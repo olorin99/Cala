@@ -58,20 +58,35 @@ cala::backend::vulkan::Context::Context(ende::Span<const char *> extensions) {
     if (_physicalDevice == VK_NULL_HANDLE)
         throw "No suitable GPU found";
 
-    u32 index = queueIndex(VK_QUEUE_GRAPHICS_BIT);
-    VkDeviceQueueCreateInfo queueCreateInfo{};
-    queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfo.queueFamilyIndex = index;
-    queueCreateInfo.queueCount = 1;
-    f32 queuePriority = 1.f;
-    queueCreateInfo.pQueuePriorities = &queuePriority;
+    u32 queuCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queuCount, nullptr);
+    ende::Vector<VkQueueFamilyProperties> familyProperties(queuCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queuCount, familyProperties.data());
+
+    u32 priCount = std::max_element(familyProperties.begin(), familyProperties.end(), [](const auto& a, const auto& b) {
+        return a.queueCount < b.queueCount;
+    })->queueCount;
+
+    ende::Vector<f32> priorities(priCount, 1.f);
+
+    ende::Vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+    for (u32 i = 0; i < familyProperties.size(); i++) {
+
+        VkDeviceQueueCreateInfo queueCreateInfo{};
+        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreateInfo.queueFamilyIndex = i;
+        queueCreateInfo.queueCount = familyProperties[i].queueCount;
+        queueCreateInfo.pQueuePriorities = priorities.data();
+
+        queueCreateInfos.push(queueCreateInfo);
+    }
 
     VkPhysicalDeviceFeatures deviceFeatures{};
 
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    createInfo.pQueueCreateInfos = &queueCreateInfo;
-    createInfo.queueCreateInfoCount = 1;
+    createInfo.pQueueCreateInfos = queueCreateInfos.data();
+    createInfo.queueCreateInfoCount = queueCreateInfos.size();
 
     createInfo.pEnabledFeatures = &deviceFeatures;
 
@@ -92,6 +107,9 @@ cala::backend::vulkan::Context::~Context() {
 
 
 u32 cala::backend::vulkan::Context::queueIndex(u32 flags) {
+    if (flags & 0x20)
+        return 0;
+
     u32 count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &count, nullptr);
     ende::Vector<VkQueueFamilyProperties> familyProperties(count);

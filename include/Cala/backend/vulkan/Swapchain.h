@@ -25,6 +25,14 @@ namespace cala::backend::vulkan {
 
         bool present(Frame frame);
 
+        VkExtent2D extent() const { return _extent; }
+
+        VkFormat format() const { return _format.format; }
+
+        u32 size() const { return _images.size(); }
+
+        VkImageView view(u32 i) const { return _imageViews[i]; }
+
     private:
 
         bool createSwapchain();
