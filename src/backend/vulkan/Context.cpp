@@ -131,3 +131,41 @@ VkQueue cala::backend::vulkan::Context::getQueue(u32 flags) {
     vkGetDeviceQueue(_device, queueIndex(flags), 0, &queue);
     return queue;
 }
+
+u32 cala::backend::vulkan::Context::memoryIndex(u32 filter, VkMemoryPropertyFlags properties) {
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memoryProperties);
+
+    for (u32 i = 0; i < memoryProperties.memoryTypeCount; i++) {
+        if ((filter & (1 << i)) && (memoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
+            return i;
+    }
+    return 0; //TODO: error on none available
+}
+
+
+std::pair<VkBuffer, VkDeviceMemory> cala::backend::vulkan::Context::createBuffer(u32 size, u32 usage, u32 flags) {
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = size;
+    bufferInfo.usage = usage;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VkBuffer buffer;
+    vkCreateBuffer(_device, &bufferInfo, nullptr, &buffer);
+
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(_device, buffer, &memRequirements);
+
+    VkMemoryAllocateInfo allocateInfo{};
+    allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocateInfo.allocationSize = memRequirements.size;
+    allocateInfo.memoryTypeIndex = memoryIndex(memRequirements.memoryTypeBits, flags);
+
+    VkDeviceMemory memory;
+    vkAllocateMemory(_device, &allocateInfo, nullptr, &memory);
+
+    vkBindBufferMemory(_device, buffer, memory, 0);
+
+    return {buffer, memory};
+}

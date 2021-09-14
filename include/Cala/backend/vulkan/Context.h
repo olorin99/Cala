@@ -18,6 +18,13 @@ namespace cala::backend::vulkan {
 
         VkQueue getQueue(u32 flags);
 
+        u32 memoryIndex(u32 filter, VkMemoryPropertyFlags properties);
+
+
+
+        std::pair<VkBuffer, VkDeviceMemory> createBuffer(u32 size, u32 usage, u32 flags);
+
+
 //    private:
 
         VkInstance _instance;

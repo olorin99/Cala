@@ -11,7 +11,7 @@ add_subdirectory(third_party)
 add_subdirectory(examples)
 add_subdirectory(libs)
 
-add_library(Cala src/backend/vulkan/Context.cpp include/Cala/backend/vulkan/Context.h src/backend/vulkan/Swapchain.cpp include/Cala/backend/vulkan/Swapchain.h)
+add_library(Cala src/backend/vulkan/Context.cpp include/Cala/backend/vulkan/Context.h src/backend/vulkan/Swapchain.cpp include/Cala/backend/vulkan/Swapchain.h src/backend/vulkan/Driver.cpp include/Cala/backend/vulkan/Driver.h src/backend/vulkan/ShaderProgram.cpp include/Cala/backend/vulkan/ShaderProgram.h)
 
 target_include_directories(Cala
         PUBLIC
@@ -21,4 +21,4 @@ target_include_directories(Cala
         src
         libs)
 
-target_link_libraries(Cala Ende ${Vulkan_LIBRARIES} ${SDL2_LIBRARIES} ${X11_LIBRARIES})
+target_link_libraries(Cala Ende ${Vulkan_LIBRARIES} ${SDL2_LIBRARIES} ${X11_LIBRARIES} imgui)
