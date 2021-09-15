@@ -4,14 +4,13 @@
 #include <vulkan/vulkan.h>
 #include <Ende/Vector.h>
 
-#include <Cala/backend/vulkan/Context.h>
 
 namespace cala::backend::vulkan {
 
     class ShaderProgram {
     public:
 
-        ShaderProgram(Context& context);
+        ShaderProgram(VkDevice device);
 
         ~ShaderProgram();
 
@@ -19,7 +18,7 @@ namespace cala::backend::vulkan {
 
 //    private:
 
-        Context& _context;
+        VkDevice _device;
         ende::Vector<VkPipelineShaderStageCreateInfo> _stages;
 
 

@@ -7,6 +7,7 @@
 #include <Ende/Span.h>
 
 #include <Cala/backend/vulkan/CommandBufferList.h>
+#include <Cala/backend/vulkan/PipelineList.h>
 
 namespace cala::backend::vulkan {
 
@@ -35,6 +36,7 @@ namespace cala::backend::vulkan {
         VkDevice _device;
 
         CommandBufferList* _commands;
+        PipelineList* _pipelines;
 
     };
 

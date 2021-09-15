@@ -1,12 +1,12 @@
 #include "Cala/backend/vulkan/ShaderProgram.h"
 
-cala::backend::vulkan::ShaderProgram::ShaderProgram(Context &context)
-    : _context(context)
+cala::backend::vulkan::ShaderProgram::ShaderProgram(VkDevice device)
+    : _device(device)
 {}
 
 cala::backend::vulkan::ShaderProgram::~ShaderProgram() {
     for (auto& stage : _stages)
-        vkDestroyShaderModule(_context._device, stage.module, nullptr);
+        vkDestroyShaderModule(_device, stage.module, nullptr);
 }
 
 bool cala::backend::vulkan::ShaderProgram::addStage(ende::Span<u32> code, u32 flags) {
@@ -17,7 +17,7 @@ bool cala::backend::vulkan::ShaderProgram::addStage(ende::Span<u32> code, u32 fl
     createInfo.codeSize = code.size();
     createInfo.pCode = code.data();
 
-    if (vkCreateShaderModule(_context._device, &createInfo, nullptr, &shader) != VK_SUCCESS)
+    if (vkCreateShaderModule(_device, &createInfo, nullptr, &shader) != VK_SUCCESS)
         return false;
 
     VkPipelineShaderStageCreateInfo stageCreateInfo{};

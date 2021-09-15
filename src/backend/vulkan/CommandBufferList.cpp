@@ -76,7 +76,7 @@ VkCommandBuffer cala::backend::vulkan::CommandBufferList::get() {
     // begin
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = 0;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     vkBeginCommandBuffer(_current->buffer, &beginInfo);
 
     // mark as unavailable
