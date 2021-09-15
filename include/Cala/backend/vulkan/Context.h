@@ -3,7 +3,10 @@
 
 #include <vulkan/vulkan.h>
 
+#include <Ende/Vector.h>
 #include <Ende/Span.h>
+
+#include <Cala/backend/vulkan/CommandBufferList.h>
 
 namespace cala::backend::vulkan {
 
@@ -30,6 +33,8 @@ namespace cala::backend::vulkan {
         VkInstance _instance;
         VkPhysicalDevice _physicalDevice;
         VkDevice _device;
+
+        CommandBufferList* _commands;
 
     };
 

@@ -18,12 +18,11 @@ namespace cala::backend::vulkan {
             u64 id = 0;
             u32 index = 0;
             VkSemaphore imageAquired = VK_NULL_HANDLE;
-            VkSemaphore renderFinished = VK_NULL_HANDLE;
         };
 
         Frame nextImage();
 
-        bool present(Frame frame);
+        bool present(Frame frame, VkSemaphore renderFinish);
 
         VkExtent2D extent() const { return _extent; }
 
@@ -52,7 +51,7 @@ namespace cala::backend::vulkan {
 
         ende::Vector<VkImage> _images;
         ende::Vector<VkImageView> _imageViews;
-        ende::Vector<std::pair<VkSemaphore, VkSemaphore>> _semaphores;
+        ende::Vector<VkSemaphore> _semaphores;
 //        std::array<VkImage, 2> _images;
 //        std::array<VkImageView, 2> _imageViews;
 //        std::array<std::pair<VkSemaphore, VkSemaphore>, 2> _semaphores;

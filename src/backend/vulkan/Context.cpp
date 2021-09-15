@@ -98,9 +98,12 @@ cala::backend::vulkan::Context::Context(ende::Span<const char *> extensions) {
     if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device) != VK_SUCCESS)
         throw "Failed to create logical device";
 
+
+    _commands = new CommandBufferList(_device, queueIndex(VK_QUEUE_GRAPHICS_BIT));
 }
 
 cala::backend::vulkan::Context::~Context() {
+    delete _commands;
     vkDestroyDevice(_device, nullptr);
     vkDestroyInstance(_instance, nullptr);
 }

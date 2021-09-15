@@ -77,9 +77,8 @@ cala::backend::vulkan::Swapchain::Swapchain(Context &context, void *window, void
 }
 
 cala::backend::vulkan::Swapchain::~Swapchain() {
-    for (auto& semaphorePair : _semaphores) {
-        vkDestroySemaphore(_context._device, semaphorePair.first, nullptr);
-        vkDestroySemaphore(_context._device, semaphorePair.second, nullptr);
+    for (auto& semaphore : _semaphores) {
+        vkDestroySemaphore(_context._device, semaphore, nullptr);
     }
 
     for (auto& view : _imageViews)
@@ -92,22 +91,22 @@ cala::backend::vulkan::Swapchain::~Swapchain() {
 
 cala::backend::vulkan::Swapchain::Frame cala::backend::vulkan::Swapchain::nextImage() {
 //    auto [image, render] = _semaphores[_frame % 2];
-    auto [image, render] = _semaphores.pop().unwrap();
+    auto image = _semaphores.pop().unwrap();
     u32 index = 0;
     vkAcquireNextImageKHR(_context._device, _swapchain, std::numeric_limits<u64>::max(), image, VK_NULL_HANDLE, &index);
-    return {_frame++, index, image, render};
+    return {_frame++, index, image};
 }
 
-bool cala::backend::vulkan::Swapchain::present(Frame frame) {
+bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFinish) {
 
-    _semaphores.push({frame.imageAquired, frame.renderFinished});
+    _semaphores.push(frame.imageAquired);
     std::rotate(_semaphores.begin(), _semaphores.end() - 1, _semaphores.end());
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &frame.renderFinished;
+    presentInfo.pWaitSemaphores = &renderFinish;
 
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &_swapchain;
@@ -201,13 +200,11 @@ bool cala::backend::vulkan::Swapchain::createSemaphores() {
 
     for (u32 i = 0; i < _imageViews.size(); i++) {
         VkSemaphore imageAcquired;
-        VkSemaphore renderFinished;
 
-        if (vkCreateSemaphore(_context._device, &createInfo, nullptr, &imageAcquired) != VK_SUCCESS ||
-                vkCreateSemaphore(_context._device, &createInfo, nullptr, &renderFinished) != VK_SUCCESS)
+        if (vkCreateSemaphore(_context._device, &createInfo, nullptr, &imageAcquired) != VK_SUCCESS)
             return false;
 
-        _semaphores.push({imageAcquired, renderFinished});
+        _semaphores.push(imageAcquired);
     }
     return true;
 }

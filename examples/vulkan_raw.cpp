@@ -422,52 +422,6 @@ int main() {
 
 
 
-    ende::Vector<VkCommandBuffer> commandBuffers;
-    commandBuffers.resize(swapchainFramebuffers.size());
-
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = commandPool;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = commandBuffers.size();
-    if (vkAllocateCommandBuffers(context._device, &allocInfo, commandBuffers.data()) != VK_SUCCESS)
-        return -53;
-
-
-//    for (u32 i = 0; i < commandBuffers.size(); i++) {
-//        VkCommandBufferBeginInfo beginInfo{};
-//        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-//        beginInfo.flags = 0;
-//        beginInfo.pInheritanceInfo = nullptr;
-//        if (vkBeginCommandBuffer(commandBuffers[i], &beginInfo) != VK_SUCCESS)
-//            return -86;
-//
-//        VkRenderPassBeginInfo renderPassBeginInfo{};
-//        renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-//        renderPassBeginInfo.renderPass = renderPass;
-//        renderPassBeginInfo.framebuffer = swapchainFramebuffers[i];
-//        renderPassBeginInfo.renderArea.offset = {0, 0};
-//        renderPassBeginInfo.renderArea.extent = swapchain.extent();
-//
-//        VkClearValue clearColour = {{{0.f, 0.f, 0.f, 1.f}}};
-//        renderPassBeginInfo.clearValueCount = 1;
-//        renderPassBeginInfo.pClearValues = &clearColour;
-//
-//        vkCmdBeginRenderPass(commandBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-//
-//        vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-//
-//        VkDeviceSize offsets[] = {0};
-//        vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertexBuffer, offsets);
-//
-//        vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
-//
-//        vkCmdEndRenderPass(commandBuffers[i]);
-//
-//        if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS)
-//            return -87;
-//    }
-
     VkQueue graphicsQueue = context.getQueue(VK_QUEUE_GRAPHICS_BIT);
 
     bool running = true;
@@ -492,13 +446,9 @@ int main() {
         auto frame = swapchain.nextImage();
 
         {
+            VkCommandBuffer commandBuffer = context._commands->get();
+
             u32 i = frame.index;
-            VkCommandBufferBeginInfo beginInfo{};
-            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            beginInfo.flags = 0;
-            beginInfo.pInheritanceInfo = nullptr;
-            if (vkBeginCommandBuffer(commandBuffers[i], &beginInfo) != VK_SUCCESS)
-                return -86;
 
             VkRenderPassBeginInfo renderPassBeginInfo{};
             renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -511,47 +461,27 @@ int main() {
             renderPassBeginInfo.clearValueCount = 1;
             renderPassBeginInfo.pClearValues = &clearColour;
 
-            vkCmdBeginRenderPass(commandBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+            vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-            vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
             VkDeviceSize offsets[] = {0};
-            vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertexBuffer, offsets);
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, offsets);
 
-            vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+            vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
-            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffers[i]);
+            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 
-            vkCmdEndRenderPass(commandBuffers[i]);
+            vkCmdEndRenderPass(commandBuffer);
 
-            if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS)
-                return -87;
+
+            context._commands->waitSemaphore(frame.imageAquired);
+            context._commands->flush();
         }
 
+        swapchain.present(frame, context._commands->signal());
 
-
-
-        VkPipelineStageFlags stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-        submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = &frame.imageAquired;
-        submitInfo.pWaitDstStageMask = stages;
-
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffers[frame.index];
-
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = &frame.renderFinished;
-
-        if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS)
-            return -100;
-
-
-        swapchain.present(frame);
-
+        // wait on present queue
         vkQueueWaitIdle(context.getQueue(0x20));
 //        vkDeviceWaitIdle(context._device);
     }
