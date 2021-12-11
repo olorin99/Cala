@@ -5,6 +5,7 @@
 #include <Ende/Vector.h>
 #include <Ende/filesystem/File.h>
 #include <Ende/math/Vec.h>
+#include <Ende/time/StopWatch.h>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
@@ -15,7 +16,9 @@
 #include <Cala/backend/vulkan/Context.h>
 #include <Cala/backend/vulkan/Swapchain.h>
 #include <Cala/backend/vulkan/ShaderProgram.h>
+#include <Cala/backend/vulkan/Driver.h>
 
+#include <Cala/backend/vulkan/CommandBuffer.h>
 
 #include "../third_party/imgui/imgui.h"
 #include "../third_party/imgui/imgui_impl_vulkan.h"
@@ -80,23 +83,24 @@ int main() {
     for (const auto& extension : extensions)
         std::cout << '\t' << extension.extensionName << '\n';
 
+    Driver driver(extensionNames, &wmInfo.info.x11.window, wmInfo.info.x11.display);
 
-    Context context(extensionNames);
-    Swapchain swapchain(context, &wmInfo.info.x11.window, wmInfo.info.x11.display);
+//    Context context(extensionNames);
+//    Swapchain swapchain(context, &wmInfo.info.x11.window, wmInfo.info.x11.display);
 
     VkCommandPool commandPool;
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.queueFamilyIndex = context.queueIndex(VK_QUEUE_GRAPHICS_BIT);
+    poolInfo.queueFamilyIndex = driver._context.queueIndex(VK_QUEUE_GRAPHICS_BIT);
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    if (vkCreateCommandPool(context._device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
+    if (vkCreateCommandPool(driver._context._device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
         return -65;
 
 
     VkRenderPass ImGuiRenderPass;
     {
         VkAttachmentDescription colourAttachment{};
-        colourAttachment.format = swapchain.format();
+        colourAttachment.format = driver._swapchain.format();
         colourAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
         colourAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         colourAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -130,7 +134,7 @@ int main() {
         renderPassInfo.pSubpasses = &subpass;
         renderPassInfo.dependencyCount = 1;
         renderPassInfo.pDependencies = &dependency;
-        if (vkCreateRenderPass(context._device, &renderPassInfo, nullptr, &ImGuiRenderPass) != VK_SUCCESS)
+        if (vkCreateRenderPass(driver._context._device, &renderPassInfo, nullptr, &ImGuiRenderPass) != VK_SUCCESS)
             return -15;
     }
 
@@ -154,9 +158,9 @@ int main() {
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.poolSizeCount = 11;
         poolInfo.pPoolSizes = poolSizes;
-        poolInfo.maxSets = swapchain.size();
+        poolInfo.maxSets = driver._swapchain.size();
 
-        if (vkCreateDescriptorPool(context._device, &poolInfo, nullptr, &ImGuiDescriptorPool) != VK_SUCCESS)
+        if (vkCreateDescriptorPool(driver._context._device, &poolInfo, nullptr, &ImGuiDescriptorPool) != VK_SUCCESS)
             return -17;
     }
 
@@ -171,21 +175,21 @@ int main() {
 
     ImGui_ImplSDL2_InitForVulkan(window);
     ImGui_ImplVulkan_InitInfo initInfo{};
-    initInfo.Instance = context._instance;
-    initInfo.PhysicalDevice = context._physicalDevice;
-    initInfo.Device = context._device;
-    initInfo.QueueFamily = context.queueIndex(VK_QUEUE_GRAPHICS_BIT);
-    initInfo.Queue = context.getQueue(VK_QUEUE_GRAPHICS_BIT);
+    initInfo.Instance = driver._context._instance;
+    initInfo.PhysicalDevice = driver._context._physicalDevice;
+    initInfo.Device = driver._context._device;
+    initInfo.QueueFamily = driver._context.queueIndex(VK_QUEUE_GRAPHICS_BIT);
+    initInfo.Queue = driver._context.getQueue(VK_QUEUE_GRAPHICS_BIT);
     initInfo.PipelineCache = VK_NULL_HANDLE;
     initInfo.DescriptorPool = ImGuiDescriptorPool;
     initInfo.Allocator = nullptr;
-    initInfo.MinImageCount = swapchain.size();
-    initInfo.ImageCount = swapchain.size();
+    initInfo.MinImageCount = driver._swapchain.size();
+    initInfo.ImageCount = driver._swapchain.size();
     initInfo.CheckVkResultFn = nullptr;
     ImGui_ImplVulkan_Init(&initInfo, ImGuiRenderPass);
-    VkCommandBuffer a = beginSingleTimeCommands(context._device, commandPool);
+    VkCommandBuffer a = beginSingleTimeCommands(driver._context._device, commandPool);
     ImGui_ImplVulkan_CreateFontsTexture(a);
-    endSingleTimeCommands(a, context._device, context.getQueue(VK_QUEUE_GRAPHICS_BIT), commandPool);
+    endSingleTimeCommands(a, driver._context._device, driver._context.getQueue(VK_QUEUE_GRAPHICS_BIT), commandPool);
 
 
 
@@ -197,13 +201,19 @@ int main() {
             {{-0.5f, 0.5f}, {0.f, 0.f, 1.f}}
     };
 
-    auto [vertexBuffer, vertexBufferMemory] = context.createBuffer(sizeof(vertices[0]) * 3, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    auto [vertexBuffer, vertexBufferMemory] = driver._context.createBuffer(sizeof(vertices[0]) * 3, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     void* data;
-    vkMapMemory(context._device, vertexBufferMemory, 0, sizeof(vertices[0]) * 3, 0, &data);
+    vkMapMemory(driver._context._device, vertexBufferMemory, 0, sizeof(vertices[0]) * 3, 0, &data);
     memcpy(data, vertices, sizeof(vertices[0]) * 3);
-    vkUnmapMemory(context._device, vertexBufferMemory);
+    vkUnmapMemory(driver._context._device, vertexBufferMemory);
 
+
+    auto [uniformBuffer, uniformBufferMemory] = driver._context.createBuffer(sizeof(ende::math::Vec3f), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    void* uniformData;
+    vkMapMemory(driver._context._device, uniformBufferMemory, 0, sizeof(ende::math::Vec3f), 0, &uniformData);
+    *static_cast<ende::math::Vec3f*>(uniformData) = {0.5, 0.5, 0.5};
+    vkUnmapMemory(driver._context._device, uniformBufferMemory);
 
     // get shader data
     ende::fs::File shaderFile;
@@ -219,123 +229,55 @@ int main() {
     shaderFile.read({reinterpret_cast<char*>(fragmentShaderData.data()), static_cast<u32>(fragmentShaderData.size() * sizeof(u32))});
 
 
-    ShaderProgram program(context._device);
+    ShaderProgram program(driver._context._device);
     if (!program.addStage(vertexShaderData, VK_SHADER_STAGE_VERTEX_BIT))
         return -10;
     if (!program.addStage(fragmentShaderData, VK_SHADER_STAGE_FRAGMENT_BIT))
         return -11;
 
+    VkDescriptorSetLayoutBinding uboBinding{};
+    uboBinding.binding = 0;
+    uboBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboBinding.descriptorCount = 1;
+    uboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    uboBinding.pImmutableSamplers = nullptr;
 
-//    // pipeline
-//
-//    // vertex input
-//    VkVertexInputBindingDescription vertexBinding{};
-//    vertexBinding.binding = 0;
-//    vertexBinding.stride = sizeof(Vertex);
-//    vertexBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-//
-//    u32 posOffset = offsetof(Vertex, position);
-//    u32 colOffset = offsetof(Vertex, colour);
-//
-//    VkVertexInputAttributeDescription vertexAttributes[] = {
-//            {.location=0, .binding=0, .format=VK_FORMAT_R32G32_SFLOAT, .offset=posOffset},
-//            {.location=1, .binding=0, .format=VK_FORMAT_R32G32B32_SFLOAT, .offset=colOffset}
-//    };
-//
-//
-//    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-//    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-//    vertexInputInfo.vertexBindingDescriptionCount = 1;
-//    vertexInputInfo.pVertexBindingDescriptions = &vertexBinding;
-//    vertexInputInfo.vertexAttributeDescriptionCount = 2;
-//    vertexInputInfo.pVertexAttributeDescriptions = vertexAttributes;
-//
-//    VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
-//    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-//    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-//    inputAssembly.primitiveRestartEnable = VK_FALSE;
-//
-//    // viewports
-//    VkViewport viewport{};
-//    viewport.x = 0.f;
-//    viewport.y = 0.f;
-//    viewport.width = swapchain.extent().width;
-//    viewport.height = swapchain.extent().height;
-//    viewport.minDepth = 0.f;
-//    viewport.maxDepth = 1.f;
-//
-//    VkRect2D scissor{};
-//    scissor.offset = {0, 0};
-//    scissor.extent = swapchain.extent();
-//
-//    VkPipelineViewportStateCreateInfo viewportState{};
-//    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-//    viewportState.viewportCount = 1;
-//    viewportState.pViewports = &viewport;
-//    viewportState.scissorCount = 1;
-//    viewportState.pScissors = &scissor;
-//
-//    //rasterizer
-//    VkPipelineRasterizationStateCreateInfo rasterizer{};
-//    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-//    rasterizer.depthClampEnable = VK_FALSE;
-//    rasterizer.rasterizerDiscardEnable = VK_FALSE;
-//    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-//    rasterizer.lineWidth = 1.f;
-//    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-//    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
-//    rasterizer.depthBiasEnable = VK_FALSE;
-//    rasterizer.depthBiasConstantFactor = 0.f;
-//    rasterizer.depthBiasClamp = 0.f;
-//    rasterizer.depthBiasSlopeFactor = 0.f;
-//
-//    //multisample
-//    VkPipelineMultisampleStateCreateInfo multisampling{};
-//    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-//    multisampling.sampleShadingEnable = VK_FALSE;
-//    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-//    multisampling.minSampleShading = 1.f;
-//    multisampling.pSampleMask = nullptr;
-//    multisampling.alphaToCoverageEnable = VK_FALSE;
-//    multisampling.alphaToOneEnable = VK_FALSE;
-//
-//    //Depth stencil
-//
-//    //blending
-//    VkPipelineColorBlendAttachmentState colourBlendAttachment{};
-//    colourBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-//    colourBlendAttachment.blendEnable = VK_FALSE;
-//    //...
-//
-//    VkPipelineColorBlendStateCreateInfo colourBlending{};
-//    colourBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-//    colourBlending.logicOpEnable = VK_FALSE;
-//    colourBlending.logicOp = VK_LOGIC_OP_COPY;
-//    colourBlending.attachmentCount = 1;
-//    colourBlending.pAttachments = &colourBlendAttachment;
-//    colourBlending.blendConstants[0] = 0.f;
-//    colourBlending.blendConstants[1] = 0.f;
-//    colourBlending.blendConstants[2] = 0.f;
-//    colourBlending.blendConstants[3] = 0.f;
-//
-//    //dynamic state
-//
-//
-//    //layout
-//    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-//    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-//    pipelineLayoutInfo.setLayoutCount = 0;
-//    pipelineLayoutInfo.pSetLayouts = nullptr;
-//    pipelineLayoutInfo.pushConstantRangeCount = 0;
-//    pipelineLayoutInfo.pPushConstantRanges = nullptr;
-//
-//    VkPipelineLayout pipelineLayout;
-//    if (vkCreatePipelineLayout(context._device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
-//        return -51;
-//
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings = &uboBinding;
+
+    VkDescriptorSetLayout descriptorSetLayout;
+    vkCreateDescriptorSetLayout(driver._context._device, &layoutInfo, nullptr, &descriptorSetLayout);
+
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+    pipelineLayoutInfo.pushConstantRangeCount = 0;
+    pipelineLayoutInfo.pPushConstantRanges = nullptr;
+
+    VkPipelineLayout pipelineLayout;
+    VkResult result = vkCreatePipelineLayout(driver._context._device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
+
+    program._setLayout[0] = descriptorSetLayout;
+    program._layout = pipelineLayout;
+
+
+    //vertex array
+    VkVertexInputBindingDescription binding{};
+    binding.binding = 0;
+    binding.stride = 5 * sizeof(f32);
+    binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    VkVertexInputAttributeDescription attributes[2] = {
+            { .location = 0, .binding = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset = 0 },
+            { .location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(f32) * 2 }
+    };
+
     //renderpass
     VkAttachmentDescription colourAttachment{};
-    colourAttachment.format = swapchain.format();
+    colourAttachment.format = driver._swapchain.format();
     colourAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colourAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colourAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -370,59 +312,98 @@ int main() {
     renderPassInfo.pSubpasses = &subpass;
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
-    if (vkCreateRenderPass(context._device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
+    if (vkCreateRenderPass(driver._context._device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
         return -15;
-//
-//
-//    VkGraphicsPipelineCreateInfo pipelineInfo{};
-//    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-//    pipelineInfo.stageCount = program._stages.size();
-//    pipelineInfo.pStages = program._stages.data();
-//
-//    pipelineInfo.pVertexInputState = &vertexInputInfo;
-//    pipelineInfo.pInputAssemblyState = &inputAssembly;
-//    pipelineInfo.pViewportState = &viewportState;
-//    pipelineInfo.pRasterizationState = &rasterizer;
-//    pipelineInfo.pMultisampleState = &multisampling;
-//    pipelineInfo.pDepthStencilState = nullptr;
-//    pipelineInfo.pColorBlendState = &colourBlending;
-//    pipelineInfo.pDynamicState = nullptr;
-//
-//    pipelineInfo.layout = pipelineLayout;
-//
-//    pipelineInfo.renderPass = renderPass;
-//    pipelineInfo.subpass = 0;
-//
-//    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-//    pipelineInfo.basePipelineIndex = -1;
-//
-//    VkPipeline pipeline;
-//    if (vkCreateGraphicsPipelines(context._device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS)
-//        return -20;
 
 
     ende::Vector<VkFramebuffer> swapchainFramebuffers;
-    swapchainFramebuffers.resize(swapchain.size());
+    swapchainFramebuffers.resize(driver._swapchain.size());
 
     for (u32 i = 0; i < swapchainFramebuffers.size(); i++) {
-        VkImageView attachments[] = { swapchain.view(i) };
+        VkImageView attachments[] = { driver._swapchain.view(i) };
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass = renderPass;
         framebufferInfo.attachmentCount = 1;
         framebufferInfo.pAttachments = attachments;
-        framebufferInfo.width = swapchain.extent().width;
-        framebufferInfo.height = swapchain.extent().height;
+        framebufferInfo.width = driver._swapchain.extent().width;
+        framebufferInfo.height = driver._swapchain.extent().height;
         framebufferInfo.layers = 1;
 
-        if (vkCreateFramebuffer(context._device, &framebufferInfo, nullptr, &swapchainFramebuffers[i]) != VK_SUCCESS)
+        if (vkCreateFramebuffer(driver._context._device, &framebufferInfo, nullptr, &swapchainFramebuffers[i]) != VK_SUCCESS)
             return -34;
     }
 
 
+    VkDescriptorPoolSize poolSize{};
+    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSize.descriptorCount = driver._swapchain.size();
+    VkDescriptorPoolCreateInfo descriptorPoolCreateInfo{};
+    descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descriptorPoolCreateInfo.poolSizeCount = 1;
+    descriptorPoolCreateInfo.pPoolSizes = &poolSize;
+    descriptorPoolCreateInfo.maxSets = driver._swapchain.size();
+    VkDescriptorPool descriptorPool;
+    vkCreateDescriptorPool(driver._context._device, &descriptorPoolCreateInfo, nullptr, &descriptorPool);
 
-    VkQueue graphicsQueue = context.getQueue(VK_QUEUE_GRAPHICS_BIT);
+
+
+//    VkDescriptorSetLayoutBinding uboBinding{};
+//    uboBinding.binding = 0;
+//    uboBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+//    uboBinding.descriptorCount = 1;
+//    uboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+//    uboBinding.pImmutableSamplers = nullptr;
+//
+//    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+//    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+//    layoutInfo.bindingCount = 1;
+//    layoutInfo.pBindings = &uboBinding;
+//
+//    VkDescriptorSetLayout descriptorSetLayout;
+//    vkCreateDescriptorSetLayout(driver._context._device, &layoutInfo, nullptr, &descriptorSetLayout);
+
+//    driver._context._pipelines->_tmp = descriptorSetLayout;
+
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = descriptorPool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &descriptorSetLayout;
+
+    VkDescriptorSet descriptorSet;
+    vkAllocateDescriptorSets(driver._context._device, &allocInfo, &descriptorSet);
+
+
+    VkDescriptorBufferInfo bufferInfo{};
+    bufferInfo.buffer = uniformBuffer;
+    bufferInfo.offset = 0;
+    bufferInfo.range = sizeof(ende::math::Vec3f);
+
+    VkWriteDescriptorSet descriptorWrite{};
+    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrite.dstSet = descriptorSet;
+    descriptorWrite.dstBinding = 0;
+    descriptorWrite.dstArrayElement = 0;
+    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptorWrite.descriptorCount = 1;
+    descriptorWrite.pBufferInfo = &bufferInfo;
+    descriptorWrite.pImageInfo = nullptr;
+    descriptorWrite.pTexelBufferView = nullptr;
+
+    vkUpdateDescriptorSets(driver._context._device, 1, &descriptorWrite, 0, nullptr);
+
+
+
+    VkQueue graphicsQueue = driver._context.getQueue(VK_QUEUE_GRAPHICS_BIT);
+
+
+    ende::time::StopWatch frameClock;
+    frameClock.start();
+    f32 dt = 1.f / 60.f;
+    f32 fps = 0.f;
+    ende::time::Duration frameTime;
 
     bool running = true;
     SDL_Event event;
@@ -435,19 +416,29 @@ int main() {
             }
         }
 
+        driver._swapchain.wait();
+
         if (renderImGui) {
             ImGui_ImplVulkan_NewFrame();
             ImGui_ImplSDL2_NewFrame(window);
             ImGui::NewFrame();
             ImGui::ShowDemoWindow();
+
+            ImGui::Begin("Stats");
+
+            ImGui::Text("FrameTime: %f", frameTime.microseconds() / 1000.f);
+            ImGui::Text("FPS: %f", 1000.f / (frameTime.microseconds() / 1000.f));
+
+            ImGui::End();
+
+
             ImGui::Render();
         }
 
-        auto frame = swapchain.nextImage();
+        auto frame = driver._swapchain.nextImage();
 
+        CommandBuffer* buffer = driver._context._commands->get();
         {
-            VkCommandBuffer commandBuffer = context._commands->get();
-
             u32 i = frame.index;
 
             VkRenderPassBeginInfo renderPassBeginInfo{};
@@ -455,58 +446,81 @@ int main() {
             renderPassBeginInfo.renderPass = renderPass;
             renderPassBeginInfo.framebuffer = swapchainFramebuffers[i];
             renderPassBeginInfo.renderArea.offset = {0, 0};
-            renderPassBeginInfo.renderArea.extent = swapchain.extent();
+            renderPassBeginInfo.renderArea.extent = driver._swapchain.extent();
 
             VkClearValue clearColour = {{{0.f, 0.f, 0.f, 1.f}}};
             renderPassBeginInfo.clearValueCount = 1;
             renderPassBeginInfo.pClearValues = &clearColour;
 
-            vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+            vkCmdBeginRenderPass(buffer->buffer(), &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-            context._pipelines->bindProgram(program);
-            context._pipelines->bindRenderPass(renderPass);
-            context._pipelines->bindPipeline(commandBuffer);
+//            driver._context._pipelines->bindProgram(program);
+//            driver._context._pipelines->bindVertexArray({&binding, 1}, {attributes, 2});
+//            driver._context._pipelines->bindRenderPass(renderPass);
+//            driver._context._pipelines->bindRasterState({});
+//            driver._context._pipelines->bindPipeline(commandBuffer);
+
+            buffer->bindProgram(program);
+            buffer->bindVertexArray({&binding, 1}, {attributes, 2});
+            buffer->bindRenderPass(renderPass);
+            buffer->bindRasterState({});
+            buffer->bindPipeline();
 
 //            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
+            vkCmdBindDescriptorSets(buffer->buffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, buffer->_pipelineKey.layout, 0, 1, &descriptorSet, 0, nullptr);
+
             VkDeviceSize offsets[] = {0};
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, offsets);
+            vkCmdBindVertexBuffers(buffer->buffer(), 0, 1, &vertexBuffer, offsets);
 
-            vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+            vkCmdDraw(buffer->buffer(), 3, 1, 0, 0);
 
-            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+//            driver.draw({}, {vertexBuffer, 3});
 
-            vkCmdEndRenderPass(commandBuffer);
+            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer->buffer());
+
+            vkCmdEndRenderPass(buffer->buffer());
 
 
-            context._commands->waitSemaphore(frame.imageAquired);
-            context._commands->flush();
+//            driver._context._commands->waitSemaphore(frame.imageAquired);
+//            driver._context._commands->flush();
+
+            buffer->submit(frame.imageAquired, driver._swapchain.fence());
+            driver._context._commands->flush();
         }
 
-        swapchain.present(frame, context._commands->signal());
+        driver._swapchain.present(frame, buffer->signal());
 
-        // wait on present queue
-        vkQueueWaitIdle(context.getQueue(0x20));
-//        vkDeviceWaitIdle(context._device);
+
+        frameTime = frameClock.reset();
+        dt = frameTime.milliseconds() / 1000.f;
     }
 
-    vkDestroyBuffer(context._device, vertexBuffer, nullptr);
-    vkFreeMemory(context._device, vertexBufferMemory, nullptr);
+    driver._swapchain.wait();
 
-    vkDestroyCommandPool(context._device, commandPool, nullptr);
+    vkDestroyDescriptorPool(driver._context._device, descriptorPool, nullptr);
+
+
+    vkDestroyBuffer(driver._context._device, uniformBuffer, nullptr);
+    vkFreeMemory(driver._context._device, uniformBufferMemory, nullptr);
+
+    vkDestroyBuffer(driver._context._device, vertexBuffer, nullptr);
+    vkFreeMemory(driver._context._device, vertexBufferMemory, nullptr);
+
+    vkDestroyCommandPool(driver._context._device, commandPool, nullptr);
 
     for (auto& framebuffer : swapchainFramebuffers)
-        vkDestroyFramebuffer(context._device, framebuffer, nullptr);
+        vkDestroyFramebuffer(driver._context._device, framebuffer, nullptr);
 
 //    vkDestroyPipeline(context._device, pipeline, nullptr);
 //    vkDestroyPipelineLayout(context._device, pipelineLayout, nullptr);
-    vkDestroyRenderPass(context._device, renderPass, nullptr);
+    vkDestroyRenderPass(driver._context._device, renderPass, nullptr);
 
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
-    vkDestroyDescriptorPool(context._device, ImGuiDescriptorPool, nullptr);
-    vkDestroyRenderPass(context._device, ImGuiRenderPass, nullptr);
+    vkDestroyDescriptorPool(driver._context._device, ImGuiDescriptorPool, nullptr);
+    vkDestroyRenderPass(driver._context._device, ImGuiRenderPass, nullptr);
 
     SDL_DestroyWindow(window);
 

@@ -14,8 +14,20 @@ cala::backend::vulkan::PipelineList::PipelineList(VkDevice device)
     _current(VK_NULL_HANDLE)
 {}
 
+cala::backend::vulkan::PipelineList::~PipelineList() {
+    for (auto& pipeline : _pipelines) {
+        vkDestroyPipelineLayout(_device, pipeline.first.layout, nullptr);
+        vkDestroyPipeline(_device, pipeline.second, nullptr);
+    }
+}
 
 void cala::backend::vulkan::PipelineList::bindProgram(ShaderProgram &program) {
+    if (_key.layout != program._layout)
+        _key.layout = program._layout;
+    for (u32 i = 0; i < 4; i++) {
+        if (_setKey.layout[i] != program._setLayout[i])
+            _setKey.layout[i] = program._setLayout[i];
+    }
     for (u32 i = 0; i < program._stages.size(); i++) {
         if (_key.shaders[i] != program._stages[i].module) {
             _key.shaders[i] = program._stages[i].module;
@@ -25,9 +37,23 @@ void cala::backend::vulkan::PipelineList::bindProgram(ShaderProgram &program) {
     }
 }
 
+void cala::backend::vulkan::PipelineList::bindVertexArray(ende::Span<VkVertexInputBindingDescription> bindings, ende::Span<VkVertexInputAttributeDescription> attributes) {
+    memset(_key.bindings, 0, sizeof(_key.bindings));
+    memcpy(_key.bindings, bindings.data(), bindings.size() * sizeof(VkVertexInputBindingDescription));
+    memset(_key.attributes, 0, sizeof(_key.attributes));
+    memcpy(_key.attributes, attributes.data(), attributes.size() * sizeof(VkVertexInputAttributeDescription));
+}
+
 void cala::backend::vulkan::PipelineList::bindRenderPass(VkRenderPass renderPass) {
     if (_key.renderPass != renderPass) {
         _key.renderPass = renderPass;
+        _dirty = true;
+    }
+}
+
+void cala::backend::vulkan::PipelineList::bindRasterState(RasterState state) {
+    if (ende::util::MurmurHash<RasterState>()(_key.raster) != ende::util::MurmurHash<RasterState>()(state)) {
+        _key.raster = state;
         _dirty = true;
     }
 }
@@ -38,6 +64,12 @@ void cala::backend::vulkan::PipelineList::bindPipeline(VkCommandBuffer cmdBuffer
     if (get(&pipeline))
         vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 }
+
+
+void cala::backend::vulkan::PipelineList::bindBuffer(VkBuffer buffer, u32 set, u32 binding, u32 offset, u32 range) {
+    _setKey.buffers[set][binding] = {buffer, offset, range};
+}
+
 
 
 bool cala::backend::vulkan::PipelineList::get(VkPipeline *pipeline) {
@@ -75,22 +107,22 @@ bool cala::backend::vulkan::PipelineList::get(VkPipeline *pipeline) {
     pipelineInfo.subpass = 0;
 
 
-    VkVertexInputBindingDescription vertexBinding{};
-    vertexBinding.binding = 0;
-    vertexBinding.stride = sizeof(f32) * 5;
-    vertexBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    VkVertexInputAttributeDescription vertexAttributes[] = {
-            { .location=0, .binding=0, .format=VK_FORMAT_R32G32_SFLOAT, .offset=0 },
-            { .location=1, .binding=0, .format=VK_FORMAT_R32G32B32_SFLOAT, .offset=8 }
-    };
+    u32 countVertexBinding = 0;
+    u32 countVertexAttribute = 0;
+    for (u32 i = 0; i < 10; i++) {
+        if (_key.bindings[i].stride > 0)
+            countVertexBinding++;
+        if (_key.attributes[i].format > 0)
+            countVertexAttribute++;
+    }
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 1;
-    vertexInputInfo.pVertexBindingDescriptions = &vertexBinding;
-    vertexInputInfo.vertexAttributeDescriptionCount = 2;
-    vertexInputInfo.pVertexAttributeDescriptions = vertexAttributes;
+    vertexInputInfo.vertexBindingDescriptionCount = countVertexBinding;
+    vertexInputInfo.pVertexBindingDescriptions = _key.bindings;
+    vertexInputInfo.vertexAttributeDescriptionCount = countVertexAttribute;
+    vertexInputInfo.pVertexAttributeDescriptions = _key.attributes;
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -118,13 +150,13 @@ bool cala::backend::vulkan::PipelineList::get(VkPipeline *pipeline) {
 
     VkPipelineRasterizationStateCreateInfo rasterizer{};
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterizer.depthClampEnable = VK_FALSE;
-    rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterizer.lineWidth = 1.f;
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
-    rasterizer.depthBiasEnable = VK_FALSE;
+    rasterizer.depthClampEnable = _key.raster.depthClamp;
+    rasterizer.rasterizerDiscardEnable = _key.raster.rasterDiscard;
+    rasterizer.polygonMode = _key.raster.polygonMode;
+    rasterizer.lineWidth = _key.raster.lineWidth;
+    rasterizer.cullMode = _key.raster.cullMode;
+    rasterizer.frontFace = _key.raster.frontFace;
+    rasterizer.depthBiasEnable = _key.raster.depthBias;
     rasterizer.depthBiasConstantFactor = 0.f;
     rasterizer.depthBiasClamp = 0.f;
     rasterizer.depthBiasSlopeFactor = 0.f;
@@ -153,16 +185,16 @@ bool cala::backend::vulkan::PipelineList::get(VkPipeline *pipeline) {
     colorBlending.blendConstants[2] = 0.f;
     colorBlending.blendConstants[3] = 0.f;
 
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 0;
-    pipelineLayoutInfo.pSetLayouts = nullptr;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-    pipelineLayoutInfo.pPushConstantRanges = nullptr;
-
-    VkPipelineLayout pipelineLayout;
-    vkCreatePipelineLayout(_device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
-
+//    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+//    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+//    pipelineLayoutInfo.setLayoutCount = 1;
+//    pipelineLayoutInfo.pSetLayouts = &_tmp;
+//    pipelineLayoutInfo.pushConstantRangeCount = 0;
+//    pipelineLayoutInfo.pPushConstantRanges = nullptr;
+//
+//    VkPipelineLayout pipelineLayout;
+//    VkResult result = vkCreatePipelineLayout(_device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
+//    _key.layout = pipelineLayout;
 
 
     pipelineInfo.pVertexInputState = &vertexInputInfo;
@@ -172,7 +204,7 @@ bool cala::backend::vulkan::PipelineList::get(VkPipeline *pipeline) {
     pipelineInfo.pMultisampleState = &multisample;
     pipelineInfo.pDepthStencilState = nullptr;
     pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.layout = pipelineLayout;
+    pipelineInfo.layout = _key.layout;
 
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.basePipelineIndex = -1;
@@ -185,4 +217,59 @@ bool cala::backend::vulkan::PipelineList::get(VkPipeline *pipeline) {
     _current = *pipeline;
     _dirty = false;
     return true;
+}
+
+void cala::backend::vulkan::PipelineList::bindDescriptors(VkCommandBuffer cmdBuffer) {
+
+//    auto it = _descriptors.find(_setKey);
+//    if (it != _descriptors.end()) {
+//        vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _key.layout, 0, 1, &it->second, 0, nullptr);
+//        return;
+//    }
+
+
+    u32 setCount = 0;
+    for (u32 i = 0; i < 4; i++) {
+        if (_setKey.layout[i] == VK_NULL_HANDLE) {
+            setCount = i;
+            break;
+        }
+    }
+
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+//    allocInfo.descriptorPool = descriptorPool;
+    allocInfo.descriptorSetCount = setCount;
+    allocInfo.pSetLayouts = _setKey.layout;
+
+    VkDescriptorSet descriptorSet;
+    vkAllocateDescriptorSets(_device, &allocInfo, &descriptorSet);
+
+
+    for (u32 i = 0; i < setCount; i++) {
+
+        VkDescriptorBufferInfo bufferInfo[4];
+        for (u32 j = 0; j < 4; j++) {
+            bufferInfo[j].buffer = _setKey.buffers[i][j].buffer;
+            bufferInfo[j].offset = _setKey.buffers[i][j].offset;
+            bufferInfo[j].range = _setKey.buffers[i][j].range;
+
+        }
+
+        VkWriteDescriptorSet descriptorWrite{};
+        descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite.dstSet = descriptorSet;
+        descriptorWrite.dstBinding = 0;
+        descriptorWrite.dstArrayElement = 0;
+        descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrite.descriptorCount = 1;
+        descriptorWrite.pBufferInfo = bufferInfo;
+        descriptorWrite.pImageInfo = nullptr;
+        descriptorWrite.pTexelBufferView = nullptr;
+
+        vkUpdateDescriptorSets(_device, 1, &descriptorWrite, 0, nullptr);
+    }
+
+//    _descriptors.insert(_setKey, descriptorSet);
+
 }

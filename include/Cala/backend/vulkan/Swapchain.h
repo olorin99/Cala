@@ -24,6 +24,8 @@ namespace cala::backend::vulkan {
 
         bool present(Frame frame, VkSemaphore renderFinish);
 
+        bool wait(u64 timeout = 1000000000);
+
         VkExtent2D extent() const { return _extent; }
 
         VkFormat format() const { return _format.format; }
@@ -31,6 +33,8 @@ namespace cala::backend::vulkan {
         u32 size() const { return _images.size(); }
 
         VkImageView view(u32 i) const { return _imageViews[i]; }
+
+        VkFence fence() const { return _fence; }
 
     private:
 
@@ -52,6 +56,8 @@ namespace cala::backend::vulkan {
         ende::Vector<VkImage> _images;
         ende::Vector<VkImageView> _imageViews;
         ende::Vector<VkSemaphore> _semaphores;
+
+        VkFence _fence;
 //        std::array<VkImage, 2> _images;
 //        std::array<VkImageView, 2> _imageViews;
 //        std::array<std::pair<VkSemaphore, VkSemaphore>, 2> _semaphores;

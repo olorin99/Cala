@@ -12,6 +12,16 @@ namespace cala::backend::vulkan {
         Driver(ende::Span<const char*> extensions, void* window, void* display);
 
 
+        CommandBuffer* beginFrame();
+
+        bool endFrame();
+
+        struct Primitive {
+            VkBuffer vertex;
+            u32 vertices;
+        };
+
+        void draw(CommandBuffer::RasterState state, Primitive primitive);
 
 
 //    private:

@@ -16,10 +16,14 @@ namespace cala::backend::vulkan {
 
         bool addStage(ende::Span<u32> code, u32 flags);
 
+        VkPipelineLayout layout();
+
 //    private:
 
         VkDevice _device;
         ende::Vector<VkPipelineShaderStageCreateInfo> _stages;
+        VkDescriptorSetLayout _setLayout[4];
+        VkPipelineLayout _layout;
 
 
     };

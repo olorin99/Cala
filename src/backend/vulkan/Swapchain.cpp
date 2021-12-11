@@ -70,6 +70,12 @@ cala::backend::vulkan::Swapchain::Swapchain(Context &context, void *window, void
 {
     _surface = createSurface(_context, window, display);
 
+    VkFenceCreateInfo fenceCreateInfo{};
+    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceCreateInfo.pNext = nullptr;
+    fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    vkCreateFence(_context._device, &fenceCreateInfo, nullptr, &_fence);
+
     //TODO: get better error handling
     if (!createSwapchain()) throw "Unable to create swapchain";
     if (!createImageViews()) throw "Unable to create swapchains image views";
@@ -84,6 +90,7 @@ cala::backend::vulkan::Swapchain::~Swapchain() {
     for (auto& view : _imageViews)
         vkDestroyImageView(_context._device, view, nullptr);
 
+    vkDestroyFence(_context._device, _fence, nullptr);
     vkDestroySwapchainKHR(_context._device, _swapchain, nullptr);
     vkDestroySurfaceKHR(_context._instance, _surface, nullptr);
 }
@@ -116,7 +123,13 @@ bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFi
 
     auto res = vkQueuePresentKHR(_context.getQueue(0x20), &presentInfo) == VK_SUCCESS;
 
+    return res;
+}
 
+bool cala::backend::vulkan::Swapchain::wait(u64 timeout) {
+    auto res = vkWaitForFences(_context._device, 1, &_fence, true, timeout) == VK_SUCCESS;
+    if (res)
+        vkResetFences(_context._device, 1, &_fence);
     return res;
 }
 

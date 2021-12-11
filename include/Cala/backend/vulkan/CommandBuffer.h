@@ -1,22 +1,35 @@
-#ifndef CALA_PIPELINELIST_H
-#define CALA_PIPELINELIST_H
+#ifndef CALA_COMMANDBUFFER_H
+#define CALA_COMMANDBUFFER_H
 
 #include <vulkan/vulkan.h>
 
-#include <unordered_map>
-#include <Ende/util/hash.h>
-
 #include <Cala/backend/vulkan/ShaderProgram.h>
+
+#include <unordered_map>
 #include <cstring>
+#include <Ende/util/hash.h>
 
 namespace cala::backend::vulkan {
 
-    class PipelineList {
+    class CommandBuffer {
     public:
 
-        PipelineList(VkDevice device);
+        CommandBuffer(VkDevice device, VkQueue queue, VkCommandBuffer buffer);
 
-        ~PipelineList();
+        ~CommandBuffer();
+
+        // non copyable
+//        CommandBuffer(const CommandBuffer& buf) = delete;
+        CommandBuffer& operator=(const CommandBuffer& buf) = delete;
+
+
+        VkCommandBuffer buffer() const { return _buffer; }
+
+
+        bool begin();
+
+        bool end();
+
 
         void bindProgram(ShaderProgram& program);
 
@@ -24,7 +37,6 @@ namespace cala::backend::vulkan {
 
 
         void bindRenderPass(VkRenderPass renderPass);
-        //TODO: bind rest of pipeline state
 
         struct RasterState {
             bool depthClamp = false;
@@ -38,19 +50,24 @@ namespace cala::backend::vulkan {
         void bindRasterState(RasterState state);
 
 
-        void bindPipeline(VkCommandBuffer cmdBuffer);
+        void bindPipeline();
 
-        void bindDescriptors(VkCommandBuffer cmdBuffer);
+        bool submit(VkSemaphore wait, VkFence fence = VK_NULL_HANDLE);
 
-        void bindBuffer(VkBuffer buffer, u32 set, u32 binding, u32 offset, u32 range);
+        VkSemaphore signal() const { return _signal; }
 
 //    private:
 
-        bool get(VkPipeline* pipeline);
+        // true if requires binding
+        VkPipeline getPipeline();
 
 
+        VkCommandBuffer _buffer;
+        VkSemaphore _signal;
+        VkDevice _device;
+        VkQueue _queue;
 
-        struct Key {
+        struct PipelineKey {
             VkShaderModule shaders[2] = {VK_NULL_HANDLE, VK_NULL_HANDLE};
             VkVertexInputBindingDescription bindings[10]; //TODO: change from arbitrary values
             VkVertexInputAttributeDescription attributes[10];
@@ -60,36 +77,16 @@ namespace cala::backend::vulkan {
             RasterState raster;
             //TODO: add rest of pipeline state to key
 
-            bool operator==(const Key& rhs) const {
-                return memcmp(this, &rhs, sizeof(Key)) == 0;
+            bool operator==(const PipelineKey& rhs) const {
+                return memcmp(this, &rhs, sizeof(PipelineKey)) == 0;
             }
-        };
+        } _pipelineKey;
 
-        struct Buffer {
-            VkBuffer buffer;
-            u32 offset;
-            u32 range;
-        };
-
-        struct DescriptorKey {
-            VkDescriptorSetLayout layout[4] = {};
-            Buffer buffers[4][4] = {{}};
-        };
-
-        VkDevice _device;
-
-        bool _dirty;
-        Key _key;
-        DescriptorKey _setKey;
-        VkPipeline _current;
-        std::unordered_map<Key, VkPipeline, ende::util::MurmurHash<Key>> _pipelines;
-//        std::unordered_map<DescriptorKey, VkDescriptorSet, ende::util::MurmurHash<DescriptorKey>> _descriptors;
-
-
-//        VkDescriptorSetLayout _tmp;
+        VkPipeline _currentPipeline;
+        std::unordered_map<PipelineKey, VkPipeline, ende::util::MurmurHash<PipelineKey>> _pipelines;
 
     };
 
 }
 
-#endif //CALA_PIPELINELIST_H
+#endif //CALA_COMMANDBUFFER_H

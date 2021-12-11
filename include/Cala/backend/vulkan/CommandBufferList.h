@@ -3,24 +3,25 @@
 
 #include <vulkan/vulkan.h>
 #include <Ende/Vector.h>
+#include <Cala/backend/vulkan/CommandBuffer.h>
 
 namespace cala::backend::vulkan {
 
     class CommandBufferList {
     public:
 
-        struct CommandBuffer {
-            VkCommandBuffer buffer;
-            bool free;
-            VkSemaphore signal;
-        };
+//        struct CommandBuffer {
+//            VkCommandBuffer buffer;
+//            bool free;
+//            VkSemaphore signal;
+//        };
 
         CommandBufferList(VkDevice device, u32 queueIndex);
 
         ~CommandBufferList();
 
 
-        VkCommandBuffer get();
+        CommandBuffer* get();
 
         bool flush();
 
