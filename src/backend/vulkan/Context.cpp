@@ -100,11 +100,9 @@ cala::backend::vulkan::Context::Context(ende::Span<const char *> extensions) {
 
 
     _commands = new CommandBufferList(_device, queueIndex(VK_QUEUE_GRAPHICS_BIT));
-    _pipelines = new PipelineList(_device);
 }
 
 cala::backend::vulkan::Context::~Context() {
-    delete _pipelines;
     delete _commands;
     vkDestroyDevice(_device, nullptr);
     vkDestroyInstance(_instance, nullptr);

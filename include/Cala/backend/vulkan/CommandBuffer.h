@@ -52,6 +52,12 @@ namespace cala::backend::vulkan {
 
         void bindPipeline();
 
+
+        void bindBuffer(u32 set, u32 slot, VkBuffer buffer, u32 offset, u32 range);
+
+
+        void bindDescriptors();
+
         bool submit(VkSemaphore wait, VkFence fence = VK_NULL_HANDLE);
 
         VkSemaphore signal() const { return _signal; }
@@ -60,6 +66,8 @@ namespace cala::backend::vulkan {
 
         // true if requires binding
         VkPipeline getPipeline();
+
+        VkDescriptorSet getDescriptorSet(u32 set);
 
 
         VkCommandBuffer _buffer;
@@ -84,6 +92,26 @@ namespace cala::backend::vulkan {
 
         VkPipeline _currentPipeline;
         std::unordered_map<PipelineKey, VkPipeline, ende::util::MurmurHash<PipelineKey>> _pipelines;
+
+        struct DescriptorKey {
+            VkDescriptorSetLayout setLayout;
+
+            struct {
+                VkBuffer buffer = VK_NULL_HANDLE;
+                u32 offset = 0;
+                u32 range = 0;
+            } buffers[4];
+
+            bool operator==(const DescriptorKey& rhs) const {
+                return memcmp(this, &rhs, sizeof(DescriptorKey)) == 0;
+            }
+        } _descriptorKey[4];
+
+        //TODO: cull descriptors every now and again
+        VkDescriptorSet _currentSets[4];
+        std::unordered_map<DescriptorKey, VkDescriptorSet, ende::util::MurmurHash<DescriptorKey>> _descriptorSets;
+
+        VkDescriptorPool _descriptorPool;
 
     };
 

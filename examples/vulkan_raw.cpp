@@ -13,8 +13,6 @@
 
 #include <vulkan/vulkan.h>
 
-#include <Cala/backend/vulkan/Context.h>
-#include <Cala/backend/vulkan/Swapchain.h>
 #include <Cala/backend/vulkan/ShaderProgram.h>
 #include <Cala/backend/vulkan/Driver.h>
 
@@ -84,9 +82,6 @@ int main() {
         std::cout << '\t' << extension.extensionName << '\n';
 
     Driver driver(extensionNames, &wmInfo.info.x11.window, wmInfo.info.x11.display);
-
-//    Context context(extensionNames);
-//    Swapchain swapchain(context, &wmInfo.info.x11.window, wmInfo.info.x11.display);
 
     VkCommandPool commandPool;
     VkCommandPoolCreateInfo poolInfo{};
@@ -336,66 +331,6 @@ int main() {
     }
 
 
-    VkDescriptorPoolSize poolSize{};
-    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSize.descriptorCount = driver._swapchain.size();
-    VkDescriptorPoolCreateInfo descriptorPoolCreateInfo{};
-    descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    descriptorPoolCreateInfo.poolSizeCount = 1;
-    descriptorPoolCreateInfo.pPoolSizes = &poolSize;
-    descriptorPoolCreateInfo.maxSets = driver._swapchain.size();
-    VkDescriptorPool descriptorPool;
-    vkCreateDescriptorPool(driver._context._device, &descriptorPoolCreateInfo, nullptr, &descriptorPool);
-
-
-
-//    VkDescriptorSetLayoutBinding uboBinding{};
-//    uboBinding.binding = 0;
-//    uboBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-//    uboBinding.descriptorCount = 1;
-//    uboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-//    uboBinding.pImmutableSamplers = nullptr;
-//
-//    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-//    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-//    layoutInfo.bindingCount = 1;
-//    layoutInfo.pBindings = &uboBinding;
-//
-//    VkDescriptorSetLayout descriptorSetLayout;
-//    vkCreateDescriptorSetLayout(driver._context._device, &layoutInfo, nullptr, &descriptorSetLayout);
-
-//    driver._context._pipelines->_tmp = descriptorSetLayout;
-
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = descriptorPool;
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &descriptorSetLayout;
-
-    VkDescriptorSet descriptorSet;
-    vkAllocateDescriptorSets(driver._context._device, &allocInfo, &descriptorSet);
-
-
-    VkDescriptorBufferInfo bufferInfo{};
-    bufferInfo.buffer = uniformBuffer;
-    bufferInfo.offset = 0;
-    bufferInfo.range = sizeof(ende::math::Vec3f);
-
-    VkWriteDescriptorSet descriptorWrite{};
-    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite.dstSet = descriptorSet;
-    descriptorWrite.dstBinding = 0;
-    descriptorWrite.dstArrayElement = 0;
-    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptorWrite.descriptorCount = 1;
-    descriptorWrite.pBufferInfo = &bufferInfo;
-    descriptorWrite.pImageInfo = nullptr;
-    descriptorWrite.pTexelBufferView = nullptr;
-
-    vkUpdateDescriptorSets(driver._context._device, 1, &descriptorWrite, 0, nullptr);
-
-
-
     VkQueue graphicsQueue = driver._context.getQueue(VK_QUEUE_GRAPHICS_BIT);
 
 
@@ -404,6 +339,9 @@ int main() {
     f32 dt = 1.f / 60.f;
     f32 fps = 0.f;
     ende::time::Duration frameTime;
+
+    CommandBuffer* buffer = nullptr;
+
 
     bool running = true;
     SDL_Event event;
@@ -428,6 +366,8 @@ int main() {
 
             ImGui::Text("FrameTime: %f", frameTime.microseconds() / 1000.f);
             ImGui::Text("FPS: %f", 1000.f / (frameTime.microseconds() / 1000.f));
+            ImGui::Text("Pipelines: %ld", buffer ? buffer->_pipelines.size() : 0);
+            ImGui::Text("Descriptors: %ld", buffer ? buffer->_descriptorSets.size() : 0);
 
             ImGui::End();
 
@@ -437,7 +377,7 @@ int main() {
 
         auto frame = driver._swapchain.nextImage();
 
-        CommandBuffer* buffer = driver._context._commands->get();
+        buffer = driver._context._commands->get();
         {
             u32 i = frame.index;
 
@@ -454,11 +394,6 @@ int main() {
 
             vkCmdBeginRenderPass(buffer->buffer(), &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-//            driver._context._pipelines->bindProgram(program);
-//            driver._context._pipelines->bindVertexArray({&binding, 1}, {attributes, 2});
-//            driver._context._pipelines->bindRenderPass(renderPass);
-//            driver._context._pipelines->bindRasterState({});
-//            driver._context._pipelines->bindPipeline(commandBuffer);
 
             buffer->bindProgram(program);
             buffer->bindVertexArray({&binding, 1}, {attributes, 2});
@@ -466,9 +401,8 @@ int main() {
             buffer->bindRasterState({});
             buffer->bindPipeline();
 
-//            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-
-            vkCmdBindDescriptorSets(buffer->buffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, buffer->_pipelineKey.layout, 0, 1, &descriptorSet, 0, nullptr);
+            buffer->bindBuffer(0, 0, uniformBuffer, 0, sizeof(ende::math::Vec3f));
+            buffer->bindDescriptors();
 
             VkDeviceSize offsets[] = {0};
             vkCmdBindVertexBuffers(buffer->buffer(), 0, 1, &vertexBuffer, offsets);
@@ -481,9 +415,6 @@ int main() {
 
             vkCmdEndRenderPass(buffer->buffer());
 
-
-//            driver._context._commands->waitSemaphore(frame.imageAquired);
-//            driver._context._commands->flush();
 
             buffer->submit(frame.imageAquired, driver._swapchain.fence());
             driver._context._commands->flush();
@@ -498,8 +429,6 @@ int main() {
 
     driver._swapchain.wait();
 
-    vkDestroyDescriptorPool(driver._context._device, descriptorPool, nullptr);
-
 
     vkDestroyBuffer(driver._context._device, uniformBuffer, nullptr);
     vkFreeMemory(driver._context._device, uniformBufferMemory, nullptr);
@@ -512,8 +441,6 @@ int main() {
     for (auto& framebuffer : swapchainFramebuffers)
         vkDestroyFramebuffer(driver._context._device, framebuffer, nullptr);
 
-//    vkDestroyPipeline(context._device, pipeline, nullptr);
-//    vkDestroyPipelineLayout(context._device, pipelineLayout, nullptr);
     vkDestroyRenderPass(driver._context._device, renderPass, nullptr);
 
     ImGui_ImplVulkan_Shutdown();

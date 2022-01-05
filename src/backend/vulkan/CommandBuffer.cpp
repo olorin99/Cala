@@ -5,11 +5,23 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(VkDevice device, VkQueue que
     _signal(VK_NULL_HANDLE),
     _device(device),
     _queue(queue),
-    _currentPipeline(VK_NULL_HANDLE)
+    _currentPipeline(VK_NULL_HANDLE),
+    _currentSets{VK_NULL_HANDLE}
 {
     VkSemaphoreCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     vkCreateSemaphore(_device, &createInfo, nullptr, &_signal);
+
+    VkDescriptorPoolSize poolSize{};
+    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSize.descriptorCount = 1000;
+
+    VkDescriptorPoolCreateInfo descriptorPoolCreateInfo{};
+    descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descriptorPoolCreateInfo.poolSizeCount = 1;
+    descriptorPoolCreateInfo.pPoolSizes = &poolSize;
+    descriptorPoolCreateInfo.maxSets = 1000;
+    vkCreateDescriptorPool(_device, &descriptorPoolCreateInfo, nullptr, &_descriptorPool);
 }
 
 cala::backend::vulkan::CommandBuffer::~CommandBuffer() {
@@ -18,6 +30,8 @@ cala::backend::vulkan::CommandBuffer::~CommandBuffer() {
     for (auto& pipeline : _pipelines) {
         vkDestroyPipeline(_device, pipeline.second, nullptr);
     }
+
+    vkDestroyDescriptorPool(_device, _descriptorPool, nullptr);
 }
 
 bool cala::backend::vulkan::CommandBuffer::begin() {
@@ -38,10 +52,11 @@ bool cala::backend::vulkan::CommandBuffer::end() {
 void cala::backend::vulkan::CommandBuffer::bindProgram(ShaderProgram &program) {
     if (_pipelineKey.layout != program._layout)
         _pipelineKey.layout = program._layout;
-//    for (u32 i = 0; i < 4; i++) {
-//        if (_setKey.layout[i] != program._setLayout[i])
-//            _setKey.layout[i] = program._setLayout[i];
-//    }
+
+    for (u32 i = 0; i < 4; i++) {
+        if (_descriptorKey[i].setLayout != program._setLayout[i])
+            _descriptorKey[i].setLayout = program._setLayout[i];
+    }
     for (u32 i = 0; i < program._stages.size(); i++) {
         if (_pipelineKey.shaders[i] != program._stages[i].module) {
             _pipelineKey.shaders[i] = program._stages[i].module;
@@ -80,6 +95,34 @@ void cala::backend::vulkan::CommandBuffer::bindPipeline() {
         _currentPipeline = pipeline;
     }
 }
+
+
+void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 slot, VkBuffer buffer, u32 offset, u32 range) {
+    _descriptorKey[set].buffers[slot] = {buffer, offset, range};
+}
+
+
+void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
+
+    u32 setCount = 0;
+    // find descriptors with key
+    for (u32 i = 0; i < 4; i++) {
+        auto descriptor = getDescriptorSet(i);
+        if (descriptor == VK_NULL_HANDLE) {
+            setCount = i;
+            break;
+        }
+        _currentSets[i] = descriptor;
+    }
+
+    // if not available create new
+
+    // bind descriptor
+    vkCmdBindDescriptorSets(_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineKey.layout, 0, setCount, _currentSets, 0, nullptr);
+
+}
+
+
 
 
 
@@ -247,4 +290,52 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
     _pipelines.emplace(std::make_pair(_pipelineKey, pipeline));
 
     return pipeline;
+}
+
+VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) {
+    auto key = _descriptorKey[set];
+
+    if (key.setLayout == VK_NULL_HANDLE)
+        return VK_NULL_HANDLE;
+
+    auto it = _descriptorSets.find(key);
+    if (it != _descriptorSets.end()) {
+        return it->second;
+    }
+
+
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = _descriptorPool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &key.setLayout;
+
+    VkDescriptorSet descriptorSet;
+    vkAllocateDescriptorSets(_device, &allocInfo, &descriptorSet);
+
+    for (u32 i = 0; i < 4; i++) {
+        if (key.buffers[i].buffer != VK_NULL_HANDLE) {
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = key.buffers[i].buffer;
+            bufferInfo.offset = key.buffers[i].offset;
+            bufferInfo.range = key.buffers[i].range;
+
+            VkWriteDescriptorSet descriptorWrite{};
+            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite.dstSet = descriptorSet;
+            descriptorWrite.dstBinding = i;
+            descriptorWrite.dstArrayElement = 0;
+            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite.descriptorCount = 1;
+            descriptorWrite.pBufferInfo = &bufferInfo;
+            descriptorWrite.pImageInfo = nullptr;
+            descriptorWrite.pTexelBufferView = nullptr;
+
+            //TODO: batch writes
+            vkUpdateDescriptorSets(_device, 1, &descriptorWrite, 0, nullptr);
+        }
+    }
+
+    _descriptorSets.emplace(std::make_pair(key, descriptorSet));
+    return descriptorSet;
 }

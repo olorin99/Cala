@@ -10,6 +10,9 @@ cala::backend::vulkan::ShaderProgram::~ShaderProgram() {
     for (auto& stage : _stages)
         vkDestroyShaderModule(_device, stage.module, nullptr);
 
+    for (auto& setLayout : _setLayout)
+        vkDestroyDescriptorSetLayout(_device, setLayout, nullptr);
+
     vkDestroyPipelineLayout(_device, _layout, nullptr);
 }
 
