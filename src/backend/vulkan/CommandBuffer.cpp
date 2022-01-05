@@ -108,11 +108,12 @@ void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
     // find descriptors with key
     for (u32 i = 0; i < 4; i++) {
         auto descriptor = getDescriptorSet(i);
-        if (descriptor == VK_NULL_HANDLE) {
-            setCount = i;
-            break;
-        }
+//        if (descriptor == VK_NULL_HANDLE) {
+//            setCount = i + 1;
+//            break;
+//        }
         _currentSets[i] = descriptor;
+        setCount++;
     }
 
     // if not available create new

@@ -10,3 +10,5 @@ set(IMGUI_PATH "imgui")
 file(GLOB IMGUI_SOURCES ${IMGUI_PATH}/*.cpp)
 add_library(imgui STATIC ${IMGUI_SOURCES})
 target_include_directories(imgui PUBLIC ${IMGUI_PATH})
+
+add_subdirectory(SPIRV-Cross-master)

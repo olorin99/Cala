@@ -22,6 +22,8 @@
 #include "../third_party/imgui/imgui_impl_vulkan.h"
 #include "../third_party/imgui/imgui_impl_sdl.h"
 
+#include "../third_party/SPIRV-Cross-master/spirv_cross.hpp"
+
 using namespace cala::backend::vulkan;
 
 struct Vertex {
@@ -215,49 +217,91 @@ int main() {
     if (!shaderFile.open("../../res/shaders/triangle.vert.spv"_path, ende::fs::in | ende::fs::binary))
         return -1;
 
-    ende::Vector<u32> vertexShaderData(shaderFile.size());
+    ende::Vector<u32> vertexShaderData(shaderFile.size() / sizeof(u32));
     shaderFile.read({reinterpret_cast<char*>(vertexShaderData.data()), static_cast<u32>(vertexShaderData.size() * sizeof(u32))});
 
     if (!shaderFile.open("../../res/shaders/triangle.frag.spv"_path, ende::fs::in | ende::fs::binary))
         return -2;
-    ende::Vector<u32> fragmentShaderData(shaderFile.size());
+    ende::Vector<u32> fragmentShaderData(shaderFile.size() / sizeof(u32));
     shaderFile.read({reinterpret_cast<char*>(fragmentShaderData.data()), static_cast<u32>(fragmentShaderData.size() * sizeof(u32))});
 
 
-    ShaderProgram program(driver._context._device);
-    if (!program.addStage(vertexShaderData, VK_SHADER_STAGE_VERTEX_BIT))
-        return -10;
-    if (!program.addStage(fragmentShaderData, VK_SHADER_STAGE_FRAGMENT_BIT))
-        return -11;
+//    u32 bindingCount = 0;
+//    VkDescriptorSetLayoutBinding bindings[8];
+//    {
+//        spirv_cross::Compiler vertexComp(vertexShaderData.data(), vertexShaderData.size());
+//
+//        spirv_cross::ShaderResources resources = vertexComp.get_shader_resources();
+//        for (auto& resource : resources.uniform_buffers) {
+//            u32 set = vertexComp.get_decoration(resource.id, spv::DecorationDescriptorSet);
+//            u32 binding = vertexComp.get_decoration(resource.id, spv::DecorationBinding);
+//
+//            bindings[bindingCount].binding = binding;
+//            bindings[bindingCount].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+//            bindings[bindingCount].descriptorCount = 1;
+//            bindings[bindingCount].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+//            bindings[bindingCount].pImmutableSamplers = nullptr;
+//            bindingCount++;
+//        }
+//
+//    }
+//    {
+//        spirv_cross::Compiler fragmentComp(fragmentShaderData.data(), fragmentShaderData.size());
+//
+//        spirv_cross::ShaderResources resources = fragmentComp.get_shader_resources();
+//        for (auto& resource : resources.uniform_buffers) {
+//            u32 set = fragmentComp.get_decoration(resource.id, spv::DecorationDescriptorSet);
+//            u32 binding = fragmentComp.get_decoration(resource.id, spv::DecorationBinding);
+//
+//            bindings[bindingCount].binding = binding;
+//            bindings[bindingCount].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+//            bindings[bindingCount].descriptorCount = 1;
+//            bindings[bindingCount].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+//            bindings[bindingCount].pImmutableSamplers = nullptr;
+//            bindingCount++;
+//        }
+//    }
+//
+//
+//    ShaderProgram program(driver._context._device);
+//    if (!program.addStage(vertexShaderData, VK_SHADER_STAGE_VERTEX_BIT))
+//        return -10;
+//    if (!program.addStage(fragmentShaderData, VK_SHADER_STAGE_FRAGMENT_BIT))
+//        return -11;
+//
+////    VkDescriptorSetLayoutBinding uboBinding{};
+////    uboBinding.binding = 0;
+////    uboBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+////    uboBinding.descriptorCount = 1;
+////    uboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+////    uboBinding.pImmutableSamplers = nullptr;
+//
+//    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+//    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+//    layoutInfo.bindingCount = bindingCount;
+//    layoutInfo.pBindings = bindings;
+//
+//    VkDescriptorSetLayout descriptorSetLayout;
+//    vkCreateDescriptorSetLayout(driver._context._device, &layoutInfo, nullptr, &descriptorSetLayout);
+//
+//    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+//    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+//    pipelineLayoutInfo.setLayoutCount = 1;
+//    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+//    pipelineLayoutInfo.pushConstantRangeCount = 0;
+//    pipelineLayoutInfo.pPushConstantRanges = nullptr;
+//
+//    VkPipelineLayout pipelineLayout;
+//    VkResult result = vkCreatePipelineLayout(driver._context._device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
+//
+//    program._setLayout[0] = descriptorSetLayout;
+//    program._layout = pipelineLayout;
 
-    VkDescriptorSetLayoutBinding uboBinding{};
-    uboBinding.binding = 0;
-    uboBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uboBinding.descriptorCount = 1;
-    uboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    uboBinding.pImmutableSamplers = nullptr;
 
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 1;
-    layoutInfo.pBindings = &uboBinding;
-
-    VkDescriptorSetLayout descriptorSetLayout;
-    vkCreateDescriptorSetLayout(driver._context._device, &layoutInfo, nullptr, &descriptorSetLayout);
-
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-    pipelineLayoutInfo.pPushConstantRanges = nullptr;
-
-    VkPipelineLayout pipelineLayout;
-    VkResult result = vkCreatePipelineLayout(driver._context._device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
-
-    program._setLayout[0] = descriptorSetLayout;
-    program._layout = pipelineLayout;
-
+    ShaderProgram program = ShaderProgram::create()
+            .addStage(vertexShaderData, VK_SHADER_STAGE_VERTEX_BIT)
+            .addStage(fragmentShaderData, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .compile(driver._context._device);
 
     //vertex array
     VkVertexInputBindingDescription binding{};

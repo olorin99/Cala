@@ -10,6 +10,22 @@ namespace cala::backend::vulkan {
     class ShaderProgram {
     public:
 
+        class Builder {
+        public:
+
+            Builder& addStage(ende::Span<u32> code, u32 flags);
+
+            ShaderProgram compile(VkDevice device);
+
+        private:
+
+            ende::Vector<std::pair<ende::Span<u32>, u32>> _stages;
+
+        };
+
+        static Builder create();
+
+
         ShaderProgram(VkDevice device);
 
         ~ShaderProgram();
@@ -19,6 +35,7 @@ namespace cala::backend::vulkan {
         VkPipelineLayout layout();
 
 //    private:
+        friend Builder;
 
         VkDevice _device;
         ende::Vector<VkPipelineShaderStageCreateInfo> _stages;
