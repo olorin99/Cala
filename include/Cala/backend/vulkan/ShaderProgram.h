@@ -30,8 +30,6 @@ namespace cala::backend::vulkan {
 
         ~ShaderProgram();
 
-        bool addStage(ende::Span<u32> code, u32 flags);
-
         VkPipelineLayout layout();
 
 //    private:

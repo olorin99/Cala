@@ -74,9 +74,9 @@ void cala::backend::vulkan::CommandBuffer::bindVertexArray(ende::Span<VkVertexIn
     memcpy(_pipelineKey.attributes, attributes.data(), attributes.size() * sizeof(VkVertexInputAttributeDescription));
 }
 
-void cala::backend::vulkan::CommandBuffer::bindRenderPass(VkRenderPass renderPass) {
-    if (_pipelineKey.renderPass != renderPass) {
-        _pipelineKey.renderPass = renderPass;
+void cala::backend::vulkan::CommandBuffer::bindRenderPass(const RenderPass& renderPass) {
+    if (_pipelineKey.renderPass != renderPass.renderPass()) {
+        _pipelineKey.renderPass = renderPass.renderPass();
 //        _dirty = true;
     }
 }

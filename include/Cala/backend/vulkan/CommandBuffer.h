@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.h>
 
 #include <Cala/backend/vulkan/ShaderProgram.h>
+#include <Cala/backend/vulkan/RenderPass.h>
 
 #include <unordered_map>
 #include <cstring>
@@ -36,7 +37,7 @@ namespace cala::backend::vulkan {
         void bindVertexArray(ende::Span<VkVertexInputBindingDescription> bindings, ende::Span<VkVertexInputAttributeDescription> attributes);
 
 
-        void bindRenderPass(VkRenderPass renderPass);
+        void bindRenderPass(const RenderPass& renderPass);
 
         struct RasterState {
             bool depthClamp = false;

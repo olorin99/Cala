@@ -99,28 +99,6 @@ cala::backend::vulkan::ShaderProgram::~ShaderProgram() {
     vkDestroyPipelineLayout(_device, _layout, nullptr);
 }
 
-bool cala::backend::vulkan::ShaderProgram::addStage(ende::Span<u32> code, u32 flags) {
-
-    VkShaderModule shader;
-    VkShaderModuleCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.codeSize = code.size() * sizeof(u32);
-    createInfo.pCode = code.data();
-
-    if (vkCreateShaderModule(_device, &createInfo, nullptr, &shader) != VK_SUCCESS)
-        return false;
-
-    VkPipelineShaderStageCreateInfo stageCreateInfo{};
-    stageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stageCreateInfo.stage = static_cast<VkShaderStageFlagBits>(flags);
-    stageCreateInfo.module = shader;
-    stageCreateInfo.pName = "main";
-
-    _stages.push(stageCreateInfo);
-
-    return true;
-}
-
 VkPipelineLayout cala::backend::vulkan::ShaderProgram::layout() {
     if (_layout != VK_NULL_HANDLE)
         return _layout;

@@ -17,6 +17,7 @@
 #include <Cala/backend/vulkan/Driver.h>
 
 #include <Cala/backend/vulkan/CommandBuffer.h>
+#include <Cala/backend/vulkan/RenderPass.h>
 
 #include "../third_party/imgui/imgui.h"
 #include "../third_party/imgui/imgui_impl_vulkan.h"
@@ -225,79 +226,6 @@ int main() {
     ende::Vector<u32> fragmentShaderData(shaderFile.size() / sizeof(u32));
     shaderFile.read({reinterpret_cast<char*>(fragmentShaderData.data()), static_cast<u32>(fragmentShaderData.size() * sizeof(u32))});
 
-
-//    u32 bindingCount = 0;
-//    VkDescriptorSetLayoutBinding bindings[8];
-//    {
-//        spirv_cross::Compiler vertexComp(vertexShaderData.data(), vertexShaderData.size());
-//
-//        spirv_cross::ShaderResources resources = vertexComp.get_shader_resources();
-//        for (auto& resource : resources.uniform_buffers) {
-//            u32 set = vertexComp.get_decoration(resource.id, spv::DecorationDescriptorSet);
-//            u32 binding = vertexComp.get_decoration(resource.id, spv::DecorationBinding);
-//
-//            bindings[bindingCount].binding = binding;
-//            bindings[bindingCount].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-//            bindings[bindingCount].descriptorCount = 1;
-//            bindings[bindingCount].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-//            bindings[bindingCount].pImmutableSamplers = nullptr;
-//            bindingCount++;
-//        }
-//
-//    }
-//    {
-//        spirv_cross::Compiler fragmentComp(fragmentShaderData.data(), fragmentShaderData.size());
-//
-//        spirv_cross::ShaderResources resources = fragmentComp.get_shader_resources();
-//        for (auto& resource : resources.uniform_buffers) {
-//            u32 set = fragmentComp.get_decoration(resource.id, spv::DecorationDescriptorSet);
-//            u32 binding = fragmentComp.get_decoration(resource.id, spv::DecorationBinding);
-//
-//            bindings[bindingCount].binding = binding;
-//            bindings[bindingCount].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-//            bindings[bindingCount].descriptorCount = 1;
-//            bindings[bindingCount].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-//            bindings[bindingCount].pImmutableSamplers = nullptr;
-//            bindingCount++;
-//        }
-//    }
-//
-//
-//    ShaderProgram program(driver._context._device);
-//    if (!program.addStage(vertexShaderData, VK_SHADER_STAGE_VERTEX_BIT))
-//        return -10;
-//    if (!program.addStage(fragmentShaderData, VK_SHADER_STAGE_FRAGMENT_BIT))
-//        return -11;
-//
-////    VkDescriptorSetLayoutBinding uboBinding{};
-////    uboBinding.binding = 0;
-////    uboBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-////    uboBinding.descriptorCount = 1;
-////    uboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-////    uboBinding.pImmutableSamplers = nullptr;
-//
-//    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-//    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-//    layoutInfo.bindingCount = bindingCount;
-//    layoutInfo.pBindings = bindings;
-//
-//    VkDescriptorSetLayout descriptorSetLayout;
-//    vkCreateDescriptorSetLayout(driver._context._device, &layoutInfo, nullptr, &descriptorSetLayout);
-//
-//    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-//    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-//    pipelineLayoutInfo.setLayoutCount = 1;
-//    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-//    pipelineLayoutInfo.pushConstantRangeCount = 0;
-//    pipelineLayoutInfo.pPushConstantRanges = nullptr;
-//
-//    VkPipelineLayout pipelineLayout;
-//    VkResult result = vkCreatePipelineLayout(driver._context._device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
-//
-//    program._setLayout[0] = descriptorSetLayout;
-//    program._layout = pipelineLayout;
-
-
     ShaderProgram program = ShaderProgram::create()
             .addStage(vertexShaderData, VK_SHADER_STAGE_VERTEX_BIT)
             .addStage(fragmentShaderData, VK_SHADER_STAGE_FRAGMENT_BIT)
@@ -314,64 +242,26 @@ int main() {
             { .location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(f32) * 2 }
     };
 
-    //renderpass
-    VkAttachmentDescription colourAttachment{};
-    colourAttachment.format = driver._swapchain.format();
-    colourAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    colourAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colourAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colourAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colourAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colourAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    colourAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    VkAttachmentReference colourAttachmentRef{};
-    colourAttachmentRef.attachment = 0;
-    colourAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colourAttachmentRef;
-
-    VkSubpassDependency dependency{};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-    VkRenderPass renderPass;
-    VkRenderPassCreateInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colourAttachment;
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies = &dependency;
-    if (vkCreateRenderPass(driver._context._device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
-        return -15;
+    std::array<RenderPass::Attachment, 1> attachments = {
+            RenderPass::Attachment{
+                    driver._swapchain.format(),
+                    VK_SAMPLE_COUNT_1_BIT,
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_STORE,
+                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            }
+    };
+    RenderPass renderPass(driver._context._device, attachments);
 
 
     ende::Vector<VkFramebuffer> swapchainFramebuffers;
-    swapchainFramebuffers.resize(driver._swapchain.size());
 
-    for (u32 i = 0; i < swapchainFramebuffers.size(); i++) {
-        VkImageView attachments[] = { driver._swapchain.view(i) };
-
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = renderPass;
-        framebufferInfo.attachmentCount = 1;
-        framebufferInfo.pAttachments = attachments;
-        framebufferInfo.width = driver._swapchain.extent().width;
-        framebufferInfo.height = driver._swapchain.extent().height;
-        framebufferInfo.layers = 1;
-
-        if (vkCreateFramebuffer(driver._context._device, &framebufferInfo, nullptr, &swapchainFramebuffers[i]) != VK_SUCCESS)
-            return -34;
+    for (u32 i = 0; i < driver._swapchain.size(); i++) {
+        swapchainFramebuffers.push(renderPass.framebuffer(driver._swapchain.view(i), driver._swapchain.extent().width, driver._swapchain.extent().height));
     }
 
 
@@ -401,6 +291,8 @@ int main() {
         driver._swapchain.wait();
 
         if (renderImGui) {
+
+
             ImGui_ImplVulkan_NewFrame();
             ImGui_ImplSDL2_NewFrame(window);
             ImGui::NewFrame();
@@ -427,7 +319,7 @@ int main() {
 
             VkRenderPassBeginInfo renderPassBeginInfo{};
             renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            renderPassBeginInfo.renderPass = renderPass;
+            renderPassBeginInfo.renderPass = renderPass.renderPass();
             renderPassBeginInfo.framebuffer = swapchainFramebuffers[i];
             renderPassBeginInfo.renderArea.offset = {0, 0};
             renderPassBeginInfo.renderArea.extent = driver._swapchain.extent();
@@ -484,8 +376,6 @@ int main() {
 
     for (auto& framebuffer : swapchainFramebuffers)
         vkDestroyFramebuffer(driver._context._device, framebuffer, nullptr);
-
-    vkDestroyRenderPass(driver._context._device, renderPass, nullptr);
 
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL2_Shutdown();
