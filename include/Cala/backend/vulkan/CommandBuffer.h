@@ -12,6 +12,8 @@
 
 namespace cala::backend::vulkan {
 
+    constexpr u32 SET_COUNT = 4;
+
     class CommandBuffer {
     public:
 
@@ -31,6 +33,9 @@ namespace cala::backend::vulkan {
 
         bool end();
 
+        void begin(RenderPass& renderPass, VkFramebuffer framebuffer, std::pair<u32, u32> extent);
+
+        void end(RenderPass& renderPass);
 
         void bindProgram(ShaderProgram& program);
 
@@ -106,10 +111,10 @@ namespace cala::backend::vulkan {
             bool operator==(const DescriptorKey& rhs) const {
                 return memcmp(this, &rhs, sizeof(DescriptorKey)) == 0;
             }
-        } _descriptorKey[4];
+        } _descriptorKey[SET_COUNT];
 
         //TODO: cull descriptors every now and again
-        VkDescriptorSet _currentSets[4];
+        VkDescriptorSet _currentSets[SET_COUNT];
         std::unordered_map<DescriptorKey, VkDescriptorSet, ende::util::MurmurHash<DescriptorKey>> _descriptorSets;
 
         VkDescriptorPool _descriptorPool;

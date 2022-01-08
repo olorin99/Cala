@@ -39,13 +39,32 @@ bool cala::backend::vulkan::CommandBuffer::begin() {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vkBeginCommandBuffer(_buffer, &beginInfo);
-    return true;
+    return vkBeginCommandBuffer(_buffer, &beginInfo) == VK_SUCCESS;
 }
 
 bool cala::backend::vulkan::CommandBuffer::end() {
-    vkEndCommandBuffer(_buffer);
-    return true;
+    return vkEndCommandBuffer(_buffer) == VK_SUCCESS;
+}
+
+void cala::backend::vulkan::CommandBuffer::begin(RenderPass &renderPass, VkFramebuffer framebuffer, std::pair<u32, u32> extent) {
+
+    VkRenderPassBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    beginInfo.renderPass = renderPass.renderPass();
+    beginInfo.framebuffer = framebuffer;
+    beginInfo.renderArea.offset = {0, 0};
+    beginInfo.renderArea.extent = {extent.first, extent.second};
+
+    VkClearValue clear = {{{0.f, 0.f, 0.f, 1.f}}};
+    beginInfo.clearValueCount = 1;
+    beginInfo.pClearValues = &clear;
+
+    vkCmdBeginRenderPass(_buffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    bindRenderPass(renderPass);
+}
+
+void cala::backend::vulkan::CommandBuffer::end(RenderPass &renderPass) {
+    vkCmdEndRenderPass(_buffer);
 }
 
 
@@ -98,6 +117,7 @@ void cala::backend::vulkan::CommandBuffer::bindPipeline() {
 
 
 void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 slot, VkBuffer buffer, u32 offset, u32 range) {
+    assert(set < SET_COUNT && "set is greater than valid number of descriptor sets");
     _descriptorKey[set].buffers[slot] = {buffer, offset, range};
 }
 
@@ -106,7 +126,7 @@ void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
 
     u32 setCount = 0;
     // find descriptors with key
-    for (u32 i = 0; i < 4; i++) {
+    for (u32 i = 0; i < SET_COUNT; i++) {
         auto descriptor = getDescriptorSet(i);
 //        if (descriptor == VK_NULL_HANDLE) {
 //            setCount = i + 1;
@@ -260,18 +280,6 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
     colorBlending.blendConstants[2] = 0.f;
     colorBlending.blendConstants[3] = 0.f;
 
-//    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-//    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-//    pipelineLayoutInfo.setLayoutCount = 1;
-//    pipelineLayoutInfo.pSetLayouts = &_tmp;
-//    pipelineLayoutInfo.pushConstantRangeCount = 0;
-//    pipelineLayoutInfo.pPushConstantRanges = nullptr;
-//
-//    VkPipelineLayout pipelineLayout;
-//    VkResult result = vkCreatePipelineLayout(_device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
-//    _pipelineKey.layout = pipelineLayout;
-
-
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
     pipelineInfo.pViewportState = &viewportState;
@@ -294,6 +302,7 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
 }
 
 VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) {
+    assert(set < SET_COUNT && "set is greater than allowed descriptor count");
     auto key = _descriptorKey[set];
 
     if (key.setLayout == VK_NULL_HANDLE)

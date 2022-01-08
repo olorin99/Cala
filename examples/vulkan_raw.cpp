@@ -317,23 +317,10 @@ int main() {
         {
             u32 i = frame.index;
 
-            VkRenderPassBeginInfo renderPassBeginInfo{};
-            renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            renderPassBeginInfo.renderPass = renderPass.renderPass();
-            renderPassBeginInfo.framebuffer = swapchainFramebuffers[i];
-            renderPassBeginInfo.renderArea.offset = {0, 0};
-            renderPassBeginInfo.renderArea.extent = driver._swapchain.extent();
-
-            VkClearValue clearColour = {{{0.f, 0.f, 0.f, 1.f}}};
-            renderPassBeginInfo.clearValueCount = 1;
-            renderPassBeginInfo.pClearValues = &clearColour;
-
-            vkCmdBeginRenderPass(buffer->buffer(), &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
+            buffer->begin(renderPass, swapchainFramebuffers[i], {driver._swapchain.extent().width, driver._swapchain.extent().height});
 
             buffer->bindProgram(program);
             buffer->bindVertexArray({&binding, 1}, {attributes, 2});
-            buffer->bindRenderPass(renderPass);
             buffer->bindRasterState({});
             buffer->bindPipeline();
 
@@ -349,8 +336,7 @@ int main() {
 
             ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer->buffer());
 
-            vkCmdEndRenderPass(buffer->buffer());
-
+            buffer->end(renderPass);
 
             buffer->submit(frame.imageAquired, driver._swapchain.fence());
             driver._context._commands->flush();
