@@ -64,6 +64,16 @@ namespace cala::backend::vulkan {
 
         void bindDescriptors();
 
+
+        void bindVertexBuffer(u32 first, VkBuffer buffer, u32 offset);
+        void bindVertexBuffers(u32 first, ende::Span<VkBuffer> buffers, ende::Span<VkDeviceSize> offsets);
+
+
+
+        void draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance);
+
+
+
         bool submit(VkSemaphore wait, VkFence fence = VK_NULL_HANDLE);
 
         VkSemaphore signal() const { return _signal; }

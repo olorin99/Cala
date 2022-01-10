@@ -19,6 +19,7 @@ public:
 
     void newFrame();
 
+    void render(cala::backend::vulkan::CommandBuffer& buffer);
 
 private:
 

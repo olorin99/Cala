@@ -186,14 +186,14 @@ int main() {
             buffer->bindBuffer(0, 0, uniformBuffer, 0, sizeof(ende::math::Vec3f));
             buffer->bindDescriptors();
 
-            VkDeviceSize offsets[] = {0};
-            vkCmdBindVertexBuffers(buffer->buffer(), 0, 1, &vertexBuffer, offsets);
-
-            vkCmdDraw(buffer->buffer(), 3, 1, 0, 0);
+//            VkDeviceSize offsets[] = {0};
+//            buffer->bindVertexBuffers(0, {&vertexBuffer, 1}, offsets);
+            buffer->bindVertexBuffer(0, vertexBuffer, 0);
+            buffer->draw(3, 1, 0, 0);
 
 //            driver.draw({}, {vertexBuffer, 3});
 
-            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer->buffer());
+            imGuiContext.render(*buffer);
 
             buffer->end(renderPass);
 

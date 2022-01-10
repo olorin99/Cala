@@ -130,3 +130,7 @@ void ImGuiContext::newFrame() {
     ImGui_ImplSDL2_NewFrame(_window);
     ImGui::NewFrame();
 }
+
+void ImGuiContext::render(cala::backend::vulkan::CommandBuffer &buffer) {
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer.buffer());
+}

@@ -144,6 +144,20 @@ void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
 }
 
 
+void cala::backend::vulkan::CommandBuffer::bindVertexBuffer(u32 first, VkBuffer buffer, u32 offset) {
+    VkDeviceSize offsets = offset;
+    vkCmdBindVertexBuffers(_buffer, first, 1, &buffer, &offsets);
+}
+
+void cala::backend::vulkan::CommandBuffer::bindVertexBuffers(u32 first, ende::Span<VkBuffer> buffers, ende::Span<VkDeviceSize> offsets) {
+    assert(buffers.size() == offsets.size());
+    vkCmdBindVertexBuffers(_buffer, first, buffers.size(), buffers.data(), offsets.data());
+}
+
+
+void cala::backend::vulkan::CommandBuffer::draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance) {
+    vkCmdDraw(_buffer, vertexCount, instanceCount, firstVertex, firstInstance);
+}
 
 
 
