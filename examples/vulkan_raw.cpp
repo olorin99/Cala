@@ -19,11 +19,7 @@
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include <Cala/backend/vulkan/RenderPass.h>
 
-#include "../third_party/imgui/imgui.h"
-#include "../third_party/imgui/imgui_impl_vulkan.h"
-#include "../third_party/imgui/imgui_impl_sdl.h"
-
-#include "../third_party/SPIRV-Cross-master/spirv_cross.hpp"
+#include <Cala/ImGuiContext.h>
 
 using namespace cala::backend::vulkan;
 
@@ -31,37 +27,6 @@ struct Vertex {
     ende::math::Vec<2, f32> position;
     ende::math::Vec3f colour;
 };
-
-VkCommandBuffer beginSingleTimeCommands(VkDevice device, VkCommandPool pool) {
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = pool;
-    allocInfo.commandBufferCount = 1;
-
-    VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
-
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
-    return commandBuffer;
-}
-
-void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkDevice device, VkQueue queue, VkCommandPool pool) {
-    vkEndCommandBuffer(commandBuffer);
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
-
-    vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(queue);
-
-    vkFreeCommandBuffers(device, pool, 1, &commandBuffer);
-}
 
 int main() {
 
@@ -86,110 +51,7 @@ int main() {
 
     Driver driver(extensionNames, &wmInfo.info.x11.window, wmInfo.info.x11.display);
 
-    VkCommandPool commandPool;
-    VkCommandPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.queueFamilyIndex = driver._context.queueIndex(VK_QUEUE_GRAPHICS_BIT);
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    if (vkCreateCommandPool(driver._context._device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
-        return -65;
-
-
-    VkRenderPass ImGuiRenderPass;
-    {
-        VkAttachmentDescription colourAttachment{};
-        colourAttachment.format = driver._swapchain.format();
-        colourAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        colourAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        colourAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        colourAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colourAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colourAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        colourAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-        VkAttachmentReference colourAttachmentRef{};
-        colourAttachmentRef.attachment = 0;
-        colourAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &colourAttachmentRef;
-
-        VkSubpassDependency dependency{};
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        VkRenderPassCreateInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.attachmentCount = 1;
-        renderPassInfo.pAttachments = &colourAttachment;
-        renderPassInfo.subpassCount = 1;
-        renderPassInfo.pSubpasses = &subpass;
-        renderPassInfo.dependencyCount = 1;
-        renderPassInfo.pDependencies = &dependency;
-        if (vkCreateRenderPass(driver._context._device, &renderPassInfo, nullptr, &ImGuiRenderPass) != VK_SUCCESS)
-            return -15;
-    }
-
-    VkDescriptorPool ImGuiDescriptorPool;
-    {
-        VkDescriptorPoolSize poolSizes[] = {
-                { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-                { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-                { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-                { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-                { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-                { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-                { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-                { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-                { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-                { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-                { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 },
-        };
-
-        VkDescriptorPoolCreateInfo poolInfo{};
-        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = 11;
-        poolInfo.pPoolSizes = poolSizes;
-        poolInfo.maxSets = driver._swapchain.size();
-
-        if (vkCreateDescriptorPool(driver._context._device, &poolInfo, nullptr, &ImGuiDescriptorPool) != VK_SUCCESS)
-            return -17;
-    }
-
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-        ImGui::GetStyle().WindowRounding = 0.f;
-        ImGui::GetStyle().Colors[ImGuiCol_WindowBg].w = 1.f;
-    }
-
-    ImGui_ImplSDL2_InitForVulkan(window);
-    ImGui_ImplVulkan_InitInfo initInfo{};
-    initInfo.Instance = driver._context._instance;
-    initInfo.PhysicalDevice = driver._context._physicalDevice;
-    initInfo.Device = driver._context._device;
-    initInfo.QueueFamily = driver._context.queueIndex(VK_QUEUE_GRAPHICS_BIT);
-    initInfo.Queue = driver._context.getQueue(VK_QUEUE_GRAPHICS_BIT);
-    initInfo.PipelineCache = VK_NULL_HANDLE;
-    initInfo.DescriptorPool = ImGuiDescriptorPool;
-    initInfo.Allocator = nullptr;
-    initInfo.MinImageCount = driver._swapchain.size();
-    initInfo.ImageCount = driver._swapchain.size();
-    initInfo.CheckVkResultFn = nullptr;
-    ImGui_ImplVulkan_Init(&initInfo, ImGuiRenderPass);
-    VkCommandBuffer a = beginSingleTimeCommands(driver._context._device, commandPool);
-    ImGui_ImplVulkan_CreateFontsTexture(a);
-    endSingleTimeCommands(a, driver._context._device, driver._context.getQueue(VK_QUEUE_GRAPHICS_BIT), commandPool);
-
-
+    ImGuiContext imGuiContext(driver, window);
 
     // buffer
 
@@ -292,10 +154,7 @@ int main() {
 
         if (renderImGui) {
 
-
-            ImGui_ImplVulkan_NewFrame();
-            ImGui_ImplSDL2_NewFrame(window);
-            ImGui::NewFrame();
+            imGuiContext.newFrame();
             ImGui::ShowDemoWindow();
 
             ImGui::Begin("Stats");
@@ -358,16 +217,8 @@ int main() {
     vkDestroyBuffer(driver._context._device, vertexBuffer, nullptr);
     vkFreeMemory(driver._context._device, vertexBufferMemory, nullptr);
 
-    vkDestroyCommandPool(driver._context._device, commandPool, nullptr);
-
     for (auto& framebuffer : swapchainFramebuffers)
         vkDestroyFramebuffer(driver._context._device, framebuffer, nullptr);
-
-    ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
-    ImGui::DestroyContext();
-    vkDestroyDescriptorPool(driver._context._device, ImGuiDescriptorPool, nullptr);
-    vkDestroyRenderPass(driver._context._device, ImGuiRenderPass, nullptr);
 
     SDL_DestroyWindow(window);
 
