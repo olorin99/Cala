@@ -55,9 +55,9 @@ void cala::backend::vulkan::CommandBuffer::begin(RenderPass &renderPass, VkFrame
     beginInfo.renderArea.offset = {0, 0};
     beginInfo.renderArea.extent = {extent.first, extent.second};
 
-    VkClearValue clear = {{{0.f, 0.f, 0.f, 1.f}}};
-    beginInfo.clearValueCount = 1;
-    beginInfo.pClearValues = &clear;
+    VkClearValue clear[2] = {{0.f, 0.f, 0.f, 1.f}, {1.f, 0.f}};
+    beginInfo.clearValueCount = 2;
+    beginInfo.pClearValues = clear;
 
     vkCmdBeginRenderPass(_buffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
     bindRenderPass(renderPass);
@@ -104,6 +104,12 @@ void cala::backend::vulkan::CommandBuffer::bindRasterState(RasterState state) {
     if (ende::util::MurmurHash<RasterState>()(_pipelineKey.raster) != ende::util::MurmurHash<RasterState>()(state)) {
         _pipelineKey.raster = state;
 //        _dirty = true;
+    }
+}
+
+void cala::backend::vulkan::CommandBuffer::bindDepthState(DepthState state) {
+    if (ende::util::MurmurHash<DepthState>()(_pipelineKey.depth) != ende::util::MurmurHash<DepthState>()(state)) {
+        _pipelineKey.depth = state;
     }
 }
 
@@ -283,6 +289,20 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
     colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     colorBlendAttachment.blendEnable = VK_FALSE;
 
+
+    VkPipelineDepthStencilStateCreateInfo depthStencil{};
+    depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencil.depthTestEnable = _pipelineKey.depth.test;
+    depthStencil.depthWriteEnable = _pipelineKey.depth.write;
+    depthStencil.depthCompareOp = _pipelineKey.depth.compareOp;
+    depthStencil.depthBoundsTestEnable = VK_FALSE;
+    depthStencil.minDepthBounds = 0.f;
+    depthStencil.maxDepthBounds = 1.f;
+    depthStencil.stencilTestEnable = VK_FALSE;
+    depthStencil.front = {};
+    depthStencil.back = {};
+
+
     VkPipelineColorBlendStateCreateInfo colorBlending{};
     colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     colorBlending.logicOpEnable = VK_FALSE;
@@ -299,7 +319,7 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
     pipelineInfo.pViewportState = &viewportState;
     pipelineInfo.pRasterizationState = &rasterizer;
     pipelineInfo.pMultisampleState = &multisample;
-    pipelineInfo.pDepthStencilState = nullptr;
+    pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.layout = _pipelineKey.layout;
 

@@ -147,6 +147,18 @@ u32 cala::backend::vulkan::Context::memoryIndex(u32 filter, VkMemoryPropertyFlag
 }
 
 
+VkDeviceMemory cala::backend::vulkan::Context::allocate(u32 size, u32 typeBits, u32 flags) {
+    VkMemoryAllocateInfo allocateInfo{};
+    allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocateInfo.allocationSize = size;
+    allocateInfo.memoryTypeIndex = memoryIndex(typeBits, flags);
+
+    VkDeviceMemory memory;
+    vkAllocateMemory(_device, &allocateInfo, nullptr, &memory);
+    return memory;
+}
+
+
 std::pair<VkBuffer, VkDeviceMemory> cala::backend::vulkan::Context::createBuffer(u32 size, u32 usage, u32 flags) {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -160,15 +172,46 @@ std::pair<VkBuffer, VkDeviceMemory> cala::backend::vulkan::Context::createBuffer
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(_device, buffer, &memRequirements);
 
-    VkMemoryAllocateInfo allocateInfo{};
-    allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocateInfo.allocationSize = memRequirements.size;
-    allocateInfo.memoryTypeIndex = memoryIndex(memRequirements.memoryTypeBits, flags);
+//    VkMemoryAllocateInfo allocateInfo{};
+//    allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+//    allocateInfo.allocationSize = memRequirements.size;
+//    allocateInfo.memoryTypeIndex = memoryIndex(memRequirements.memoryTypeBits, flags);
+//
+//    VkDeviceMemory memory;
+//    vkAllocateMemory(_device, &allocateInfo, nullptr, &memory);
 
-    VkDeviceMemory memory;
-    vkAllocateMemory(_device, &allocateInfo, nullptr, &memory);
-
+    VkDeviceMemory memory = allocate(memRequirements.size, memRequirements.memoryTypeBits, flags);
     vkBindBufferMemory(_device, buffer, memory, 0);
 
     return {buffer, memory};
+}
+
+std::pair <VkImage, VkDeviceMemory> cala::backend::vulkan::Context::createImage(const CreateImage info) {
+    VkImageCreateInfo imageInfo{};
+    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType = info.imageType;
+    imageInfo.format = info.format;
+    imageInfo.extent.width = info.width;
+    imageInfo.extent.height = info.height;
+    imageInfo.extent.depth = info.depth;
+    imageInfo.mipLevels = info.mipLevels;
+    imageInfo.arrayLayers = info.arrayLayers;
+
+    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage = info.usage;
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+
+    VkImage image;
+    vkCreateImage(_device, &imageInfo, nullptr, &image);
+
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(_device, image, &memRequirements);
+
+    VkDeviceMemory memory = allocate(memRequirements.size, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    vkBindImageMemory(_device, image, memory, 0);
+    return {image, memory};
+
 }

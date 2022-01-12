@@ -6,6 +6,7 @@
 #include <Ende/filesystem/File.h>
 #include <Ende/math/Vec.h>
 #include <Ende/time/StopWatch.h>
+#include <Ende/time/time.h>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
@@ -18,6 +19,7 @@
 
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include <Cala/backend/vulkan/RenderPass.h>
+#include <Cala/backend/vulkan/Image.h>
 
 #include <Cala/ImGuiContext.h>
 
@@ -29,6 +31,8 @@ struct Vertex {
 };
 
 int main() {
+
+    auto runTime = ende::time::SystemTime::now();
 
     bool renderImGui = true;
 
@@ -104,7 +108,7 @@ int main() {
             { .location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(f32) * 2 }
     };
 
-    std::array<RenderPass::Attachment, 1> attachments = {
+    std::array<RenderPass::Attachment, 2> attachments = {
             RenderPass::Attachment{
                     driver._swapchain.format(),
                     VK_SAMPLE_COUNT_1_BIT,
@@ -115,15 +119,34 @@ int main() {
                     VK_IMAGE_LAYOUT_UNDEFINED,
                     VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            },
+            RenderPass::Attachment{
+                VK_FORMAT_D32_SFLOAT,
+                VK_SAMPLE_COUNT_1_BIT,
+                VK_ATTACHMENT_LOAD_OP_CLEAR,
+                VK_ATTACHMENT_STORE_OP_STORE,
+                VK_ATTACHMENT_LOAD_OP_CLEAR,
+                VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
             }
     };
     RenderPass renderPass(driver._context._device, attachments);
 
 
+    Image depthImage(driver._context, {
+        800, 600, 1, VK_FORMAT_D32_SFLOAT, 1, 1, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
+    });
+
+
+    Image::View depthView = depthImage.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT);
+
     ende::Vector<VkFramebuffer> swapchainFramebuffers;
 
     for (u32 i = 0; i < driver._swapchain.size(); i++) {
-        swapchainFramebuffers.push(renderPass.framebuffer(driver._swapchain.view(i), driver._swapchain.extent().width, driver._swapchain.extent().height));
+        VkImageView fbAttachments[2] = {driver._swapchain.view(i), depthView.view};
+        swapchainFramebuffers.push(renderPass.framebuffer(fbAttachments, driver._swapchain.extent().width, driver._swapchain.extent().height));
     }
 
 
@@ -135,6 +158,7 @@ int main() {
     f32 dt = 1.f / 60.f;
     f32 fps = 0.f;
     ende::time::Duration frameTime;
+    u64 frameCount = 0;
 
     CommandBuffer* buffer = nullptr;
 
@@ -163,6 +187,8 @@ int main() {
             ImGui::Text("FPS: %f", 1000.f / (frameTime.microseconds() / 1000.f));
             ImGui::Text("Pipelines: %ld", buffer ? buffer->_pipelines.size() : 0);
             ImGui::Text("Descriptors: %ld", buffer ? buffer->_descriptorSets.size() : 0);
+            ImGui::Text("Uptime: %ld sec", runTime.elapsed().seconds());
+            ImGui::Text("Frame: %ld", frameCount);
 
             ImGui::End();
 
@@ -181,14 +207,13 @@ int main() {
             buffer->bindProgram(program);
             buffer->bindVertexArray({&binding, 1}, {attributes, 2});
             buffer->bindRasterState({});
+            buffer->bindDepthState({});
             buffer->bindPipeline();
 
             buffer->bindBuffer(0, 0, uniformBuffer, 0, sizeof(ende::math::Vec3f));
             buffer->bindDescriptors();
 
-//            VkDeviceSize offsets[] = {0};
-//            buffer->bindVertexBuffers(0, {&vertexBuffer, 1}, offsets);
-            buffer->bindVertexBuffer(0, vertexBuffer, 0);
+            buffer->bindVertexBuffer(0, vertexBuffer);
             buffer->draw(3, 1, 0, 0);
 
 //            driver.draw({}, {vertexBuffer, 3});
@@ -206,6 +231,7 @@ int main() {
 
         frameTime = frameClock.reset();
         dt = frameTime.milliseconds() / 1000.f;
+        frameCount++;
     }
 
     driver._swapchain.wait();

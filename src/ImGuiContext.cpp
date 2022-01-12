@@ -40,8 +40,8 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Driver &driver, SDL_Window* wi
     _descriptorPool(VK_NULL_HANDLE),
     _commandPool(VK_NULL_HANDLE)
 {
-    std::array<cala::backend::vulkan::RenderPass::Attachment, 1> attachments = {
-            {
+    std::array<cala::backend::vulkan::RenderPass::Attachment, 2> attachments = {
+            cala::backend::vulkan::RenderPass::Attachment{
                     driver._swapchain.format(),
                     VK_SAMPLE_COUNT_1_BIT,
                     VK_ATTACHMENT_LOAD_OP_CLEAR,
@@ -51,6 +51,17 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Driver &driver, SDL_Window* wi
                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                     VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            },
+            cala::backend::vulkan::RenderPass::Attachment{
+                    VK_FORMAT_D32_SFLOAT,
+                    VK_SAMPLE_COUNT_1_BIT,
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_STORE,
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
             }
     };
     _renderPass = new cala::backend::vulkan::RenderPass(driver._context._device, attachments);
@@ -132,5 +143,6 @@ void ImGuiContext::newFrame() {
 }
 
 void ImGuiContext::render(cala::backend::vulkan::CommandBuffer &buffer) {
+//    buffer.begin(*_renderPass);TODO: use own renderpass/framebuffers
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer.buffer());
 }

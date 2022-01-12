@@ -55,6 +55,13 @@ namespace cala::backend::vulkan {
         };
         void bindRasterState(RasterState state);
 
+        struct DepthState {
+            bool test = false;
+            bool write = false;
+            VkCompareOp compareOp = VK_COMPARE_OP_LESS;
+        };
+        void bindDepthState(DepthState state);
+
 
         void bindPipeline();
 
@@ -65,7 +72,7 @@ namespace cala::backend::vulkan {
         void bindDescriptors();
 
 
-        void bindVertexBuffer(u32 first, VkBuffer buffer, u32 offset);
+        void bindVertexBuffer(u32 first, VkBuffer buffer, u32 offset = 0);
         void bindVertexBuffers(u32 first, ende::Span<VkBuffer> buffers, ende::Span<VkDeviceSize> offsets);
 
 
@@ -99,6 +106,7 @@ namespace cala::backend::vulkan {
             VkDescriptorSetLayout setLayout;
             VkPipelineLayout layout;
             RasterState raster;
+            DepthState depth;
             //TODO: add rest of pipeline state to key
 
             bool operator==(const PipelineKey& rhs) const {
