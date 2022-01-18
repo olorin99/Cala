@@ -66,7 +66,11 @@ VkExtent2D getExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
 cala::backend::vulkan::Swapchain::Swapchain(Context &context, void *window, void *display)
     : _context(context),
     _swapchain(VK_NULL_HANDLE),
-    _frame(0)
+    _frame(0),
+    _depthImage(context, {
+        800, 600, 1, VK_FORMAT_D32_SFLOAT, 1, 1, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
+    }),
+    _depthView(_depthImage.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT))
 {
     _surface = createSurface(_context, window, display);
 
@@ -80,9 +84,48 @@ cala::backend::vulkan::Swapchain::Swapchain(Context &context, void *window, void
     if (!createSwapchain()) throw "Unable to create swapchain";
     if (!createImageViews()) throw "Unable to create swapchains image views";
     if (!createSemaphores()) throw "Unable to create swapchains semaphores";
+
+    std::array<RenderPass::Attachment, 2> attachments = {
+            RenderPass::Attachment{
+                    format(),
+                    VK_SAMPLE_COUNT_1_BIT,
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_STORE,
+                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            },
+            RenderPass::Attachment{
+                    VK_FORMAT_D32_SFLOAT,
+                    VK_SAMPLE_COUNT_1_BIT,
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_STORE,
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+            }
+    };
+
+    _renderPass = new RenderPass(_context._device, attachments);
+
+    for (auto& view : _imageViews) {
+        VkImageView attachments[2] = { view, _depthView.view };
+        _framebuffers.push(_renderPass->framebuffer(attachments, 800, 600));
+    }
 }
 
 cala::backend::vulkan::Swapchain::~Swapchain() {
+
+    for (auto& framebuffer : _framebuffers)
+        vkDestroyFramebuffer(_context._device, framebuffer, nullptr);
+
+    delete _renderPass;
+
+
     for (auto& semaphore : _semaphores) {
         vkDestroySemaphore(_context._device, semaphore, nullptr);
     }

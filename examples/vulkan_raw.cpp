@@ -108,47 +108,6 @@ int main() {
             { .location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(f32) * 2 }
     };
 
-    std::array<RenderPass::Attachment, 2> attachments = {
-            RenderPass::Attachment{
-                    driver._swapchain.format(),
-                    VK_SAMPLE_COUNT_1_BIT,
-                    VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    VK_ATTACHMENT_STORE_OP_STORE,
-                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    VK_IMAGE_LAYOUT_UNDEFINED,
-                    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-            },
-            RenderPass::Attachment{
-                VK_FORMAT_D32_SFLOAT,
-                VK_SAMPLE_COUNT_1_BIT,
-                VK_ATTACHMENT_LOAD_OP_CLEAR,
-                VK_ATTACHMENT_STORE_OP_STORE,
-                VK_ATTACHMENT_LOAD_OP_CLEAR,
-                VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-            }
-    };
-    RenderPass renderPass(driver._context._device, attachments);
-
-
-    Image depthImage(driver._context, {
-        800, 600, 1, VK_FORMAT_D32_SFLOAT, 1, 1, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
-    });
-
-
-    Image::View depthView = depthImage.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT);
-
-    ende::Vector<VkFramebuffer> swapchainFramebuffers;
-
-    for (u32 i = 0; i < driver._swapchain.size(); i++) {
-        VkImageView fbAttachments[2] = {driver._swapchain.view(i), depthView.view};
-        swapchainFramebuffers.push(renderPass.framebuffer(fbAttachments, driver._swapchain.extent().width, driver._swapchain.extent().height));
-    }
-
 
     VkQueue graphicsQueue = driver._context.getQueue(VK_QUEUE_GRAPHICS_BIT);
 
@@ -199,12 +158,11 @@ int main() {
 
         auto frame = driver._swapchain.nextImage();
 
-//        buffer = driver._context._commands->get();
         buffer = driver.beginFrame();
         {
             u32 i = frame.index;
 
-            buffer->begin(renderPass, swapchainFramebuffers[i], {driver._swapchain.extent().width, driver._swapchain.extent().height});
+            buffer->begin(driver._swapchain.renderPass(), driver._swapchain.framebuffer(frame.index), {driver._swapchain.extent().width, driver._swapchain.extent().height});
 
             buffer->bindProgram(program);
             buffer->bindVertexArray({&binding, 1}, {attributes, 2});
@@ -222,12 +180,11 @@ int main() {
 
             imGuiContext.render(*buffer);
 
-            buffer->end(renderPass);
+            buffer->end(driver._swapchain.renderPass());
 
             buffer->submit(frame.imageAquired, driver._swapchain.fence());
-            driver.endFrame();
         }
-
+        driver.endFrame();
         driver._swapchain.present(frame, buffer->signal());
 
 
@@ -260,8 +217,8 @@ int main() {
 
 
     std::cout << "\n\n\nCommand Buffers: " << driver._commands.count();
-    std::cout << "\nPipelines: " << buffer ? buffer->_pipelines.size() : 0;
-    std::cout << "\nDescriptors: " << buffer ? buffer->_descriptorSets.size() : 0;
+    std::cout << "\nPipelines: " << (buffer ? buffer->_pipelines.size() : 0);
+    std::cout << "\nDescriptors: " << (buffer ? buffer->_descriptorSets.size() : 0);
     std::cout << "\nUptime: " << runTime.elapsed().seconds() << "sec";
     std::cout << "\nFrame: " << frameCount;
 
@@ -271,9 +228,6 @@ int main() {
 
     vkDestroyBuffer(driver._context._device, vertexBuffer, nullptr);
     vkFreeMemory(driver._context._device, vertexBufferMemory, nullptr);
-
-    for (auto& framebuffer : swapchainFramebuffers)
-        vkDestroyFramebuffer(driver._context._device, framebuffer, nullptr);
 
     SDL_DestroyWindow(window);
 

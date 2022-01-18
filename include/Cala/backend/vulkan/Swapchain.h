@@ -2,7 +2,8 @@
 #define CALA_SWAPCHAIN_H
 
 #include <Cala/backend/vulkan/Context.h>
-
+#include <Cala/backend/vulkan/Image.h>
+#include <Cala/backend/vulkan/RenderPass.h>
 #include <Ende/Vector.h>
 
 namespace cala::backend::vulkan {
@@ -36,6 +37,10 @@ namespace cala::backend::vulkan {
 
         VkFence fence() const { return _fence; }
 
+        RenderPass& renderPass() const { return *_renderPass; }
+
+        VkFramebuffer framebuffer(u32 i) const { return _framebuffers[i]; }
+
     private:
 
         bool createSwapchain();
@@ -56,6 +61,12 @@ namespace cala::backend::vulkan {
         ende::Vector<VkImage> _images;
         ende::Vector<VkImageView> _imageViews;
         ende::Vector<VkSemaphore> _semaphores;
+
+        Image _depthImage;
+        Image::View _depthView;
+
+        RenderPass* _renderPass;
+        ende::Vector<VkFramebuffer> _framebuffers;
 
         VkFence _fence;
 //        std::array<VkImage, 2> _images;

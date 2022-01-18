@@ -205,7 +205,7 @@ bool cala::backend::vulkan::CommandBuffer::submit(VkSemaphore wait, VkFence fenc
     VkPipelineStageFlags waitDstStageMask[1] = { VK_PIPELINE_STAGE_ALL_COMMANDS_BIT };
     VkSemaphore waitSemaphore[1] = { wait };
 
-    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.waitSemaphoreCount = wait == VK_NULL_HANDLE ? 0 : 1;
     submitInfo.pWaitSemaphores = waitSemaphore;
     submitInfo.pWaitDstStageMask = waitDstStageMask;
 
