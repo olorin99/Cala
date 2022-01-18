@@ -3,6 +3,7 @@
 
 #include <Cala/backend/vulkan/Context.h>
 #include <Cala/backend/vulkan/Swapchain.h>
+#include <Cala/backend/vulkan/CommandBufferList.h>
 
 namespace cala::backend::vulkan {
 
@@ -28,7 +29,7 @@ namespace cala::backend::vulkan {
 
         Context _context;
         Swapchain _swapchain;
-
+        CommandBufferList _commands;
 
     };
 

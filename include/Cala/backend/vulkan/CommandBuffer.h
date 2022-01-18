@@ -85,6 +85,8 @@ namespace cala::backend::vulkan {
 
         VkSemaphore signal() const { return _signal; }
 
+        bool active() const { return _active; }
+
 //    private:
 
         // true if requires binding
@@ -97,16 +99,16 @@ namespace cala::backend::vulkan {
         VkSemaphore _signal;
         VkDevice _device;
         VkQueue _queue;
+        bool _active;
 
         struct PipelineKey {
             VkShaderModule shaders[2] = {VK_NULL_HANDLE, VK_NULL_HANDLE};
-            VkVertexInputBindingDescription bindings[10]; //TODO: change from arbitrary values
-            VkVertexInputAttributeDescription attributes[10];
+            VkVertexInputBindingDescription bindings[10]{}; //TODO: change from arbitrary values
+            VkVertexInputAttributeDescription attributes[10]{};
             VkRenderPass renderPass = VK_NULL_HANDLE;
-            VkDescriptorSetLayout setLayout;
-            VkPipelineLayout layout;
-            RasterState raster;
-            DepthState depth;
+            VkPipelineLayout layout = VK_NULL_HANDLE;
+            RasterState raster = {};
+            DepthState depth = {};
             //TODO: add rest of pipeline state to key
 
             bool operator==(const PipelineKey& rhs) const {
@@ -117,19 +119,20 @@ namespace cala::backend::vulkan {
         VkPipeline _currentPipeline;
         std::unordered_map<PipelineKey, VkPipeline, ende::util::MurmurHash<PipelineKey>> _pipelines;
 
-        struct DescriptorKey {
-            VkDescriptorSetLayout setLayout;
+        VkDescriptorSetLayout setLayout[4] {};
+        struct __attribute__((packed)) DescriptorKey {
+//            VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
 
             struct {
                 VkBuffer buffer = VK_NULL_HANDLE;
                 u32 offset = 0;
                 u32 range = 0;
-            } buffers[4];
+            } buffers[4] {};
 
             bool operator==(const DescriptorKey& rhs) const {
                 return memcmp(this, &rhs, sizeof(DescriptorKey)) == 0;
             }
-        } _descriptorKey[SET_COUNT];
+        } _descriptorKey[SET_COUNT] {};
 
         //TODO: cull descriptors every now and again
         VkDescriptorSet _currentSets[SET_COUNT];

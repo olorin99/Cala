@@ -6,8 +6,6 @@
 #include <Ende/Vector.h>
 #include <Ende/Span.h>
 
-#include <Cala/backend/vulkan/CommandBufferList.h>
-
 namespace cala::backend::vulkan {
 
     class Context {
@@ -47,7 +45,7 @@ namespace cala::backend::vulkan {
         VkPhysicalDevice _physicalDevice;
         VkDevice _device;
 
-        CommandBufferList* _commands;
+
 
     };
 

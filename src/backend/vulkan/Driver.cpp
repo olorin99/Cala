@@ -3,22 +3,23 @@
 
 cala::backend::vulkan::Driver::Driver(ende::Span<const char *> extensions, void *window, void *display)
     : _context(extensions),
-      _swapchain(_context, window, display)
+      _swapchain(_context, window, display),
+      _commands(_context, _context.queueIndex(VK_QUEUE_GRAPHICS_BIT))
 {}
 
 
 cala::backend::vulkan::CommandBuffer* cala::backend::vulkan::Driver::beginFrame() {
-    return _context._commands->get();
+    return _commands.get();
 }
 
 bool cala::backend::vulkan::Driver::endFrame() {
-    return _context._commands->flush();
+    return _commands.flush();
 }
 
 
 void cala::backend::vulkan::Driver::draw(CommandBuffer::RasterState state, Primitive primitive) {
 
-    auto commandBuffer = _context._commands->get();
+    auto commandBuffer = _commands.get();
 
 //    _context._pipelines->bindRasterState(state);
 //    _context._pipelines->bindPipeline(commandBuffer);

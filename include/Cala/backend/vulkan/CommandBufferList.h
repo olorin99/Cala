@@ -4,19 +4,14 @@
 #include <vulkan/vulkan.h>
 #include <Ende/Vector.h>
 #include <Cala/backend/vulkan/CommandBuffer.h>
+#include <Cala/backend/vulkan/Context.h>
 
 namespace cala::backend::vulkan {
 
     class CommandBufferList {
     public:
 
-//        struct CommandBuffer {
-//            VkCommandBuffer buffer;
-//            bool free;
-//            VkSemaphore signal;
-//        };
-
-        CommandBufferList(VkDevice device, u32 queueIndex);
+        CommandBufferList(Context& context, u32 queueIndex);
 
         ~CommandBufferList();
 
@@ -25,19 +20,15 @@ namespace cala::backend::vulkan {
 
         bool flush();
 
-        void waitSemaphore(VkSemaphore wait);
-
-        VkSemaphore signal();
+        u32 count() const { return _buffers.size(); }
 
     private:
 
-        VkDevice _device;
+        Context& _context;
         VkCommandPool _pool;
+        VkQueue _queue;
         CommandBuffer* _current;
         ende::Vector<CommandBuffer> _buffers;
-        VkQueue _queue;
-        VkSemaphore _wait;
-        VkSemaphore _renderFinish;
 
     };
 

@@ -1,10 +1,13 @@
 #include "Cala/backend/vulkan/CommandBuffer.h"
 
+#include <iostream>
+
 cala::backend::vulkan::CommandBuffer::CommandBuffer(VkDevice device, VkQueue queue, VkCommandBuffer buffer)
     : _buffer(buffer),
     _signal(VK_NULL_HANDLE),
     _device(device),
     _queue(queue),
+    _active(false),
     _currentPipeline(VK_NULL_HANDLE),
     _currentSets{VK_NULL_HANDLE}
 {
@@ -39,11 +42,21 @@ bool cala::backend::vulkan::CommandBuffer::begin() {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    return vkBeginCommandBuffer(_buffer, &beginInfo) == VK_SUCCESS;
+    _active = vkBeginCommandBuffer(_buffer, &beginInfo) == VK_SUCCESS;
+    return _active;
 }
 
 bool cala::backend::vulkan::CommandBuffer::end() {
-    return vkEndCommandBuffer(_buffer) == VK_SUCCESS;
+    bool res = vkEndCommandBuffer(_buffer) == VK_SUCCESS;
+    if (res) {
+        _active = false;
+        _currentPipeline = VK_NULL_HANDLE;
+//        _pipelineKey = {};
+//        for (u32 i = 0; i < SET_COUNT; i++)
+//            _descriptorKey[i] = {};
+//        _currentPipeline = VK_NULL_HANDLE;
+    }
+    return res;
 }
 
 void cala::backend::vulkan::CommandBuffer::begin(RenderPass &renderPass, VkFramebuffer framebuffer, std::pair<u32, u32> extent) {
@@ -72,9 +85,10 @@ void cala::backend::vulkan::CommandBuffer::bindProgram(ShaderProgram &program) {
     if (_pipelineKey.layout != program._layout)
         _pipelineKey.layout = program._layout;
 
-    for (u32 i = 0; i < 4; i++) {
-        if (_descriptorKey[i].setLayout != program._setLayout[i])
-            _descriptorKey[i].setLayout = program._setLayout[i];
+    for (u32 i = 0; i < SET_COUNT; i++) {
+//        if (_descriptorKey[i].setLayout != program._setLayout[i])
+//            _descriptorKey[i].setLayout = program._setLayout[i];
+        setLayout[i] = program._setLayout[i];
     }
     for (u32 i = 0; i < program._stages.size(); i++) {
         if (_pipelineKey.shaders[i] != program._stages[i].module) {
@@ -130,10 +144,24 @@ void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 slot, VkBuffe
 
 void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
 
+    //TOOD: figure out what the hell is happening here
+
+//    ende::util::MurmurHash<DescriptorKey> hasher;
+
+//    for (u32 i = 0; i < SET_COUNT; i++) {
+//        std::cout << hasher(_descriptorKey[i]) << '\n';
+//    }
+//
+//    std::cout << "\n\n\n";
+
+
     u32 setCount = 0;
     // find descriptors with key
     for (u32 i = 0; i < SET_COUNT; i++) {
+//        std::cout << hasher(_descriptorKey[i]) << '\n';
+//        std::cout << _descriptorSets.size() << '\n';
         auto descriptor = getDescriptorSet(i);
+//        std::cout << _descriptorSets.size() << '\n';
 //        if (descriptor == VK_NULL_HANDLE) {
 //            setCount = i + 1;
 //            break;
@@ -339,11 +367,29 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
     assert(set < SET_COUNT && "set is greater than allowed descriptor count");
     auto key = _descriptorKey[set];
 
-    if (key.setLayout == VK_NULL_HANDLE)
+    if (setLayout[set] == VK_NULL_HANDLE)
         return VK_NULL_HANDLE;
+
+//    const char* str = (const char*)&key;
+//
+//    std::cout << "\nKey: " << set << " : " << _descriptorSets.size() << " : " << _descriptorSets.hash_function()(key) << '\n';
+//
+//    for (auto& [storedKey, value] : _descriptorSets) {
+//        const char* storedStr = (const char*)&storedKey;
+//        for (u32 i = 0; i < sizeof(key); i++)
+//            std::cout << storedStr[i];
+//        std::cout << '\n';
+//        for (u32 i = 0; i < sizeof(key); i++)
+//            std::cout << str[i];
+//        std::cout << '\n';
+//
+//        std::cout << (storedKey == key) << " : " << memcmp(&storedKey, &key, sizeof(key)) << " : " << _descriptorSets.hash_function()(storedKey) << " : " << _descriptorSets.hash_function()(key) << "\n";
+//        std::cout << ende::util::MurmurHash<DescriptorKey>()(key) << " : " << ende::util::MurmurHash<DescriptorKey>()(storedKey) << '\n';
+//    }
 
     auto it = _descriptorSets.find(key);
     if (it != _descriptorSets.end()) {
+//        std::cout << "Found\n";
         return it->second;
     }
 
@@ -352,7 +398,7 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = _descriptorPool;
     allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &key.setLayout;
+    allocInfo.pSetLayouts = &setLayout[set];
 
     VkDescriptorSet descriptorSet;
     vkAllocateDescriptorSets(_device, &allocInfo, &descriptorSet);
@@ -381,5 +427,6 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
     }
 
     _descriptorSets.emplace(std::make_pair(key, descriptorSet));
+//    _descriptorSets[key] = descriptorSet;
     return descriptorSet;
 }

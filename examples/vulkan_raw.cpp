@@ -185,6 +185,7 @@ int main() {
 
             ImGui::Text("FrameTime: %f", frameTime.microseconds() / 1000.f);
             ImGui::Text("FPS: %f", 1000.f / (frameTime.microseconds() / 1000.f));
+            ImGui::Text("Command Buffers: %ld", driver._commands.count());
             ImGui::Text("Pipelines: %ld", buffer ? buffer->_pipelines.size() : 0);
             ImGui::Text("Descriptors: %ld", buffer ? buffer->_descriptorSets.size() : 0);
             ImGui::Text("Uptime: %ld sec", runTime.elapsed().seconds());
@@ -198,7 +199,8 @@ int main() {
 
         auto frame = driver._swapchain.nextImage();
 
-        buffer = driver._context._commands->get();
+//        buffer = driver._context._commands->get();
+        buffer = driver.beginFrame();
         {
             u32 i = frame.index;
 
@@ -223,7 +225,7 @@ int main() {
             buffer->end(renderPass);
 
             buffer->submit(frame.imageAquired, driver._swapchain.fence());
-            driver._context._commands->flush();
+            driver.endFrame();
         }
 
         driver._swapchain.present(frame, buffer->signal());
@@ -232,9 +234,36 @@ int main() {
         frameTime = frameClock.reset();
         dt = frameTime.milliseconds() / 1000.f;
         frameCount++;
+
+//        if (frameCount > 10)
+//            running = false;
     }
 
     driver._swapchain.wait();
+
+    ende::util::MurmurHash<CommandBuffer::DescriptorKey> hasher;
+
+    std::cout << sizeof(CommandBuffer::DescriptorKey) << '\n';
+    std::cout << sizeof(CommandBuffer::DescriptorKey) / 4 << '\n';
+
+    std::cout << "Current Descriptor Sets\n";
+    for (u32 i = 0; i < SET_COUNT; i++) {
+        std::cout << hasher(buffer->_descriptorKey[i]) << '\n';
+    }
+
+    std::cout << '\n';
+
+    std::cout << "Stored Descriptor Sets\n";
+    for (auto& [key, value] : buffer->_descriptorSets) {
+        std::cout << hasher(key) << '\n';
+    }
+
+
+    std::cout << "\n\n\nCommand Buffers: " << driver._commands.count();
+    std::cout << "\nPipelines: " << buffer ? buffer->_pipelines.size() : 0;
+    std::cout << "\nDescriptors: " << buffer ? buffer->_descriptorSets.size() : 0;
+    std::cout << "\nUptime: " << runTime.elapsed().seconds() << "sec";
+    std::cout << "\nFrame: " << frameCount;
 
 
     vkDestroyBuffer(driver._context._device, uniformBuffer, nullptr);
