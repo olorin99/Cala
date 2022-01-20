@@ -5,6 +5,8 @@
 
 #include <Cala/backend/vulkan/ShaderProgram.h>
 #include <Cala/backend/vulkan/RenderPass.h>
+#include <Cala/backend/vulkan/Framebuffer.h>
+#include <Cala/backend/vulkan/Buffer.h>
 
 #include <unordered_map>
 #include <cstring>
@@ -34,8 +36,13 @@ namespace cala::backend::vulkan {
         bool end();
 
         void begin(RenderPass& renderPass, VkFramebuffer framebuffer, std::pair<u32, u32> extent);
+        void begin(Framebuffer& framebuffer);
 
         void end(RenderPass& renderPass);
+        void end(Framebuffer& framebuffer);
+
+
+
 
         void bindProgram(ShaderProgram& program);
 
@@ -67,6 +74,7 @@ namespace cala::backend::vulkan {
 
 
         void bindBuffer(u32 set, u32 slot, VkBuffer buffer, u32 offset, u32 range);
+        void bindBuffer(u32 set, u32 slot, Buffer& buffer, u32 offset = 0, u32 range = 0);
 
 
         void bindDescriptors();

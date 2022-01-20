@@ -76,8 +76,16 @@ void cala::backend::vulkan::CommandBuffer::begin(RenderPass &renderPass, VkFrame
     bindRenderPass(renderPass);
 }
 
+void cala::backend::vulkan::CommandBuffer::begin(Framebuffer &framebuffer) {
+    begin(framebuffer.renderPass(), framebuffer.framebuffer(), framebuffer.extent());
+}
+
 void cala::backend::vulkan::CommandBuffer::end(RenderPass &renderPass) {
     vkCmdEndRenderPass(_buffer);
+}
+
+void cala::backend::vulkan::CommandBuffer::end(Framebuffer &framebuffer) {
+    end(framebuffer.renderPass());
 }
 
 
@@ -139,6 +147,10 @@ void cala::backend::vulkan::CommandBuffer::bindPipeline() {
 void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 slot, VkBuffer buffer, u32 offset, u32 range) {
     assert(set < SET_COUNT && "set is greater than valid number of descriptor sets");
     _descriptorKey[set].buffers[slot] = {buffer, offset, range};
+}
+
+void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 slot, Buffer &buffer, u32 offset, u32 range) {
+    bindBuffer(set, slot, buffer.buffer(), offset, range == 0 ? buffer.size() : range);
 }
 
 

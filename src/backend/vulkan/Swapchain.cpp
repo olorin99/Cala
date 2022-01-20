@@ -113,15 +113,15 @@ cala::backend::vulkan::Swapchain::Swapchain(Context &context, void *window, void
     _renderPass = new RenderPass(_context._device, attachments);
 
     for (auto& view : _imageViews) {
-        VkImageView attachments[2] = { view, _depthView.view };
-        _framebuffers.push(_renderPass->framebuffer(attachments, 800, 600));
+        VkImageView framebufferAttachments[2] = { view, _depthView.view };
+        _framebuffers.emplace(_context._device, *_renderPass, framebufferAttachments, 800, 600);
     }
 }
 
 cala::backend::vulkan::Swapchain::~Swapchain() {
 
-    for (auto& framebuffer : _framebuffers)
-        vkDestroyFramebuffer(_context._device, framebuffer, nullptr);
+//    for (auto& framebuffer : _framebuffers)
+//        vkDestroyFramebuffer(_context._device, framebuffer, nullptr);
 
     delete _renderPass;
 

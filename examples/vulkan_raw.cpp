@@ -20,6 +20,7 @@
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include <Cala/backend/vulkan/RenderPass.h>
 #include <Cala/backend/vulkan/Image.h>
+#include <Cala/backend/vulkan/Buffer.h>
 
 #include <Cala/ImGuiContext.h>
 
@@ -64,20 +65,12 @@ int main() {
             {{0.5f, 0.5f}, {0.f, 1.f, 0.f}},
             {{-0.5f, 0.5f}, {0.f, 0.f, 1.f}}
     };
+    Buffer vertexBuffer(driver._context, sizeof(vertices[0]) * 3, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    vertexBuffer.data({vertices, sizeof(Vertex) * 3});
 
-    auto [vertexBuffer, vertexBufferMemory] = driver._context.createBuffer(sizeof(vertices[0]) * 3, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-    void* data;
-    vkMapMemory(driver._context._device, vertexBufferMemory, 0, sizeof(vertices[0]) * 3, 0, &data);
-    memcpy(data, vertices, sizeof(vertices[0]) * 3);
-    vkUnmapMemory(driver._context._device, vertexBufferMemory);
-
-
-    auto [uniformBuffer, uniformBufferMemory] = driver._context.createBuffer(sizeof(ende::math::Vec3f), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    void* uniformData;
-    vkMapMemory(driver._context._device, uniformBufferMemory, 0, sizeof(ende::math::Vec3f), 0, &uniformData);
-    *static_cast<ende::math::Vec3f*>(uniformData) = {0.5, 0.5, 0.5};
-    vkUnmapMemory(driver._context._device, uniformBufferMemory);
+    Buffer uniformBuffer(driver._context, sizeof(ende::math::Vec3f), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    ende::math::Vec3f uniformData = {0.5, 0.5, 0.5};
+    uniformBuffer.data({&uniformData, sizeof(uniformData)});
 
     // get shader data
     ende::fs::File shaderFile;
@@ -162,7 +155,7 @@ int main() {
         {
             u32 i = frame.index;
 
-            buffer->begin(driver._swapchain.renderPass(), driver._swapchain.framebuffer(frame.index), {driver._swapchain.extent().width, driver._swapchain.extent().height});
+            buffer->begin(driver._swapchain.framebuffer(frame.index));
 
             buffer->bindProgram(program);
             buffer->bindVertexArray({&binding, 1}, {attributes, 2});
@@ -170,17 +163,18 @@ int main() {
             buffer->bindDepthState({});
             buffer->bindPipeline();
 
-            buffer->bindBuffer(0, 0, uniformBuffer, 0, sizeof(ende::math::Vec3f));
+//            buffer->bindBuffer(0, 0, uniformBuffer.buffer(), 0, sizeof(ende::math::Vec3f));
+            buffer->bindBuffer(0, 0, uniformBuffer);
             buffer->bindDescriptors();
 
-            buffer->bindVertexBuffer(0, vertexBuffer);
+            buffer->bindVertexBuffer(0, vertexBuffer.buffer());
             buffer->draw(3, 1, 0, 0);
 
 //            driver.draw({}, {vertexBuffer, 3});
 
             imGuiContext.render(*buffer);
 
-            buffer->end(driver._swapchain.renderPass());
+            buffer->end(driver._swapchain.framebuffer(frame.index));
 
             buffer->submit(frame.imageAquired, driver._swapchain.fence());
         }
@@ -221,13 +215,6 @@ int main() {
     std::cout << "\nDescriptors: " << (buffer ? buffer->_descriptorSets.size() : 0);
     std::cout << "\nUptime: " << runTime.elapsed().seconds() << "sec";
     std::cout << "\nFrame: " << frameCount;
-
-
-    vkDestroyBuffer(driver._context._device, uniformBuffer, nullptr);
-    vkFreeMemory(driver._context._device, uniformBufferMemory, nullptr);
-
-    vkDestroyBuffer(driver._context._device, vertexBuffer, nullptr);
-    vkFreeMemory(driver._context._device, vertexBufferMemory, nullptr);
 
     SDL_DestroyWindow(window);
 

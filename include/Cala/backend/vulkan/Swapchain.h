@@ -4,6 +4,7 @@
 #include <Cala/backend/vulkan/Context.h>
 #include <Cala/backend/vulkan/Image.h>
 #include <Cala/backend/vulkan/RenderPass.h>
+#include <Cala/backend/vulkan/Framebuffer.h>
 #include <Ende/Vector.h>
 
 namespace cala::backend::vulkan {
@@ -39,7 +40,7 @@ namespace cala::backend::vulkan {
 
         RenderPass& renderPass() const { return *_renderPass; }
 
-        VkFramebuffer framebuffer(u32 i) const { return _framebuffers[i]; }
+        Framebuffer& framebuffer(u32 i) { return _framebuffers[i]; }
 
     private:
 
@@ -66,7 +67,7 @@ namespace cala::backend::vulkan {
         Image::View _depthView;
 
         RenderPass* _renderPass;
-        ende::Vector<VkFramebuffer> _framebuffers;
+        ende::Vector<Framebuffer> _framebuffers;
 
         VkFence _fence;
 //        std::array<VkImage, 2> _images;
