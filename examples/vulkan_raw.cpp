@@ -58,7 +58,7 @@ int main() {
 
     ImGuiContext imGuiContext(driver, window);
 
-    // buffer
+    // cmd
 
     const Vertex vertices[] = {
             {{0.f, -0.5f}, {1.f, 0.f, 0.f}},
@@ -102,8 +102,6 @@ int main() {
     };
 
 
-    VkQueue graphicsQueue = driver._context.getQueue(VK_QUEUE_GRAPHICS_BIT);
-
 
     ende::time::StopWatch frameClock;
     frameClock.start();
@@ -112,7 +110,7 @@ int main() {
     ende::time::Duration frameTime;
     u64 frameCount = 0;
 
-    CommandBuffer* buffer = nullptr;
+    CommandBuffer* cmd = nullptr;
 
 
     bool running = true;
@@ -138,8 +136,8 @@ int main() {
             ImGui::Text("FrameTime: %f", frameTime.microseconds() / 1000.f);
             ImGui::Text("FPS: %f", 1000.f / (frameTime.microseconds() / 1000.f));
             ImGui::Text("Command Buffers: %ld", driver._commands.count());
-            ImGui::Text("Pipelines: %ld", buffer ? buffer->_pipelines.size() : 0);
-            ImGui::Text("Descriptors: %ld", buffer ? buffer->_descriptorSets.size() : 0);
+            ImGui::Text("Pipelines: %ld", cmd ? cmd->_pipelines.size() : 0);
+            ImGui::Text("Descriptors: %ld", cmd ? cmd->_descriptorSets.size() : 0);
             ImGui::Text("Uptime: %ld sec", runTime.elapsed().seconds());
             ImGui::Text("Frame: %ld", frameCount);
 
@@ -151,35 +149,34 @@ int main() {
 
         auto frame = driver._swapchain.nextImage();
 
-        buffer = driver.beginFrame();
+        cmd = driver.beginFrame();
         {
             u32 i = frame.index;
 
-            buffer->begin(driver._swapchain.framebuffer(frame.index));
+            cmd->begin(frame.framebuffer);
 
-            buffer->bindProgram(program);
-            buffer->bindVertexArray({&binding, 1}, {attributes, 2});
-            buffer->bindRasterState({});
-            buffer->bindDepthState({});
-            buffer->bindPipeline();
+            cmd->bindProgram(program);
+            cmd->bindVertexArray({&binding, 1}, {attributes, 2});
+            cmd->bindRasterState({});
+            cmd->bindDepthState({});
+            cmd->bindPipeline();
 
-//            buffer->bindBuffer(0, 0, uniformBuffer.buffer(), 0, sizeof(ende::math::Vec3f));
-            buffer->bindBuffer(0, 0, uniformBuffer);
-            buffer->bindDescriptors();
+            cmd->bindBuffer(0, 0, uniformBuffer);
+            cmd->bindDescriptors();
 
-            buffer->bindVertexBuffer(0, vertexBuffer.buffer());
-            buffer->draw(3, 1, 0, 0);
+            cmd->bindVertexBuffer(0, vertexBuffer.buffer());
+            cmd->draw(3, 1, 0, 0);
 
 //            driver.draw({}, {vertexBuffer, 3});
 
-            imGuiContext.render(*buffer);
+            imGuiContext.render(*cmd);
 
-            buffer->end(driver._swapchain.framebuffer(frame.index));
+            cmd->end(frame.framebuffer);
 
-            buffer->submit(frame.imageAquired, driver._swapchain.fence());
+            cmd->submit(frame.imageAquired, frame.fence);
         }
         driver.endFrame();
-        driver._swapchain.present(frame, buffer->signal());
+        driver._swapchain.present(frame, cmd->signal());
 
 
         frameTime = frameClock.reset();
@@ -199,20 +196,20 @@ int main() {
 
     std::cout << "Current Descriptor Sets\n";
     for (u32 i = 0; i < SET_COUNT; i++) {
-        std::cout << hasher(buffer->_descriptorKey[i]) << '\n';
+        std::cout << hasher(cmd->_descriptorKey[i]) << '\n';
     }
 
     std::cout << '\n';
 
     std::cout << "Stored Descriptor Sets\n";
-    for (auto& [key, value] : buffer->_descriptorSets) {
+    for (auto& [key, value] : cmd->_descriptorSets) {
         std::cout << hasher(key) << '\n';
     }
 
 
     std::cout << "\n\n\nCommand Buffers: " << driver._commands.count();
-    std::cout << "\nPipelines: " << (buffer ? buffer->_pipelines.size() : 0);
-    std::cout << "\nDescriptors: " << (buffer ? buffer->_descriptorSets.size() : 0);
+    std::cout << "\nPipelines: " << (cmd ? cmd->_pipelines.size() : 0);
+    std::cout << "\nDescriptors: " << (cmd ? cmd->_descriptorSets.size() : 0);
     std::cout << "\nUptime: " << runTime.elapsed().seconds() << "sec";
     std::cout << "\nFrame: " << frameCount;
 

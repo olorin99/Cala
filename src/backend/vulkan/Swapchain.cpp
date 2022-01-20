@@ -144,7 +144,7 @@ cala::backend::vulkan::Swapchain::Frame cala::backend::vulkan::Swapchain::nextIm
     auto image = _semaphores.pop().unwrap();
     u32 index = 0;
     vkAcquireNextImageKHR(_context._device, _swapchain, std::numeric_limits<u64>::max(), image, VK_NULL_HANDLE, &index);
-    return {_frame++, index, image};
+    return { _frame++, index, image, _fence, _framebuffers[index] };
 }
 
 bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFinish) {

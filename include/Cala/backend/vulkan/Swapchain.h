@@ -20,6 +20,8 @@ namespace cala::backend::vulkan {
             u64 id = 0;
             u32 index = 0;
             VkSemaphore imageAquired = VK_NULL_HANDLE;
+            VkFence fence = VK_NULL_HANDLE;
+            Framebuffer& framebuffer;
         };
 
         Frame nextImage();
@@ -70,9 +72,6 @@ namespace cala::backend::vulkan {
         ende::Vector<Framebuffer> _framebuffers;
 
         VkFence _fence;
-//        std::array<VkImage, 2> _images;
-//        std::array<VkImageView, 2> _imageViews;
-//        std::array<std::pair<VkSemaphore, VkSemaphore>, 2> _semaphores;
 
     };
 
