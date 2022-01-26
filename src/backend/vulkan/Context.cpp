@@ -51,8 +51,10 @@ cala::backend::vulkan::Context::Context(ende::Span<const char *> extensions) {
     vkEnumeratePhysicalDevices(_instance, &deviceCount, devices.data());
 
     for (auto& device : devices) {
-        if (checkDeviceSuitable(device))
+        if (checkDeviceSuitable(device)) {
             _physicalDevice = device;
+            break;
+        }
     }
 
     if (_physicalDevice == VK_NULL_HANDLE)
