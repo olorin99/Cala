@@ -24,11 +24,17 @@
 
 #include <Cala/ImGuiContext.h>
 
+#include <Cala/Camera.h>
+
+using namespace cala;
 using namespace cala::backend::vulkan;
 
 struct Vertex {
-    ende::math::Vec<2, f32> position;
-    ende::math::Vec3f colour;
+    ende::math::Vec3f position;
+    ende::math::Vec3f normal;
+    ende::math::Vec<2, f32> texCoords;
+    ende::math::Vec3f tangent;
+    ende::math::Vec3f bitangent;
 };
 
 int main() {
@@ -58,29 +64,34 @@ int main() {
 
     ImGuiContext imGuiContext(driver, window);
 
+    Transform cameraTransform({0, 0, -1});
+    Camera camera(ende::math::perspective(45.f, 800.f / 600.f, 0.f, 1000.f), cameraTransform);
+
+    Buffer cameraBuffer(driver._context, sizeof(Camera::Data), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
     // cmd
 
     const Vertex vertices[] = {
-            {{0.f, -0.5f}, {1.f, 0.f, 0.f}},
-            {{0.5f, 0.5f}, {0.f, 1.f, 0.f}},
-            {{-0.5f, 0.5f}, {0.f, 0.f, 1.f}}
+            {{0.f, -0.5f, 0.f}, {0.f, 1.f, 0.f}, {0.5f, 0.f}, {1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}},
+            {{0.5f, 0.5f, 0.f}, {0.f, 1.f, 0.f}, {1.f, 1.f}, {1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}},
+            {{-0.5f, 0.5f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 1.f}, {1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}}
     };
     Buffer vertexBuffer(driver._context, sizeof(vertices[0]) * 3, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     vertexBuffer.data({vertices, sizeof(Vertex) * 3});
 
-    Buffer uniformBuffer(driver._context, sizeof(ende::math::Vec3f), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    ende::math::Vec3f uniformData = {0.5, 0.5, 0.5};
-    uniformBuffer.data({&uniformData, sizeof(uniformData)});
+
+    Transform model({0, 0, 0});
+    Buffer uniformBuffer(driver._context, sizeof(ende::math::Mat4f), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     // get shader data
     ende::fs::File shaderFile;
-    if (!shaderFile.open("../../res/shaders/triangle.vert.spv"_path, ende::fs::in | ende::fs::binary))
+    if (!shaderFile.open("../../res/shaders/default.vert.spv"_path, ende::fs::in | ende::fs::binary))
         return -1;
 
     ende::Vector<u32> vertexShaderData(shaderFile.size() / sizeof(u32));
     shaderFile.read({reinterpret_cast<char*>(vertexShaderData.data()), static_cast<u32>(vertexShaderData.size() * sizeof(u32))});
 
-    if (!shaderFile.open("../../res/shaders/triangle.frag.spv"_path, ende::fs::in | ende::fs::binary))
+    if (!shaderFile.open("../../res/shaders/default.frag.spv"_path, ende::fs::in | ende::fs::binary))
         return -2;
     ende::Vector<u32> fragmentShaderData(shaderFile.size() / sizeof(u32));
     shaderFile.read({reinterpret_cast<char*>(fragmentShaderData.data()), static_cast<u32>(fragmentShaderData.size() * sizeof(u32))});
@@ -93,12 +104,15 @@ int main() {
     //vertex array
     VkVertexInputBindingDescription binding{};
     binding.binding = 0;
-    binding.stride = 5 * sizeof(f32);
+    binding.stride = 14 * sizeof(f32);
     binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    VkVertexInputAttributeDescription attributes[2] = {
-            { .location = 0, .binding = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset = 0 },
-            { .location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(f32) * 2 }
+    VkVertexInputAttributeDescription attributes[5] = {
+            { .location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 },
+            { .location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(f32) * 3 },
+            { .location = 2, .binding = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset = sizeof(f32) * 6 },
+            { .location = 3, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(f32) * 8 },
+            { .location = 4, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(f32) * 11 }
     };
 
 
@@ -123,6 +137,17 @@ int main() {
                     break;
             }
         }
+        {
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_W])
+                cameraTransform.addPos(cameraTransform.rot().front() * dt * 10);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_S])
+                cameraTransform.addPos(cameraTransform.rot().back() * dt * 10);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_A])
+                cameraTransform.addPos(cameraTransform.rot().left() * dt * 10);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_D])
+                cameraTransform.addPos(cameraTransform.rot().right() * dt * 10);
+        }
+
 
         driver._swapchain.wait();
 
@@ -147,6 +172,14 @@ int main() {
             ImGui::Render();
         }
 
+        {
+            auto cameraData = camera.data();
+            cameraBuffer.data({&cameraData, sizeof(cameraData)});
+
+            auto modelData = model.toMat();
+            uniformBuffer.data({&modelData, sizeof(modelData)});
+        }
+
         auto frame = driver._swapchain.nextImage();
 
         cmd = driver.beginFrame();
@@ -156,12 +189,13 @@ int main() {
             cmd->begin(frame.framebuffer);
 
             cmd->bindProgram(program);
-            cmd->bindVertexArray({&binding, 1}, {attributes, 2});
+            cmd->bindVertexArray({&binding, 1}, {attributes, 5});
             cmd->bindRasterState({});
             cmd->bindDepthState({});
             cmd->bindPipeline();
 
-            cmd->bindBuffer(0, 0, uniformBuffer);
+            cmd->bindBuffer(0, 0, cameraBuffer);
+            cmd->bindBuffer(1, 0, uniformBuffer);
             cmd->bindDescriptors();
 
             cmd->bindVertexBuffer(0, vertexBuffer.buffer());
