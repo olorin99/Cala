@@ -18,8 +18,6 @@
 #include <Cala/backend/vulkan/Driver.h>
 
 #include <Cala/backend/vulkan/CommandBuffer.h>
-#include <Cala/backend/vulkan/RenderPass.h>
-#include <Cala/backend/vulkan/Image.h>
 #include <Cala/backend/vulkan/Buffer.h>
 
 #include <Cala/ImGuiContext.h>
@@ -27,16 +25,72 @@
 #include <Cala/Camera.h>
 #include <Cala/shapes.h>
 
+
+#include "../third_party/stb_image.h"
+
 using namespace cala;
 using namespace cala::backend::vulkan;
 
-//struct Vertex {
-//    ende::math::Vec3f position;
-//    ende::math::Vec3f normal;
-//    ende::math::Vec<2, f32> texCoords;
-//    ende::math::Vec3f tangent;
-//    ende::math::Vec3f bitangent;
-//};
+
+Image loadImage(Driver& driver, const ende::fs::Path& path) {
+    i32 width, height, channels;
+    u8* data = stbi_load((*path).c_str(), &width, &height, &channels, STBI_rgb_alpha);
+    if (!data) throw "unable load image";
+    u32 length = width * height * 4;
+
+    auto staging = driver.stagingBuffer(length);
+    staging.data({data, length});
+
+    stbi_image_free(data);
+
+    Image image(driver._context, {(u32)width, (u32)height, 1, VK_FORMAT_R8G8B8A8_SRGB});
+
+    driver.immediate([&](VkCommandBuffer buffer) {
+        VkImageSubresourceRange range;
+        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        range.baseMipLevel = 0;
+        range.levelCount = 1;
+        range.baseArrayLayer = 0;
+        range.layerCount = 1;
+
+        VkImageMemoryBarrier imageBarrier{};
+        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        imageBarrier.image = image.image();
+        imageBarrier.subresourceRange = range;
+        imageBarrier.srcAccessMask = 0;
+        imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        vkCmdPipelineBarrier(buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+
+        VkBufferImageCopy copyRegion{};
+        copyRegion.bufferOffset = 0;
+        copyRegion.bufferRowLength = 0;
+        copyRegion.bufferImageHeight = 0;
+
+        copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        copyRegion.imageSubresource.mipLevel = 0;
+        copyRegion.imageSubresource.baseArrayLayer = 0;
+        copyRegion.imageSubresource.layerCount = 1;
+        copyRegion.imageExtent.width = width;
+        copyRegion.imageExtent.height = height;
+        copyRegion.imageExtent.depth = 1;
+
+        vkCmdCopyBufferToImage(buffer, staging.buffer(), image.image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+
+//        VkImageMemoryBarrier imageBarrier1{}
+        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        imageBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        vkCmdPipelineBarrier(buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+
+    });
+
+    return image;
+}
+
 
 int main() {
 
@@ -69,16 +123,6 @@ int main() {
     Camera camera(ende::math::perspective(45.f, 800.f / 600.f, 0.f, 1000.f), cameraTransform);
 
     Buffer cameraBuffer(driver._context, sizeof(Camera::Data), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-    // cmd
-
-//    const Vertex vertices[] = {
-//            {{0.f, -0.5f, 0.f}, {0.f, 1.f, 0.f}, {0.5f, 0.f}, {1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}},
-//            {{0.5f, 0.5f, 0.f}, {0.f, 1.f, 0.f}, {1.f, 1.f}, {1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}},
-//            {{-0.5f, 0.5f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 1.f}, {1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}}
-//    };
-//    Buffer vertexBuffer(driver._context, sizeof(vertices[0]) * 3, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-//    vertexBuffer.data({vertices, sizeof(Vertex) * 3});
 
     Mesh vertices = cala::shapes::sphere();
     Buffer vertexBuffer = vertices.vertexBuffer(driver._context);
@@ -118,6 +162,32 @@ int main() {
             { .location = 3, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(f32) * 8 },
             { .location = 4, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(f32) * 11 }
     };
+
+
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.anisotropyEnable = VK_FALSE;
+    samplerInfo.maxAnisotropy = 0;
+    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipLodBias = 0.f;
+    samplerInfo.minLod = 0.f;
+    samplerInfo.maxLod = 0.f;
+
+    VkSampler sampler;
+    vkCreateSampler(driver._context._device, &samplerInfo, nullptr, &sampler);
+
+
+    Image image = loadImage(driver, "../../res/textures/metal-sheet.jpg"_path);
+    Image::View view = image.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT);
 
 
 
@@ -200,6 +270,7 @@ int main() {
 
             cmd->bindBuffer(0, 0, cameraBuffer);
             cmd->bindBuffer(1, 0, uniformBuffer);
+            cmd->bindImage(2, 0, view.view, sampler);
             cmd->bindDescriptors();
 
             cmd->bindVertexBuffer(0, vertexBuffer.buffer());

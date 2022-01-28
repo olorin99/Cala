@@ -26,11 +26,27 @@ namespace cala::backend::vulkan {
         void draw(CommandBuffer::RasterState state, Primitive primitive);
 
 
+        Buffer stagingBuffer(u32 size);
+
+
+        VkCommandBuffer beginSingleTimeCommands();
+
+        void endSingleTimeCommands(VkCommandBuffer buffer);
+
+        template <typename F>
+        void immediate(F func) {
+            auto cmd = beginSingleTimeCommands();
+            func(cmd);
+            endSingleTimeCommands(cmd);
+        }
+
+
 //    private:
 
         Context _context;
         Swapchain _swapchain;
         CommandBufferList _commands;
+        VkCommandPool _commandPool;
 
     };
 

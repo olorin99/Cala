@@ -34,6 +34,8 @@ namespace cala::backend::vulkan {
 
         ~Image();
 
+        void data(DataInfo info);
+
 
         struct View {
             VkImageView view;

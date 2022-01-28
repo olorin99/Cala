@@ -50,6 +50,12 @@ cala::backend::vulkan::Image::View::~View() {
     vkDestroyImageView(_device, view, nullptr);
 }
 
+
+void cala::backend::vulkan::Image::data(DataInfo info) {
+
+}
+
+
 cala::backend::vulkan::Image::View cala::backend::vulkan::Image::getView(VkImageViewType viewType, VkImageAspectFlags aspect, u32 mipLevel, u32 levelCount, u32 arrayLayer, u32 layerCount) {
     VkImageViewCreateInfo viewCreateInfo{};
     viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;

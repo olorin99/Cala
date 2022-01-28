@@ -33,6 +33,17 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
             bindings[set][bindingCount[set]].pImmutableSamplers = nullptr;
             bindingCount[set]++;
         }
+        for (auto& resource : resources.sampled_images) {
+            u32 set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
+            u32 binding = comp.get_decoration(resource.id, spv::DecorationBinding);
+
+            bindings[set][bindingCount[set]].binding = binding;
+            bindings[set][bindingCount[set]].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            bindings[set][bindingCount[set]].descriptorCount = 1;
+            bindings[set][bindingCount[set]].stageFlags = stage.second;
+            bindings[set][bindingCount[set]].pImmutableSamplers = nullptr;
+            bindingCount[set]++;
+        }
 
         VkShaderModule shader;
         VkShaderModuleCreateInfo createInfo{};

@@ -4,8 +4,15 @@
 cala::backend::vulkan::Driver::Driver(ende::Span<const char *> extensions, void *window, void *display)
     : _context(extensions),
       _swapchain(_context, window, display),
-      _commands(_context, _context.queueIndex(VK_QUEUE_GRAPHICS_BIT))
-{}
+      _commands(_context, _context.queueIndex(VK_QUEUE_GRAPHICS_BIT)),
+      _commandPool(VK_NULL_HANDLE)
+{
+    VkCommandPoolCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    createInfo.queueFamilyIndex = _context.queueIndex(VK_QUEUE_GRAPHICS_BIT);
+    createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(_context._device, &createInfo, nullptr, &_commandPool);
+}
 
 
 cala::backend::vulkan::CommandBuffer* cala::backend::vulkan::Driver::beginFrame() {
@@ -32,4 +39,43 @@ void cala::backend::vulkan::Driver::draw(CommandBuffer::RasterState state, Primi
 
     vkCmdDraw(commandBuffer->buffer(), primitive.vertices, 1, 0, 0);
 
+}
+
+cala::backend::vulkan::Buffer cala::backend::vulkan::Driver::stagingBuffer(u32 size) {
+    return Buffer(_context, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+}
+
+
+VkCommandBuffer cala::backend::vulkan::Driver::beginSingleTimeCommands() {
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = _commandPool;
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(_context._device, &allocInfo, &commandBuffer);
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+    return commandBuffer;
+}
+
+void cala::backend::vulkan::Driver::endSingleTimeCommands(VkCommandBuffer buffer) {
+    vkEndCommandBuffer(buffer);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &buffer;
+
+    VkQueue graphicsQueue = _context.getQueue(VK_QUEUE_GRAPHICS_BIT);
+    vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(graphicsQueue);
+
+    vkFreeCommandBuffers(_context._device, _commandPool, 1, &buffer);
 }

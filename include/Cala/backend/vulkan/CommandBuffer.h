@@ -76,6 +76,7 @@ namespace cala::backend::vulkan {
         void bindBuffer(u32 set, u32 slot, VkBuffer buffer, u32 offset, u32 range);
         void bindBuffer(u32 set, u32 slot, Buffer& buffer, u32 offset = 0, u32 range = 0);
 
+        void bindImage(u32 set, u32 slot, VkImageView image, VkSampler sampler);
 
         void bindDescriptors();
 
@@ -139,6 +140,10 @@ namespace cala::backend::vulkan {
                 u32 offset = 0;
                 u32 range = 0;
             } buffers[4] {};
+            struct {
+                VkImageView image = VK_NULL_HANDLE;
+                VkSampler sampler = VK_NULL_HANDLE;
+            } images[4] {};
 
             bool operator==(const DescriptorKey& rhs) const {
                 return memcmp(this, &rhs, sizeof(DescriptorKey)) == 0;

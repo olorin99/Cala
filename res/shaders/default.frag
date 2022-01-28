@@ -9,6 +9,9 @@ layout (location = 0) in VsOut {
 
 layout (location = 0) out vec4 FragColour;
 
+layout (set = 2, binding = 0) uniform sampler2D metalMap;
+
 void main() {
-    FragColour = vec4(1, 1, 1, 1);
+//    FragColour = vec4(1, 1, 1, 1);
+    FragColour = vec4(texture(metalMap, fsIn.TexCoords).xyz, 1.0f);
 }
