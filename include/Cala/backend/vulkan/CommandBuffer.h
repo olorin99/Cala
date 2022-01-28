@@ -83,9 +83,10 @@ namespace cala::backend::vulkan {
         void bindVertexBuffer(u32 first, VkBuffer buffer, u32 offset = 0);
         void bindVertexBuffers(u32 first, ende::Span<VkBuffer> buffers, ende::Span<VkDeviceSize> offsets);
 
+        void bindIndexBuffer(Buffer& buffer, u32 offset = 0);
 
 
-        void draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance);
+        void draw(u32 count, u32 instanceCount, u32 first, u32 firstInstance);
 
 
 
@@ -108,6 +109,8 @@ namespace cala::backend::vulkan {
         VkDevice _device;
         VkQueue _queue;
         bool _active;
+
+        Buffer* _indexBuffer;
 
         struct PipelineKey {
             VkShaderModule shaders[2] = {VK_NULL_HANDLE, VK_NULL_HANDLE};

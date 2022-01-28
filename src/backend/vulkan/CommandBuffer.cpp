@@ -8,6 +8,7 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(VkDevice device, VkQueue que
     _device(device),
     _queue(queue),
     _active(false),
+    _indexBuffer(nullptr),
     _currentPipeline(VK_NULL_HANDLE),
     _currentSets{VK_NULL_HANDLE}
 {
@@ -193,16 +194,26 @@ void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
 void cala::backend::vulkan::CommandBuffer::bindVertexBuffer(u32 first, VkBuffer buffer, u32 offset) {
     VkDeviceSize offsets = offset;
     vkCmdBindVertexBuffers(_buffer, first, 1, &buffer, &offsets);
+    _indexBuffer = nullptr;
 }
 
 void cala::backend::vulkan::CommandBuffer::bindVertexBuffers(u32 first, ende::Span<VkBuffer> buffers, ende::Span<VkDeviceSize> offsets) {
     assert(buffers.size() == offsets.size());
     vkCmdBindVertexBuffers(_buffer, first, buffers.size(), buffers.data(), offsets.data());
+    _indexBuffer = nullptr;
+}
+
+void cala::backend::vulkan::CommandBuffer::bindIndexBuffer(Buffer& buffer, u32 offset) {
+    vkCmdBindIndexBuffer(_buffer, buffer.buffer(), offset, VK_INDEX_TYPE_UINT32);
+    _indexBuffer = &buffer;
 }
 
 
-void cala::backend::vulkan::CommandBuffer::draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance) {
-    vkCmdDraw(_buffer, vertexCount, instanceCount, firstVertex, firstInstance);
+void cala::backend::vulkan::CommandBuffer::draw(u32 count, u32 instanceCount, u32 first, u32 firstInstance) {
+    if (_indexBuffer)
+        vkCmdDrawIndexed(_buffer, count, instanceCount, first, 0, firstInstance);
+    else
+        vkCmdDraw(_buffer, count, instanceCount, first, firstInstance);
 }
 
 

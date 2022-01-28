@@ -14,7 +14,7 @@ namespace cala::backend::vulkan {
         ~Buffer();
 
         Buffer(const Buffer&) = delete;
-        Buffer(Buffer&&) = delete;
+        Buffer(Buffer&& rhs);
 
 
         struct Mapped {

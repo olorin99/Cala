@@ -25,17 +25,18 @@
 #include <Cala/ImGuiContext.h>
 
 #include <Cala/Camera.h>
+#include <Cala/shapes.h>
 
 using namespace cala;
 using namespace cala::backend::vulkan;
 
-struct Vertex {
-    ende::math::Vec3f position;
-    ende::math::Vec3f normal;
-    ende::math::Vec<2, f32> texCoords;
-    ende::math::Vec3f tangent;
-    ende::math::Vec3f bitangent;
-};
+//struct Vertex {
+//    ende::math::Vec3f position;
+//    ende::math::Vec3f normal;
+//    ende::math::Vec<2, f32> texCoords;
+//    ende::math::Vec3f tangent;
+//    ende::math::Vec3f bitangent;
+//};
 
 int main() {
 
@@ -71,14 +72,17 @@ int main() {
 
     // cmd
 
-    const Vertex vertices[] = {
-            {{0.f, -0.5f, 0.f}, {0.f, 1.f, 0.f}, {0.5f, 0.f}, {1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}},
-            {{0.5f, 0.5f, 0.f}, {0.f, 1.f, 0.f}, {1.f, 1.f}, {1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}},
-            {{-0.5f, 0.5f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 1.f}, {1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}}
-    };
-    Buffer vertexBuffer(driver._context, sizeof(vertices[0]) * 3, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    vertexBuffer.data({vertices, sizeof(Vertex) * 3});
+//    const Vertex vertices[] = {
+//            {{0.f, -0.5f, 0.f}, {0.f, 1.f, 0.f}, {0.5f, 0.f}, {1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}},
+//            {{0.5f, 0.5f, 0.f}, {0.f, 1.f, 0.f}, {1.f, 1.f}, {1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}},
+//            {{-0.5f, 0.5f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 1.f}, {1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}}
+//    };
+//    Buffer vertexBuffer(driver._context, sizeof(vertices[0]) * 3, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+//    vertexBuffer.data({vertices, sizeof(Vertex) * 3});
 
+    Mesh vertices = cala::shapes::sphere();
+    Buffer vertexBuffer = vertices.vertexBuffer(driver._context);
+    Buffer indexBuffer = vertices.indexBuffer(driver._context);
 
     Transform model({0, 0, 0});
     Buffer uniformBuffer(driver._context, sizeof(ende::math::Mat4f), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -199,7 +203,9 @@ int main() {
             cmd->bindDescriptors();
 
             cmd->bindVertexBuffer(0, vertexBuffer.buffer());
-            cmd->draw(3, 1, 0, 0);
+            cmd->bindIndexBuffer(indexBuffer);
+//            cmd->draw(vertexBuffer.size() / sizeof(Vertex), 1, 0, 0);
+            cmd->draw(indexBuffer.size() / sizeof(u32), 1, 0, 0);
 
 //            driver.draw({}, {vertexBuffer, 3});
 

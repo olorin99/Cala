@@ -29,6 +29,23 @@ cala::backend::vulkan::Buffer::~Buffer() {
     vkDestroyBuffer(_context._device, _buffer, nullptr);
 }
 
+
+cala::backend::vulkan::Buffer::Buffer(Buffer &&rhs)
+    : _context(rhs._context),
+    _buffer(VK_NULL_HANDLE),
+    _memory(VK_NULL_HANDLE),
+    _size(0),
+    _flags(0),
+    _usage(0)
+{
+    std::swap(_buffer, rhs._buffer);
+    std::swap(_memory, rhs._memory);
+    std::swap(_size, rhs._size);
+    std::swap(_flags, rhs._flags);
+    std::swap(_usage, rhs._usage);
+}
+
+
 cala::backend::vulkan::Buffer::Mapped::~Mapped() {
     buffer->unmap();
 }
