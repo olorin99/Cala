@@ -302,12 +302,13 @@ int main() {
 
     driver._swapchain.wait();
 
-
-    std::cout << "\n\n\nCommand Buffers: " << driver._commands.count();
+    std::cout << "\n\nCommand Buffers: " << driver._commands.count();
     std::cout << "\nPipelines: " << (cmd ? cmd->_pipelines.size() : 0);
     std::cout << "\nDescriptors: " << (cmd ? cmd->_descriptorSets.size() : 0);
     std::cout << "\nUptime: " << runTime.elapsed().seconds() << "sec";
     std::cout << "\nFrame: " << frameCount;
+
+    vkDestroySampler(driver._context._device, sampler, nullptr);
 
     SDL_DestroyWindow(window);
 

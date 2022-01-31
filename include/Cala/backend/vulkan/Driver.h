@@ -13,6 +13,7 @@ namespace cala::backend::vulkan {
 
         Driver(ende::Span<const char*> extensions, void* window, void* display);
 
+        ~Driver();
 
         CommandBuffer* beginFrame();
 

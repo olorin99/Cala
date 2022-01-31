@@ -1,5 +1,5 @@
 #include "Cala/backend/vulkan/Driver.h"
-
+#include <vulkan/vulkan.h>
 
 cala::backend::vulkan::Driver::Driver(ende::Span<const char *> extensions, void *window, void *display)
     : _context(extensions),
@@ -12,6 +12,13 @@ cala::backend::vulkan::Driver::Driver(ende::Span<const char *> extensions, void 
     createInfo.queueFamilyIndex = _context.queueIndex(VK_QUEUE_GRAPHICS_BIT);
     createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     vkCreateCommandPool(_context._device, &createInfo, nullptr, &_commandPool);
+}
+
+cala::backend::vulkan::Driver::~Driver() {
+    vkDestroyCommandPool(_context._device, _commandPool, nullptr);
+
+    for (auto& setLayout : _setLayouts)
+        vkDestroyDescriptorSetLayout(_context._device, setLayout.second, nullptr);
 }
 
 
