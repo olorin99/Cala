@@ -79,3 +79,29 @@ void cala::backend::vulkan::Driver::endSingleTimeCommands(VkCommandBuffer buffer
 
     vkFreeCommandBuffers(_context._device, _commandPool, 1, &buffer);
 }
+
+
+VkDescriptorSetLayout cala::backend::vulkan::Driver::getSetLayout(ende::Span <VkDescriptorSetLayoutBinding> bindings) {
+
+    SetLayoutKey key;
+    for (u32 i = 0; i < bindings.size(); i++) {
+        key.bindings[i] = bindings[i];
+    }
+
+    auto it = _setLayouts.find(key);
+    if (it != _setLayouts.end()) {
+        return it->second;
+    }
+
+    VkDescriptorSetLayoutCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    createInfo.bindingCount = bindings.size();
+    createInfo.pBindings = bindings.data();
+
+    VkDescriptorSetLayout setLayout;
+    vkCreateDescriptorSetLayout(_context._device, &createInfo, nullptr, &setLayout);
+
+    _setLayouts.emplace(std::make_pair(key, setLayout));
+
+    return setLayout;
+}

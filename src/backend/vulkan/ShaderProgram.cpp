@@ -1,4 +1,5 @@
 #include "Cala/backend/vulkan/ShaderProgram.h"
+#include <Cala/backend/vulkan/Driver.h>
 #include "../third_party/SPIRV-Cross-master/spirv_cross.hpp"
 
 cala::backend::vulkan::ShaderProgram::Builder cala::backend::vulkan::ShaderProgram::create() {
@@ -10,8 +11,8 @@ cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProg
     return *this;
 }
 
-cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Builder::compile(VkDevice device) {
-    ShaderProgram program(device);
+cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Builder::compile(Driver& driver) {
+    ShaderProgram program(driver._context._device);
 
     u32 bindingCount[4] = {0};
     VkDescriptorSetLayoutBinding bindings[4][8]; // 4 sets 4 buffers each stage TODO: find proper value
@@ -51,7 +52,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
         createInfo.codeSize = stage.first.size() * sizeof(u32);
         createInfo.pCode = stage.first.data();
 
-        if (vkCreateShaderModule(device, &createInfo, nullptr, &shader) != VK_SUCCESS)
+        if (vkCreateShaderModule(driver._context._device, &createInfo, nullptr, &shader) != VK_SUCCESS)
             throw "Unable to create shader";
 
         VkPipelineShaderStageCreateInfo stageCreateInfo{};
@@ -67,12 +68,13 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
 //    u32 setCount = 0;
 
     VkDescriptorSetLayout setLayouts[4] = {};
-    VkDescriptorSetLayoutCreateInfo setLayoutInfo[4] = {};
+//    VkDescriptorSetLayoutCreateInfo setLayoutInfo[4] = {};
     for (u32 i = 0; i < 4; i++) {
-        setLayoutInfo[i].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        setLayoutInfo[i].bindingCount = bindingCount[i];
-        setLayoutInfo[i].pBindings = bindings[i];
-        vkCreateDescriptorSetLayout(device, &setLayoutInfo[i], nullptr, &setLayouts[i]);
+        setLayouts[i] = driver.getSetLayout({bindings[i], bindingCount[i]});
+//        setLayoutInfo[i].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+//        setLayoutInfo[i].bindingCount = bindingCount[i];
+//        setLayoutInfo[i].pBindings = bindings[i];
+//        vkCreateDescriptorSetLayout(driver._context._device, &setLayoutInfo[i], nullptr, &setLayouts[i]);
     }
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
@@ -83,7 +85,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
     pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
     VkPipelineLayout  pipelineLayout;
-    vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
+    vkCreatePipelineLayout(driver._context._device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
 
 
     program._layout = pipelineLayout;

@@ -147,7 +147,7 @@ int main() {
     ShaderProgram program = ShaderProgram::create()
             .addStage(vertexShaderData, VK_SHADER_STAGE_VERTEX_BIT)
             .addStage(fragmentShaderData, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .compile(driver._context._device);
+            .compile(driver);
 
     //vertex array
     VkVertexInputBindingDescription binding{};
@@ -237,6 +237,7 @@ int main() {
             ImGui::Text("Command Buffers: %ld", driver._commands.count());
             ImGui::Text("Pipelines: %ld", cmd ? cmd->_pipelines.size() : 0);
             ImGui::Text("Descriptors: %ld", cmd ? cmd->_descriptorSets.size() : 0);
+            ImGui::Text("Set Layouts: %ld", driver._setLayouts.size());
             ImGui::Text("Uptime: %ld sec", runTime.elapsed().seconds());
             ImGui::Text("Frame: %ld", frameCount);
 
@@ -294,28 +295,12 @@ int main() {
         dt = frameTime.milliseconds() / 1000.f;
         frameCount++;
 
-//        if (frameCount > 10)
-//            running = false;
+
+        if (cmd->_descriptorSets.size() > 700)
+            running = false;
     }
 
     driver._swapchain.wait();
-
-    ende::util::MurmurHash<CommandBuffer::DescriptorKey> hasher;
-
-    std::cout << sizeof(CommandBuffer::DescriptorKey) << '\n';
-    std::cout << sizeof(CommandBuffer::DescriptorKey) / 4 << '\n';
-
-    std::cout << "Current Descriptor Sets\n";
-    for (u32 i = 0; i < SET_COUNT; i++) {
-        std::cout << hasher(cmd->_descriptorKey[i]) << '\n';
-    }
-
-    std::cout << '\n';
-
-    std::cout << "Stored Descriptor Sets\n";
-    for (auto& [key, value] : cmd->_descriptorSets) {
-        std::cout << hasher(key) << '\n';
-    }
 
 
     std::cout << "\n\n\nCommand Buffers: " << driver._commands.count();

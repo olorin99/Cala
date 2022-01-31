@@ -131,9 +131,9 @@ namespace cala::backend::vulkan {
         VkPipeline _currentPipeline;
         std::unordered_map<PipelineKey, VkPipeline, ende::util::MurmurHash<PipelineKey>> _pipelines;
 
-        VkDescriptorSetLayout setLayout[4] {};
-        struct __attribute__((packed)) DescriptorKey {
-//            VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
+//        VkDescriptorSetLayout setLayout[4] {};
+        struct /*__attribute__((packed))*/ DescriptorKey {
+            VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
 
             struct {
                 VkBuffer buffer = VK_NULL_HANDLE;

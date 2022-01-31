@@ -48,6 +48,18 @@ namespace cala::backend::vulkan {
         CommandBufferList _commands;
         VkCommandPool _commandPool;
 
+
+        struct SetLayoutKey {
+            VkDescriptorSetLayoutBinding bindings[8];
+            bool operator==(const SetLayoutKey& rhs) const {
+                return memcmp(this, &rhs, sizeof(SetLayoutKey)) == 0;
+            }
+        };
+        std::unordered_map<SetLayoutKey, VkDescriptorSetLayout, ende::util::MurmurHash<SetLayoutKey>> _setLayouts;
+
+
+        VkDescriptorSetLayout getSetLayout(ende::Span<VkDescriptorSetLayoutBinding> bindings);
+
     };
 
 }

@@ -1,7 +1,5 @@
 #include "Cala/backend/vulkan/CommandBuffer.h"
 
-#include <iostream>
-
 cala::backend::vulkan::CommandBuffer::CommandBuffer(VkDevice device, VkQueue queue, VkCommandBuffer buffer)
     : _buffer(buffer),
     _signal(VK_NULL_HANDLE),
@@ -96,9 +94,9 @@ void cala::backend::vulkan::CommandBuffer::bindProgram(ShaderProgram &program) {
         _pipelineKey.layout = program._layout;
 
     for (u32 i = 0; i < SET_COUNT; i++) {
-//        if (_descriptorKey[i].setLayout != program._setLayout[i])
-//            _descriptorKey[i].setLayout = program._setLayout[i];
-        setLayout[i] = program._setLayout[i];
+        if (_descriptorKey[i].setLayout != program._setLayout[i])
+            _descriptorKey[i].setLayout = program._setLayout[i];
+//        setLayout[i] = program._setLayout[i];
     }
     for (u32 i = 0; i < program._stages.size(); i++) {
         if (_pipelineKey.shaders[i] != program._stages[i].module) {
@@ -161,22 +159,9 @@ void cala::backend::vulkan::CommandBuffer::bindImage(u32 set, u32 slot, VkImageV
 
 void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
 
-    //TOOD: figure out what the hell is happening here
-
-//    ende::util::MurmurHash<DescriptorKey> hasher;
-
-//    for (u32 i = 0; i < SET_COUNT; i++) {
-//        std::cout << hasher(_descriptorKey[i]) << '\n';
-//    }
-//
-//    std::cout << "\n\n\n";
-
-
     u32 setCount = 0;
     // find descriptors with key
     for (u32 i = 0; i < SET_COUNT; i++) {
-//        std::cout << hasher(_descriptorKey[i]) << '\n';
-//        std::cout << _descriptorSets.size() << '\n';
         auto descriptor = getDescriptorSet(i);
 //        std::cout << _descriptorSets.size() << '\n';
 //        if (descriptor == VK_NULL_HANDLE) {
@@ -394,29 +379,11 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
     assert(set < SET_COUNT && "set is greater than allowed descriptor count");
     auto key = _descriptorKey[set];
 
-    if (setLayout[set] == VK_NULL_HANDLE)
+    if (key.setLayout == VK_NULL_HANDLE)
         return VK_NULL_HANDLE;
-
-//    const char* str = (const char*)&key;
-//
-//    std::cout << "\nKey: " << set << " : " << _descriptorSets.size() << " : " << _descriptorSets.hash_function()(key) << '\n';
-//
-//    for (auto& [storedKey, value] : _descriptorSets) {
-//        const char* storedStr = (const char*)&storedKey;
-//        for (u32 i = 0; i < sizeof(key); i++)
-//            std::cout << storedStr[i];
-//        std::cout << '\n';
-//        for (u32 i = 0; i < sizeof(key); i++)
-//            std::cout << str[i];
-//        std::cout << '\n';
-//
-//        std::cout << (storedKey == key) << " : " << memcmp(&storedKey, &key, sizeof(key)) << " : " << _descriptorSets.hash_function()(storedKey) << " : " << _descriptorSets.hash_function()(key) << "\n";
-//        std::cout << ende::util::MurmurHash<DescriptorKey>()(key) << " : " << ende::util::MurmurHash<DescriptorKey>()(storedKey) << '\n';
-//    }
 
     auto it = _descriptorSets.find(key);
     if (it != _descriptorSets.end()) {
-//        std::cout << "Found\n";
         return it->second;
     }
 
@@ -425,12 +392,13 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = _descriptorPool;
     allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &setLayout[set];
+    allocInfo.pSetLayouts = &key.setLayout;
 
     VkDescriptorSet descriptorSet;
     vkAllocateDescriptorSets(_device, &allocInfo, &descriptorSet);
 
     for (u32 i = 0; i < 4; i++) {
+
         if (key.buffers[i].buffer != VK_NULL_HANDLE) {
             VkDescriptorBufferInfo bufferInfo{};
             bufferInfo.buffer = key.buffers[i].buffer;
@@ -474,6 +442,5 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
     }
 
     _descriptorSets.emplace(std::make_pair(key, descriptorSet));
-//    _descriptorSets[key] = descriptorSet;
     return descriptorSet;
 }

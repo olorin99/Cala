@@ -7,6 +7,8 @@
 
 namespace cala::backend::vulkan {
 
+    class Driver;
+
     class ShaderProgram {
     public:
 
@@ -15,7 +17,7 @@ namespace cala::backend::vulkan {
 
             Builder& addStage(ende::Span<u32> code, u32 flags);
 
-            ShaderProgram compile(VkDevice device);
+            ShaderProgram compile(Driver& driver);
 
         private:
 
