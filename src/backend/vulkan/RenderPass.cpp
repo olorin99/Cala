@@ -1,9 +1,10 @@
 #include "Cala/backend/vulkan/RenderPass.h"
 
 cala::backend::vulkan::RenderPass::RenderPass(VkDevice device, ende::Span<Attachment> attachments)
-    : _device(device)
+    : _device(device),
+    _colourAttachments(0)
 {
-
+    _clearValues.reserve(attachments.size());
     u32 colourAttachmentCount = 0;
     VkAttachmentDescription attachmentDescriptions[5]{}; // 4 colour attachments + depth
     VkAttachmentReference colourReferences[4]{};
@@ -24,6 +25,8 @@ cala::backend::vulkan::RenderPass::RenderPass(VkDevice device, ende::Span<Attach
             colourReferences[colourAttachmentCount].attachment = i;
             colourReferences[colourAttachmentCount].layout = attachments[i].internalLayout;
             colourAttachmentCount++;
+            _clearValues.push({0.f, 0.f, 0.f, 1.f});
+            _colourAttachments++;
         } else {
             depthAttachment.format = attachments[i].format;
             depthAttachment.samples = attachments[i].samples;
@@ -36,6 +39,7 @@ cala::backend::vulkan::RenderPass::RenderPass(VkDevice device, ende::Span<Attach
             depthReference.attachment = i;
             depthReference.layout = attachments[i].internalLayout;
             depthPresent = true;
+            _clearValues.push({1.f, 0.f});
         }
 
     }

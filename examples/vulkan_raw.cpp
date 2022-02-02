@@ -38,56 +38,9 @@ Image loadImage(Driver& driver, const ende::fs::Path& path) {
     if (!data) throw "unable load image";
     u32 length = width * height * 4;
 
-    auto staging = driver.stagingBuffer(length);
-    staging.data({data, length});
-
-    stbi_image_free(data);
-
     Image image(driver._context, {(u32)width, (u32)height, 1, VK_FORMAT_R8G8B8A8_SRGB});
-
-    driver.immediate([&](VkCommandBuffer buffer) {
-        VkImageSubresourceRange range;
-        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        range.baseMipLevel = 0;
-        range.levelCount = 1;
-        range.baseArrayLayer = 0;
-        range.layerCount = 1;
-
-        VkImageMemoryBarrier imageBarrier{};
-        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier.image = image.image();
-        imageBarrier.subresourceRange = range;
-        imageBarrier.srcAccessMask = 0;
-        imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        vkCmdPipelineBarrier(buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
-
-        VkBufferImageCopy copyRegion{};
-        copyRegion.bufferOffset = 0;
-        copyRegion.bufferRowLength = 0;
-        copyRegion.bufferImageHeight = 0;
-
-        copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        copyRegion.imageSubresource.mipLevel = 0;
-        copyRegion.imageSubresource.baseArrayLayer = 0;
-        copyRegion.imageSubresource.layerCount = 1;
-        copyRegion.imageExtent.width = width;
-        copyRegion.imageExtent.height = height;
-        copyRegion.imageExtent.depth = 1;
-
-        vkCmdCopyBufferToImage(buffer, staging.buffer(), image.image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
-
-//        VkImageMemoryBarrier imageBarrier1{}
-        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        vkCmdPipelineBarrier(buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
-
-    });
-
+    image.data(driver, {0, (u32)width, (u32)height, 1, 4, {data, length}});
+    stbi_image_free(data);
     return image;
 }
 
@@ -120,7 +73,7 @@ int main() {
     ImGuiContext imGuiContext(driver, window);
 
     Transform cameraTransform({0, 0, -1});
-    Camera camera(ende::math::perspective(45.f, 800.f / 600.f, 0.f, 1000.f), cameraTransform);
+    Camera camera(ende::math::perspective(45.f, 800.f / -600.f, 0.f, 1000.f), cameraTransform);
 
     Buffer cameraBuffer(driver._context, sizeof(Camera::Data), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -220,6 +173,10 @@ int main() {
                 cameraTransform.addPos(cameraTransform.rot().left() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_D])
                 cameraTransform.addPos(cameraTransform.rot().right() * dt * 10);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LSHIFT])
+                cameraTransform.addPos(cameraTransform.rot().down() * dt * 10);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_SPACE])
+                cameraTransform.addPos(cameraTransform.rot().up() * dt * 10);
         }
 
 
@@ -266,7 +223,7 @@ int main() {
             cmd->bindProgram(program);
             cmd->bindVertexArray({&binding, 1}, {attributes, 5});
             cmd->bindRasterState({});
-            cmd->bindDepthState({});
+            cmd->bindDepthState({true, true, VK_COMPARE_OP_LESS_OR_EQUAL});
             cmd->bindPipeline();
 
             cmd->bindBuffer(0, 0, cameraBuffer);

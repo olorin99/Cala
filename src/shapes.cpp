@@ -3,6 +3,14 @@
 
 cala::Mesh cala::shapes::triangle(f32 width, f32 height) {
     Mesh data;
+
+    f32 halfWidth = width / 2.f;
+    f32 halfHeight = height / 2.f;
+
+    data.addVertex({ { -halfWidth, -halfHeight, 0 }, { 0, 0, 1 }, { 0, 0 }, { 1, 0, 0 }, { 0, 0, 1 } });
+    data.addVertex({ { halfWidth, -halfHeight, 0 }, { 0, 0, 1 }, { 1, 0 }, { 1, 0, 0 }, { 0, 0, 1 } });
+    data.addVertex({ { 0, halfHeight, 0 }, { 0, 0, 1 }, { 0.5, 1 }, { 1, 0, 0 }, { 0, 0, 1 } });
+
     return data;
 }
 

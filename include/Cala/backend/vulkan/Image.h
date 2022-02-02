@@ -8,6 +8,8 @@
 
 namespace cala::backend::vulkan {
 
+    class Driver;
+
     class Image {
     public:
 
@@ -26,7 +28,7 @@ namespace cala::backend::vulkan {
             u32 width = 1;
             u32 height = 1;
             u32 depth = 1;
-            VkFormat format;
+            u32 format = 4; //byte size of values per pixel TODO: change to enum
             ende::Span<void> data = nullptr;
         };
 
@@ -34,7 +36,7 @@ namespace cala::backend::vulkan {
 
         ~Image();
 
-        void data(DataInfo info);
+        void data(Driver& driver, DataInfo info);
 
 
         struct View {

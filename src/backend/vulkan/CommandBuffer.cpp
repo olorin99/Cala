@@ -6,6 +6,7 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(VkDevice device, VkQueue que
     _device(device),
     _queue(queue),
     _active(false),
+    _renderPass(nullptr),
     _indexBuffer(nullptr),
     _currentPipeline(VK_NULL_HANDLE),
     _currentSets{VK_NULL_HANDLE}
@@ -68,9 +69,10 @@ void cala::backend::vulkan::CommandBuffer::begin(RenderPass &renderPass, VkFrame
     beginInfo.renderArea.offset = {0, 0};
     beginInfo.renderArea.extent = {extent.first, extent.second};
 
-    VkClearValue clear[2] = {{0.f, 0.f, 0.f, 1.f}, {1.f, 0.f}};
-    beginInfo.clearValueCount = 2;
-    beginInfo.pClearValues = clear;
+//    VkClearValue clear[2] = {{0.f, 0.f, 0.f, 1.f}, {1.f, 0.f}};
+    auto clearValues = renderPass.clearValues();
+    beginInfo.clearValueCount = clearValues.size();
+    beginInfo.pClearValues = clearValues.data();
 
     vkCmdBeginRenderPass(_buffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
     bindRenderPass(renderPass);
@@ -115,9 +117,10 @@ void cala::backend::vulkan::CommandBuffer::bindVertexArray(ende::Span<VkVertexIn
     memcpy(_pipelineKey.attributes, attributes.data(), attributes.size() * sizeof(VkVertexInputAttributeDescription));
 }
 
-void cala::backend::vulkan::CommandBuffer::bindRenderPass(const RenderPass& renderPass) {
+void cala::backend::vulkan::CommandBuffer::bindRenderPass(RenderPass& renderPass) {
     if (_pipelineKey.renderPass != renderPass.renderPass()) {
         _pipelineKey.renderPass = renderPass.renderPass();
+        _renderPass = &renderPass;
 //        _dirty = true;
     }
 }
@@ -163,20 +166,18 @@ void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
     // find descriptors with key
     for (u32 i = 0; i < SET_COUNT; i++) {
         auto descriptor = getDescriptorSet(i);
-//        std::cout << _descriptorSets.size() << '\n';
-//        if (descriptor == VK_NULL_HANDLE) {
-//            setCount = i + 1;
-//            break;
-//        }
         _currentSets[i] = descriptor;
         setCount++;
     }
 
-    // if not available create new
-
     // bind descriptor
     vkCmdBindDescriptorSets(_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineKey.layout, 0, setCount, _currentSets, 0, nullptr);
 
+}
+
+void cala::backend::vulkan::CommandBuffer::clearDescriptors() {
+    for (auto& setKey : _descriptorKey)
+        setKey = {};
 }
 
 
@@ -325,11 +326,6 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
     multisample.alphaToCoverageEnable = VK_FALSE;
     multisample.alphaToOneEnable = VK_FALSE;
 
-    VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachment.blendEnable = VK_FALSE;
-
-
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.depthTestEnable = _pipelineKey.depth.test;
@@ -342,13 +338,21 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
     depthStencil.front = {};
     depthStencil.back = {};
 
+    //TODO: set up so can be configured by user
+    VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachment.blendEnable = VK_FALSE;
+
+    VkPipelineColorBlendAttachmentState colourBlendAttachments[3] {};
+    for (auto& attachment : colourBlendAttachments)
+        attachment = colorBlendAttachment;
 
     VkPipelineColorBlendStateCreateInfo colorBlending{};
     colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     colorBlending.logicOpEnable = VK_FALSE;
     colorBlending.logicOp = VK_LOGIC_OP_COPY;
-    colorBlending.attachmentCount = 1;
-    colorBlending.pAttachments = &colorBlendAttachment;
+    colorBlending.attachmentCount = _renderPass->colourAttachmentCount();
+    colorBlending.pAttachments = colourBlendAttachments;
     colorBlending.blendConstants[0] = 0.f;
     colorBlending.blendConstants[1] = 0.f;
     colorBlending.blendConstants[2] = 0.f;

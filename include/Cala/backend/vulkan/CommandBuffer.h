@@ -49,7 +49,7 @@ namespace cala::backend::vulkan {
         void bindVertexArray(ende::Span<VkVertexInputBindingDescription> bindings, ende::Span<VkVertexInputAttributeDescription> attributes);
 
 
-        void bindRenderPass(const RenderPass& renderPass);
+        void bindRenderPass(RenderPass& renderPass);
 
         struct RasterState {
             bool depthClamp = false;
@@ -79,6 +79,7 @@ namespace cala::backend::vulkan {
         void bindImage(u32 set, u32 slot, VkImageView image, VkSampler sampler);
 
         void bindDescriptors();
+        void clearDescriptors();
 
 
         void bindVertexBuffer(u32 first, VkBuffer buffer, u32 offset = 0);
@@ -111,6 +112,7 @@ namespace cala::backend::vulkan {
         VkQueue _queue;
         bool _active;
 
+        RenderPass* _renderPass;
         Buffer* _indexBuffer;
 
         struct PipelineKey {
