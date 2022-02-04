@@ -12,7 +12,7 @@ namespace cala::backend::vulkan {
     class Swapchain {
     public:
 
-        Swapchain(Context& context, void* window, void* display);
+        Swapchain(Context& context, Platform& platform);
 
         ~Swapchain();
 

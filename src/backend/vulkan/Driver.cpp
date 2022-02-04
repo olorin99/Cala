@@ -1,9 +1,9 @@
 #include "Cala/backend/vulkan/Driver.h"
 #include <vulkan/vulkan.h>
 
-cala::backend::vulkan::Driver::Driver(ende::Span<const char *> extensions, void *window, void *display)
-    : _context(extensions),
-      _swapchain(_context, window, display),
+cala::backend::vulkan::Driver::Driver(cala::backend::Platform& platform)
+    : _context(platform),
+      _swapchain(_context, platform),
       _commands(_context, _context.queueIndex(VK_QUEUE_GRAPHICS_BIT)),
       _commandPool(VK_NULL_HANDLE)
 {

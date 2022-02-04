@@ -6,12 +6,14 @@
 #include <Ende/Vector.h>
 #include <Ende/Span.h>
 
+#include "Platform.h"
+
 namespace cala::backend::vulkan {
 
     class Context {
     public:
 
-        Context(ende::Span<const char*> extensions);
+        Context(cala::backend::Platform& platform);
 
         ~Context();
 

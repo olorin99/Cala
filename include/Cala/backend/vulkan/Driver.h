@@ -5,13 +5,14 @@
 #include <Cala/backend/vulkan/Swapchain.h>
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include <Cala/backend/vulkan/CommandBufferList.h>
+#include "Platform.h"
 
 namespace cala::backend::vulkan {
 
     class Driver {
     public:
 
-        Driver(ende::Span<const char*> extensions, void* window, void* display);
+        Driver(Platform& platform);
 
         ~Driver();
 

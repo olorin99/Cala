@@ -2,6 +2,8 @@
 
 #include <Ende/Vector.h>
 
+#include <iostream>
+
 const char* validationLayers[] = {
         "VK_LAYER_KHRONOS_validation"
 };
@@ -20,7 +22,7 @@ bool checkDeviceSuitable(VkPhysicalDevice device) {
     return deviceFeatures.geometryShader;
 }
 
-cala::backend::vulkan::Context::Context(ende::Span<const char *> extensions) {
+cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
 
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -29,6 +31,8 @@ cala::backend::vulkan::Context::Context(ende::Span<const char *> extensions) {
     appInfo.pEngineName = "Cala";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.apiVersion = VK_API_VERSION_1_0;
+
+    auto extensions = platform.requiredExtensions();
 
     VkInstanceCreateInfo instanceCreateInfo{};
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -82,6 +86,23 @@ cala::backend::vulkan::Context::Context(ende::Span<const char *> extensions) {
 
         queueCreateInfos.push(queueCreateInfo);
     }
+
+
+//    //TODO: store extensions for queries
+//    u32 extensionCount = 0;
+//    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+//    ende::Vector<VkExtensionProperties> extensions1(extensionCount);
+//    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions1.data());
+//
+//    std::cout << "Extensions:\n";
+//    for (auto& extension : extensions1)
+//        std::cout << '\t' << extension.extensionName << '\n';
+
+
+//    VkPhysicalDeviceFeatures deviceFeatures1{};
+//    vkGetPhysicalDeviceFeatures(_physicalDevice, &deviceFeatures1);
+//
+
 
     VkPhysicalDeviceFeatures deviceFeatures{};
 

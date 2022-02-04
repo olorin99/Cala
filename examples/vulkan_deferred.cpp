@@ -1,15 +1,12 @@
 #include <iostream>
 
+#include <Cala/backend/vulkan/SDLPlatform.h>
 #include <Cala/backend/vulkan/Driver.h>
 #include <Cala/ImGuiContext.h>
 #include <Cala/Camera.h>
 #include <Cala/shapes.h>
 
 #include <Ende/filesystem/File.h>
-
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_vulkan.h>
-#include <SDL2/SDL_syswm.h>
 
 #include "../third_party/stb_image.h"
 
@@ -30,26 +27,12 @@ Image loadImage(Driver& driver, const ende::fs::Path& path) {
 }
 
 int main() {
-    auto window = SDL_CreateWindow("deferred", 0, 0, 800, 600, SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN);
-    SDL_SysWMinfo wmInfo;
-    SDL_VERSION(&wmInfo.version);
-    SDL_GetWindowWMInfo(window, &wmInfo);
 
-    u32 extensionCount = 0;
-    SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr);
-    ende::Vector<const char*> extensionNames(extensionCount);
-    SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, extensionNames.data());
+    SDLPlatform platform("Deferred", 800, 600);
 
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-    ende::Vector<VkExtensionProperties> extensions(extensionCount);
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
-    for (const auto& extension : extensions)
-        std::cout << '\t' << extension.extensionName << '\n';
+    Driver driver(platform);
 
-    Driver driver(extensionNames, &wmInfo.info.x11.window, wmInfo.info.x11.display);
-
-    ImGuiContext imGuiContext(driver, window);
-
+    ImGuiContext imGuiContext(driver, platform.window());
 
     // get shader data
     ende::fs::File shaderFile;

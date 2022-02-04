@@ -20,6 +20,8 @@
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include <Cala/backend/vulkan/Buffer.h>
 
+#include <Cala/backend/vulkan/SDLPlatform.h>
+
 #include <Cala/ImGuiContext.h>
 
 #include <Cala/Camera.h>
@@ -46,31 +48,16 @@ Image loadImage(Driver& driver, const ende::fs::Path& path) {
 
 
 int main() {
-
     auto runTime = ende::time::SystemTime::now();
 
     bool renderImGui = true;
 
-    auto window = SDL_CreateWindow("hello", 0, 0, 800, 600, SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN);
+    SDLPlatform platform("Hello", 800, 600);
 
-    SDL_SysWMinfo wmInfo;
-    SDL_VERSION(&wmInfo.version);
-    SDL_GetWindowWMInfo(window, &wmInfo);
+    Driver driver(platform);
+    ImGuiContext imGuiContext(driver, platform.window());
 
-    u32 extensionCount = 0;
-    SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr);
-    ende::Vector<const char*> extensionNames(extensionCount);
-    SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, extensionNames.data());
 
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-    ende::Vector<VkExtensionProperties> extensions(extensionCount);
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
-    for (const auto& extension : extensions)
-        std::cout << '\t' << extension.extensionName << '\n';
-
-    Driver driver(extensionNames, &wmInfo.info.x11.window, wmInfo.info.x11.display);
-
-    ImGuiContext imGuiContext(driver, window);
 
     Transform cameraTransform({0, 0, -1});
     Camera camera(ende::math::perspective(45.f, 800.f / -600.f, 0.f, 1000.f), cameraTransform);
@@ -266,8 +253,5 @@ int main() {
     std::cout << "\nFrame: " << frameCount;
 
     vkDestroySampler(driver._context._device, sampler, nullptr);
-
-    SDL_DestroyWindow(window);
-
     return 0;
 }

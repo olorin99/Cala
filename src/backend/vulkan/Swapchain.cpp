@@ -1,21 +1,7 @@
 #include <Ende/Vector.h>
 
-#define VK_USE_PLATFORM_XLIB_KHR
-#include <vulkan/vulkan.h>
-
 #include "Cala/backend/vulkan/Swapchain.h"
 
-VkSurfaceKHR createSurface(cala::backend::vulkan::Context& context, void* window, void* display) {
-    VkSurfaceKHR surface;
-    VkXlibSurfaceCreateInfoKHR createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-    createInfo.window = *static_cast<Window*>(window);
-    createInfo.dpy = static_cast<Display*>(display);
-    vkCreateXlibSurfaceKHR(context._instance, &createInfo, nullptr, &surface);
-    VkBool32 supported = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR(context._physicalDevice, context.queueIndex(VK_QUEUE_GRAPHICS_BIT), surface, &supported);
-    return surface;
-}
 
 VkSurfaceCapabilitiesKHR getCapabilities(VkPhysicalDevice device, VkSurfaceKHR surface) {
     VkSurfaceCapabilitiesKHR capabilities;
@@ -63,7 +49,7 @@ VkExtent2D getExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
     return extent;
 }
 
-cala::backend::vulkan::Swapchain::Swapchain(Context &context, void *window, void *display)
+cala::backend::vulkan::Swapchain::Swapchain(Context &context, Platform& platform)
     : _context(context),
     _swapchain(VK_NULL_HANDLE),
     _frame(0),
@@ -72,7 +58,9 @@ cala::backend::vulkan::Swapchain::Swapchain(Context &context, void *window, void
     }),
     _depthView(_depthImage.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT))
 {
-    _surface = createSurface(_context, window, display);
+    _surface = platform.surface(context._instance);
+    VkBool32 supported = VK_FALSE;
+    vkGetPhysicalDeviceSurfaceSupportKHR(context._physicalDevice, context.queueIndex(VK_QUEUE_GRAPHICS_BIT), _surface, &supported);
 
     VkFenceCreateInfo fenceCreateInfo{};
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -120,11 +108,7 @@ cala::backend::vulkan::Swapchain::Swapchain(Context &context, void *window, void
 
 cala::backend::vulkan::Swapchain::~Swapchain() {
 
-//    for (auto& framebuffer : _framebuffers)
-//        vkDestroyFramebuffer(_context._device, framebuffer, nullptr);
-
     delete _renderPass;
-
 
     for (auto& semaphore : _semaphores) {
         vkDestroySemaphore(_context._device, semaphore, nullptr);
@@ -140,7 +124,6 @@ cala::backend::vulkan::Swapchain::~Swapchain() {
 
 
 cala::backend::vulkan::Swapchain::Frame cala::backend::vulkan::Swapchain::nextImage() {
-//    auto [image, render] = _semaphores[_frame % 2];
     auto image = _semaphores.pop().unwrap();
     u32 index = 0;
     vkAcquireNextImageKHR(_context._device, _swapchain, std::numeric_limits<u64>::max(), image, VK_NULL_HANDLE, &index);
