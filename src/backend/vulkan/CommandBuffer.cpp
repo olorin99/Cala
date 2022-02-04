@@ -7,6 +7,7 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(VkDevice device, VkQueue que
     _queue(queue),
     _active(false),
     _renderPass(nullptr),
+    _framebuffer(nullptr),
     _indexBuffer(nullptr),
     _currentPipeline(VK_NULL_HANDLE),
     _currentSets{VK_NULL_HANDLE}
@@ -80,6 +81,7 @@ void cala::backend::vulkan::CommandBuffer::begin(RenderPass &renderPass, VkFrame
 
 void cala::backend::vulkan::CommandBuffer::begin(Framebuffer &framebuffer) {
     begin(framebuffer.renderPass(), framebuffer.framebuffer(), framebuffer.extent());
+    _framebuffer = &framebuffer;
 }
 
 void cala::backend::vulkan::CommandBuffer::end(RenderPass &renderPass) {
@@ -122,6 +124,17 @@ void cala::backend::vulkan::CommandBuffer::bindRenderPass(RenderPass& renderPass
         _pipelineKey.renderPass = renderPass.renderPass();
         _renderPass = &renderPass;
 //        _dirty = true;
+    }
+}
+
+void cala::backend::vulkan::CommandBuffer::bindViewPort(const ViewPort &viewport) {
+    if (_pipelineKey.viewPort.x != viewport.x ||
+        _pipelineKey.viewPort.y != viewport.y ||
+        _pipelineKey.viewPort.width != viewport.width ||
+        _pipelineKey.viewPort.height != viewport.height ||
+        _pipelineKey.viewPort.minDepth != viewport.minDepth ||
+        _pipelineKey.viewPort.maxDepth != viewport.maxDepth) {
+        _pipelineKey.viewPort = viewport;
     }
 }
 
@@ -285,17 +298,35 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
+    auto frameSize = _framebuffer->extent();
+
     VkViewport viewport{};
-    viewport.x = 0.f;
-    viewport.y = 0.f;
-    viewport.width = 800.f;
-    viewport.height = 600.f;
-    viewport.minDepth = 0.f;
-    viewport.maxDepth = 1.f;
+
+    //default viewport
+    if (_pipelineKey.viewPort.x == 0 &&
+        _pipelineKey.viewPort.y == 0 &&
+        _pipelineKey.viewPort.width == 0 &&
+        _pipelineKey.viewPort.height == 0 &&
+        _pipelineKey.viewPort.minDepth == 0.f &&
+        _pipelineKey.viewPort.maxDepth == 1.f) {
+        viewport.x = 0.f;
+        viewport.y = 0.f;
+        viewport.width = frameSize.first;
+        viewport.height = frameSize.second;
+        viewport.minDepth = 0.f;
+        viewport.maxDepth = 1.f;
+    } else { //custom viewport
+        viewport.x = _pipelineKey.viewPort.x;
+        viewport.y = _pipelineKey.viewPort.y;
+        viewport.width = _pipelineKey.viewPort.width;
+        viewport.height = _pipelineKey.viewPort.height;
+        viewport.minDepth = _pipelineKey.viewPort.minDepth;
+        viewport.maxDepth = _pipelineKey.viewPort.maxDepth;
+    }
 
     VkRect2D scissor{};
     scissor.offset = {0, 0};
-    scissor.extent = {.width=800, .height=600};
+    scissor.extent = {.width=frameSize.first, .height=frameSize.second};
 
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;

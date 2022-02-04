@@ -51,6 +51,16 @@ namespace cala::backend::vulkan {
 
         void bindRenderPass(RenderPass& renderPass);
 
+        struct ViewPort {
+            f32 x = 0;
+            f32 y = 0;
+            f32 width = 0;
+            f32 height = 0;
+            f32 minDepth = 0.f;
+            f32 maxDepth = 1.f;
+        };
+        void bindViewPort(const ViewPort& viewport);
+
         struct RasterState {
             bool depthClamp = false;
             bool rasterDiscard = false;
@@ -113,6 +123,7 @@ namespace cala::backend::vulkan {
         bool _active;
 
         RenderPass* _renderPass;
+        Framebuffer* _framebuffer;
         Buffer* _indexBuffer;
 
         struct PipelineKey {
@@ -121,6 +132,7 @@ namespace cala::backend::vulkan {
             VkVertexInputAttributeDescription attributes[10]{};
             VkRenderPass renderPass = VK_NULL_HANDLE;
             VkPipelineLayout layout = VK_NULL_HANDLE;
+            ViewPort viewPort = {};
             RasterState raster = {};
             DepthState depth = {};
             //TODO: add rest of pipeline state to key
