@@ -111,12 +111,64 @@ void cala::backend::vulkan::CommandBuffer::bindProgram(ShaderProgram &program) {
     }
 }
 
-void cala::backend::vulkan::CommandBuffer::bindVertexArray(ende::Span<VkVertexInputBindingDescription> bindings,
-                                                           ende::Span<VkVertexInputAttributeDescription> attributes) {
+void cala::backend::vulkan::CommandBuffer::bindAttributes(ende::Span<Attribute> attributes) {
+    VkVertexInputAttributeDescription attributeDescriptions[10]{};
+    u32 i = 0;
+    u32 offset = 0;
+    for (; i < attributes.size(); i++) {
+        attributeDescriptions[i].location = attributes[i].location;
+        attributeDescriptions[i].binding = attributes[i].binding;
+        attributeDescriptions[i].offset = offset;
+        switch (attributes[i].type) {
+            case AttribType::Vec2f:
+                attributeDescriptions[i].format = VK_FORMAT_R32G32_SFLOAT;
+                break;
+            case AttribType::Vec3f:
+                attributeDescriptions[i].format = VK_FORMAT_R32G32B32_SFLOAT;
+                break;
+            case AttribType::Vec4f:
+                attributeDescriptions[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+                break;
+            case AttribType::Mat4f:
+                if (i + 4 >= 10) return;
+                attributeDescriptions[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+                attributeDescriptions[++i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+                attributeDescriptions[i].location = attributes[i].location;
+                attributeDescriptions[i].binding = attributes[i].binding;
+                attributeDescriptions[i].offset = offset;
+                attributeDescriptions[++i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+                attributeDescriptions[i].location = attributes[i].location;
+                attributeDescriptions[i].binding = attributes[i].binding;
+                attributeDescriptions[i].offset = offset;
+                attributeDescriptions[++i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+                attributeDescriptions[i].location = attributes[i].location;
+                attributeDescriptions[i].binding = attributes[i].binding;
+                attributeDescriptions[i].offset = offset;
+                break;
+        }
+        offset += static_cast<std::underlying_type<AttribType>::type>(attributes[i].type) * sizeof(f32);
+    }
+    bindAttributeDescriptions({&attributeDescriptions[0], i});
+}
+
+void cala::backend::vulkan::CommandBuffer::bindBindings(ende::Span<VkVertexInputBindingDescription> bindings) {
     memset(_pipelineKey.bindings, 0, sizeof(_pipelineKey.bindings));
     memcpy(_pipelineKey.bindings, bindings.data(), bindings.size() * sizeof(VkVertexInputBindingDescription));
+}
+
+void cala::backend::vulkan::CommandBuffer::bindAttributeDescriptions(ende::Span<VkVertexInputAttributeDescription> attributes) {
     memset(_pipelineKey.attributes, 0, sizeof(_pipelineKey.attributes));
     memcpy(_pipelineKey.attributes, attributes.data(), attributes.size() * sizeof(VkVertexInputAttributeDescription));
+}
+
+void cala::backend::vulkan::CommandBuffer::bindVertexArray(ende::Span<VkVertexInputBindingDescription> bindings,
+                                                           ende::Span<VkVertexInputAttributeDescription> attributes) {
+    bindBindings(bindings);
+    bindAttributeDescriptions(attributes);
+//    memset(_pipelineKey.bindings, 0, sizeof(_pipelineKey.bindings));
+//    memcpy(_pipelineKey.bindings, bindings.data(), bindings.size() * sizeof(VkVertexInputBindingDescription));
+//    memset(_pipelineKey.attributes, 0, sizeof(_pipelineKey.attributes));
+//    memcpy(_pipelineKey.attributes, attributes.data(), attributes.size() * sizeof(VkVertexInputAttributeDescription));
 }
 
 void cala::backend::vulkan::CommandBuffer::bindRenderPass(RenderPass& renderPass) {

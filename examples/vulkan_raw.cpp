@@ -26,6 +26,7 @@
 
 #include <Cala/Camera.h>
 #include <Cala/shapes.h>
+#include <Cala/lights.h>
 
 
 #include "../third_party/stb_image.h"
@@ -71,6 +72,13 @@ int main() {
     Transform model({0, 0, 0});
     Buffer uniformBuffer(driver._context, sizeof(ende::math::Mat4f), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
+
+    PointLight light;
+    light.position = {0, -1, 0};
+
+    Buffer lightBuffer(driver._context, sizeof(light), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    lightBuffer.data({&light, sizeof(light)});
+
     // get shader data
     ende::fs::File shaderFile;
     if (!shaderFile.open("../../res/shaders/default.vert.spv"_path, ende::fs::in | ende::fs::binary))
@@ -95,12 +103,12 @@ int main() {
     binding.stride = 14 * sizeof(f32);
     binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    VkVertexInputAttributeDescription attributes[5] = {
-            { .location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 },
-            { .location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(f32) * 3 },
-            { .location = 2, .binding = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset = sizeof(f32) * 6 },
-            { .location = 3, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(f32) * 8 },
-            { .location = 4, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(f32) * 11 }
+    Attribute attributes[5] = {
+            {0, 0, AttribType::Vec3f},
+            {1, 0, AttribType::Vec3f},
+            {2, 0, AttribType::Vec2f},
+            {3, 0, AttribType::Vec3f},
+            {4, 0, AttribType::Vec3f}
     };
 
 
@@ -130,6 +138,13 @@ int main() {
     Image::View view = image.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT);
 
 
+    Image brickwall = loadImage(driver, "../../res/textures/brickwall.jpg"_path);
+    auto brickwall_view = brickwall.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT);
+    Image brickwall_normal = loadImage(driver, "../../res/textures/brickwall_normal.jpg"_path);
+    auto brickwall_normal_view = brickwall_normal.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT);
+    Image brickwall_specular = loadImage(driver, "../../res/textures/brickwall_specular.jpg"_path);
+    auto brickwall_specular_view = brickwall_specular.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT);
+
 
     ende::time::StopWatch frameClock;
     frameClock.start();
@@ -142,12 +157,33 @@ int main() {
 
 
     bool running = true;
+    bool lockMouse = false;
     SDL_Event event;
     while (running) {
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
                 case SDL_QUIT:
                     running = false;
+                    break;
+                case SDL_MOUSEMOTION:
+                    if (lockMouse) {
+                        ende::math::Vec<2, i32> delta = ende::math::Vec<2, i32>{event.motion.x, event.motion.y};
+                        bool rotY = delta.x() != 0;
+                        bool rotX = delta.y() != 0;
+                        if (rotY)
+                            cameraTransform.rotate({0, 1, 0}, ende::math::rad(delta.x() * 0.1f));
+                        if (rotX)
+                            cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(delta.y() * 0.1f));
+                        if (rotY || rotX)
+                            SDL_WarpMouseInWindow(platform.window(), 400, 300);
+                    }
+                    break;
+                case SDL_KEYDOWN:
+                    switch (event.key.keysym.scancode) {
+                        case SDL_SCANCODE_M:
+                            lockMouse = !lockMouse;
+                            break;
+                    }
                     break;
             }
         }
@@ -157,20 +193,26 @@ int main() {
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_S])
                 cameraTransform.addPos(cameraTransform.rot().back() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_A])
-                cameraTransform.addPos(cameraTransform.rot().left() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().left() * -dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_D])
-                cameraTransform.addPos(cameraTransform.rot().right() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().right() * -dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LSHIFT])
                 cameraTransform.addPos(cameraTransform.rot().down() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_SPACE])
                 cameraTransform.addPos(cameraTransform.rot().up() * dt * 10);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LEFT])
+                cameraTransform.rotate({0, 1, 0}, ende::math::rad(45) * dt);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_RIGHT])
+                cameraTransform.rotate({0, 1, 0}, ende::math::rad(-45) * dt);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_UP])
+                cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(-45) * dt);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_DOWN])
+                cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(45) * dt);
         }
-
 
         driver._swapchain.wait();
 
         if (renderImGui) {
-
             imGuiContext.newFrame();
             ImGui::ShowDemoWindow();
 
@@ -187,7 +229,6 @@ int main() {
 
             ImGui::End();
 
-
             ImGui::Render();
         }
 
@@ -203,19 +244,22 @@ int main() {
 
         cmd = driver.beginFrame();
         {
-            u32 i = frame.index;
-
             cmd->begin(frame.framebuffer);
 
             cmd->bindProgram(program);
-            cmd->bindVertexArray({&binding, 1}, {attributes, 5});
-            cmd->bindRasterState({});
+//            cmd->bindVertexArray({&binding, 1}, {attributes, 5});
+            cmd->bindBindings({&binding, 1});
+            cmd->bindAttributes(attributes);
+            cmd->bindRasterState({.cullMode=VK_CULL_MODE_FRONT_BIT});
             cmd->bindDepthState({true, true, VK_COMPARE_OP_LESS_OR_EQUAL});
             cmd->bindPipeline();
 
             cmd->bindBuffer(0, 0, cameraBuffer);
             cmd->bindBuffer(1, 0, uniformBuffer);
-            cmd->bindImage(2, 0, view.view, sampler);
+            cmd->bindImage(2, 0, brickwall_view.view, sampler);
+            cmd->bindImage(2, 1, brickwall_normal_view.view, sampler);
+            cmd->bindImage(2, 2, brickwall_specular_view.view, sampler);
+            cmd->bindBuffer(3, 0, lightBuffer);
             cmd->bindDescriptors();
 
             cmd->bindVertexBuffer(0, vertexBuffer.buffer());

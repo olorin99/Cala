@@ -16,6 +16,19 @@ namespace cala::backend::vulkan {
 
     constexpr u32 SET_COUNT = 4;
 
+    enum class AttribType {
+        Vec2f = 2,
+        Vec3f = 3,
+        Vec4f = 4,
+        Mat4f = 16
+    };
+
+    struct Attribute {
+        u32 location = 0;
+        u32 binding = 0;
+        AttribType type = AttribType::Vec3f;
+    };
+
     class CommandBuffer {
     public:
 
@@ -46,6 +59,12 @@ namespace cala::backend::vulkan {
 
         void bindProgram(ShaderProgram& program);
 
+        void bindAttributes(ende::Span<Attribute> attributes);
+
+        void bindBindings(ende::Span<VkVertexInputBindingDescription> bindings);
+
+        void bindAttributeDescriptions(ende::Span<VkVertexInputAttributeDescription> attributes);
+
         void bindVertexArray(ende::Span<VkVertexInputBindingDescription> bindings, ende::Span<VkVertexInputAttributeDescription> attributes);
 
 
@@ -67,7 +86,7 @@ namespace cala::backend::vulkan {
             VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
             f32 lineWidth = 1.f;
             u32 cullMode = VK_CULL_MODE_BACK_BIT;
-            VkFrontFace frontFace = VK_FRONT_FACE_CLOCKWISE;
+            VkFrontFace frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
             bool depthBias = false;
         };
         void bindRasterState(RasterState state);
