@@ -27,12 +27,12 @@ cala::backend::vulkan::Image::Image(Context& context, CreateInfo info)
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 
-    vkCreateImage(_context._device, &imageInfo, nullptr, &_image);
+    vkCreateImage(_context.device(), &imageInfo, nullptr, &_image);
 
     VkMemoryRequirements memoryRequirements;
-    vkGetImageMemoryRequirements(_context._device, _image, &memoryRequirements);
+    vkGetImageMemoryRequirements(_context.device(), _image, &memoryRequirements);
     _memory = _context.allocate(memoryRequirements.size, memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    vkBindImageMemory(_context._device, _image, _memory, 0);
+    vkBindImageMemory(_context.device(), _image, _memory, 0);
 
     _width = info.width;
     _height = info.height;
@@ -41,8 +41,8 @@ cala::backend::vulkan::Image::Image(Context& context, CreateInfo info)
 }
 
 cala::backend::vulkan::Image::~Image() {
-    vkDestroyImage(_context._device, _image, nullptr);
-    vkFreeMemory(_context._device, _memory, nullptr);
+    vkDestroyImage(_context.device(), _image, nullptr);
+    vkFreeMemory(_context.device(), _memory, nullptr);
 }
 
 
@@ -115,9 +115,9 @@ cala::backend::vulkan::Image::View cala::backend::vulkan::Image::getView(VkImage
     viewCreateInfo.subresourceRange.layerCount = layerCount;
 
     VkImageView view;
-    vkCreateImageView(_context._device, &viewCreateInfo, nullptr, &view);
+    vkCreateImageView(_context.device(), &viewCreateInfo, nullptr, &view);
     View v{};
     v.view = view;
-    v._device = _context._device;
+    v._device = _context.device();
     return v;
 }

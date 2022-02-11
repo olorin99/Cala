@@ -34,7 +34,7 @@ void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkDevice device, VkQue
 
 
 ImGuiContext::ImGuiContext(cala::backend::vulkan::Driver &driver, SDL_Window* window)
-    : _device(driver._context._device),
+    : _device(driver._context.device()),
     _window(window),
     _renderPass(nullptr),
     _descriptorPool(VK_NULL_HANDLE),
@@ -48,12 +48,12 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Driver &driver, SDL_Window* wi
                     VK_ATTACHMENT_STORE_OP_STORE,
                     VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                     VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    VK_IMAGE_LAYOUT_UNDEFINED,
                     VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
             },
             cala::backend::vulkan::RenderPass::Attachment{
-                    VK_FORMAT_D32_SFLOAT,
+                    driver._context.depthFormat(),
                     VK_SAMPLE_COUNT_1_BIT,
                     VK_ATTACHMENT_LOAD_OP_CLEAR,
                     VK_ATTACHMENT_STORE_OP_STORE,
@@ -64,7 +64,7 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Driver &driver, SDL_Window* wi
                     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
             }
     };
-    _renderPass = new cala::backend::vulkan::RenderPass(driver._context._device, attachments);
+    _renderPass = new cala::backend::vulkan::RenderPass(driver._context, attachments);
 
     VkDescriptorPoolSize poolSizes[] = {
             { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
@@ -86,15 +86,13 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Driver &driver, SDL_Window* wi
     poolInfo.pPoolSizes = poolSizes;
     poolInfo.maxSets = driver._swapchain.size();
 
-    vkCreateDescriptorPool(driver._context._device, &poolInfo, nullptr, &_descriptorPool);
+    vkCreateDescriptorPool(driver._context.device(), &poolInfo, nullptr, &_descriptorPool);
 
     VkCommandPoolCreateInfo commandPoolInfo{};
     commandPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     commandPoolInfo.queueFamilyIndex = driver._context.queueIndex(VK_QUEUE_GRAPHICS_BIT);
     commandPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(driver._context._device, &commandPoolInfo, nullptr, &_commandPool);
-
-
+    vkCreateCommandPool(driver._context.device(), &commandPoolInfo, nullptr, &_commandPool);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -107,9 +105,9 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Driver &driver, SDL_Window* wi
 
     ImGui_ImplSDL2_InitForVulkan(window);
     ImGui_ImplVulkan_InitInfo initInfo{};
-    initInfo.Instance = driver._context._instance;
-    initInfo.PhysicalDevice = driver._context._physicalDevice;
-    initInfo.Device = driver._context._device;
+    initInfo.Instance = driver._context.instance();
+    initInfo.PhysicalDevice = driver._context.physicalDevice();
+    initInfo.Device = driver._context.device();
     initInfo.QueueFamily = driver._context.queueIndex(VK_QUEUE_GRAPHICS_BIT);
     initInfo.Queue = driver._context.getQueue(VK_QUEUE_GRAPHICS_BIT);
     initInfo.PipelineCache = VK_NULL_HANDLE;
@@ -120,9 +118,9 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Driver &driver, SDL_Window* wi
     initInfo.CheckVkResultFn = nullptr;
     ImGui_ImplVulkan_Init(&initInfo, _renderPass->renderPass());
 
-    VkCommandBuffer a = beginSingleTimeCommands(driver._context._device, _commandPool);
+    VkCommandBuffer a = beginSingleTimeCommands(driver._context.device(), _commandPool);
     ImGui_ImplVulkan_CreateFontsTexture(a);
-    endSingleTimeCommands(a, driver._context._device, driver._context.getQueue(VK_QUEUE_GRAPHICS_BIT), _commandPool);
+    endSingleTimeCommands(a, driver._context.device(), driver._context.getQueue(VK_QUEUE_GRAPHICS_BIT), _commandPool);
 }
 
 ImGuiContext::~ImGuiContext() {

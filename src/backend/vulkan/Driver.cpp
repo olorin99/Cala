@@ -11,14 +11,14 @@ cala::backend::vulkan::Driver::Driver(cala::backend::Platform& platform)
     createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     createInfo.queueFamilyIndex = _context.queueIndex(VK_QUEUE_GRAPHICS_BIT);
     createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(_context._device, &createInfo, nullptr, &_commandPool);
+    vkCreateCommandPool(_context.device(), &createInfo, nullptr, &_commandPool);
 }
 
 cala::backend::vulkan::Driver::~Driver() {
-    vkDestroyCommandPool(_context._device, _commandPool, nullptr);
+    vkDestroyCommandPool(_context.device(), _commandPool, nullptr);
 
     for (auto& setLayout : _setLayouts)
-        vkDestroyDescriptorSetLayout(_context._device, setLayout.second, nullptr);
+        vkDestroyDescriptorSetLayout(_context.device(), setLayout.second, nullptr);
 }
 
 
@@ -61,7 +61,7 @@ VkCommandBuffer cala::backend::vulkan::Driver::beginSingleTimeCommands() {
     allocInfo.commandBufferCount = 1;
 
     VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(_context._device, &allocInfo, &commandBuffer);
+    vkAllocateCommandBuffers(_context.device(), &allocInfo, &commandBuffer);
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -84,12 +84,11 @@ void cala::backend::vulkan::Driver::endSingleTimeCommands(VkCommandBuffer buffer
     vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
     vkQueueWaitIdle(graphicsQueue);
 
-    vkFreeCommandBuffers(_context._device, _commandPool, 1, &buffer);
+    vkFreeCommandBuffers(_context.device(), _commandPool, 1, &buffer);
 }
 
 
 VkDescriptorSetLayout cala::backend::vulkan::Driver::getSetLayout(ende::Span <VkDescriptorSetLayoutBinding> bindings) {
-
     SetLayoutKey key;
     for (u32 i = 0; i < bindings.size(); i++) {
         key.bindings[i] = bindings[i];
@@ -106,9 +105,8 @@ VkDescriptorSetLayout cala::backend::vulkan::Driver::getSetLayout(ende::Span <Vk
     createInfo.pBindings = bindings.data();
 
     VkDescriptorSetLayout setLayout;
-    vkCreateDescriptorSetLayout(_context._device, &createInfo, nullptr, &setLayout);
+    vkCreateDescriptorSetLayout(_context.device(), &createInfo, nullptr, &setLayout);
 
     _setLayouts.emplace(std::make_pair(key, setLayout));
-
     return setLayout;
 }

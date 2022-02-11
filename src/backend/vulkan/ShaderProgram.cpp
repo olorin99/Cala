@@ -12,7 +12,7 @@ cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProg
 }
 
 cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Builder::compile(Driver& driver) {
-    ShaderProgram program(driver._context._device);
+    ShaderProgram program(driver._context.device());
 
     u32 bindingCount[4] = {0};
     VkDescriptorSetLayoutBinding bindings[4][8]; // 4 sets 4 buffers each stage TODO: find proper value
@@ -52,7 +52,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
         createInfo.codeSize = stage.first.size() * sizeof(u32);
         createInfo.pCode = stage.first.data();
 
-        if (vkCreateShaderModule(driver._context._device, &createInfo, nullptr, &shader) != VK_SUCCESS)
+        if (vkCreateShaderModule(driver._context.device(), &createInfo, nullptr, &shader) != VK_SUCCESS)
             throw "Unable to create shader";
 
         VkPipelineShaderStageCreateInfo stageCreateInfo{};
@@ -74,7 +74,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
 //        setLayoutInfo[i].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 //        setLayoutInfo[i].bindingCount = bindingCount[i];
 //        setLayoutInfo[i].pBindings = bindings[i];
-//        vkCreateDescriptorSetLayout(driver._context._device, &setLayoutInfo[i], nullptr, &setLayouts[i]);
+//        vkCreateDescriptorSetLayout(driver._context.device(), &setLayoutInfo[i], nullptr, &setLayouts[i]);
     }
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
@@ -85,7 +85,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
     pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
     VkPipelineLayout  pipelineLayout;
-    vkCreatePipelineLayout(driver._context._device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
+    vkCreatePipelineLayout(driver._context.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
 
 
     program._layout = pipelineLayout;

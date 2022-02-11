@@ -40,14 +40,21 @@ namespace cala::backend::vulkan {
         };
         std::pair<VkImage, VkDeviceMemory> createImage(const CreateImage info);
 
+        VkInstance instance() const { return _instance; }
 
-//    private:
+        VkPhysicalDevice physicalDevice() const { return _physicalDevice; }
+
+        VkDevice device() const { return _device; }
+
+        VkFormat depthFormat() const { return _depthFormat; }
+
+    private:
 
         VkInstance _instance;
         VkPhysicalDevice _physicalDevice;
         VkDevice _device;
 
-
+        VkFormat _depthFormat;
 
     };
 

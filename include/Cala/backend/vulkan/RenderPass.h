@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.h>
 #include <Ende/Vector.h>
 #include <Ende/Span.h>
+#include <Cala/backend/vulkan/Context.h>
 
 namespace cala::backend::vulkan {
 
@@ -22,7 +23,7 @@ namespace cala::backend::vulkan {
             VkImageLayout internalLayout;
         };
 
-        RenderPass(VkDevice device, ende::Span<Attachment> attachments);
+        RenderPass(Context& context, ende::Span<Attachment> attachments);
 
         ~RenderPass();
 

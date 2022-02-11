@@ -27,6 +27,7 @@
 #include <Cala/Camera.h>
 #include <Cala/shapes.h>
 #include <Cala/lights.h>
+#include <Cala/Scene.h>
 
 
 #include "../third_party/stb_image.h"
@@ -58,19 +59,25 @@ int main() {
     Driver driver(platform);
     ImGuiContext imGuiContext(driver, platform.window());
 
+    Scene scene;
 
 
     Transform cameraTransform({0, 0, -1});
-    Camera camera(ende::math::perspective(45.f, 800.f / -600.f, 0.f, 1000.f), cameraTransform);
+    Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.f, 1000.f), cameraTransform);
 
     Buffer cameraBuffer(driver._context, sizeof(Camera::Data), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-    Mesh vertices = cala::shapes::sphere();
-    Buffer vertexBuffer = vertices.vertexBuffer(driver._context);
-    Buffer indexBuffer = vertices.indexBuffer(driver._context);
+//    Buffer vertexBuffer = vertices.vertexBuffer(driver._context);
+//    Buffer indexBuffer = vertices.indexBuffer(driver._context);
 
     Transform model({0, 0, 0});
     Buffer uniformBuffer(driver._context, sizeof(ende::math::Mat4f), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    Mesh vertices = cala::shapes::sphere();
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    vertices = cala::shapes::quad();
+    model.addPos({1, 0, 0});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
 
 
     PointLight light;
@@ -131,7 +138,7 @@ int main() {
     samplerInfo.maxLod = 0.f;
 
     VkSampler sampler;
-    vkCreateSampler(driver._context._device, &samplerInfo, nullptr, &sampler);
+    vkCreateSampler(driver._context.device(), &samplerInfo, nullptr, &sampler);
 
 
     Image image = loadImage(driver, "../../res/textures/metal-sheet.jpg"_path);
@@ -236,8 +243,8 @@ int main() {
             auto cameraData = camera.data();
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
 
-            auto modelData = model.toMat();
-            uniformBuffer.data({&modelData, sizeof(modelData)});
+//            auto modelData = model.toMat();
+//            uniformBuffer.data({&modelData, sizeof(modelData)});
         }
 
         auto frame = driver._swapchain.nextImage();
@@ -262,10 +269,22 @@ int main() {
             cmd->bindBuffer(3, 0, lightBuffer);
             cmd->bindDescriptors();
 
-            cmd->bindVertexBuffer(0, vertexBuffer.buffer());
-            cmd->bindIndexBuffer(indexBuffer);
+            for (auto& renderable : scene._renderables) {
+                auto modelData = renderable.second.toMat();
+                uniformBuffer.data({&modelData, sizeof(modelData)});
+
+
+                cmd->bindVertexBuffer(0, renderable.first.vertex.buffer());
+                cmd->bindIndexBuffer(renderable.first.index);
+                cmd->draw(renderable.first.index.size() / sizeof(u32), 1, 0, 0);
+
+
+//                cmd->bindVertexBuffer(0, vertexBuffer.buffer());
+//                cmd->bindIndexBuffer(indexBuffer);
 //            cmd->draw(vertexBuffer.size() / sizeof(Vertex), 1, 0, 0);
-            cmd->draw(indexBuffer.size() / sizeof(u32), 1, 0, 0);
+//                cmd->draw(indexBuffer.size() / sizeof(u32), 1, 0, 0);
+            }
+
 
 //            driver.draw({}, {vertexBuffer, 3});
 
@@ -296,6 +315,6 @@ int main() {
     std::cout << "\nUptime: " << runTime.elapsed().seconds() << "sec";
     std::cout << "\nFrame: " << frameCount;
 
-    vkDestroySampler(driver._context._device, sampler, nullptr);
+    vkDestroySampler(driver._context.device(), sampler, nullptr);
     return 0;
 }

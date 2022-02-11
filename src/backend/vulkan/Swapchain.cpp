@@ -54,19 +54,19 @@ cala::backend::vulkan::Swapchain::Swapchain(Context &context, Platform& platform
     _swapchain(VK_NULL_HANDLE),
     _frame(0),
     _depthImage(context, {
-        800, 600, 1, VK_FORMAT_D32_SFLOAT, 1, 1, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
+        800, 600, 1, _context.depthFormat(), 1, 1, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
     }),
     _depthView(_depthImage.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT))
 {
-    _surface = platform.surface(context._instance);
+    _surface = platform.surface(context.instance());
     VkBool32 supported = VK_FALSE;
-    vkGetPhysicalDeviceSurfaceSupportKHR(context._physicalDevice, context.queueIndex(VK_QUEUE_GRAPHICS_BIT), _surface, &supported);
+    vkGetPhysicalDeviceSurfaceSupportKHR(context.physicalDevice(), context.queueIndex(VK_QUEUE_GRAPHICS_BIT), _surface, &supported);
 
     VkFenceCreateInfo fenceCreateInfo{};
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceCreateInfo.pNext = nullptr;
     fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-    vkCreateFence(_context._device, &fenceCreateInfo, nullptr, &_fence);
+    vkCreateFence(_context.device(), &fenceCreateInfo, nullptr, &_fence);
 
     //TODO: get better error handling
     if (!createSwapchain()) throw "Unable to create swapchain";
@@ -86,7 +86,7 @@ cala::backend::vulkan::Swapchain::Swapchain(Context &context, Platform& platform
                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
             },
             RenderPass::Attachment{
-                    VK_FORMAT_D32_SFLOAT,
+                    _context.depthFormat(),
                     VK_SAMPLE_COUNT_1_BIT,
                     VK_ATTACHMENT_LOAD_OP_CLEAR,
                     VK_ATTACHMENT_STORE_OP_STORE,
@@ -98,40 +98,38 @@ cala::backend::vulkan::Swapchain::Swapchain(Context &context, Platform& platform
             }
     };
 
-    _renderPass = new RenderPass(_context._device, attachments);
+    _renderPass = new RenderPass(_context, attachments);
 
     for (auto& view : _imageViews) {
         VkImageView framebufferAttachments[2] = { view, _depthView.view };
-        _framebuffers.emplace(_context._device, *_renderPass, framebufferAttachments, 800, 600);
+        _framebuffers.emplace(_context.device(), *_renderPass, framebufferAttachments, 800, 600);
     }
 }
 
 cala::backend::vulkan::Swapchain::~Swapchain() {
-
     delete _renderPass;
 
     for (auto& semaphore : _semaphores) {
-        vkDestroySemaphore(_context._device, semaphore, nullptr);
+        vkDestroySemaphore(_context.device(), semaphore, nullptr);
     }
 
     for (auto& view : _imageViews)
-        vkDestroyImageView(_context._device, view, nullptr);
+        vkDestroyImageView(_context.device(), view, nullptr);
 
-    vkDestroyFence(_context._device, _fence, nullptr);
-    vkDestroySwapchainKHR(_context._device, _swapchain, nullptr);
-    vkDestroySurfaceKHR(_context._instance, _surface, nullptr);
+    vkDestroyFence(_context.device(), _fence, nullptr);
+    vkDestroySwapchainKHR(_context.device(), _swapchain, nullptr);
+    vkDestroySurfaceKHR(_context.instance(), _surface, nullptr);
 }
 
 
 cala::backend::vulkan::Swapchain::Frame cala::backend::vulkan::Swapchain::nextImage() {
     auto image = _semaphores.pop().unwrap();
     u32 index = 0;
-    vkAcquireNextImageKHR(_context._device, _swapchain, std::numeric_limits<u64>::max(), image, VK_NULL_HANDLE, &index);
+    vkAcquireNextImageKHR(_context.device(), _swapchain, std::numeric_limits<u64>::max(), image, VK_NULL_HANDLE, &index);
     return { _frame++, index, image, _fence, _framebuffers[index] };
 }
 
 bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFinish) {
-
     _semaphores.push(frame.imageAquired);
     std::rotate(_semaphores.begin(), _semaphores.end() - 1, _semaphores.end());
 
@@ -153,17 +151,17 @@ bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFi
 }
 
 bool cala::backend::vulkan::Swapchain::wait(u64 timeout) {
-    auto res = vkWaitForFences(_context._device, 1, &_fence, true, timeout) == VK_SUCCESS;
+    auto res = vkWaitForFences(_context.device(), 1, &_fence, true, timeout) == VK_SUCCESS;
     if (res)
-        vkResetFences(_context._device, 1, &_fence);
+        vkResetFences(_context.device(), 1, &_fence);
     return res;
 }
 
 
 bool cala::backend::vulkan::Swapchain::createSwapchain() {
-    VkSurfaceCapabilitiesKHR capabilities = getCapabilities(_context._physicalDevice, _surface);
-    VkSurfaceFormatKHR format = getFormat(_context._physicalDevice, _surface);
-    VkPresentModeKHR mode = getPresentMode(_context._physicalDevice, _surface);
+    VkSurfaceCapabilitiesKHR capabilities = getCapabilities(_context.physicalDevice(), _surface);
+    VkSurfaceFormatKHR format = getFormat(_context.physicalDevice(), _surface);
+    VkPresentModeKHR mode = getPresentMode(_context.physicalDevice(), _surface);
     VkExtent2D extent = getExtent(capabilities);
 
     u32 imageCount = capabilities.minImageCount + 1;
@@ -191,12 +189,12 @@ bool cala::backend::vulkan::Swapchain::createSwapchain() {
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = _swapchain;
 
-    VkResult result = vkCreateSwapchainKHR(_context._device, &createInfo, nullptr, &_swapchain);
+    VkResult result = vkCreateSwapchainKHR(_context.device(), &createInfo, nullptr, &_swapchain);
 
     u32 count = 0;
-    vkGetSwapchainImagesKHR(_context._device, _swapchain, &count, nullptr);
+    vkGetSwapchainImagesKHR(_context.device(), _swapchain, &count, nullptr);
     _images.resize(count);
-    vkGetSwapchainImagesKHR(_context._device, _swapchain, &count, _images.data());
+    vkGetSwapchainImagesKHR(_context.device(), _swapchain, &count, _images.data());
 
     _format = format;
     _extent = extent;
@@ -224,7 +222,7 @@ bool cala::backend::vulkan::Swapchain::createImageViews() {
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(_context._device, &createInfo, nullptr, &_imageViews[i]) != VK_SUCCESS)
+        if (vkCreateImageView(_context.device(), &createInfo, nullptr, &_imageViews[i]) != VK_SUCCESS)
             return false;
     }
     return true;
@@ -240,7 +238,7 @@ bool cala::backend::vulkan::Swapchain::createSemaphores() {
     for (u32 i = 0; i < _imageViews.size(); i++) {
         VkSemaphore imageAcquired;
 
-        if (vkCreateSemaphore(_context._device, &createInfo, nullptr, &imageAcquired) != VK_SUCCESS)
+        if (vkCreateSemaphore(_context.device(), &createInfo, nullptr, &imageAcquired) != VK_SUCCESS)
             return false;
 
         _semaphores.push(imageAcquired);

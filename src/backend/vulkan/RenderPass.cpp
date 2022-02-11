@@ -1,7 +1,7 @@
 #include "Cala/backend/vulkan/RenderPass.h"
 
-cala::backend::vulkan::RenderPass::RenderPass(VkDevice device, ende::Span<Attachment> attachments)
-    : _device(device),
+cala::backend::vulkan::RenderPass::RenderPass(Context& context, ende::Span<Attachment> attachments)
+    : _device(context.device()),
     _colourAttachments(0)
 {
     _clearValues.reserve(attachments.size());
@@ -13,7 +13,7 @@ cala::backend::vulkan::RenderPass::RenderPass(VkDevice device, ende::Span<Attach
     bool depthPresent = false;
 
     for (u32 i = 0; i < attachments.size(); i++) {
-        if (attachments[i].format != VK_FORMAT_D32_SFLOAT) {
+        if (attachments[i].format != context.depthFormat()) {
             attachmentDescriptions[colourAttachmentCount].format = attachments[i].format;
             attachmentDescriptions[colourAttachmentCount].samples = attachments[i].samples;
             attachmentDescriptions[colourAttachmentCount].loadOp = attachments[i].loadOp;
@@ -41,7 +41,6 @@ cala::backend::vulkan::RenderPass::RenderPass(VkDevice device, ende::Span<Attach
             depthPresent = true;
             _clearValues.push({1.f, 0.f});
         }
-
     }
 
     attachmentDescriptions[colourAttachmentCount] = depthAttachment;
@@ -52,16 +51,6 @@ cala::backend::vulkan::RenderPass::RenderPass(VkDevice device, ende::Span<Attach
     subpass.pColorAttachments = colourReferences;
     if (depthPresent)
         subpass.pDepthStencilAttachment = &depthReference;
-
-
-
-//    VkSubpassDependency dependency{};
-//    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-//    dependency.dstSubpass = 0;
-//    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-//    dependency.srcAccessMask = 0;
-//    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-//    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
     VkSubpassDependency dependencies[5]{};
     for (u32 i = 0; i < attachments.size(); i++) {
@@ -81,8 +70,6 @@ cala::backend::vulkan::RenderPass::RenderPass(VkDevice device, ende::Span<Attach
         }
     }
 
-
-
     VkRenderPassCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     createInfo.attachmentCount = attachments.size();
@@ -93,7 +80,6 @@ cala::backend::vulkan::RenderPass::RenderPass(VkDevice device, ende::Span<Attach
     createInfo.pDependencies = dependencies;
 
     vkCreateRenderPass(_device, &createInfo, nullptr, &_renderPass);
-
 }
 
 cala::backend::vulkan::RenderPass::~RenderPass() {
@@ -102,7 +88,6 @@ cala::backend::vulkan::RenderPass::~RenderPass() {
 
 
 VkFramebuffer cala::backend::vulkan::RenderPass::framebuffer(ende::Span<VkImageView> attachments, u32 width, u32 height) {
-
     VkFramebufferCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 

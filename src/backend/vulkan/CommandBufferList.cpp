@@ -11,14 +11,14 @@ cala::backend::vulkan::CommandBufferList::CommandBufferList(Context& context, u3
     createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     createInfo.queueFamilyIndex = queueIndex;
     createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(_context._device, &createInfo, nullptr, &_pool);
+    vkCreateCommandPool(_context.device(), &createInfo, nullptr, &_pool);
 
-    vkGetDeviceQueue(_context._device, queueIndex, 0, &_queue);
+    vkGetDeviceQueue(_context.device(), queueIndex, 0, &_queue);
 
 }
 
 cala::backend::vulkan::CommandBufferList::~CommandBufferList() {
-    vkDestroyCommandPool(_context._device, _pool, nullptr);
+    vkDestroyCommandPool(_context.device(), _pool, nullptr);
 }
 
 
@@ -52,9 +52,9 @@ cala::backend::vulkan::CommandBuffer* cala::backend::vulkan::CommandBufferList::
         allocInfo.commandBufferCount = 1;
 
         VkCommandBuffer buffer;
-        vkAllocateCommandBuffers(_context._device, &allocInfo, &buffer);
+        vkAllocateCommandBuffers(_context.device(), &allocInfo, &buffer);
 
-        _buffers.emplace(_context._device, _queue, buffer);
+        _buffers.emplace(_context.device(), _queue, buffer);
         _current = &_buffers.back();
     }
 

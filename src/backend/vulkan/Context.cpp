@@ -2,8 +2,6 @@
 
 #include <Ende/Vector.h>
 
-#include <iostream>
-
 const char* validationLayers[] = {
         "VK_LAYER_KHRONOS_validation"
 };
@@ -23,7 +21,6 @@ bool checkDeviceSuitable(VkPhysicalDevice device) {
 }
 
 cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
-
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName = "Cala";
@@ -77,7 +74,6 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
 
     ende::Vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     for (u32 i = 0; i < familyProperties.size(); i++) {
-
         VkDeviceQueueCreateInfo queueCreateInfo{};
         queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         queueCreateInfo.queueFamilyIndex = i;
@@ -103,7 +99,6 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
 //    vkGetPhysicalDeviceFeatures(_physicalDevice, &deviceFeatures1);
 //
 
-
     VkPhysicalDeviceFeatures deviceFeatures{};
 
     VkDeviceCreateInfo createInfo{};
@@ -121,6 +116,16 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device) != VK_SUCCESS)
         throw "Failed to create logical device";
 
+
+    for (VkFormat format : {VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT}) {
+        VkFormatProperties depthProperties;
+        vkGetPhysicalDeviceFormatProperties(_physicalDevice, format, &depthProperties);
+
+        if ((depthProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+            _depthFormat = format;
+            break;
+        }
+    }
 }
 
 cala::backend::vulkan::Context::~Context() {
@@ -233,5 +238,4 @@ std::pair <VkImage, VkDeviceMemory> cala::backend::vulkan::Context::createImage(
 
     vkBindImageMemory(_device, image, memory, 0);
     return {image, memory};
-
 }

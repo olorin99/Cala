@@ -16,17 +16,17 @@ cala::backend::vulkan::Buffer::Buffer(Context &context, u32 size, u32 usage, u32
     bufferInfo.usage = usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    vkCreateBuffer(_context._device, &bufferInfo, nullptr, &_buffer);
+    vkCreateBuffer(_context.device(), &bufferInfo, nullptr, &_buffer);
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(_context._device, _buffer, &memRequirements);
+    vkGetBufferMemoryRequirements(_context.device(), _buffer, &memRequirements);
     _memory = _context.allocate(memRequirements.size, memRequirements.memoryTypeBits, flags);
-    vkBindBufferMemory(_context._device, _buffer, _memory, 0);
+    vkBindBufferMemory(_context.device(), _buffer, _memory, 0);
 }
 
 cala::backend::vulkan::Buffer::~Buffer() {
-    vkFreeMemory(_context._device, _memory, nullptr);
-    vkDestroyBuffer(_context._device, _buffer, nullptr);
+    vkFreeMemory(_context.device(), _memory, nullptr);
+    vkDestroyBuffer(_context.device(), _buffer, nullptr);
 }
 
 
@@ -52,12 +52,12 @@ cala::backend::vulkan::Buffer::Mapped::~Mapped() {
 
 cala::backend::vulkan::Buffer::Mapped cala::backend::vulkan::Buffer::map(u32 offset, u32 size) {
     void* address = nullptr;
-    vkMapMemory(_context._device, _memory, offset, size, 0, &address);
+    vkMapMemory(_context.device(), _memory, offset, size, 0, &address);
     return { address, this };
 }
 
 void cala::backend::vulkan::Buffer::unmap() {
-    vkUnmapMemory(_context._device, _memory);
+    vkUnmapMemory(_context.device(), _memory);
 }
 
 void cala::backend::vulkan::Buffer::data(ende::Span<const void> data, u32 offset) {
