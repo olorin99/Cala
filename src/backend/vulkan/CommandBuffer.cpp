@@ -484,7 +484,7 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
     VkDescriptorSet descriptorSet;
     vkAllocateDescriptorSets(_device, &allocInfo, &descriptorSet);
 
-    for (u32 i = 0; i < 4; i++) {
+    for (u32 i = 0; i < 8; i++) {
 
         if (key.buffers[i].buffer != VK_NULL_HANDLE) {
             VkDescriptorBufferInfo bufferInfo{};

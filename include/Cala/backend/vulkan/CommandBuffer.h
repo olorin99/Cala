@@ -172,11 +172,11 @@ namespace cala::backend::vulkan {
                 VkBuffer buffer = VK_NULL_HANDLE;
                 u32 offset = 0;
                 u32 range = 0;
-            } buffers[4] {};
+            } buffers[8] {};
             struct {
                 VkImageView image = VK_NULL_HANDLE;
                 VkSampler sampler = VK_NULL_HANDLE;
-            } images[4] {};
+            } images[8] {};
 
             bool operator==(const DescriptorKey& rhs) const {
                 return memcmp(this, &rhs, sizeof(DescriptorKey)) == 0;

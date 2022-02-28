@@ -117,7 +117,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
         throw "Failed to create logical device";
 
 
-    for (VkFormat format : {VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT}) {
+    for (VkFormat format : {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT}) {
         VkFormatProperties depthProperties;
         vkGetPhysicalDeviceFormatProperties(_physicalDevice, format, &depthProperties);
 

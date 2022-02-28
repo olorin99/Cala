@@ -3,7 +3,7 @@
 
 #include <vulkan/vulkan.h>
 #include <Ende/Vector.h>
-
+#include <Cala/backend/ShaderInterface.h>
 
 namespace cala::backend::vulkan {
 
@@ -32,6 +32,13 @@ namespace cala::backend::vulkan {
 
         ~ShaderProgram();
 
+        ShaderProgram(const ShaderProgram& rhs) = delete;
+
+        ShaderProgram(ShaderProgram&& rhs);
+
+        ShaderProgram& operator=(const ShaderProgram& rhs) = delete;
+
+
         VkPipelineLayout layout();
 
 //    private:
@@ -42,6 +49,7 @@ namespace cala::backend::vulkan {
         VkDescriptorSetLayout _setLayout[4];
         VkPipelineLayout _layout;
 
+        ShaderInterface _interface;
 
     };
 

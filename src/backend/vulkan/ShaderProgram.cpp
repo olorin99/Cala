@@ -27,6 +27,25 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
             u32 set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
             u32 binding = comp.get_decoration(resource.id, spv::DecorationBinding);
 
+            const spirv_cross::SPIRType &type = comp.get_type(resource.base_type_id);
+            u32 size = comp.get_declared_struct_size(type);
+            u32 memberCount = type.member_types.size();
+
+
+            program._interface.sets[set].id = set;
+            program._interface.sets[set].byteSize = size;
+
+            program._interface.sets[set].bindings[binding].id = binding;
+            program._interface.sets[set].bindings[binding].type = ShaderInterface::BindingType::UNIFORM;
+            program._interface.sets[set].bindings[binding].byteSize = size;
+
+            for (u32 i = 0; i < memberCount; i++) {
+                const std::string name = comp.get_member_name(type.self, i);
+                u32 offset = comp.type_struct_member_offset(type, i);
+                u32 memberSize = comp.get_declared_struct_member_size(type, i);
+                program._interface.getMemberList(set, binding)[name] = {offset, memberSize};
+            }
+
             bindings[set][bindingCount[set]].binding = binding;
             bindings[set][bindingCount[set]].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             bindings[set][bindingCount[set]].descriptorCount = 1;
@@ -38,12 +57,31 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
             u32 set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
             u32 binding = comp.get_decoration(resource.id, spv::DecorationBinding);
 
+            const spirv_cross::SPIRType &type = comp.get_type(resource.base_type_id);
+//            u32 size = comp.get_declared_struct_size(type);
+            program._interface.sets[set].id = set;
+
+            program._interface.sets[set].bindings[binding].id = binding;
+            program._interface.sets[set].bindings[binding].type = ShaderInterface::BindingType::SAMPLER;
+            program._interface.sets[set].bindings[binding].dimensions = 2;
+            program._interface.sets[set].bindings[binding].name = comp.get_name(resource.id);
+
             bindings[set][bindingCount[set]].binding = binding;
             bindings[set][bindingCount[set]].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             bindings[set][bindingCount[set]].descriptorCount = 1;
             bindings[set][bindingCount[set]].stageFlags = stage.second;
             bindings[set][bindingCount[set]].pImmutableSamplers = nullptr;
             bindingCount[set]++;
+        }
+
+        for (u32 i = 0; i < 4; i++) {
+            program._interface.sets[i].id = i;
+            u32 size = 0;
+            for (u32 j = 0; j < 8; j++) {
+                if (program._interface.sets[i].bindings[j].type == ShaderInterface::BindingType::UNIFORM)
+                    size += program._interface.sets[i].bindings[j].byteSize;
+            }
+            program._interface.sets[i].byteSize = size;
         }
 
         VkShaderModule shader;
@@ -103,11 +141,26 @@ cala::backend::vulkan::ShaderProgram::ShaderProgram(VkDevice device)
 {}
 
 cala::backend::vulkan::ShaderProgram::~ShaderProgram() {
+    if (_device == VK_NULL_HANDLE) return;
+
     for (auto& stage : _stages)
         vkDestroyShaderModule(_device, stage.module, nullptr);
 
     vkDestroyPipelineLayout(_device, _layout, nullptr);
 }
+
+cala::backend::vulkan::ShaderProgram::ShaderProgram(ShaderProgram &&rhs)
+    : _device(VK_NULL_HANDLE),
+    _layout(VK_NULL_HANDLE)
+{
+    std::swap(_device, rhs._device);
+    std::swap(_stages, rhs._stages);
+    for (u32 i = 0; i < 4; i++)
+        _setLayout[i] = rhs._setLayout[i];
+    std::swap(_layout, rhs._layout);
+    std::swap(_interface, rhs._interface);
+}
+
 
 VkPipelineLayout cala::backend::vulkan::ShaderProgram::layout() {
     if (_layout != VK_NULL_HANDLE)

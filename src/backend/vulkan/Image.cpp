@@ -47,9 +47,23 @@ cala::backend::vulkan::Image::~Image() {
 
 
 cala::backend::vulkan::Image::View::~View() {
+    if (_device == VK_NULL_HANDLE) return;
     vkDestroyImageView(_device, view, nullptr);
 }
 
+cala::backend::vulkan::Image::View::View(View &&rhs) noexcept
+    : _device(VK_NULL_HANDLE),
+    view(VK_NULL_HANDLE)
+{
+    std::swap(_device, rhs._device);
+    std::swap(view, rhs.view);
+}
+
+cala::backend::vulkan::Image::View &cala::backend::vulkan::Image::View::operator=(View &&rhs) noexcept {
+    std::swap(_device, rhs._device);
+    std::swap(view, rhs.view);
+    return *this;
+}
 
 void cala::backend::vulkan::Image::data(cala::backend::vulkan::Driver& driver, DataInfo info) {
 

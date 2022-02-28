@@ -26,9 +26,9 @@
 
 #include <Cala/Camera.h>
 #include <Cala/shapes.h>
-#include <Cala/lights.h>
+#include <Cala/Light.h>
 #include <Cala/Scene.h>
-
+#include <Cala/Material.h>
 
 #include "../third_party/stb_image.h"
 
@@ -63,7 +63,7 @@ int main() {
 
 
     Transform cameraTransform({0, 0, -1});
-    Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.f, 1000.f), cameraTransform);
+    Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
 
     Buffer cameraBuffer(driver._context, sizeof(Camera::Data), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -71,14 +71,28 @@ int main() {
 //    Buffer indexBuffer = vertices.indexBuffer(driver._context);
 
     Transform model({0, 0, 0});
-    Buffer uniformBuffer(driver._context, sizeof(ende::math::Mat4f), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     Mesh vertices = cala::shapes::sphere();
     scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
     vertices = cala::shapes::quad();
-    model.addPos({1, 0, 0});
+    model.addPos({0, 0, 0});
     scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    vertices = cala::shapes::quad();
+    model.addPos({0, 0, 1});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    vertices = cala::shapes::quad();
+    model.rotate({1, 0, 0}, ende::math::rad(90.f));
+    model.addPos({0.5, 0, 0});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    vertices = cala::shapes::quad();
+    model.addPos({-1.5, 0, 0});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    ende::Vector<ende::math::Mat4f> models;
+    for (auto& transform : scene._renderables)
+        models.push(transform.second.toMat());
 
+    Buffer uniformBuffer(driver._context, sizeof(ende::math::Mat4f) * models.size(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    uniformBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});
 
     PointLight light;
     light.position = {0, -1, 0};
@@ -153,6 +167,15 @@ int main() {
     auto brickwall_specular_view = brickwall_specular.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT);
 
 
+    Material material(driver, std::move(program));
+    material._rasterState = {.cullMode=VK_CULL_MODE_BACK_BIT, .frontFace=VK_FRONT_FACE_CLOCKWISE};
+    material._depthState = {true, true, VK_COMPARE_OP_LESS};
+
+    auto matInstance = material.instance();
+    matInstance.addImage(std::move(brickwall_view)).addImage(std::move(brickwall_normal_view)).addImage(std::move(brickwall_specular_view));
+
+    matInstance.setUniform("mixColour", ende::math::Vec3f{0.5, 1.5, 0});
+
     ende::time::StopWatch frameClock;
     frameClock.start();
     f32 dt = 1.f / 60.f;
@@ -161,7 +184,6 @@ int main() {
     u64 frameCount = 0;
 
     CommandBuffer* cmd = nullptr;
-
 
     bool running = true;
     bool lockMouse = false;
@@ -242,9 +264,6 @@ int main() {
         {
             auto cameraData = camera.data();
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
-
-//            auto modelData = model.toMat();
-//            uniformBuffer.data({&modelData, sizeof(modelData)});
         }
 
         auto frame = driver._swapchain.nextImage();
@@ -253,55 +272,47 @@ int main() {
         {
             cmd->begin(frame.framebuffer);
 
-            cmd->bindProgram(program);
-//            cmd->bindVertexArray({&binding, 1}, {attributes, 5});
+            cmd->bindProgram(material._program);
             cmd->bindBindings({&binding, 1});
             cmd->bindAttributes(attributes);
-            cmd->bindRasterState({.cullMode=VK_CULL_MODE_FRONT_BIT});
-            cmd->bindDepthState({true, true, VK_COMPARE_OP_LESS_OR_EQUAL});
+            cmd->bindRasterState(material._rasterState);
+            cmd->bindDepthState(material._depthState);
+//            cmd->bindRasterState({.cullMode=VK_CULL_MODE_BACK_BIT, .frontFace=VK_FRONT_FACE_CLOCKWISE});
+//            cmd->bindDepthState({true, true, VK_COMPARE_OP_LESS});
             cmd->bindPipeline();
 
             cmd->bindBuffer(0, 0, cameraBuffer);
-            cmd->bindBuffer(1, 0, uniformBuffer);
-            cmd->bindImage(2, 0, brickwall_view.view, sampler);
-            cmd->bindImage(2, 1, brickwall_normal_view.view, sampler);
-            cmd->bindImage(2, 2, brickwall_specular_view.view, sampler);
+
+            for (u32 i = 0; i < matInstance._samplers.size(); i++) {
+                cmd->bindImage(2, i, matInstance._samplers[i].view, sampler);
+            }
+            cmd->bindBuffer(2, 3, matInstance.material()->_uniformBuffer);
+//            cmd->bindImage(2, 0, brickwall_view.view, sampler);
+//            cmd->bindImage(2, 1, brickwall_normal_view.view, sampler);
+//            cmd->bindImage(2, 2, brickwall_specular_view.view, sampler);
             cmd->bindBuffer(3, 0, lightBuffer);
-            cmd->bindDescriptors();
+//            cmd->bindDescriptors();
 
+            u32 i = 0;
             for (auto& renderable : scene._renderables) {
-                auto modelData = renderable.second.toMat();
-                uniformBuffer.data({&modelData, sizeof(modelData)});
-
-
+                cmd->bindBuffer(1, 0, uniformBuffer, sizeof(ende::math::Mat4f) * i++, sizeof(ende::math::Mat4f));
+                cmd->bindDescriptors();
                 cmd->bindVertexBuffer(0, renderable.first.vertex.buffer());
                 cmd->bindIndexBuffer(renderable.first.index);
                 cmd->draw(renderable.first.index.size() / sizeof(u32), 1, 0, 0);
-
-
-//                cmd->bindVertexBuffer(0, vertexBuffer.buffer());
-//                cmd->bindIndexBuffer(indexBuffer);
-//            cmd->draw(vertexBuffer.size() / sizeof(Vertex), 1, 0, 0);
-//                cmd->draw(indexBuffer.size() / sizeof(u32), 1, 0, 0);
             }
-
-
-//            driver.draw({}, {vertexBuffer, 3});
 
             imGuiContext.render(*cmd);
 
             cmd->end(frame.framebuffer);
-
             cmd->submit(frame.imageAquired, frame.fence);
         }
         driver.endFrame();
         driver._swapchain.present(frame, cmd->signal());
 
-
         frameTime = frameClock.reset();
         dt = frameTime.milliseconds() / 1000.f;
         frameCount++;
-
 
         if (cmd->_descriptorSets.size() > 700)
             running = false;
@@ -312,6 +323,7 @@ int main() {
     std::cout << "\n\nCommand Buffers: " << driver._commands.count();
     std::cout << "\nPipelines: " << (cmd ? cmd->_pipelines.size() : 0);
     std::cout << "\nDescriptors: " << (cmd ? cmd->_descriptorSets.size() : 0);
+    std::cout << "\nRenderables: " << scene._renderables.size();
     std::cout << "\nUptime: " << runTime.elapsed().seconds() << "sec";
     std::cout << "\nFrame: " << frameCount;
 

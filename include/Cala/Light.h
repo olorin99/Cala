@@ -1,5 +1,5 @@
-#ifndef CALA_LIGHTS_H
-#define CALA_LIGHTS_H
+#ifndef CALA_LIGHT_H
+#define CALA_LIGHT_H
 
 #include <Ende/math/Vec.h>
 
@@ -19,6 +19,25 @@ namespace cala {
         f32 radius = 80;
     };
 
+    class Light {
+    public:
+
+        enum LightType {
+            POINT,
+            DIRECTIONAL,
+            SPOT
+        };
+
+
+    private:
+
+        LightType type;
+        union {
+            PointLight point;
+        };
+
+    };
+
 }
 
-#endif //CALA_LIGHTS_H
+#endif //CALA_LIGHT_H

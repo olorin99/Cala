@@ -42,7 +42,15 @@ namespace cala::backend::vulkan {
         struct View {
             VkImageView view;
             ~View();
+
+            View(View&& rhs) noexcept;
+            View& operator=(View&& rhs) noexcept;
+
+            View(const View&) = delete;
+            View& operator=(const View&) = delete;
         private:
+            View() = default;
+
             friend Image;
             VkDevice _device;
         };
