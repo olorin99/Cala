@@ -17,6 +17,8 @@ namespace cala::backend {
 
         i32 getUniformSize(u32 set, const char* name);
 
+        i32 getSamplerBinding(u32 set, const char* name);
+
 //    private:
 
         enum class BindingType {

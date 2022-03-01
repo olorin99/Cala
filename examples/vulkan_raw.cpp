@@ -19,6 +19,7 @@
 
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include <Cala/backend/vulkan/Buffer.h>
+#include <Cala/backend/vulkan/Sampler.h>
 
 #include <Cala/backend/vulkan/SDLPlatform.h>
 
@@ -132,39 +133,11 @@ int main() {
             {4, 0, AttribType::Vec3f}
     };
 
-
-    VkSamplerCreateInfo samplerInfo{};
-    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VK_FILTER_LINEAR;
-    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.anisotropyEnable = VK_FALSE;
-    samplerInfo.maxAnisotropy = 0;
-    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    samplerInfo.unnormalizedCoordinates = VK_FALSE;
-    samplerInfo.compareEnable = VK_FALSE;
-    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    samplerInfo.mipLodBias = 0.f;
-    samplerInfo.minLod = 0.f;
-    samplerInfo.maxLod = 0.f;
-
-    VkSampler sampler;
-    vkCreateSampler(driver._context.device(), &samplerInfo, nullptr, &sampler);
-
-
-    Image image = loadImage(driver, "../../res/textures/metal-sheet.jpg"_path);
-    Image::View view = image.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT);
-
+    Sampler sampler(driver._context, {});
 
     Image brickwall = loadImage(driver, "../../res/textures/brickwall.jpg"_path);
-    auto brickwall_view = brickwall.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT);
     Image brickwall_normal = loadImage(driver, "../../res/textures/brickwall_normal.jpg"_path);
-    auto brickwall_normal_view = brickwall_normal.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT);
     Image brickwall_specular = loadImage(driver, "../../res/textures/brickwall_specular.jpg"_path);
-    auto brickwall_specular_view = brickwall_specular.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT);
 
 
     Material material(driver, std::move(program));
@@ -172,8 +145,10 @@ int main() {
     material._depthState = {true, true, VK_COMPARE_OP_LESS};
 
     auto matInstance = material.instance();
-    matInstance.addImage(std::move(brickwall_view)).addImage(std::move(brickwall_normal_view)).addImage(std::move(brickwall_specular_view));
 
+    matInstance.setSampler("diffuseMap", brickwall.getView());
+    matInstance.setSampler("normalMap", brickwall_normal.getView());
+    matInstance.setSampler("specularMap", brickwall_specular.getView());
     matInstance.setUniform("mixColour", ende::math::Vec3f{0.5, 1.5, 0});
 
     ende::time::StopWatch frameClock;
@@ -277,21 +252,15 @@ int main() {
             cmd->bindAttributes(attributes);
             cmd->bindRasterState(material._rasterState);
             cmd->bindDepthState(material._depthState);
-//            cmd->bindRasterState({.cullMode=VK_CULL_MODE_BACK_BIT, .frontFace=VK_FRONT_FACE_CLOCKWISE});
-//            cmd->bindDepthState({true, true, VK_COMPARE_OP_LESS});
             cmd->bindPipeline();
 
             cmd->bindBuffer(0, 0, cameraBuffer);
 
             for (u32 i = 0; i < matInstance._samplers.size(); i++) {
-                cmd->bindImage(2, i, matInstance._samplers[i].view, sampler);
+                cmd->bindImage(2, i, matInstance._samplers[i].view, sampler.sampler());
             }
             cmd->bindBuffer(2, 3, matInstance.material()->_uniformBuffer);
-//            cmd->bindImage(2, 0, brickwall_view.view, sampler);
-//            cmd->bindImage(2, 1, brickwall_normal_view.view, sampler);
-//            cmd->bindImage(2, 2, brickwall_specular_view.view, sampler);
             cmd->bindBuffer(3, 0, lightBuffer);
-//            cmd->bindDescriptors();
 
             u32 i = 0;
             for (auto& renderable : scene._renderables) {
@@ -327,6 +296,5 @@ int main() {
     std::cout << "\nUptime: " << runTime.elapsed().seconds() << "sec";
     std::cout << "\nFrame: " << frameCount;
 
-    vkDestroySampler(driver._context.device(), sampler, nullptr);
     return 0;
 }

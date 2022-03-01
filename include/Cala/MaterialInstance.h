@@ -22,6 +22,8 @@ namespace cala {
             return setUniform(name, (u8*)&data, sizeof(data));
         }
 
+        bool setSampler(const char* name, cala::backend::vulkan::Image::View&& view);
+
 
 //        void setUniform
 

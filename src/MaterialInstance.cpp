@@ -21,3 +21,13 @@ bool cala::MaterialInstance::setUniform(const char *name, u8 *data, u32 size) {
     material()->_uniformBuffer.data({material()->_uniformData.data(), static_cast<u32>(material()->_uniformData.size())});
     return true;
 }
+
+bool cala::MaterialInstance::setSampler(const char *name, cala::backend::vulkan::Image::View &&view) {
+    i32 binding = material()->_program._interface.getSamplerBinding(2, name);
+    if (binding < 0)
+        return false;
+    if (_samplers.size() < binding + 1)
+        _samplers.resize(binding + 1);
+    _samplers[binding] = std::forward<backend::vulkan::Image::View>(view);
+    return true;
+}

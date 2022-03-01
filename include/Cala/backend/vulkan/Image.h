@@ -41,21 +41,21 @@ namespace cala::backend::vulkan {
 
         struct View {
             VkImageView view;
+
+            View() = default;
             ~View();
 
             View(View&& rhs) noexcept;
             View& operator=(View&& rhs) noexcept;
-
             View(const View&) = delete;
             View& operator=(const View&) = delete;
         private:
-            View() = default;
 
             friend Image;
             VkDevice _device;
         };
 
-        View getView(VkImageViewType viewType, VkImageAspectFlags aspect, u32 mipLevel = 0, u32 levelCount = 1, u32 arrayLayer = 0, u32 layerCount = 1);
+        View getView(VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT, u32 mipLevel = 0, u32 levelCount = 1, u32 arrayLayer = 0, u32 layerCount = 1);
 
 
         VkImage image() const { return _image; }

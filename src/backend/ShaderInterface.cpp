@@ -32,6 +32,17 @@ i32 cala::backend::ShaderInterface::getUniformSize(u32 set, const char *name) {
     return -1;
 }
 
+i32 cala::backend::ShaderInterface::getSamplerBinding(u32 set, const char *name) {
+    for (u32 binding = 0; binding < 8; binding++) {
+        auto& bindingRef = sets[set].bindings[binding];
+        if (bindingRef.type == BindingType::SAMPLER) {
+            if (bindingRef.name == name)
+                return bindingRef.id;
+        }
+    }
+    return -1;
+}
+
 std::unordered_map<std::string, cala::backend::ShaderInterface::BindingMember> &cala::backend::ShaderInterface::getMemberList(u32 set, u32 binding) {
     return sets[set].bindings[binding].members;
 }
