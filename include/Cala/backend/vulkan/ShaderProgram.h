@@ -41,6 +41,8 @@ namespace cala::backend::vulkan {
 
         VkPipelineLayout layout();
 
+        bool stagePresent(u32 stageFlags) const;
+
 //    private:
         friend Builder;
 
@@ -50,6 +52,7 @@ namespace cala::backend::vulkan {
         VkPipelineLayout _layout;
 
         ShaderInterface _interface;
+        u32 _stageFlags;
 
     };
 

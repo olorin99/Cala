@@ -2,6 +2,8 @@
 
 #include <Ende/Vector.h>
 
+#include <iostream>
+
 const char* validationLayers[] = {
         "VK_LAYER_KHRONOS_validation"
 };
@@ -9,6 +11,16 @@ const char* validationLayers[] = {
 const char* deviceExtensions[] = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
+
+static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+        VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+        VkDebugUtilsMessageTypeFlagsEXT messageType,
+        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+        void* pUserData
+        ) {
+    std::cerr << "Validation Layer: " << pCallbackData->pMessage << "\n";
+    return VK_FALSE;
+}
 
 bool checkDeviceSuitable(VkPhysicalDevice device) {
     VkPhysicalDeviceProperties deviceProperties;
@@ -30,6 +42,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     appInfo.apiVersion = VK_API_VERSION_1_0;
 
     auto extensions = platform.requiredExtensions();
+    extensions.push(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
     VkInstanceCreateInfo instanceCreateInfo{};
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -41,6 +54,17 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
 
     if (vkCreateInstance(&instanceCreateInfo, nullptr, &_instance) != VK_SUCCESS)
         throw "Instance Creation Error";
+
+
+    VkDebugUtilsMessengerCreateInfoEXT debugInfo{};
+    debugInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    debugInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
+    debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+    debugInfo.pfnUserCallback = debugCallback;
+    debugInfo.pUserData = nullptr;
+
+    auto createDebugUtils = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(_instance, "vkCreateDebugUtilsMessengerEXT");
+    createDebugUtils(_instance, &debugInfo, nullptr, &_debugMessenger);
 
 
     u32 deviceCount = 0;
@@ -130,6 +154,10 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
 
 cala::backend::vulkan::Context::~Context() {
     vkDestroyDevice(_device, nullptr);
+
+    auto destroyDebugUtils = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(_instance, "vkDestroyDebugUtilsMessengerEXT");
+    destroyDebugUtils(_instance, _debugMessenger, nullptr);
+
     vkDestroyInstance(_instance, nullptr);
 }
 

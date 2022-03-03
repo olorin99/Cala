@@ -53,6 +53,7 @@ namespace cala::backend::vulkan {
         VkInstance _instance;
         VkPhysicalDevice _physicalDevice;
         VkDevice _device;
+        VkDebugUtilsMessengerEXT _debugMessenger;
 
         VkFormat _depthFormat;
 

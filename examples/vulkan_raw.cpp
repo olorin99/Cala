@@ -114,9 +114,18 @@ int main() {
     ende::Vector<u32> fragmentShaderData(shaderFile.size() / sizeof(u32));
     shaderFile.read({reinterpret_cast<char*>(fragmentShaderData.data()), static_cast<u32>(fragmentShaderData.size() * sizeof(u32))});
 
+    if (!shaderFile.open("../../res/shaders/default.comp.spv"_path, ende::fs::in | ende::fs::binary))
+        return -2;
+    ende::Vector<u32> computeShaderData(shaderFile.size() / sizeof(u32));
+    shaderFile.read({reinterpret_cast<char*>(computeShaderData.data()), static_cast<u32>(computeShaderData.size() * sizeof(u32))});
+
     ShaderProgram program = ShaderProgram::create()
             .addStage(vertexShaderData, VK_SHADER_STAGE_VERTEX_BIT)
             .addStage(fragmentShaderData, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .compile(driver);
+
+    ShaderProgram computeProgram = ShaderProgram::create()
+            .addStage(computeShaderData, VK_SHADER_STAGE_COMPUTE_BIT)
             .compile(driver);
 
     //vertex array
@@ -139,6 +148,8 @@ int main() {
     Image brickwall_normal = loadImage(driver, "../../res/textures/brickwall_normal.jpg"_path);
     Image brickwall_specular = loadImage(driver, "../../res/textures/brickwall_specular.jpg"_path);
 
+    Image brickwall_copy(driver._context, {1024, 1024, 1, VK_FORMAT_R8G8B8A8_UNORM, 1, 1, VK_IMAGE_USAGE_STORAGE_BIT});
+    auto brickwall_copy_view = brickwall_copy.getView();
 
     Material material(driver, std::move(program));
     material._rasterState = {.cullMode=VK_CULL_MODE_BACK_BIT, .frontFace=VK_FRONT_FACE_CLOCKWISE};
@@ -245,6 +256,15 @@ int main() {
 
         cmd = driver.beginFrame();
         {
+            cmd->clearDescriptors();
+            cmd->bindProgram(computeProgram);
+//            cmd->bindImage(0, 0, brickwall_view.view, sampler.sampler());
+            cmd->bindImage(0, 0, brickwall_copy_view.view, sampler.sampler(), true);
+            cmd->bindPipeline();
+            cmd->bindDescriptors();
+            //TODO: need to add barriers around resources used by compute
+            cmd->dispatchCompute(1024 / 16, 1024 / 16, 1);
+
             cmd->begin(frame.framebuffer);
 
             cmd->bindProgram(material._program);

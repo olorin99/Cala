@@ -23,7 +23,9 @@ namespace cala::backend {
 
         enum class BindingType {
             UNIFORM,
-            SAMPLER
+            SAMPLER,
+            STORAGE_IMAGE,
+            STORAGE_BUFFER
         };
 
         struct BindingMember {

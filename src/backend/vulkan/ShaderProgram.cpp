@@ -73,6 +73,25 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
             bindings[set][bindingCount[set]].pImmutableSamplers = nullptr;
             bindingCount[set]++;
         }
+        for (auto& resource : resources.storage_images) {
+            u32 set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
+            u32 binding = comp.get_decoration(resource.id, spv::DecorationBinding);
+
+            const spirv_cross::SPIRType &type = comp.get_type(resource.base_type_id);
+            program._interface.sets[set].id = set;
+
+            program._interface.sets[set].bindings[binding].id = binding;
+            program._interface.sets[set].bindings[binding].type = ShaderInterface::BindingType::STORAGE_IMAGE;
+            program._interface.sets[set].bindings[binding].dimensions = 2;
+            program._interface.sets[set].bindings[binding].name = comp.get_name(resource.id);
+
+            bindings[set][bindingCount[set]].binding = binding;
+            bindings[set][bindingCount[set]].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            bindings[set][bindingCount[set]].descriptorCount = 1;
+            bindings[set][bindingCount[set]].stageFlags = stage.second;
+            bindings[set][bindingCount[set]].pImmutableSamplers = nullptr;
+            bindingCount[set]++;
+        }
 
         for (u32 i = 0; i < 4; i++) {
             program._interface.sets[i].id = i;
@@ -100,19 +119,16 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
         stageCreateInfo.pName = "main";
 
         program._stages.push(stageCreateInfo);
+        program._stageFlags |= stage.second;
     }
 
 
 //    u32 setCount = 0;
 
     VkDescriptorSetLayout setLayouts[4] = {};
-//    VkDescriptorSetLayoutCreateInfo setLayoutInfo[4] = {};
+
     for (u32 i = 0; i < 4; i++) {
         setLayouts[i] = driver.getSetLayout({bindings[i], bindingCount[i]});
-//        setLayoutInfo[i].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-//        setLayoutInfo[i].bindingCount = bindingCount[i];
-//        setLayoutInfo[i].pBindings = bindings[i];
-//        vkCreateDescriptorSetLayout(driver._context.device(), &setLayoutInfo[i], nullptr, &setLayouts[i]);
     }
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
@@ -166,7 +182,6 @@ VkPipelineLayout cala::backend::vulkan::ShaderProgram::layout() {
     if (_layout != VK_NULL_HANDLE)
         return _layout;
 
-
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 0;
@@ -176,4 +191,8 @@ VkPipelineLayout cala::backend::vulkan::ShaderProgram::layout() {
 
     vkCreatePipelineLayout(_device, &pipelineLayoutInfo, nullptr, &_layout);
     return _layout;
+}
+
+bool cala::backend::vulkan::ShaderProgram::stagePresent(u32 stageFlags) const {
+    return _stageFlags & stageFlags;
 }

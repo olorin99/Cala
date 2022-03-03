@@ -105,7 +105,7 @@ namespace cala::backend::vulkan {
         void bindBuffer(u32 set, u32 slot, VkBuffer buffer, u32 offset, u32 range);
         void bindBuffer(u32 set, u32 slot, Buffer& buffer, u32 offset = 0, u32 range = 0);
 
-        void bindImage(u32 set, u32 slot, VkImageView image, VkSampler sampler);
+        void bindImage(u32 set, u32 slot, VkImageView image, VkSampler sampler, bool storage = false);
 
         void bindDescriptors();
         void clearDescriptors();
@@ -119,6 +119,8 @@ namespace cala::backend::vulkan {
 
         void draw(u32 count, u32 instanceCount, u32 first, u32 firstInstance);
 
+        void dispatchCompute(u32 x, u32 y, u32 z);
+
 
 
         bool submit(VkSemaphore wait = VK_NULL_HANDLE, VkFence fence = VK_NULL_HANDLE);
@@ -129,7 +131,6 @@ namespace cala::backend::vulkan {
 
 //    private:
 
-        // true if requires binding
         VkPipeline getPipeline();
 
         VkDescriptorSet getDescriptorSet(u32 set);
@@ -144,9 +145,10 @@ namespace cala::backend::vulkan {
         RenderPass* _renderPass;
         Framebuffer* _framebuffer;
         Buffer* _indexBuffer;
+        bool _computeBound;
 
         struct PipelineKey {
-            VkShaderModule shaders[2] = {VK_NULL_HANDLE, VK_NULL_HANDLE};
+            VkPipelineShaderStageCreateInfo shaders[2] = {};
             VkVertexInputBindingDescription bindings[10]{}; //TODO: change from arbitrary values
             VkVertexInputAttributeDescription attributes[10]{};
             VkRenderPass renderPass = VK_NULL_HANDLE;
@@ -167,15 +169,18 @@ namespace cala::backend::vulkan {
 //        VkDescriptorSetLayout setLayout[4] {};
         struct /*__attribute__((packed))*/ DescriptorKey {
             VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
-
             struct {
                 VkBuffer buffer = VK_NULL_HANDLE;
                 u32 offset = 0;
                 u32 range = 0;
             } buffers[8] {};
+            union {
+
+            };
             struct {
                 VkImageView image = VK_NULL_HANDLE;
                 VkSampler sampler = VK_NULL_HANDLE;
+                u32 flags = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             } images[8] {};
 
             bool operator==(const DescriptorKey& rhs) const {
