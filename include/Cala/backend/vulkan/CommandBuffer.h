@@ -122,6 +122,9 @@ namespace cala::backend::vulkan {
         void dispatchCompute(u32 x, u32 y, u32 z);
 
 
+        void pipelineBarrier(VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkDependencyFlags dependencyFlags, ende::Span<VkImageMemoryBarrier> imageBarriers);
+
+
 
         bool submit(VkSemaphore wait = VK_NULL_HANDLE, VkFence fence = VK_NULL_HANDLE);
 

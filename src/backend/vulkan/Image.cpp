@@ -135,3 +135,22 @@ cala::backend::vulkan::Image::View cala::backend::vulkan::Image::getView(VkImage
     v._device = _context.device();
     return v;
 }
+
+VkImageMemoryBarrier cala::backend::vulkan::Image::barrier(VkAccessFlags srcAccess, VkAccessFlags dstAccess, VkImageLayout srcLayout, VkImageLayout dstLayout) {
+    VkImageSubresourceRange range{};
+    range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    range.baseMipLevel = 0;
+    range.levelCount = 1;
+    range.baseArrayLayer = 0;
+    range.layerCount = 1;
+
+    VkImageMemoryBarrier memoryBarrier{};
+    memoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    memoryBarrier.srcAccessMask = srcAccess;
+    memoryBarrier.dstAccessMask = dstAccess;
+    memoryBarrier.oldLayout = srcLayout;
+    memoryBarrier.newLayout = dstLayout;
+    memoryBarrier.image = _image;
+    memoryBarrier.subresourceRange = range;
+    return memoryBarrier;
+}

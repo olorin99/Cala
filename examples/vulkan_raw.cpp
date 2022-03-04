@@ -62,14 +62,10 @@ int main() {
 
     Scene scene;
 
-
     Transform cameraTransform({0, 0, -1});
     Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
 
     Buffer cameraBuffer(driver._context, sizeof(Camera::Data), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-//    Buffer vertexBuffer = vertices.vertexBuffer(driver._context);
-//    Buffer indexBuffer = vertices.indexBuffer(driver._context);
 
     Transform model({0, 0, 0});
 
@@ -256,14 +252,21 @@ int main() {
 
         cmd = driver.beginFrame();
         {
-            cmd->clearDescriptors();
-            cmd->bindProgram(computeProgram);
-//            cmd->bindImage(0, 0, brickwall_view.view, sampler.sampler());
-            cmd->bindImage(0, 0, brickwall_copy_view.view, sampler.sampler(), true);
-            cmd->bindPipeline();
-            cmd->bindDescriptors();
-            //TODO: need to add barriers around resources used by compute
-            cmd->dispatchCompute(1024 / 16, 1024 / 16, 1);
+//            VkImageMemoryBarrier barriers[] = { brickwall_copy.barrier(VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL) };
+//            cmd->pipelineBarrier(VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, barriers);
+
+//            cmd->clearDescriptors();
+//            cmd->bindProgram(computeProgram);
+////            cmd->bindImage(0, 0, brickwall_view.view, sampler.sampler());
+//            cmd->bindImage(0, 0, brickwall_copy_view.view, sampler.sampler(), true);
+//            cmd->bindPipeline();
+//            cmd->bindDescriptors();
+//            //TODO: need to add barriers around resources used by compute
+            //TODO: why doesnt this work. validation layers dont give anything, everything seems valid leading upto this but for some reason it just segfaults each time
+//            cmd->dispatchCompute(1024 / 16, 1024 / 16, 1);
+
+//            barriers[0] = brickwall_copy.barrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL);
+//            cmd->pipelineBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, barriers);
 
             cmd->begin(frame.framebuffer);
 
