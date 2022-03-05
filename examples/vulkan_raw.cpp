@@ -252,21 +252,20 @@ int main() {
 
         cmd = driver.beginFrame();
         {
-//            VkImageMemoryBarrier barriers[] = { brickwall_copy.barrier(VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL) };
-//            cmd->pipelineBarrier(VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, barriers);
+            VkImageMemoryBarrier barriers[] = { brickwall_copy.barrier(VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL) };
+            cmd->pipelineBarrier(VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, barriers);
 
-//            cmd->clearDescriptors();
-//            cmd->bindProgram(computeProgram);
-////            cmd->bindImage(0, 0, brickwall_view.view, sampler.sampler());
-//            cmd->bindImage(0, 0, brickwall_copy_view.view, sampler.sampler(), true);
-//            cmd->bindPipeline();
-//            cmd->bindDescriptors();
-//            //TODO: need to add barriers around resources used by compute
-            //TODO: why doesnt this work. validation layers dont give anything, everything seems valid leading upto this but for some reason it just segfaults each time
-//            cmd->dispatchCompute(1024 / 16, 1024 / 16, 1);
+            cmd->clearDescriptors();
+            cmd->bindProgram(computeProgram);
+//            cmd->bindImage(0, 0, brickwall_view.view, sampler.sampler());
+            cmd->bindImage(0, 0, brickwall_copy_view.view, sampler.sampler(), true);
+            cmd->bindPipeline();
+            cmd->bindDescriptors();
+            //TODO: need to add barriers around resources used by compute
+            cmd->dispatchCompute(1024 / 16, 1024 / 16, 1);
 
-//            barriers[0] = brickwall_copy.barrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL);
-//            cmd->pipelineBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, barriers);
+            barriers[0] = brickwall_copy.barrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL);
+            cmd->pipelineBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, barriers);
 
             cmd->begin(frame.framebuffer);
 

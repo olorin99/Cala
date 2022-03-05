@@ -153,7 +153,9 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
 cala::backend::vulkan::ShaderProgram::ShaderProgram(VkDevice device)
     : _device(device),
     _layout(VK_NULL_HANDLE),
-    _setLayout{}
+    _setLayout{},
+    _interface{},
+    _stageFlags(0)
 {}
 
 cala::backend::vulkan::ShaderProgram::~ShaderProgram() {
@@ -175,6 +177,7 @@ cala::backend::vulkan::ShaderProgram::ShaderProgram(ShaderProgram &&rhs)
         _setLayout[i] = rhs._setLayout[i];
     std::swap(_layout, rhs._layout);
     std::swap(_interface, rhs._interface);
+    std::swap(_stageFlags, rhs._stageFlags);
 }
 
 
@@ -194,5 +197,5 @@ VkPipelineLayout cala::backend::vulkan::ShaderProgram::layout() {
 }
 
 bool cala::backend::vulkan::ShaderProgram::stagePresent(u32 stageFlags) const {
-    return _stageFlags & stageFlags;
+    return (_stageFlags & stageFlags) == stageFlags;
 }
