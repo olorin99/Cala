@@ -12,7 +12,13 @@ namespace cala::shapes {
 
     Mesh cube(f32 edge = 1.f);
 
-    Mesh sphere(f32 radius = 0.5f, u32 rings = 16, u32 sectors = 16);
+    Mesh sphereUV(f32 radius = 0.5f, u32 rings = 16, u32 sectors = 16);
+
+    Mesh sphereNormalized(f32 radius = 0.5f, u32 divisions = 6);
+
+    Mesh sphereCube(f32 radius = 0.5f, u32 divisions = 6);
+
+    Mesh icosahedron(f32 radius = 0.5);
 
     Mesh frustum(const ende::math::Mat4f& matrix);
 

@@ -11,6 +11,8 @@ cala::Mesh cala::shapes::triangle(f32 width, f32 height) {
     data.addVertex({ { halfWidth, -halfHeight, 0 }, { 0, 0, 1 }, { 1, 0 }, { 1, 0, 0 }, { 0, 0, 1 } });
     data.addVertex({ { 0, halfHeight, 0 }, { 0, 0, 1 }, { 0.5, 1 }, { 1, 0, 0 }, { 0, 0, 1 } });
 
+    data.addTriangle(0, 1, 2);
+
     return data;
 }
 
@@ -18,17 +20,11 @@ cala::Mesh cala::shapes::quad(f32 edge) {
     Mesh data;
 
     data.addVertex({ { -edge, -edge, -edge }, { 0, 0, -1 }, { 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 } });
+    data.addVertex({ { -edge, edge, -edge }, { 0, 0, -1 }, { 0, 1 }, { 1, 0, 0 }, { 0, 1, 0 } });
     data.addVertex({ { edge, -edge, -edge }, { 0, 0, -1 }, { 1, 0 }, { 1, 0, 0 }, { 0, 1, 0 } });
     data.addVertex({ { edge, edge, -edge }, { 0, 0, -1 }, { 1, 1 }, { 1, 0, 0 }, { 0, 1, 0 } });
-    data.addVertex({ { -edge, edge, -edge }, { 0, 0, -1 }, { 0, 1 }, { 1, 0, 0 }, { 0, 1, 0 } });
 
-    data.addIndex(0);
-    data.addIndex(1);
-    data.addIndex(2);
-
-    data.addIndex(2);
-    data.addIndex(3);
-    data.addIndex(0);
+    data.addQuad(0, 1, 2, 3);
 
     return data;
 }
@@ -38,198 +34,319 @@ cala::Mesh cala::shapes::cube(f32 edge) {
 
     //top
     data.addVertex({ { -edge, edge, -edge }, { 0, 1, 0 }, { 0, 0 }, { 1, 0, 0 }, { 0, 0, 1 } });
-    data.addVertex({ { edge, edge, -edge }, { 0, 1, 0 }, { 1, 0 }, { 1, 0, 0 }, { 0, 0, 1 } });
+    data.addVertex({ { -edge, edge, edge }, { 0, 1, 0 }, { 0, 1 }, { 1, 0, 0 }, { 0, 0, 1 } });
     data.addVertex({ { edge, edge, edge }, { 0, 1, 0 }, { 1, 1 }, { 1, 0, 0 }, { 0, 0, 1 } });
 
     data.addVertex({ { edge, edge, edge }, { 0, 1, 0 }, { 1, 1 }, { 1, 0, 0 }, { 0, 0, 1 } });
-    data.addVertex({ { -edge, edge, edge }, { 0, 1, 0 }, { 0, 1 }, { 1, 0, 0 }, { 0, 0, 1 } });
+    data.addVertex({ { edge, edge, -edge }, { 0, 1, 0 }, { 1, 0 }, { 1, 0, 0 }, { 0, 0, 1 } });
     data.addVertex({ { -edge, edge, -edge }, { 0, 1, 0 }, { 0, 0 }, { 1, 0, 0 }, { 0, 0, 1 } });
+
 
     //front
     data.addVertex({ { -edge, -edge, -edge }, { 0, 0, -1 }, { 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 } });
-    data.addVertex({ { edge, -edge, -edge }, { 0, 0, -1 }, { 1, 0 }, { 1, 0, 0 }, { 0, 1, 0 } });
+    data.addVertex({ { -edge, edge, -edge }, { 0, 0, -1 }, { 0, 1 }, { 1, 0, 0 }, { 0, 1, 0 } });
     data.addVertex({ { edge, edge, -edge }, { 0, 0, -1 }, { 1, 1 }, { 1, 0, 0 }, { 0, 1, 0 } });
 
     data.addVertex({ { edge, edge, -edge }, { 0, 0, -1 }, { 1, 1 }, { 1, 0, 0 }, { 0, 1, 0 } });
-    data.addVertex({ { -edge, edge, -edge }, { 0, 0, -1 }, { 0, 1 }, { 1, 0, 0 }, { 0, 1, 0 } });
+    data.addVertex({ { edge, -edge, -edge }, { 0, 0, -1 }, { 1, 0 }, { 1, 0, 0 }, { 0, 1, 0 } });
     data.addVertex({ { -edge, -edge, -edge }, { 0, 0, -1 }, { 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 } });
+
 
     //left
     data.addVertex({ { -edge, -edge, edge }, { -1, 0, 0 }, { 0, 0 }, { 0, 0, -1 }, { 0, 1, 0 } });
-    data.addVertex({ { -edge, -edge, -edge }, { -1, 0, 0 }, { 1, 0 }, { 0, 0, -1 }, { 0, 1, 0 } });
+    data.addVertex({ { -edge, edge, edge }, { -1, 0, 0 }, { 0, 1 }, { 0, 0, -1 }, { 0, 1, 0 } });
     data.addVertex({ { -edge, edge, -edge }, { -1, 0, 0 }, { 1, 1 }, { 0, 0, -1 }, { 0, 1, 0 } });
 
     data.addVertex({ { -edge, edge, -edge }, { -1, 0, 0 }, { 1, 1 }, { 0, 0, -1 }, { 0, 1, 0 } });
-    data.addVertex({ { -edge, edge, edge }, { -1, 0, 0 }, { 0, 1 }, { 0, 0, -1 }, { 0, 1, 0 } });
+    data.addVertex({ { -edge, -edge, -edge }, { -1, 0, 0 }, { 1, 0 }, { 0, 0, -1 }, { 0, 1, 0 } });
     data.addVertex({ { -edge, -edge, edge }, { -1, 0, 0 }, { 0, 0 }, { 0, 0, -1 }, { 0, 1, 0 } });
+
 
     //right
     data.addVertex({ { edge, -edge, -edge }, { 1, 0, 0 }, { 0, 0 }, { 0, 0, 1 }, { 0, 1, 0 } });
-    data.addVertex({ { edge, -edge, edge }, { 1, 0, 0 }, { 1, 0 }, { 0, 0, 1 }, { 0, 1, 0 } });
+    data.addVertex({ { edge, edge, -edge }, { 1, 0, 0 }, { 0, 1 }, { 0, 0, 1 }, { 0, 1, 0 } });
     data.addVertex({ { edge, edge, edge }, { 1, 0, 0 }, { 1, 1 }, { 0, 0, 1 }, { 0, 1, 0 } });
 
     data.addVertex({ { edge, edge, edge }, { 1, 0, 0 }, { 1, 1 }, { 0, 0, 1 }, { 0, 1, 0 } });
-    data.addVertex({ { edge, edge, -edge }, { 1, 0, 0 }, { 0, 1 }, { 0, 0, 1 }, { 0, 1, 0 } });
+    data.addVertex({ { edge, -edge, edge }, { 1, 0, 0 }, { 1, 0 }, { 0, 0, 1 }, { 0, 1, 0 } });
     data.addVertex({ { edge, -edge, -edge }, { 1, 0, 0 }, { 0, 0 }, { 0, 0, 1 }, { 0, 1, 0 } });
+
 
     //bottom
     data.addVertex({ { -edge, -edge, edge }, { 0, -1, 0 }, { 0, 0 }, { 1, 0, 0 }, { 0, 0, -1 } });
-    data.addVertex({ { edge, -edge, edge }, { 0, -1, 0 }, { 1, 0 }, { 1, 0, 0 }, { 0, 0, -1 } });
+    data.addVertex({ { -edge, -edge, -edge }, { 0, -1, 0 }, { 0, 1 }, { 1, 0, 0 }, { 0, 0, -1 } });
     data.addVertex({ { edge, -edge, -edge }, { 0, -1, 0 }, { 1, 1 }, { 1, 0, 0 }, { 0, 0, -1 } });
 
     data.addVertex({ { edge, -edge, -edge }, { 0, -1, 0 }, { 1, 1 }, { 1, 0, 0 }, { 0, 0, -1 } });
-    data.addVertex({ { -edge, -edge, -edge }, { 0, -1, 0 }, { 0, 1 }, { 1, 0, 0 }, { 0, 0, -1 } });
+    data.addVertex({ { edge, -edge, edge }, { 0, -1, 0 }, { 1, 0 }, { 1, 0, 0 }, { 0, 0, -1 } });
     data.addVertex({ { -edge, -edge, edge }, { 0, -1, 0 }, { 0, 0 }, { 1, 0, 0 }, { 0, 0, -1 } });
+
 
     //back
     data.addVertex({ { edge, -edge, edge }, { 0, 0, 1 }, { 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 } });
-    data.addVertex({ { -edge, -edge, edge }, { 0, 0, 1 }, { 1, 0 }, { -1, 0, 0 }, { 0, 1, 0 } });
+    data.addVertex({ { edge, edge, edge }, { 0, 0, 1 }, { 0, 1 }, { -1, 0, 0 }, { 0, 1, 0 } });
     data.addVertex({ { -edge, edge, edge }, { 0, 0, 1 }, { 1, 1 }, { -1, 0, 0 }, { 0, 1, 0 } });
 
     data.addVertex({ { -edge, edge, edge }, { 0, 0, 1 }, { 1, 1 }, { -1, 0, 0 }, { 0, 1, 0 } });
-    data.addVertex({ { edge, edge, edge }, { 0, 0, 1 }, { 0, 1 }, { -1, 0, 0 }, { 0, 1, 0 } });
+    data.addVertex({ { -edge, -edge, edge }, { 0, 0, 1 }, { 1, 0 }, { -1, 0, 0 }, { 0, 1, 0 } });
     data.addVertex({ { edge, -edge, edge }, { 0, 0, 1 }, { 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 } });
 
-    return data;
-}
 
-cala::Mesh cala::shapes::sphere(f32 radius, u32 rings, u32 sectors) {
-    Mesh data;
-
-    f32 x, y, z, u, v, d;
-    f64 theta;
-    f64 phi = 0.f;
-    f64 thetad = 2 * ende::math::PI / sectors;
-    f64 phid = ende::math::PI / (rings + 1);
-
-    u = 0.5 + (std::atan2(0, 0) / (2 * ende::math::PI));
-    v = 0.5 - (std::asin(0.5) / ende::math::PI);
-
-    data.addVertex({{0, radius, 0}, {0, 1, 0}, {u, v}, {1, 0, 0}, {0, 0, 1}});
-    phi = phid;
-    for (u32 i = 0; i < rings; i++) {
-        y = std::cos(phi);
-        d = std::sin(phi);
-        theta = 0;
-        for (u32 j = 0; j < sectors; j++) {
-            x = std::sin(theta) * d;
-            z = std::cos(theta) * d;
-            u = 0.5 + (std::atan2(z, x) / (2 * ende::math::PI));
-            v = 0.5 - (std::asin(y) / ende::math::PI);
-
-            ende::math::Vec<3, f64> tangent({std::sin(theta) * std::cos(phi), std::sin(theta) * std::sin(phi), std::cos(theta)});
-            ende::math::Vec<3, f64> normal({x, y, z});
-            ende::math::Vec<3, f64> bitangent = normal.unit().cross(tangent);
-
-            data.addVertex({{x * radius, y * radius, z * radius}, {x, y, z}, {u, v}, {(f32)tangent.x(), (f32)tangent.y(), (f32)tangent.z()}, {(f32)bitangent.x(), (f32)bitangent.y(), (f32)bitangent.z()}});
-            theta += thetad;
-        }
-        phi += phid;
-    }
-    v = 0.5 - (std::asin(-0.5) / ende::math::PI);
-    data.addVertex({{0, -radius, 0}, {0, -1, 0}, {u, v}, {1, 0, 0}, {0, 0, -1}});
-
-    for (u32 i = 0; i < sectors; i++) {
-        data.addIndex(0);
-        data.addIndex(i + 2);
-        data.addIndex(i + 1);
-    }
-
-    for (u32 i = 0; i < sectors; i++) {
-        data.addIndex(i + 1);
-        data.addIndex(i + sectors);
+    for (u32 i = 0; i < 36; i++)
         data.addIndex(i);
 
-        data.addIndex(i + sectors);
-        data.addIndex(i + 1);
-        data.addIndex(i + sectors + 1);
+    return data;
+}
+
+namespace sphereUtils {
+
+    ende::math::Vec<2, f32> normalToUV(const ende::math::Vec3f& normal) {
+        f32 u = 0.5 + (std::atan2(normal.z(), normal.x()) / (2 * ende::math::PI));
+        f32 v = 0.5 - (std::asin(normal.y()) / ende::math::PI);
+        return {u, v};
     }
 
-    for (u32 i = 0; i < rings - 2; i++) {
+
+}
+
+
+
+
+cala::Mesh cala::shapes::sphereUV(f32 radius, u32 rings, u32 sectors) {
+    Mesh data;
+
+    ende::math::Vec<2, f32> uv = sphereUtils::normalToUV({0, 0.5, 0});
+
+    data.addVertex({{0, radius, 0}, {0, 1, 0}, {uv.x(), uv.y()}, {1, 0, 0}, {0, 0, 1}});
+    for (u32 i = 0; i < rings - 1; i++) {
+        f32 polar = ende::math::PI * (f32)(i + 1) / (f32)rings;
+        f32 sp = std::sin(polar);
+        f32 cp = std::cos(polar);
         for (u32 j = 0; j < sectors; j++) {
-            u32 v1 = i * sectors + sectors + j;
-            u32 v2 = v1 + 1;
-            u32 v3 = v1 + sectors;
-            u32 v4 = v2 + sectors;
+            f32 azimuth = 2.f * ende::math::PI * (f32)j / (f32)sectors;
+            f32 sa = std::sin(azimuth);
+            f32 ca = std::cos(azimuth);
+            f32 x = sp * ca;
+            f32 y = cp;
+            f32 z = sp * sa;
 
-            data.addIndex(v2);
-            data.addIndex(v3);
-            data.addIndex(v1);
+            ende::math::Vec<3, f32> normal{x, y, z};
+            normal = normal.unit();
+            uv = sphereUtils::normalToUV(normal);
 
-            data.addIndex(v3);
-            data.addIndex(v2);
-            data.addIndex(v4);
+            ende::math::Vec<3, f32> tangent({sa * cp, sa * sp, ca});
+            ende::math::Vec<3, f32> bitangent = normal.cross(tangent);
+
+            data.addVertex({{x * radius, y * radius, z * radius}, {normal.x(), normal.y(), normal.x()}, {uv.x(), uv.y()}, {(f32)tangent.x(), (f32)tangent.y(), (f32)tangent.z()}, {(f32)bitangent.x(), (f32)bitangent.y(), (f32)bitangent.z()}});
+        }
+    }
+    uv = sphereUtils::normalToUV({0, -0.5, 0});
+    data.addVertex({{0, -radius, 0}, {0, -1, 0}, {uv.x(), uv.y()}, {-1, 0, 0}, {0, 0, 1}});
+
+    for (u32 i = 0; i < sectors; i++) {
+        u32 a = i + 1;
+        u32 b = (i + 1) % sectors + 1;
+        data.addTriangle(0, b, a);
+    }
+
+    for (u32 i = 0; i < rings; i++) {
+        u32 aStart = i * sectors + 1;
+        u32 bStart = (i + 1) * sectors + 1;
+        for (u32 j = 0; j < sectors; j++) {
+            u32 a = aStart + j;
+            u32 a1 = aStart + (j + 1) % sectors;
+            u32 b = bStart + j;
+            u32 b1 = bStart + (j + 1) % sectors;
+            data.addQuad(a, a1, b, b1);
         }
     }
 
     for (u32 i = 0; i < sectors; i++) {
-        data.addIndex(data.vertexCount() - (i + 1));
-        data.addIndex(data.vertexCount() - i);
-        data.addIndex(data.vertexCount() - 1);
+        u32 a = i + sectors * (rings - 2) + 1;
+        u32 b = (i + 1) % sectors + sectors * (rings - 2) + 1;
+        data.addTriangle(data.vertexCount() - 1, a, b);
     }
-
-
-//    data.addVertex({{0, radius, 0}, {0, 1, 0}, {0, 0}, {1, 0, 0}, {0, 0, 1}});
-//    for (u32 ring = 0; ring < rings; ring++) {
-//        f32 angle1 = (ring + 1) * ende::math::PI / (rings + 1);
-//
-//        for (u32 sector = 0; sector < sectors; sector++) {
-//            f32 angle2 = sector * (ende::math::PI * 2) / sectors;
-//
-//            f32 x = std::sin(angle1) * std::cos(angle2);
-//            f32 y = std::cos(angle1);
-//            f32 z = std::sin(angle1) * std::sin(angle2);
-//
-//            f32 u = 0.5f + (std::atan2(z, x) / (2 * ende::math::PI));
-//            f32 v = 0.5f - (std::asin(y) / ende::math::PI);
-//
-//
-//            ende::math::Vec3f tangent({std::sin(angle2) * std::cos(angle1), std::sin(angle2) * std::sin(angle1), std::cos(angle2)});
-//            ende::math::Vec3f normal({x, y, z});
-//            ende::math::Vec3f bitangent = normal.unit().cross(tangent);
-//
-//            data.addVertex({ { x * radius, y * radius, z * radius }, { x, y, z }, { u, v }, { tangent.x(), tangent.y(), tangent.z() }, { bitangent.x(), bitangent.y(), bitangent.z() } });
-//        }
-//    }
-//    data.addVertex({{0, -radius, 0}, {0, -1, 0}, {0, 0}, {1, 0, 0}, {0, 0, -1}});
-//
-//    for (u32 sector = 0; sector < sectors; sector++) {
-//        u32 a = sector + 1;
-//        u32 b = (sector + 1) % sectors + 1;
-//        data.addIndex(0);
-//        data.addIndex(b);
-//        data.addIndex(a);
-//    }
-//
-//    for (u32 ring = 0; ring < rings; ring++) {
-//        u32 aStart = ring * sectors + 1;
-//        u32 bStart = (ring + 1) * sectors + 1;
-//        for (u32 sector = 0; sector < sectors; sector++) {
-//            u32 a = aStart + sector;
-//            u32 a1 = aStart + (sector + 1) % sectors;
-//            u32 b = bStart + sector;
-//            u32 b1 = bStart + (sector + 1) % sectors;
-//
-//            data.addIndex(a);
-//            data.addIndex(a1);
-//            data.addIndex(b1);
-//
-//            data.addIndex(a);
-//            data.addIndex(b1);
-//            data.addIndex(b);
-//        }
-//    }
-//
-//    for (u32 sector = 0; sector < sectors; sector++) {
-//        u32 a = sector + sectors * (rings - 2) + 1;
-//        u32 b = (sector + 1) % sectors + sectors * (rings - 2) + 1;
-//        data.addIndex(data.vertexCount());
-//        data.addIndex(a);
-//        data.addIndex(b);
-//    }
 
     return data;
 }
+
+
+static const ende::math::Vec3f origins[6] = {
+        {-1, -1, -1},
+        {1, -1, -1},
+        {1, -1, 1},
+        {-1, -1, 1},
+        {-1, 1, -1},
+        {-1, -1, 1}
+};
+
+static const ende::math::Vec3f rights[6] = {
+        {2, 0, 0},
+        {0, 0, 2},
+        {-2, 0, 0},
+        {0, 0, -2},
+        {2, 0, 0},
+        {2, 0, 0}
+};
+
+static const ende::math::Vec3f ups[6] = {
+        {0, 2, 0},
+        {0, 2, 0},
+        {0, 2, 0},
+        {0, 2, 0},
+        {0, 0, 2},
+        {0, 0, -2}
+};
+
+
+ende::math::Vec3f mult(const ende::math::Vec3f& lhs, const ende::math::Vec3f& rhs) {
+    return {lhs.x() * rhs.x(), lhs.y() * rhs.y(), lhs.z() * rhs.z()};
+}
+
+
+cala::Mesh cala::shapes::sphereNormalized(f32 radius, u32 divisions) {
+    Mesh data;
+
+    f32 step = 1.0f / (f32)divisions;
+    ende::math::Vec3f step3{step, step, step};
+
+    for (u32 face = 0; face < 6; face++) {
+        ende::math::Vec3f origin = origins[face];
+        ende::math::Vec3f right = rights[face];
+        ende::math::Vec3f up = ups[face];
+        for (u32 i = 0; i < divisions + 1; i++) {
+            ende::math::Vec3f i3{static_cast<float>(i), static_cast<float>(i), static_cast<float>(i)};
+            for (u32 j = 0; j < divisions + 1; j++) {
+                ende::math::Vec3f j3{static_cast<f32>(j), static_cast<f32>(j), static_cast<f32>(j)};
+                ende::math::Vec3f p = origin + mult(step3, (mult(j3, right) + mult(i3, up)));
+                ende::math::Vec3f normal = p.unit();
+                p = normal * radius;
+                auto uv = sphereUtils::normalToUV(normal);
+                data.addVertex({{p.x(), p.y(), p.z()}, {normal.x(), normal.y(), normal.z()}, {uv.x(), uv.y()}, {-1, 0, 0}, {0, 0, 1}});
+            }
+        }
+    }
+
+    u32 k = divisions + 1;
+    for (u32 face = 0; face < 6; face++) {
+        for (u32 i = 0; i < divisions; i++) {
+            bool bottom = i < (divisions / 2);
+            for (u32 j = 0; j < divisions; j++) {
+                bool left = j < (divisions / 2);
+                u32 a = (face * k + i) * k + j;
+                u32 b = (face * k + i) * k + j + 1;
+                u32 c = (face * k + i + 1) * k + j;
+                u32 d = (face * k + i + 1) * k + j + 1;
+                data.addQuad(a, c, b, d);
+            }
+        }
+    }
+
+    return data;
+}
+
+cala::Mesh cala::shapes::sphereCube(f32 radius, u32 divisions) {
+    Mesh data;
+
+    f32 step = 1.0f / (f32)divisions;
+    ende::math::Vec3f step3{step, step, step};
+    for (u32 face = 0; face < 6; face++) {
+        ende::math::Vec3f origin = origins[face];
+        ende::math::Vec3f right = rights[face];
+        ende::math::Vec3f up = ups[face];
+        for (u32 i = 0; i < divisions + 1; i++) {
+            ende::math::Vec3f i3{static_cast<f32>(i), static_cast<f32>(i), static_cast<f32>(i)};
+            for (u32 j = 0; j < divisions + 1; j++) {
+                ende::math::Vec3f j3{static_cast<f32>(j), static_cast<f32>(j), static_cast<f32>(j)};
+                ende::math::Vec3f p = origin + mult(step3, (mult(j3, right) + mult(i3, up)));
+                ende::math::Vec3f p2 = mult(p, p);
+                ende::math::Vec3f n{
+                    p.x() * (f32)std::sqrt(1.0 - 0.5 * (p2.y() + p2.z()) + p2.y() * p2.z() / 3.0),
+                    p.y() * (f32)std::sqrt(1.0 - 0.5 * (p2.z() + p2.x()) + p2.z() * p2.x() / 3.0),
+                    p.z() * (f32)std::sqrt(1.0 - 0.5 * (p2.x() + p2.y()) + p2.x() * p2.y() / 3.0),
+                };
+
+                ende::math::Vec3f normal = n.unit();
+                n = n * radius;
+                auto uv = sphereUtils::normalToUV(normal);
+                data.addVertex({{n.x(), n.y(), n.z()}, {normal.x(), normal.y(), normal.z()}, {uv.x(), uv.y()}, {-1, 0, 0}, {0, 0, 1}});
+            }
+        }
+    }
+
+    u32 k = divisions + 1;
+    for (u32 face = 0; face < 6; face++) {
+        for (u32 i = 0; i < divisions; i++) {
+            bool bottom = i < (divisions / 2);
+            for (u32 j = 0; j < divisions; j++) {
+                bool left = j < (divisions / 2);
+                u32 a = (face * k + i) * k + j;
+                u32 b = (face * k + i) * k + j + 1;
+                u32 c = (face * k + i + 1) * k + j;
+                u32 d = (face * k + i + 1) * k + j + 1;
+                data.addQuad(a, c, b, d);
+            }
+        }
+    }
+
+    return data;
+}
+
+#define POSITION(a, b, c) \
+    pos = {a, b, c};        \
+    normal = pos.unit(); \
+    uv = sphereUtils::normalToUV(normal); \
+    pos = normal * radius;                \
+    data.addVertex({{pos.x(), pos.y(), pos.z()}, {normal.x(), normal.y(), normal.z()}, {uv.x(), uv.y()}, {-1, 0, 0}, {0, 0, 1}});
+
+cala::Mesh cala::shapes::icosahedron(f32 radius) {
+    Mesh data;
+
+    f32 t = (1.0f + std::sqrt(5.0f)) / 2.0f;
+
+    ende::math::Vec3f pos = {-1, t, 0.0};
+    ende::math::Vec3f normal = pos.unit();
+    ende::math::Vec<2, f32> uv = sphereUtils::normalToUV(normal);
+    pos = normal * radius;
+    data.addVertex({{pos.x(), pos.y(), pos.z()}, {normal.x(), normal.y(), normal.z()}, {uv.x(), uv.y()}, {-1, 0, 0}, {0, 0, 1}});
+
+    POSITION({1, t, 0})
+    POSITION({-1, -t, 0})
+    POSITION({1, -t, 0})
+    POSITION({0, -1, t})
+    POSITION({0, 1, t})
+    POSITION({0, -1, -t})
+    POSITION({0, 1, -t})
+    POSITION({t, 0, -1})
+    POSITION({t, 0, 1})
+    POSITION({-t, 0, -1})
+    POSITION({-t, 0, 1})
+
+    data.addTriangle(0, 11, 5);
+    data.addTriangle(0, 5, 1);
+    data.addTriangle(0, 1, 7);
+    data.addTriangle(0, 7, 10);
+    data.addTriangle(0, 10, 11);
+    data.addTriangle(1, 5, 9);
+    data.addTriangle(5, 11, 4);
+    data.addTriangle(11, 10, 2);
+    data.addTriangle(10, 7, 6);
+    data.addTriangle(7, 1, 8);
+    data.addTriangle(3, 9, 4);
+    data.addTriangle(3, 4, 2);
+    data.addTriangle(3, 2, 6);
+    data.addTriangle(3, 6, 8);
+    data.addTriangle(3, 8, 9);
+    data.addTriangle(4, 9, 5);
+    data.addTriangle(2, 4, 11);
+    data.addTriangle(6, 2, 10);
+    data.addTriangle(8, 6, 7);
+    data.addTriangle(9, 8, 1);
+
+    return data;
+}
+
+
 
 cala::Mesh cala::shapes::frustum(const ende::math::Mat4f &matrix) {
     Mesh data;

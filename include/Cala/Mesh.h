@@ -29,6 +29,10 @@ namespace cala {
 
         Mesh& addIndex(u32 index);
 
+        Mesh& addTriangle(u32 a, u32 b, u32 c);
+
+        Mesh& addQuad(u32 a, u32 b, u32 c, u32 d);
+
 
         u32 vertexCount() const { return _vertices.size(); }
 

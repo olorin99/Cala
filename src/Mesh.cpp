@@ -28,6 +28,19 @@ cala::Mesh &cala::Mesh::addIndex(u32 index) {
     return *this;
 }
 
+cala::Mesh &cala::Mesh::addTriangle(u32 a, u32 b, u32 c) {
+    _indices.push(a);
+    _indices.push(b);
+    _indices.push(c);
+    return *this;
+}
+
+cala::Mesh &cala::Mesh::addQuad(u32 a, u32 b, u32 c, u32 d) {
+    addTriangle(a, b, d);
+    addTriangle(d, c, a);
+    return *this;
+}
+
 cala::backend::vulkan::Buffer cala::Mesh::vertexBuffer(backend::vulkan::Context& context) const {
     backend::vulkan::Buffer buf(context, _vertices.size() * sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     buf.data({_vertices.data(), static_cast<u32>(_vertices.size() * sizeof(Vertex))});

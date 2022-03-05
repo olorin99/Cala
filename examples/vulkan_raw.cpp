@@ -69,8 +69,29 @@ int main() {
 
     Transform model({0, 0, 0});
 
-    Mesh vertices = cala::shapes::sphere();
+    Mesh vertices = cala::shapes::sphereUV();
     scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+
+    vertices = cala::shapes::sphereNormalized();
+    model.addPos({1, 0, 0});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    model.addPos({-1, 0, 0});
+
+    vertices = cala::shapes::sphereCube();
+    model.addPos({-1, 0, 0});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    model.addPos({1, 0, 0});
+
+    vertices = cala::shapes::icosahedron();
+    model.addPos({-2, 0, 0});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    model.addPos({2, 0, 0});
+
+    vertices = cala::shapes::cube(0.5);
+    model.addPos({2, 0, 0});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    model.addPos({-2, 0, 0});
+
     vertices = cala::shapes::quad();
     model.addPos({0, 0, 0});
     scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
@@ -84,6 +105,12 @@ int main() {
     vertices = cala::shapes::quad();
     model.addPos({-1.5, 0, 0});
     scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+
+    // light marker
+    vertices = cala::shapes::sphereNormalized(0.1);
+    model.setPos({0, -1, 1});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+
     ende::Vector<ende::math::Mat4f> models;
     for (auto& transform : scene._renderables)
         models.push(transform.second.toMat());
@@ -92,7 +119,8 @@ int main() {
     uniformBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});
 
     PointLight light;
-    light.position = {0, -1, 0};
+    light.position = {0, -1, 1};
+    light.colour = {10, 10, 10};
 
     Buffer lightBuffer(driver._context, sizeof(light), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     lightBuffer.data({&light, sizeof(light)});
@@ -148,7 +176,7 @@ int main() {
     auto brickwall_copy_view = brickwall_copy.getView();
 
     Material material(driver, std::move(program));
-    material._rasterState = {.cullMode=VK_CULL_MODE_BACK_BIT, .frontFace=VK_FRONT_FACE_CLOCKWISE};
+    material._rasterState = {.cullMode=VK_CULL_MODE_BACK_BIT};
     material._depthState = {true, true, VK_COMPARE_OP_LESS};
 
     auto matInstance = material.instance();
@@ -156,7 +184,7 @@ int main() {
     matInstance.setSampler("diffuseMap", brickwall.getView());
     matInstance.setSampler("normalMap", brickwall_normal.getView());
     matInstance.setSampler("specularMap", brickwall_specular.getView());
-    matInstance.setUniform("mixColour", ende::math::Vec3f{0.5, 1.5, 0});
+    matInstance.setUniform("mixColour", ende::math::Vec3f{0.5, 1, 1.5});
 
     ende::time::StopWatch frameClock;
     f32 dt = 1.f / 60.f;
