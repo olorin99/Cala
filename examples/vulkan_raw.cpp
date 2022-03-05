@@ -159,17 +159,21 @@ int main() {
     matInstance.setUniform("mixColour", ende::math::Vec3f{0.5, 1.5, 0});
 
     ende::time::StopWatch frameClock;
-    frameClock.start();
     f32 dt = 1.f / 60.f;
     f32 fps = 0.f;
     ende::time::Duration frameTime;
     u64 frameCount = 0;
+
+    ende::time::Duration sumAvgFrameTime;
+    ende::time::Duration avgFrameTime;
+    ende::time::Duration maxDeviation;
 
     CommandBuffer* cmd = nullptr;
 
     bool running = true;
     bool lockMouse = false;
     SDL_Event event;
+    frameClock.start();
     while (running) {
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
@@ -230,6 +234,9 @@ int main() {
             ImGui::Begin("Stats");
 
             ImGui::Text("FrameTime: %f", frameTime.microseconds() / 1000.f);
+            ImGui::Text("Average FrameTime: %f", avgFrameTime.microseconds() / 1000.f);
+            ImGui::Text("Sum Average FrameTime: %f", sumAvgFrameTime.microseconds() / 1000.f);
+            ImGui::Text("Max Deviation FrameTime: %f", maxDeviation.microseconds() / 1000.f);
             ImGui::Text("FPS: %f", 1000.f / (frameTime.microseconds() / 1000.f));
             ImGui::Text("Command Buffers: %ld", driver._commands.count());
             ImGui::Text("Pipelines: %ld", cmd ? cmd->_pipelines.size() : 0);
@@ -261,7 +268,6 @@ int main() {
             cmd->bindImage(0, 0, brickwall_copy_view.view, sampler.sampler(), true);
             cmd->bindPipeline();
             cmd->bindDescriptors();
-            //TODO: need to add barriers around resources used by compute
             cmd->dispatchCompute(1024 / 16, 1024 / 16, 1);
 
             barriers[0] = brickwall_copy.barrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL);
@@ -303,6 +309,17 @@ int main() {
 
         frameTime = frameClock.reset();
         dt = frameTime.milliseconds() / 1000.f;
+        if (frameCount == 0) avgFrameTime = frameTime;
+        auto deviation = avgFrameTime - frameTime;
+        if (deviation < 0)
+            deviation = deviation * -1;
+        maxDeviation = std::max(maxDeviation, deviation);
+        sumAvgFrameTime += frameTime;
+        if (frameCount % 100 == 0) {
+            avgFrameTime = sumAvgFrameTime / 100;
+            sumAvgFrameTime = 0;
+        }
+
         frameCount++;
 
         if (cmd->_descriptorSets.size() > 700)
