@@ -14,8 +14,6 @@
 
 namespace cala::backend::vulkan {
 
-    constexpr u32 SET_COUNT = 4;
-
     enum class AttribType {
         Vec2f = 2,
         Vec3f = 3,
@@ -81,12 +79,12 @@ namespace cala::backend::vulkan {
         void bindViewPort(const ViewPort& viewport);
 
         struct RasterState {
+            CullMode cullMode = CullMode::BACK;
+            FrontFace frontFace = FrontFace::CCW;
+            PolygonMode polygonMode = PolygonMode::FILL;
+            f32 lineWidth = 1.f;
             bool depthClamp = false;
             bool rasterDiscard = false;
-            VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
-            f32 lineWidth = 1.f;
-            u32 cullMode = VK_CULL_MODE_BACK_BIT;
-            VkFrontFace frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
             bool depthBias = false;
         };
         void bindRasterState(RasterState state);
@@ -152,8 +150,8 @@ namespace cala::backend::vulkan {
 
         struct PipelineKey {
             VkPipelineShaderStageCreateInfo shaders[2] = {};
-            VkVertexInputBindingDescription bindings[10]{}; //TODO: change from arbitrary values
-            VkVertexInputAttributeDescription attributes[10]{};
+            VkVertexInputBindingDescription bindings[MAX_VERTEX_INPUT_BINDINGS]{};
+            VkVertexInputAttributeDescription attributes[MAX_VERTEX_INPUT_ATTRIBUTES]{};
             VkRenderPass renderPass = VK_NULL_HANDLE;
             VkPipelineLayout layout = VK_NULL_HANDLE;
             ViewPort viewPort = {};
@@ -176,23 +174,20 @@ namespace cala::backend::vulkan {
                 VkBuffer buffer = VK_NULL_HANDLE;
                 u32 offset = 0;
                 u32 range = 0;
-            } buffers[8] {};
-            union {
-
-            };
+            } buffers[MAX_BINDING_PER_SET] {};
             struct {
                 VkImageView image = VK_NULL_HANDLE;
                 VkSampler sampler = VK_NULL_HANDLE;
                 u32 flags = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            } images[8] {};
+            } images[MAX_BINDING_PER_SET] {};
 
             bool operator==(const DescriptorKey& rhs) const {
                 return memcmp(this, &rhs, sizeof(DescriptorKey)) == 0;
             }
-        } _descriptorKey[SET_COUNT] {};
+        } _descriptorKey[MAX_SET_COUNT] {};
 
         //TODO: cull descriptors every now and again
-        VkDescriptorSet _currentSets[SET_COUNT];
+        VkDescriptorSet _currentSets[MAX_SET_COUNT];
         std::unordered_map<DescriptorKey, VkDescriptorSet, ende::util::MurmurHash<DescriptorKey>> _descriptorSets;
 
         VkDescriptorPool _descriptorPool;

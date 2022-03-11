@@ -32,7 +32,7 @@ namespace cala::backend::vulkan {
 
         VkExtent2D extent() const { return _extent; }
 
-        VkFormat format() const { return _format.format; }
+        Format format() const { return _format; }
 
         u32 size() const { return _images.size(); }
 
@@ -57,7 +57,7 @@ namespace cala::backend::vulkan {
 
         VkSurfaceKHR _surface;
         VkSwapchainKHR _swapchain;
-        VkSurfaceFormatKHR _format;
+        Format _format;
         VkExtent2D _extent;
         u64 _frame;
 

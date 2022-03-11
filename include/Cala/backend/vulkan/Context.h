@@ -5,7 +5,7 @@
 
 #include <Ende/Vector.h>
 #include <Ende/Span.h>
-
+#include <Cala/backend/primitives.h>
 #include "Platform.h"
 
 namespace cala::backend::vulkan {
@@ -46,7 +46,7 @@ namespace cala::backend::vulkan {
 
         VkDevice device() const { return _device; }
 
-        VkFormat depthFormat() const { return _depthFormat; }
+        Format depthFormat() const { return _depthFormat; }
 
     private:
 
@@ -55,7 +55,7 @@ namespace cala::backend::vulkan {
         VkDevice _device;
         VkDebugUtilsMessengerEXT _debugMessenger;
 
-        VkFormat _depthFormat;
+        Format _depthFormat;
 
     };
 

@@ -1,4 +1,5 @@
 #include "Cala/backend/vulkan/RenderPass.h"
+#include <Cala/backend/vulkan/primitives.h>
 
 cala::backend::vulkan::RenderPass::RenderPass(Context& context, ende::Span<Attachment> attachments)
     : _device(context.device()),
@@ -14,7 +15,7 @@ cala::backend::vulkan::RenderPass::RenderPass(Context& context, ende::Span<Attac
 
     for (u32 i = 0; i < attachments.size(); i++) {
         if (attachments[i].format != context.depthFormat()) {
-            attachmentDescriptions[colourAttachmentCount].format = attachments[i].format;
+            attachmentDescriptions[colourAttachmentCount].format = getFormat(attachments[i].format);
             attachmentDescriptions[colourAttachmentCount].samples = attachments[i].samples;
             attachmentDescriptions[colourAttachmentCount].loadOp = attachments[i].loadOp;
             attachmentDescriptions[colourAttachmentCount].storeOp = attachments[i].storeOp;
@@ -28,7 +29,7 @@ cala::backend::vulkan::RenderPass::RenderPass(Context& context, ende::Span<Attac
             _clearValues.push({0.f, 0.f, 0.f, 1.f});
             _colourAttachments++;
         } else {
-            depthAttachment.format = attachments[i].format;
+            depthAttachment.format = getFormat(attachments[i].format);
             depthAttachment.samples = attachments[i].samples;
             depthAttachment.loadOp = attachments[i].loadOp;
             depthAttachment.storeOp = attachments[i].storeOp;

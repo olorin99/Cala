@@ -146,7 +146,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
         vkGetPhysicalDeviceFormatProperties(_physicalDevice, format, &depthProperties);
 
         if ((depthProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-            _depthFormat = format;
+            _depthFormat = static_cast<Format>(format);
             break;
         }
     }
@@ -224,14 +224,6 @@ std::pair<VkBuffer, VkDeviceMemory> cala::backend::vulkan::Context::createBuffer
 
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(_device, buffer, &memRequirements);
-
-//    VkMemoryAllocateInfo allocateInfo{};
-//    allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-//    allocateInfo.allocationSize = memRequirements.size;
-//    allocateInfo.memoryTypeIndex = memoryIndex(memRequirements.memoryTypeBits, flags);
-//
-//    VkDeviceMemory memory;
-//    vkAllocateMemory(_device, &allocateInfo, nullptr, &memory);
 
     VkDeviceMemory memory = allocate(memRequirements.size, memRequirements.memoryTypeBits, flags);
     vkBindBufferMemory(_device, buffer, memory, 0);

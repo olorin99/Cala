@@ -26,6 +26,8 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
         for (auto& resource : resources.uniform_buffers) {
             u32 set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
             u32 binding = comp.get_decoration(resource.id, spv::DecorationBinding);
+            assert(set < MAX_SET_COUNT && "supplied set count is greater than valid set count per shader program");
+            assert(set < MAX_BINDING_PER_SET && "supplied binding count is greater than valid binding count per shader program");
 
             const spirv_cross::SPIRType &type = comp.get_type(resource.base_type_id);
             u32 size = comp.get_declared_struct_size(type);
@@ -56,9 +58,10 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
         for (auto& resource : resources.sampled_images) {
             u32 set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
             u32 binding = comp.get_decoration(resource.id, spv::DecorationBinding);
+            assert(set < MAX_SET_COUNT && "supplied set count is greater than valid set count per shader program");
+            assert(set < MAX_BINDING_PER_SET && "supplied binding count is greater than valid binding count per shader program");
 
             const spirv_cross::SPIRType &type = comp.get_type(resource.base_type_id);
-//            u32 size = comp.get_declared_struct_size(type);
             program._interface.sets[set].id = set;
 
             program._interface.sets[set].bindings[binding].id = binding;
@@ -76,6 +79,8 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
         for (auto& resource : resources.storage_images) {
             u32 set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
             u32 binding = comp.get_decoration(resource.id, spv::DecorationBinding);
+            assert(set < MAX_SET_COUNT && "supplied set count is greater than valid set count per shader program");
+            assert(set < MAX_BINDING_PER_SET && "supplied binding count is greater than valid binding count per shader program");
 
             const spirv_cross::SPIRType &type = comp.get_type(resource.base_type_id);
             program._interface.sets[set].id = set;
@@ -93,10 +98,10 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
             bindingCount[set]++;
         }
 
-        for (u32 i = 0; i < 4; i++) {
+        for (u32 i = 0; i < MAX_SET_COUNT; i++) {
             program._interface.sets[i].id = i;
             u32 size = 0;
-            for (u32 j = 0; j < 8; j++) {
+            for (u32 j = 0; j < MAX_BINDING_PER_SET; j++) {
                 if (program._interface.sets[i].bindings[j].type == ShaderInterface::BindingType::UNIFORM)
                     size += program._interface.sets[i].bindings[j].byteSize;
             }
@@ -127,13 +132,13 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
 
     VkDescriptorSetLayout setLayouts[4] = {};
 
-    for (u32 i = 0; i < 4; i++) {
+    for (u32 i = 0; i < MAX_SET_COUNT; i++) {
         setLayouts[i] = driver.getSetLayout({bindings[i], bindingCount[i]});
     }
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 4;
+    pipelineLayoutInfo.setLayoutCount = MAX_SET_COUNT;
     pipelineLayoutInfo.pSetLayouts = setLayouts;
     pipelineLayoutInfo.pushConstantRangeCount = 0;
     pipelineLayoutInfo.pPushConstantRanges = nullptr;
@@ -173,7 +178,7 @@ cala::backend::vulkan::ShaderProgram::ShaderProgram(ShaderProgram &&rhs)
 {
     std::swap(_device, rhs._device);
     std::swap(_stages, rhs._stages);
-    for (u32 i = 0; i < 4; i++)
+    for (u32 i = 0; i < MAX_SET_COUNT; i++)
         _setLayout[i] = rhs._setLayout[i];
     std::swap(_layout, rhs._layout);
     std::swap(_interface, rhs._interface);

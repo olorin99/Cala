@@ -12,7 +12,7 @@ namespace cala::backend::vulkan {
     public:
 
         struct Attachment {
-            VkFormat format;
+            Format format;
             VkSampleCountFlagBits samples;
             VkAttachmentLoadOp loadOp;
             VkAttachmentStoreOp storeOp;

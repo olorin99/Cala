@@ -43,7 +43,7 @@ Image loadImage(Driver& driver, const ende::fs::Path& path) {
     if (!data) throw "unable load image";
     u32 length = width * height * 4;
 
-    Image image(driver._context, {(u32)width, (u32)height, 1, VK_FORMAT_R8G8B8A8_SRGB});
+    Image image(driver._context, {(u32)width, (u32)height, 1, backend::Format::RGBA8_SRGB});
     image.data(driver, {0, (u32)width, (u32)height, 1, 4, {data, length}});
     stbi_image_free(data);
     return image;
@@ -172,11 +172,16 @@ int main() {
     Image brickwall_normal = loadImage(driver, "../../res/textures/brickwall_normal.jpg"_path);
     Image brickwall_specular = loadImage(driver, "../../res/textures/brickwall_specular.jpg"_path);
 
-    Image brickwall_copy(driver._context, {1024, 1024, 1, VK_FORMAT_R8G8B8A8_UNORM, 1, 1, VK_IMAGE_USAGE_STORAGE_BIT});
+    Image brickwall_copy(driver._context, {1024, 1024, 1, backend::Format::RGBA8_UNORM, 1, 1, backend::ImageUsage::STORAGE});
     auto brickwall_copy_view = brickwall_copy.getView();
 
     Material material(driver, std::move(program));
-    material._rasterState = {.cullMode=VK_CULL_MODE_BACK_BIT};
+    material._rasterState = {
+            backend::CullMode::BACK,
+            backend::FrontFace::CCW,
+            backend::PolygonMode::FILL
+    };
+//    material._rasterState = {.polygonMode=backend::PolygonMode::LINE, .cullMode=backend::CullMode::BACK};
     material._depthState = {true, true, VK_COMPARE_OP_LESS};
 
     auto matInstance = material.instance();

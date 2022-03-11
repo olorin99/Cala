@@ -1,5 +1,6 @@
 #include "Cala/backend/vulkan/Image.h"
 #include <Cala/backend/vulkan/Driver.h>
+#include <Cala/backend/vulkan/primitives.h>
 
 cala::backend::vulkan::Image::Image(Context& context, CreateInfo info)
     : _context(context),
@@ -14,7 +15,7 @@ cala::backend::vulkan::Image::Image(Context& context, CreateInfo info)
         imageInfo.imageType = VK_IMAGE_TYPE_2D;
     else
         imageInfo.imageType = VK_IMAGE_TYPE_1D;
-    imageInfo.format = info.format;
+    imageInfo.format = getFormat(info.format);
     imageInfo.extent.width = info.width;
     imageInfo.extent.height = info.height;
     imageInfo.extent.depth = info.depth;
@@ -23,7 +24,7 @@ cala::backend::vulkan::Image::Image(Context& context, CreateInfo info)
 
     imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.usage = info.usage;
+    imageInfo.usage = getImageUsage(info.usage);
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 
@@ -37,7 +38,7 @@ cala::backend::vulkan::Image::Image(Context& context, CreateInfo info)
     _width = info.width;
     _height = info.height;
     _depth = info.depth;
-    _format = info.format;
+    _format = getFormat(info.format);
 }
 
 cala::backend::vulkan::Image::~Image() {

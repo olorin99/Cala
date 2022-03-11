@@ -1,5 +1,5 @@
 #include <Ende/Vector.h>
-
+#include <Cala/backend/vulkan/primitives.h>
 #include "Cala/backend/vulkan/Swapchain.h"
 
 
@@ -9,7 +9,7 @@ VkSurfaceCapabilitiesKHR getCapabilities(VkPhysicalDevice device, VkSurfaceKHR s
     return capabilities;
 }
 
-VkSurfaceFormatKHR getFormat(VkPhysicalDevice device, VkSurfaceKHR surface) {
+VkSurfaceFormatKHR getSurfaceFormat(VkPhysicalDevice device, VkSurfaceKHR surface) {
     u32 count = 0;
     vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &count, nullptr);
     ende::Vector<VkSurfaceFormatKHR> formats(count);
@@ -54,7 +54,7 @@ cala::backend::vulkan::Swapchain::Swapchain(Context &context, Platform& platform
     _swapchain(VK_NULL_HANDLE),
     _frame(0),
     _depthImage(context, {
-        800, 600, 1, _context.depthFormat(), 1, 1, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
+        800, 600, 1, _context.depthFormat(), 1, 1, backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT
     }),
     _depthView(_depthImage.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT))
 {
@@ -160,7 +160,7 @@ bool cala::backend::vulkan::Swapchain::wait(u64 timeout) {
 
 bool cala::backend::vulkan::Swapchain::createSwapchain() {
     VkSurfaceCapabilitiesKHR capabilities = getCapabilities(_context.physicalDevice(), _surface);
-    VkSurfaceFormatKHR format = getFormat(_context.physicalDevice(), _surface);
+    VkSurfaceFormatKHR format = getSurfaceFormat(_context.physicalDevice(), _surface);
     VkPresentModeKHR mode = getPresentMode(_context.physicalDevice(), _surface);
     VkExtent2D extent = getExtent(capabilities);
 
@@ -196,7 +196,7 @@ bool cala::backend::vulkan::Swapchain::createSwapchain() {
     _images.resize(count);
     vkGetSwapchainImagesKHR(_context.device(), _swapchain, &count, _images.data());
 
-    _format = format;
+    _format = static_cast<Format>(format.format);
     _extent = extent;
     return result == VK_SUCCESS;
 }
@@ -209,7 +209,7 @@ bool cala::backend::vulkan::Swapchain::createImageViews() {
 
         createInfo.image = _images[i];
         createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format = _format.format;
+        createInfo.format = getFormat(_format);
 
         createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;

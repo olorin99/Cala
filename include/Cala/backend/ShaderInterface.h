@@ -3,6 +3,7 @@
 
 #include "Ende/platform.h"
 #include <unordered_map>
+#include <Cala/backend/primitives.h>
 
 namespace cala::backend {
 
@@ -46,8 +47,8 @@ namespace cala::backend {
                 std::unordered_map<std::string, BindingMember> members;
                 u32 dimensions;
                 std::string name;
-            } bindings[8];
-        } sets[4];
+            } bindings[MAX_BINDING_PER_SET];
+        } sets[MAX_SET_COUNT];
 
     };
 

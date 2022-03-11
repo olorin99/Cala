@@ -1,4 +1,5 @@
 #include "Cala/backend/vulkan/CommandBuffer.h"
+#include <Cala/backend/vulkan/primitives.h>
 
 cala::backend::vulkan::CommandBuffer::CommandBuffer(VkDevice device, VkQueue queue, VkCommandBuffer buffer)
     : _buffer(buffer),
@@ -98,7 +99,7 @@ void cala::backend::vulkan::CommandBuffer::bindProgram(ShaderProgram &program) {
     if (_pipelineKey.layout != program._layout)
         _pipelineKey.layout = program._layout;
 
-    for (u32 i = 0; i < SET_COUNT; i++) {
+    for (u32 i = 0; i < MAX_SET_COUNT; i++) {
         if (_descriptorKey[i].setLayout != program._setLayout[i])
             _descriptorKey[i].setLayout = program._setLayout[i];
 //        setLayout[i] = program._setLayout[i];
@@ -114,7 +115,8 @@ void cala::backend::vulkan::CommandBuffer::bindProgram(ShaderProgram &program) {
 }
 
 void cala::backend::vulkan::CommandBuffer::bindAttributes(ende::Span<Attribute> attributes) {
-    VkVertexInputAttributeDescription attributeDescriptions[10]{};
+    assert(attributes.size() <= MAX_VERTEX_INPUT_ATTRIBUTES && "number of supplied vertex input attributes is greater than valid count");
+    VkVertexInputAttributeDescription attributeDescriptions[MAX_VERTEX_INPUT_ATTRIBUTES]{};
     u32 i = 0;
     u32 offset = 0;
     for (; i < attributes.size(); i++) {
@@ -154,6 +156,7 @@ void cala::backend::vulkan::CommandBuffer::bindAttributes(ende::Span<Attribute> 
 }
 
 void cala::backend::vulkan::CommandBuffer::bindBindings(ende::Span<VkVertexInputBindingDescription> bindings) {
+    assert(bindings.size() <= MAX_VERTEX_INPUT_BINDINGS && "number of supplied vertex input bindings is greater than valid count");
     memset(_pipelineKey.bindings, 0, sizeof(_pipelineKey.bindings));
     memcpy(_pipelineKey.bindings, bindings.data(), bindings.size() * sizeof(VkVertexInputBindingDescription));
 }
@@ -167,10 +170,6 @@ void cala::backend::vulkan::CommandBuffer::bindVertexArray(ende::Span<VkVertexIn
                                                            ende::Span<VkVertexInputAttributeDescription> attributes) {
     bindBindings(bindings);
     bindAttributeDescriptions(attributes);
-//    memset(_pipelineKey.bindings, 0, sizeof(_pipelineKey.bindings));
-//    memcpy(_pipelineKey.bindings, bindings.data(), bindings.size() * sizeof(VkVertexInputBindingDescription));
-//    memset(_pipelineKey.attributes, 0, sizeof(_pipelineKey.attributes));
-//    memcpy(_pipelineKey.attributes, attributes.data(), attributes.size() * sizeof(VkVertexInputAttributeDescription));
 }
 
 void cala::backend::vulkan::CommandBuffer::bindRenderPass(RenderPass& renderPass) {
@@ -215,7 +214,7 @@ void cala::backend::vulkan::CommandBuffer::bindPipeline() {
 
 
 void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 slot, VkBuffer buffer, u32 offset, u32 range) {
-    assert(set < SET_COUNT && "set is greater than valid number of descriptor sets");
+    assert(set < MAX_SET_COUNT && "set is greater than valid number of descriptor sets");
     _descriptorKey[set].buffers[slot] = {buffer, offset, range};
 }
 
@@ -231,7 +230,7 @@ void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
 
     u32 setCount = 0;
     // find descriptors with key
-    for (u32 i = 0; i < SET_COUNT; i++) {
+    for (u32 i = 0; i < MAX_SET_COUNT; i++) {
         auto descriptor = getDescriptorSet(i);
         _currentSets[i] = descriptor;
         setCount++;
@@ -318,18 +317,6 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
     VkPipeline pipeline;
     if (!_computeBound) {
 
-//        VkPipelineShaderStageCreateInfo shaderStages[2] = {{}, {}};
-//        shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-//        shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-//        shaderStages[0].pName = "main";
-//        shaderStages[0].module = _pipelineKey.shaders[0];
-//
-//        shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-//        shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-//        shaderStages[1].pName = "main";
-//        shaderStages[1].module = _pipelineKey.shaders[1];
-
-
         VkGraphicsPipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 
@@ -339,14 +326,14 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
         pipelineInfo.renderPass = _pipelineKey.renderPass;
         pipelineInfo.subpass = 0;
 
-
-
         u32 countVertexBinding = 0;
         u32 countVertexAttribute = 0;
-        for (u32 i = 0; i < 10; i++) {
-            if (_pipelineKey.bindings[i].stride > 0)
+        for (u32 binding = 0; binding < MAX_VERTEX_INPUT_BINDINGS; binding++) {
+            if (_pipelineKey.bindings[binding].stride > 0)
                 countVertexBinding++;
-            if (_pipelineKey.attributes[i].format > 0)
+        }
+        for (u32 attribute = 0; attribute < MAX_VERTEX_INPUT_ATTRIBUTES; attribute++) {
+            if (_pipelineKey.attributes[attribute].format > 0)
                 countVertexAttribute++;
         }
 
@@ -403,10 +390,10 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
         rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         rasterizer.depthClampEnable = _pipelineKey.raster.depthClamp;
         rasterizer.rasterizerDiscardEnable = _pipelineKey.raster.rasterDiscard;
-        rasterizer.polygonMode = _pipelineKey.raster.polygonMode;
+        rasterizer.polygonMode = getPolygonMode(_pipelineKey.raster.polygonMode);
         rasterizer.lineWidth = _pipelineKey.raster.lineWidth;
-        rasterizer.cullMode = _pipelineKey.raster.cullMode;
-        rasterizer.frontFace = _pipelineKey.raster.frontFace;
+        rasterizer.cullMode = getCullMode(_pipelineKey.raster.cullMode);
+        rasterizer.frontFace = getFrontFace(_pipelineKey.raster.frontFace);
         rasterizer.depthBiasEnable = _pipelineKey.raster.depthBias;
         rasterizer.depthBiasConstantFactor = 0.f;
         rasterizer.depthBiasClamp = 0.f;
@@ -493,7 +480,7 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
 }
 
 VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) {
-    assert(set < SET_COUNT && "set is greater than allowed descriptor count");
+    assert(set < MAX_SET_COUNT && "set is greater than allowed descriptor count");
     auto key = _descriptorKey[set];
 
     if (key.setLayout == VK_NULL_HANDLE)
@@ -514,7 +501,7 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
     VkDescriptorSet descriptorSet;
     vkAllocateDescriptorSets(_device, &allocInfo, &descriptorSet);
 
-    for (u32 i = 0; i < 8; i++) {
+    for (u32 i = 0; i < MAX_BINDING_PER_SET; i++) {
 
         if (key.buffers[i].buffer != VK_NULL_HANDLE) {
             VkDescriptorBufferInfo bufferInfo{};

@@ -6,6 +6,8 @@
 #include <Ende/Span.h>
 #include <Cala/backend/vulkan/Context.h>
 
+#include <Cala/backend/primitives.h>
+
 namespace cala::backend::vulkan {
 
     class Driver;
@@ -17,10 +19,10 @@ namespace cala::backend::vulkan {
             u32 width = 1;
             u32 height = 1;
             u32 depth = 1;
-            VkFormat format = VK_FORMAT_R8G8B8A8_UINT;
+            Format format = Format::RGBA8_UINT;
             u32 mipLevels = 1;
             u32 arrayLayers = 1;
-            VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+            ImageUsage usage = ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST;
         };
 
         struct DataInfo {

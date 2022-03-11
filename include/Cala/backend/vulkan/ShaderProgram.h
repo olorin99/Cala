@@ -48,7 +48,7 @@ namespace cala::backend::vulkan {
 
         VkDevice _device;
         ende::Vector<VkPipelineShaderStageCreateInfo> _stages;
-        VkDescriptorSetLayout _setLayout[4];
+        VkDescriptorSetLayout _setLayout[MAX_SET_COUNT];
         VkPipelineLayout _layout;
 
         ShaderInterface _interface;
