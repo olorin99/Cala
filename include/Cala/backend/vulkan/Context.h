@@ -24,9 +24,9 @@ namespace cala::backend::vulkan {
         u32 memoryIndex(u32 filter, VkMemoryPropertyFlags properties);
 
 
-        VkDeviceMemory allocate(u32 size, u32 typeBits, u32 flags);
+        VkDeviceMemory allocate(u32 size, u32 typeBits, MemoryProperties flags);
 
-        std::pair<VkBuffer, VkDeviceMemory> createBuffer(u32 size, u32 usage, u32 flags);
+        std::pair<VkBuffer, VkDeviceMemory> createBuffer(u32 size, u32 usage, MemoryProperties flags);
 
         struct CreateImage {
             VkImageType imageType;

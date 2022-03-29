@@ -66,7 +66,7 @@ int main() {
     Transform cameraTransform({0, 0, -1});
     Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
 
-    Buffer cameraBuffer(driver._context, sizeof(Camera::Data), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    Buffer cameraBuffer(driver._context, sizeof(Camera::Data), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
 
     Transform model({0, 0, 0});
 
@@ -116,14 +116,14 @@ int main() {
     for (auto& transform : scene._renderables)
         models.push(transform.second.toMat());
 
-    Buffer uniformBuffer(driver._context, sizeof(ende::math::Mat4f) * models.size(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    Buffer uniformBuffer(driver._context, sizeof(ende::math::Mat4f) * models.size(), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
     uniformBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});
 
     PointLight light;
     light.position = {0, -1, 1};
     light.colour = {10, 10, 10};
 
-    Buffer lightBuffer(driver._context, sizeof(light), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    Buffer lightBuffer(driver._context, sizeof(light), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
     lightBuffer.data({&light, sizeof(light)});
 
     // get shader data

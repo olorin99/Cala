@@ -35,6 +35,26 @@ namespace cala::backend {
         RGBA8_SRGB = 43
     };
 
+    enum class MemoryProperties {
+        DEVICE_LOCAL = 0x00000001,
+        HOST_VISIBLE = 0x00000002,
+        HOST_COHERENT = 0x00000004,
+        HOST_CACHED = 0x00000008,
+        LAZILY_ALLOCATED = 0x00000010
+    };
+
+    enum class BufferUsage {
+        TRANSFER_SRC = 0x00000001,
+        TRANSFER_DST = 0x00000002,
+        UNIFORM_TEXEL = 0x00000004,
+        STORAGE_TEXEL = 0x00000008,
+        UNIFORM = 0x00000010,
+        STORAGE = 0x00000020,
+        INDEX = 0x00000040,
+        VERTEX = 0x00000080,
+        INDIRECT = 0x00000100
+    };
+
     enum class ImageUsage {
         TRANSFER_SRC = 0x00000001,
         TRANSFER_DST = 0x00000002,
@@ -103,12 +123,28 @@ namespace cala::backend {
 
 }
 
+constexpr cala::backend::MemoryProperties operator|(cala::backend::MemoryProperties lhs, cala::backend::MemoryProperties rhs) {
+    return static_cast<cala::backend::MemoryProperties>(static_cast<std::underlying_type<cala::backend::MemoryProperties>::type>(lhs) | static_cast<std::underlying_type<cala::backend::MemoryProperties>::type>(rhs));
+}
+
+constexpr cala::backend::MemoryProperties operator&(cala::backend::MemoryProperties lhs, cala::backend::MemoryProperties rhs) {
+    return static_cast<cala::backend::MemoryProperties>(static_cast<std::underlying_type<cala::backend::MemoryProperties>::type>(lhs) & static_cast<std::underlying_type<cala::backend::MemoryProperties>::type>(rhs));
+}
+
 constexpr cala::backend::ImageUsage operator|(cala::backend::ImageUsage lhs, cala::backend::ImageUsage rhs) {
     return static_cast<cala::backend::ImageUsage>(static_cast<std::underlying_type<cala::backend::ImageUsage>::type>(lhs) | static_cast<std::underlying_type<cala::backend::ImageUsage>::type>(rhs));
 }
 
 constexpr cala::backend::ImageUsage operator&(cala::backend::ImageUsage lhs, cala::backend::ImageUsage rhs) {
     return static_cast<cala::backend::ImageUsage>(static_cast<std::underlying_type<cala::backend::ImageUsage>::type>(lhs) & static_cast<std::underlying_type<cala::backend::ImageUsage>::type>(rhs));
+}
+
+constexpr cala::backend::BufferUsage operator|(cala::backend::BufferUsage lhs, cala::backend::BufferUsage rhs) {
+    return static_cast<cala::backend::BufferUsage>(static_cast<std::underlying_type<cala::backend::BufferUsage>::type>(lhs) | static_cast<std::underlying_type<cala::backend::BufferUsage>::type>(rhs));
+}
+
+constexpr cala::backend::BufferUsage operator&(cala::backend::BufferUsage lhs, cala::backend::BufferUsage rhs) {
+    return static_cast<cala::backend::BufferUsage>(static_cast<std::underlying_type<cala::backend::BufferUsage>::type>(lhs) & static_cast<std::underlying_type<cala::backend::BufferUsage>::type>(rhs));
 }
 
 #endif //CALA_PRIMITIVES_H

@@ -9,7 +9,7 @@ namespace cala::backend::vulkan {
     class Buffer {
     public:
 
-        Buffer(Context& context, u32 size, u32 usage, u32 flags);
+        Buffer(Context& context, u32 size, BufferUsage usage, MemoryProperties flags);
 
         ~Buffer();
 
@@ -39,8 +39,8 @@ namespace cala::backend::vulkan {
         VkBuffer _buffer;
         VkDeviceMemory _memory;
         u32 _size;
-        u32 _usage;
-        u32 _flags;
+        BufferUsage _usage;
+        MemoryProperties _flags;
 
     };
 

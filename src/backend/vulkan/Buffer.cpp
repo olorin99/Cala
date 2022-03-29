@@ -1,8 +1,9 @@
 #include <cstring>
 #include "Cala/backend/vulkan/Buffer.h"
+#include <Cala/backend/vulkan/primitives.h>
 
 
-cala::backend::vulkan::Buffer::Buffer(Context &context, u32 size, u32 usage, u32 flags)
+cala::backend::vulkan::Buffer::Buffer(Context &context, u32 size, BufferUsage usage, MemoryProperties flags)
     : _context(context),
     _buffer(VK_NULL_HANDLE),
     _memory(VK_NULL_HANDLE),
@@ -13,7 +14,7 @@ cala::backend::vulkan::Buffer::Buffer(Context &context, u32 size, u32 usage, u32
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = size;
-    bufferInfo.usage = usage;
+    bufferInfo.usage = getBufferUsage(usage);
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     vkCreateBuffer(_context.device(), &bufferInfo, nullptr, &_buffer);
@@ -35,8 +36,8 @@ cala::backend::vulkan::Buffer::Buffer(Buffer &&rhs)
     _buffer(VK_NULL_HANDLE),
     _memory(VK_NULL_HANDLE),
     _size(0),
-    _flags(0),
-    _usage(0)
+    _flags(MemoryProperties::HOST_VISIBLE),
+    _usage(BufferUsage::UNIFORM)
 {
     std::swap(_buffer, rhs._buffer);
     std::swap(_memory, rhs._memory);

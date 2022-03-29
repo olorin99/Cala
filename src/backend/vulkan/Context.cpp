@@ -1,4 +1,5 @@
 #include "Cala/backend/vulkan/Context.h"
+#include "Cala/backend/vulkan/primitives.h"
 
 #include <Ende/Vector.h>
 
@@ -200,11 +201,11 @@ u32 cala::backend::vulkan::Context::memoryIndex(u32 filter, VkMemoryPropertyFlag
 }
 
 
-VkDeviceMemory cala::backend::vulkan::Context::allocate(u32 size, u32 typeBits, u32 flags) {
+VkDeviceMemory cala::backend::vulkan::Context::allocate(u32 size, u32 typeBits, MemoryProperties flags) {
     VkMemoryAllocateInfo allocateInfo{};
     allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocateInfo.allocationSize = size;
-    allocateInfo.memoryTypeIndex = memoryIndex(typeBits, flags);
+    allocateInfo.memoryTypeIndex = memoryIndex(typeBits, getMemoryProperties(flags));
 
     VkDeviceMemory memory;
     vkAllocateMemory(_device, &allocateInfo, nullptr, &memory);
@@ -212,7 +213,7 @@ VkDeviceMemory cala::backend::vulkan::Context::allocate(u32 size, u32 typeBits, 
 }
 
 
-std::pair<VkBuffer, VkDeviceMemory> cala::backend::vulkan::Context::createBuffer(u32 size, u32 usage, u32 flags) {
+std::pair<VkBuffer, VkDeviceMemory> cala::backend::vulkan::Context::createBuffer(u32 size, u32 usage, MemoryProperties flags) {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = size;
@@ -254,7 +255,7 @@ std::pair <VkImage, VkDeviceMemory> cala::backend::vulkan::Context::createImage(
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(_device, image, &memRequirements);
 
-    VkDeviceMemory memory = allocate(memRequirements.size, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    VkDeviceMemory memory = allocate(memRequirements.size, memRequirements.memoryTypeBits, MemoryProperties::DEVICE_LOCAL);
 
     vkBindImageMemory(_device, image, memory, 0);
     return {image, memory};

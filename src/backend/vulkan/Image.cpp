@@ -32,7 +32,7 @@ cala::backend::vulkan::Image::Image(Context& context, CreateInfo info)
 
     VkMemoryRequirements memoryRequirements;
     vkGetImageMemoryRequirements(_context.device(), _image, &memoryRequirements);
-    _memory = _context.allocate(memoryRequirements.size, memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    _memory = _context.allocate(memoryRequirements.size, memoryRequirements.memoryTypeBits, MemoryProperties::DEVICE_LOCAL);
     vkBindImageMemory(_context.device(), _image, _memory, 0);
 
     _width = info.width;

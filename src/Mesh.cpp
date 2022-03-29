@@ -42,13 +42,13 @@ cala::Mesh &cala::Mesh::addQuad(u32 a, u32 b, u32 c, u32 d) {
 }
 
 cala::backend::vulkan::Buffer cala::Mesh::vertexBuffer(backend::vulkan::Context& context) const {
-    backend::vulkan::Buffer buf(context, _vertices.size() * sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    backend::vulkan::Buffer buf(context, _vertices.size() * sizeof(Vertex), backend::BufferUsage::VERTEX, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT);
     buf.data({_vertices.data(), static_cast<u32>(_vertices.size() * sizeof(Vertex))});
     return std::move(buf);
 }
 
 cala::backend::vulkan::Buffer cala::Mesh::indexBuffer(backend::vulkan::Context& context) const {
-    backend::vulkan::Buffer buf(context, _indices.size() * sizeof(u32), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    backend::vulkan::Buffer buf(context, _indices.size() * sizeof(u32), backend::BufferUsage::INDEX, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT);
     buf.data({_indices.data(), static_cast<u32>(_indices.size() * sizeof(u32))});
     return std::move(buf);
 }

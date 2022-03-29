@@ -10,6 +10,14 @@ namespace cala::backend::vulkan {
         return static_cast<VkFormat>(format);
     }
 
+    constexpr inline VkMemoryPropertyFlagBits getMemoryProperties(MemoryProperties flags) {
+        return static_cast<VkMemoryPropertyFlagBits>(flags);
+    }
+
+    constexpr inline VkBufferUsageFlagBits getBufferUsage(BufferUsage usage) {
+        return static_cast<VkBufferUsageFlagBits>(usage);
+    }
+
     constexpr inline VkImageUsageFlagBits getImageUsage(ImageUsage usage) {
         return static_cast<VkImageUsageFlagBits>(usage);
     }
