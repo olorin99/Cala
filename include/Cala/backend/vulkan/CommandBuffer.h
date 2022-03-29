@@ -7,25 +7,14 @@
 #include <Cala/backend/vulkan/RenderPass.h>
 #include <Cala/backend/vulkan/Framebuffer.h>
 #include <Cala/backend/vulkan/Buffer.h>
+#include <Cala/backend/vulkan/Image.h>
+#include <Cala/backend/vulkan/Sampler.h>
 
 #include <unordered_map>
 #include <cstring>
 #include <Ende/util/hash.h>
 
 namespace cala::backend::vulkan {
-
-    enum class AttribType {
-        Vec2f = 2,
-        Vec3f = 3,
-        Vec4f = 4,
-        Mat4f = 16
-    };
-
-    struct Attribute {
-        u32 location = 0;
-        u32 binding = 0;
-        AttribType type = AttribType::Vec3f;
-    };
 
     class CommandBuffer {
     public:
@@ -68,14 +57,7 @@ namespace cala::backend::vulkan {
 
         void bindRenderPass(RenderPass& renderPass);
 
-        struct ViewPort {
-            f32 x = 0;
-            f32 y = 0;
-            f32 width = 0;
-            f32 height = 0;
-            f32 minDepth = 0.f;
-            f32 maxDepth = 1.f;
-        };
+
         void bindViewPort(const ViewPort& viewport);
 
         struct RasterState {
@@ -92,7 +74,7 @@ namespace cala::backend::vulkan {
         struct DepthState {
             bool test = false;
             bool write = false;
-            VkCompareOp compareOp = VK_COMPARE_OP_LESS;
+            CompareOp compareOp = CompareOp::LESS;
         };
         void bindDepthState(DepthState state);
 
@@ -103,14 +85,15 @@ namespace cala::backend::vulkan {
         void bindBuffer(u32 set, u32 slot, VkBuffer buffer, u32 offset, u32 range);
         void bindBuffer(u32 set, u32 slot, Buffer& buffer, u32 offset = 0, u32 range = 0);
 
-        void bindImage(u32 set, u32 slot, VkImageView image, VkSampler sampler, bool storage = false);
+        void bindImage(u32 set, u32 slot, Image::View& image, Sampler& sampler, bool storage = false);
 
         void bindDescriptors();
         void clearDescriptors();
 
-
         void bindVertexBuffer(u32 first, VkBuffer buffer, u32 offset = 0);
         void bindVertexBuffers(u32 first, ende::Span<VkBuffer> buffers, ende::Span<VkDeviceSize> offsets);
+
+        void bindVertexBuffer(u32 first, Buffer& buffer, u32 offset);
 
         void bindIndexBuffer(Buffer& buffer, u32 offset = 0);
 

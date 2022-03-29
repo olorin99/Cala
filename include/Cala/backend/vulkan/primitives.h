@@ -26,6 +26,10 @@ namespace cala::backend::vulkan {
         return static_cast<VkFrontFace>(face);
     }
 
+    constexpr inline VkCompareOp getCompareOp(CompareOp op) {
+        return static_cast<VkCompareOp>(op);
+    }
+
 
 }
 

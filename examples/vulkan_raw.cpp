@@ -34,6 +34,7 @@
 #include "../third_party/stb_image.h"
 
 using namespace cala;
+using namespace cala::backend;
 using namespace cala::backend::vulkan;
 
 
@@ -172,17 +173,17 @@ int main() {
     Image brickwall_normal = loadImage(driver, "../../res/textures/brickwall_normal.jpg"_path);
     Image brickwall_specular = loadImage(driver, "../../res/textures/brickwall_specular.jpg"_path);
 
-    Image brickwall_copy(driver._context, {1024, 1024, 1, backend::Format::RGBA8_UNORM, 1, 1, backend::ImageUsage::STORAGE});
+    Image brickwall_copy(driver._context, {1024, 1024, 1, Format::RGBA8_UNORM, 1, 1, ImageUsage::STORAGE});
     auto brickwall_copy_view = brickwall_copy.getView();
 
     Material material(driver, std::move(program));
     material._rasterState = {
-            backend::CullMode::BACK,
-            backend::FrontFace::CCW,
-            backend::PolygonMode::FILL
+            CullMode::BACK,
+            FrontFace::CCW,
+            PolygonMode::FILL
     };
 //    material._rasterState = {.polygonMode=backend::PolygonMode::LINE, .cullMode=backend::CullMode::BACK};
-    material._depthState = {true, true, VK_COMPARE_OP_LESS};
+    material._depthState = {true, true};
 
     auto matInstance = material.instance();
 
@@ -262,7 +263,7 @@ int main() {
 
         if (renderImGui) {
             imGuiContext.newFrame();
-            ImGui::ShowDemoWindow();
+//            ImGui::ShowDemoWindow();
 
             ImGui::Begin("Stats");
 
@@ -298,7 +299,7 @@ int main() {
             cmd->clearDescriptors();
             cmd->bindProgram(computeProgram);
 //            cmd->bindImage(0, 0, brickwall_view.view, sampler.sampler());
-            cmd->bindImage(0, 0, brickwall_copy_view.view, sampler.sampler(), true);
+            cmd->bindImage(0, 0, brickwall_copy_view, sampler, true);
             cmd->bindPipeline();
             cmd->bindDescriptors();
             cmd->dispatchCompute(1024 / 16, 1024 / 16, 1);
@@ -318,7 +319,7 @@ int main() {
             cmd->bindBuffer(0, 0, cameraBuffer);
 
             for (u32 i = 0; i < matInstance._samplers.size(); i++) {
-                cmd->bindImage(2, i, matInstance._samplers[i].view, sampler.sampler());
+                cmd->bindImage(2, i, matInstance._samplers[i], sampler);
             }
             cmd->bindBuffer(2, 3, matInstance.material()->_uniformBuffer);
             cmd->bindBuffer(3, 0, lightBuffer);

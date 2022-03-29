@@ -65,6 +65,41 @@ namespace cala::backend {
         CW = 1
     };
 
+    enum class CompareOp {
+        NEVER = 0,
+        LESS = 1,
+        EQUAL = 2,
+        LESS_EQUAL = 3,
+        GREATER = 4,
+        NOT_EQUAL = 5,
+        GREATER_EQUAL = 6,
+        ALWAYS = 7
+    };
+
+    enum class AttribType {
+        Vec2f = 2,
+        Vec3f = 3,
+        Vec4f = 4,
+        Mat4f = 16
+    };
+
+
+
+
+    struct Attribute {
+        u32 location = 0;
+        u32 binding = 0;
+        AttribType type = AttribType::Vec3f;
+    };
+
+    struct ViewPort {
+        f32 x = 0;
+        f32 y = 0;
+        f32 width = 0;
+        f32 height = 0;
+        f32 minDepth = 0.f;
+        f32 maxDepth = 1.f;
+    };
 
 }
 

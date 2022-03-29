@@ -222,8 +222,8 @@ void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 slot, Buffer 
     bindBuffer(set, slot, buffer.buffer(), offset, range == 0 ? buffer.size() : range);
 }
 
-void cala::backend::vulkan::CommandBuffer::bindImage(u32 set, u32 slot, VkImageView image, VkSampler sampler, bool storage) {
-    _descriptorKey[set].images[slot] = { image, sampler, storage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+void cala::backend::vulkan::CommandBuffer::bindImage(u32 set, u32 slot, Image::View& image, Sampler& sampler, bool storage) {
+    _descriptorKey[set].images[slot] = { image.view, sampler.sampler(), storage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 }
 
 void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
@@ -250,13 +250,17 @@ void cala::backend::vulkan::CommandBuffer::clearDescriptors() {
 void cala::backend::vulkan::CommandBuffer::bindVertexBuffer(u32 first, VkBuffer buffer, u32 offset) {
     VkDeviceSize offsets = offset;
     vkCmdBindVertexBuffers(_buffer, first, 1, &buffer, &offsets);
-    _indexBuffer = nullptr;
+    _indexBuffer = nullptr; //TODO: add support for multiple draws from single buffer
 }
 
 void cala::backend::vulkan::CommandBuffer::bindVertexBuffers(u32 first, ende::Span<VkBuffer> buffers, ende::Span<VkDeviceSize> offsets) {
     assert(buffers.size() == offsets.size());
     vkCmdBindVertexBuffers(_buffer, first, buffers.size(), buffers.data(), offsets.data());
     _indexBuffer = nullptr;
+}
+
+void cala::backend::vulkan::CommandBuffer::bindVertexBuffer(u32 first, Buffer &buffer, u32 offset) {
+    bindVertexBuffer(first, buffer.buffer(), offset);
 }
 
 void cala::backend::vulkan::CommandBuffer::bindIndexBuffer(Buffer& buffer, u32 offset) {
@@ -412,7 +416,7 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
         depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         depthStencil.depthTestEnable = _pipelineKey.depth.test;
         depthStencil.depthWriteEnable = _pipelineKey.depth.write;
-        depthStencil.depthCompareOp = _pipelineKey.depth.compareOp;
+        depthStencil.depthCompareOp = getCompareOp(_pipelineKey.depth.compareOp);
         depthStencil.depthBoundsTestEnable = VK_FALSE;
         depthStencil.minDepthBounds = 0.f;
         depthStencil.maxDepthBounds = 1.f;
