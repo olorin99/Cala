@@ -1,13 +1,14 @@
 #include "Cala/backend/vulkan/ShaderProgram.h"
 #include <Cala/backend/vulkan/Driver.h>
+#include <Cala/backend/vulkan/primitives.h>
 #include "../third_party/SPIRV-Cross-master/spirv_cross.hpp"
 
 cala::backend::vulkan::ShaderProgram::Builder cala::backend::vulkan::ShaderProgram::create() {
     return {};
 }
 
-cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStage(ende::Span<u32> code, u32 flags) {
-    _stages.push({code, flags});
+cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStage(ende::Span<u32> code, ShaderStage stage) {
+    _stages.push({code, stage});
     return *this;
 }
 
@@ -51,7 +52,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
             bindings[set][bindingCount[set]].binding = binding;
             bindings[set][bindingCount[set]].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             bindings[set][bindingCount[set]].descriptorCount = 1;
-            bindings[set][bindingCount[set]].stageFlags = stage.second;
+            bindings[set][bindingCount[set]].stageFlags = getShaderStage(stage.second);
             bindings[set][bindingCount[set]].pImmutableSamplers = nullptr;
             bindingCount[set]++;
         }
@@ -72,7 +73,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
             bindings[set][bindingCount[set]].binding = binding;
             bindings[set][bindingCount[set]].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             bindings[set][bindingCount[set]].descriptorCount = 1;
-            bindings[set][bindingCount[set]].stageFlags = stage.second;
+            bindings[set][bindingCount[set]].stageFlags = getShaderStage(stage.second);
             bindings[set][bindingCount[set]].pImmutableSamplers = nullptr;
             bindingCount[set]++;
         }
@@ -93,7 +94,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
             bindings[set][bindingCount[set]].binding = binding;
             bindings[set][bindingCount[set]].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
             bindings[set][bindingCount[set]].descriptorCount = 1;
-            bindings[set][bindingCount[set]].stageFlags = stage.second;
+            bindings[set][bindingCount[set]].stageFlags = getShaderStage(stage.second);
             bindings[set][bindingCount[set]].pImmutableSamplers = nullptr;
             bindingCount[set]++;
         }
@@ -160,7 +161,7 @@ cala::backend::vulkan::ShaderProgram::ShaderProgram(VkDevice device)
     _layout(VK_NULL_HANDLE),
     _setLayout{},
     _interface{},
-    _stageFlags(0)
+    _stageFlags(ShaderStage::NONE)
 {}
 
 cala::backend::vulkan::ShaderProgram::~ShaderProgram() {
@@ -201,6 +202,6 @@ VkPipelineLayout cala::backend::vulkan::ShaderProgram::layout() {
     return _layout;
 }
 
-bool cala::backend::vulkan::ShaderProgram::stagePresent(u32 stageFlags) const {
+bool cala::backend::vulkan::ShaderProgram::stagePresent(ShaderStage stageFlags) const {
     return (_stageFlags & stageFlags) == stageFlags;
 }

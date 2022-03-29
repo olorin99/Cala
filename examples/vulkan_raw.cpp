@@ -145,12 +145,12 @@ int main() {
     shaderFile.read({reinterpret_cast<char*>(computeShaderData.data()), static_cast<u32>(computeShaderData.size() * sizeof(u32))});
 
     ShaderProgram program = ShaderProgram::create()
-            .addStage(vertexShaderData, VK_SHADER_STAGE_VERTEX_BIT)
-            .addStage(fragmentShaderData, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .addStage(vertexShaderData, ShaderStage::VERTEX)
+            .addStage(fragmentShaderData, ShaderStage::FRAGMENT)
             .compile(driver);
 
     ShaderProgram computeProgram = ShaderProgram::create()
-            .addStage(computeShaderData, VK_SHADER_STAGE_COMPUTE_BIT)
+            .addStage(computeShaderData, ShaderStage::COMPUTE)
             .compile(driver);
 
     //vertex array

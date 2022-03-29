@@ -111,7 +111,7 @@ void cala::backend::vulkan::CommandBuffer::bindProgram(ShaderProgram &program) {
 //            _dirty = true;
 //        }
     }
-    _computeBound = program.stagePresent(VK_SHADER_STAGE_COMPUTE_BIT);
+    _computeBound = program.stagePresent(ShaderStage::COMPUTE);
 }
 
 void cala::backend::vulkan::CommandBuffer::bindAttributes(ende::Span<Attribute> attributes) {

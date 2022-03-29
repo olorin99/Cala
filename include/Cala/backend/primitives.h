@@ -96,6 +96,18 @@ namespace cala::backend {
         ALWAYS = 7
     };
 
+    enum class ShaderStage {
+        NONE = 0,
+        VERTEX = 0x00000001,
+        TESS_CONTROL = 0x00000002,
+        TESS_EVAL = 0x00000004,
+        GEOMETRY = 0x00000008,
+        FRAGMENT = 0x00000010,
+        COMPUTE = 0x00000020,
+        ALL_GRAPHICS = 0x0000001F,
+        ALL = 0x7FFFFFFF
+    };
+
     enum class AttribType {
         Vec2f = 2,
         Vec3f = 3,
@@ -145,6 +157,19 @@ constexpr cala::backend::BufferUsage operator|(cala::backend::BufferUsage lhs, c
 
 constexpr cala::backend::BufferUsage operator&(cala::backend::BufferUsage lhs, cala::backend::BufferUsage rhs) {
     return static_cast<cala::backend::BufferUsage>(static_cast<std::underlying_type<cala::backend::BufferUsage>::type>(lhs) & static_cast<std::underlying_type<cala::backend::BufferUsage>::type>(rhs));
+}
+
+constexpr cala::backend::ShaderStage operator|(cala::backend::ShaderStage lhs, cala::backend::ShaderStage rhs) {
+    return static_cast<cala::backend::ShaderStage>(static_cast<std::underlying_type<cala::backend::ShaderStage>::type>(lhs) | static_cast<std::underlying_type<cala::backend::ShaderStage>::type>(rhs));
+}
+
+constexpr cala::backend::ShaderStage operator&(cala::backend::ShaderStage lhs, cala::backend::ShaderStage rhs) {
+    return static_cast<cala::backend::ShaderStage>(static_cast<std::underlying_type<cala::backend::ShaderStage>::type>(lhs) & static_cast<std::underlying_type<cala::backend::ShaderStage>::type>(rhs));
+}
+
+constexpr cala::backend::ShaderStage& operator|=(cala::backend::ShaderStage& lhs, cala::backend::ShaderStage rhs) {
+    lhs =  static_cast<cala::backend::ShaderStage>(static_cast<std::underlying_type<cala::backend::ShaderStage>::type>(lhs) | static_cast<std::underlying_type<cala::backend::ShaderStage>::type>(rhs));
+    return lhs;
 }
 
 #endif //CALA_PRIMITIVES_H

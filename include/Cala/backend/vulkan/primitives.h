@@ -38,6 +38,9 @@ namespace cala::backend::vulkan {
         return static_cast<VkCompareOp>(op);
     }
 
+    constexpr inline VkShaderStageFlagBits getShaderStage(ShaderStage stage) {
+        return static_cast<VkShaderStageFlagBits>(stage);
+    }
 
 }
 

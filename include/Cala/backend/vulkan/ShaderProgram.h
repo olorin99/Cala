@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.h>
 #include <Ende/Vector.h>
 #include <Cala/backend/ShaderInterface.h>
+#include <Cala/backend/primitives.h>
 
 namespace cala::backend::vulkan {
 
@@ -15,13 +16,13 @@ namespace cala::backend::vulkan {
         class Builder {
         public:
 
-            Builder& addStage(ende::Span<u32> code, u32 flags);
+            Builder& addStage(ende::Span<u32> code, ShaderStage stage);
 
             ShaderProgram compile(Driver& driver);
 
         private:
 
-            ende::Vector<std::pair<ende::Span<u32>, u32>> _stages;
+            ende::Vector<std::pair<ende::Span<u32>, ShaderStage>> _stages;
 
         };
 
@@ -41,7 +42,7 @@ namespace cala::backend::vulkan {
 
         VkPipelineLayout layout();
 
-        bool stagePresent(u32 stageFlags) const;
+        bool stagePresent(ShaderStage stageFlags) const;
 
 //    private:
         friend Builder;
@@ -52,7 +53,7 @@ namespace cala::backend::vulkan {
         VkPipelineLayout _layout;
 
         ShaderInterface _interface;
-        u32 _stageFlags;
+        ShaderStage _stageFlags;
 
     };
 
