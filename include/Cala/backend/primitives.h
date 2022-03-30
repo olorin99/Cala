@@ -43,6 +43,18 @@ namespace cala::backend {
         LAZILY_ALLOCATED = 0x00000010
     };
 
+    enum class ImageLayout {
+        UNDEFINED = 0,
+        GENERAL = 1,
+        COLOUR_ATTACHMENT = 2,
+        DEPTH_STENCIL_ATTACHMENT = 3,
+        DEPTH_STENCIL_READ_ONLY = 4,
+        SHADER_READ_ONLY = 5,
+        TRANSFER_SRC = 6,
+        TRANSFER_DST = 7,
+        PREINITIALIZED = 8
+    };
+
     enum class BufferUsage {
         TRANSFER_SRC = 0x00000001,
         TRANSFER_DST = 0x00000002,
@@ -108,6 +120,46 @@ namespace cala::backend {
         ALL = 0x7FFFFFFF
     };
 
+    enum class Access {
+        INDIRECT_READ = 0x00000001,
+        INDEX_READ = 0x00000002,
+        VERTEX_READ = 0x00000004,
+        UNIFORM_READ = 0x00000008,
+        INPUT_READ = 0x00000010,
+        SHADER_READ = 0x00000020,
+        SHADER_WRITE = 0x00000040,
+        COLOUR_ATTACHMENT_READ = 0x00000080,
+        COLOUR_ATTACHMENT_WRITE = 0x00000100,
+        DEPTH_STENCIL_READ = 0x00000200,
+        DEPTH_STENCIL_WRITE = 0x00000400,
+        TRANSFER_READ = 0x00000800,
+        TRANSFER_WRITE = 0x00001000,
+        HOST_READ = 0x00002000,
+        HOST_WRITE = 0x00004000,
+        MEMORY_READ = 0x00008000,
+        MEMORY_WRITE = 0x00010000
+    };
+
+    enum class PipelineStage {
+        TOP = 0x00000001,
+        DRAW_INDIRECT = 0x00000002,
+        VERTEX_INPUT = 0x00000004,
+        VERTEX_SHADER = 0x00000008,
+        TESS_CONTROL = 0x00000010,
+        TESS_EVAL = 0x00000020,
+        GEOMETRY_SHADER = 0x00000040,
+        FRAGMENT_SHADER = 0x00000080,
+        EARLY_FRAGMENT = 0x00000100,
+        LATE_FRAGMENT = 0x00000200,
+        COLOUR_ATTACHMENT_OUTPUT = 0x00000400,
+        COMPUTE_SHADER = 0x00000800,
+        TRANSFER = 0x00001000,
+        BOTTOM = 0x00002000,
+        HOST = 0x00004000,
+        ALL_GRAPHICS = 0x00008000,
+        ALL_COMMANDS = 0x00010000
+    };
+
     enum class AttribType {
         Vec2f = 2,
         Vec3f = 3,
@@ -170,6 +222,14 @@ constexpr cala::backend::ShaderStage operator&(cala::backend::ShaderStage lhs, c
 constexpr cala::backend::ShaderStage& operator|=(cala::backend::ShaderStage& lhs, cala::backend::ShaderStage rhs) {
     lhs =  static_cast<cala::backend::ShaderStage>(static_cast<std::underlying_type<cala::backend::ShaderStage>::type>(lhs) | static_cast<std::underlying_type<cala::backend::ShaderStage>::type>(rhs));
     return lhs;
+}
+
+constexpr cala::backend::Access operator|(cala::backend::Access lhs, cala::backend::Access rhs) {
+    return static_cast<cala::backend::Access>(static_cast<std::underlying_type<cala::backend::Access>::type>(lhs) | static_cast<std::underlying_type<cala::backend::Access>::type>(rhs));
+}
+
+constexpr cala::backend::Access operator&(cala::backend::Access lhs, cala::backend::Access rhs) {
+    return static_cast<cala::backend::Access>(static_cast<std::underlying_type<cala::backend::Access>::type>(lhs) & static_cast<std::underlying_type<cala::backend::Access>::type>(rhs));
 }
 
 #endif //CALA_PRIMITIVES_H

@@ -10,6 +10,10 @@ namespace cala::backend::vulkan {
         return static_cast<VkFormat>(format);
     }
 
+    constexpr inline VkImageLayout getImageLayout(ImageLayout layout) {
+        return static_cast<VkImageLayout>(layout);
+    }
+
     constexpr inline VkMemoryPropertyFlagBits getMemoryProperties(MemoryProperties flags) {
         return static_cast<VkMemoryPropertyFlagBits>(flags);
     }
@@ -40,6 +44,14 @@ namespace cala::backend::vulkan {
 
     constexpr inline VkShaderStageFlagBits getShaderStage(ShaderStage stage) {
         return static_cast<VkShaderStageFlagBits>(stage);
+    }
+
+    constexpr inline VkAccessFlagBits getAccessFlags(Access flags) {
+        return static_cast<VkAccessFlagBits>(flags);
+    }
+
+    constexpr inline VkPipelineStageFlagBits getPipelineStage(PipelineStage stage) {
+        return static_cast<VkPipelineStageFlagBits>(stage);
     }
 
 }

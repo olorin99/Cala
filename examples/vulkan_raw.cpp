@@ -182,7 +182,6 @@ int main() {
             FrontFace::CCW,
             PolygonMode::FILL
     };
-//    material._rasterState = {.polygonMode=backend::PolygonMode::LINE, .cullMode=backend::CullMode::BACK};
     material._depthState = {true, true};
 
     auto matInstance = material.instance();
@@ -293,8 +292,8 @@ int main() {
 
         cmd = driver.beginFrame();
         {
-            VkImageMemoryBarrier barriers[] = { brickwall_copy.barrier(VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL) };
-            cmd->pipelineBarrier(VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, barriers);
+            VkImageMemoryBarrier barriers[] = { brickwall_copy.barrier(Access::SHADER_READ, Access::SHADER_WRITE, ImageLayout::UNDEFINED, ImageLayout::GENERAL) };
+            cmd->pipelineBarrier(PipelineStage::VERTEX_SHADER, PipelineStage::COMPUTE_SHADER, 0, barriers);
 
             cmd->clearDescriptors();
             cmd->bindProgram(computeProgram);
@@ -304,8 +303,8 @@ int main() {
             cmd->bindDescriptors();
             cmd->dispatchCompute(1024 / 16, 1024 / 16, 1);
 
-            barriers[0] = brickwall_copy.barrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL);
-            cmd->pipelineBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, barriers);
+            barriers[0] = brickwall_copy.barrier(Access::SHADER_WRITE, Access::SHADER_READ, ImageLayout::GENERAL, ImageLayout::GENERAL);
+            cmd->pipelineBarrier(PipelineStage::COMPUTE_SHADER, PipelineStage::VERTEX_SHADER, 0, barriers);
 
             cmd->begin(frame.framebuffer);
 

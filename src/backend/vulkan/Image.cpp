@@ -137,7 +137,7 @@ cala::backend::vulkan::Image::View cala::backend::vulkan::Image::getView(VkImage
     return v;
 }
 
-VkImageMemoryBarrier cala::backend::vulkan::Image::barrier(VkAccessFlags srcAccess, VkAccessFlags dstAccess, VkImageLayout srcLayout, VkImageLayout dstLayout) {
+VkImageMemoryBarrier cala::backend::vulkan::Image::barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout) {
     VkImageSubresourceRange range{};
     range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     range.baseMipLevel = 0;
@@ -147,10 +147,10 @@ VkImageMemoryBarrier cala::backend::vulkan::Image::barrier(VkAccessFlags srcAcce
 
     VkImageMemoryBarrier memoryBarrier{};
     memoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    memoryBarrier.srcAccessMask = srcAccess;
-    memoryBarrier.dstAccessMask = dstAccess;
-    memoryBarrier.oldLayout = srcLayout;
-    memoryBarrier.newLayout = dstLayout;
+    memoryBarrier.srcAccessMask = getAccessFlags(srcAccess);
+    memoryBarrier.dstAccessMask = getAccessFlags(dstAccess);
+    memoryBarrier.oldLayout = getImageLayout(srcLayout);
+    memoryBarrier.newLayout = getImageLayout(dstLayout);
     memoryBarrier.image = _image;
     memoryBarrier.subresourceRange = range;
     return memoryBarrier;

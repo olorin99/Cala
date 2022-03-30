@@ -282,8 +282,8 @@ void cala::backend::vulkan::CommandBuffer::dispatchCompute(u32 x, u32 y, u32 z) 
     vkCmdDispatch(_buffer, x, y, z);
 }
 
-void cala::backend::vulkan::CommandBuffer::pipelineBarrier(VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkDependencyFlags dependencyFlags, ende::Span<VkImageMemoryBarrier> imageBarriers) {
-    vkCmdPipelineBarrier(_buffer, srcStage, dstStage, dependencyFlags, 0, nullptr, 0, nullptr, imageBarriers.size(), imageBarriers.data());
+void cala::backend::vulkan::CommandBuffer::pipelineBarrier(PipelineStage srcStage, PipelineStage dstStage, VkDependencyFlags dependencyFlags, ende::Span<VkImageMemoryBarrier> imageBarriers) {
+    vkCmdPipelineBarrier(_buffer, getPipelineStage(srcStage), getPipelineStage(dstStage), dependencyFlags, 0, nullptr, 0, nullptr, imageBarriers.size(), imageBarriers.data());
 }
 
 
