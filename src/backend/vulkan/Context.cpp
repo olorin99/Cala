@@ -2,7 +2,7 @@
 #include "Cala/backend/vulkan/primitives.h"
 
 #include <Ende/Vector.h>
-
+#include <cstring>
 #include <iostream>
 
 const char* validationLayers[] = {
@@ -123,6 +123,34 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
 //    VkPhysicalDeviceFeatures deviceFeatures1{};
 //    vkGetPhysicalDeviceFeatures(_physicalDevice, &deviceFeatures1);
 //
+
+    VkPhysicalDeviceProperties deviceProperties{};
+    vkGetPhysicalDeviceProperties(_physicalDevice, &deviceProperties);
+    _apiVersion = deviceProperties.apiVersion;
+    _driverVersion = deviceProperties.driverVersion;
+    switch (deviceProperties.vendorID) {
+        case 0x1002:
+            _vendor = "AMD";
+            break;
+        case 0x1010:
+            _vendor = "ImgTec";
+            break;
+        case 0x10DE:
+            _vendor = "NVIDIA";
+            break;
+        case 0x13B5:
+            _vendor = "ARM";
+            break;
+        case 0x5143:
+            _vendor = "Qualcomm";
+            break;
+        case 0x8086:
+            _vendor = "INTEL";
+            break;
+    }
+    _deviceType = static_cast<PhysicalDeviceType>(deviceProperties.deviceType);
+    _deviceName = {deviceProperties.deviceName, static_cast<u32>(strlen(deviceProperties.deviceName))};
+
 
     VkPhysicalDeviceFeatures deviceFeatures{};
 
@@ -259,4 +287,21 @@ std::pair <VkImage, VkDeviceMemory> cala::backend::vulkan::Context::createImage(
 
     vkBindImageMemory(_device, image, memory, 0);
     return {image, memory};
+}
+
+
+const char *cala::backend::vulkan::Context::deviceTypeString() const {
+    switch (_deviceType) {
+        case PhysicalDeviceType::OTHER:
+            return "OTHER";
+        case PhysicalDeviceType::INTEGRATED_GPU:
+            return "INTEGRATED_GPU";
+        case PhysicalDeviceType::DISCRETE_GPU:
+            return "DISCRETE_GPU";
+        case PhysicalDeviceType::VIRTUAL_GPU:
+            return "VIRTUAL_GPU";
+        case PhysicalDeviceType::CPU:
+            return "CPU";
+    }
+    return "OTHER";
 }

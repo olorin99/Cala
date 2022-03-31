@@ -13,6 +13,13 @@ namespace cala::backend {
 
     constexpr u32 MAX_VERTEX_INPUT_ATTRIBUTES = 10;
 
+    enum class PhysicalDeviceType {
+        OTHER = 0,
+        INTEGRATED_GPU = 1,
+        DISCRETE_GPU = 2,
+        VIRTUAL_GPU = 3,
+        CPU = 4
+    };
 
     enum class Format {
         UNDEFINED = 0,

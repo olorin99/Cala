@@ -277,6 +277,12 @@ int main() {
             statWindow.update(frameTime.microseconds() / 1000.f, avgFrameTime.microseconds() / 1000.f, driver._commands.count(), cmd ? cmd->_pipelines.size() : 0, cmd ? cmd->_descriptorSets.size() : 0, driver._setLayouts.size(), frameCount);
             statWindow.render();
 
+            ImGui::Begin("Device");
+            ImGui::Text("Vendor: %s", driver._context.vendor());
+            ImGui::Text("Device: %s", driver._context.deviceName().data());
+            ImGui::Text("Type: %s", driver._context.deviceTypeString());
+            ImGui::End();
+
             ImGui::Render();
         }
 

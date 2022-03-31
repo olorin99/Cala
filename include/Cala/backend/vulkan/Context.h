@@ -48,6 +48,19 @@ namespace cala::backend::vulkan {
 
         Format depthFormat() const { return _depthFormat; }
 
+
+        u32 apiVersion() const { return _apiVersion; }
+
+        u32 driverVersion() const { return _driverVersion; }
+
+        const char* vendor() const { return _vendor; }
+
+        PhysicalDeviceType deviceType() const { return _deviceType; }
+
+        const char* deviceTypeString() const;
+
+        ende::Span<char> deviceName() const { return _deviceName; }
+
     private:
 
         VkInstance _instance;
@@ -56,6 +69,12 @@ namespace cala::backend::vulkan {
         VkDebugUtilsMessengerEXT _debugMessenger;
 
         Format _depthFormat;
+
+        u32 _apiVersion;
+        u32 _driverVersion;
+        const char* _vendor;
+        PhysicalDeviceType _deviceType;
+        ende::Span<char> _deviceName;
 
     };
 
