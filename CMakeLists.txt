@@ -21,4 +21,4 @@ target_include_directories(Cala
         src
         libs)
 
-target_link_libraries(Cala Ende ${Vulkan_LIBRARIES} ${SDL2_LIBRARIES} ${X11_LIBRARIES} imgui spirv-cross-cpp)
+target_link_libraries(Cala Ende ${Vulkan_LIBRARIES} ${SDL2_LIBRARIES} ${X11_LIBRARIES} imgui spirv-cross-cpp IMGUI)

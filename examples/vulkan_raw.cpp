@@ -35,6 +35,8 @@
 
 #include "../third_party/stb_image.h"
 
+#include <Stats.h>
+
 using namespace cala;
 using namespace cala::backend;
 using namespace cala::backend::vulkan;
@@ -193,6 +195,10 @@ int main() {
     matInstance.setSampler("specularMap", brickwall_specular.getView());
     matInstance.setUniform("mixColour", ende::math::Vec3f{0.5, 1, 1.5});
 
+
+    imgui::Stats statWindow;
+
+
     ende::time::StopWatch frameClock;
     f32 dt = 1.f / 60.f;
     f32 fps = 0.f;
@@ -268,21 +274,8 @@ int main() {
             imGuiContext.newFrame();
 //            ImGui::ShowDemoWindow();
 
-            ImGui::Begin("Stats");
-
-            ImGui::Text("FrameTime: %f", frameTime.microseconds() / 1000.f);
-            ImGui::Text("Average FrameTime: %f", avgFrameTime.microseconds() / 1000.f);
-            ImGui::Text("Sum Average FrameTime: %f", sumAvgFrameTime.microseconds() / 1000.f);
-            ImGui::Text("Max Deviation FrameTime: %f", maxDeviation.microseconds() / 1000.f);
-            ImGui::Text("FPS: %f", 1000.f / (frameTime.microseconds() / 1000.f));
-            ImGui::Text("Command Buffers: %ld", driver._commands.count());
-            ImGui::Text("Pipelines: %ld", cmd ? cmd->_pipelines.size() : 0);
-            ImGui::Text("Descriptors: %ld", cmd ? cmd->_descriptorSets.size() : 0);
-            ImGui::Text("Set Layouts: %ld", driver._setLayouts.size());
-            ImGui::Text("Uptime: %ld sec", runTime.elapsed().seconds());
-            ImGui::Text("Frame: %ld", frameCount);
-
-            ImGui::End();
+            statWindow.update(frameTime.microseconds() / 1000.f, avgFrameTime.microseconds() / 1000.f, driver._commands.count(), cmd ? cmd->_pipelines.size() : 0, cmd ? cmd->_descriptorSets.size() : 0, driver._setLayouts.size(), frameCount);
+            statWindow.render();
 
             ImGui::Render();
         }
