@@ -7,6 +7,8 @@
 #include <Ende/math/Vec.h>
 #include <Ende/time/StopWatch.h>
 #include <Ende/time/time.h>
+#include <Ende/profile/profile.h>
+#include <Ende/profile/ProfileManager.h>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
@@ -208,6 +210,8 @@ int main() {
     SDL_Event event;
     frameClock.start();
     while (running) {
+        ende::profile::ProfileManager::beginFrame(frameCount);
+        PROFILE_NAMED("MAIN_LOOP")
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
                 case SDL_QUIT:
@@ -353,6 +357,7 @@ int main() {
             sumAvgFrameTime = 0;
         }
 
+        ende::profile::ProfileManager::endFrame(frameCount);
         frameCount++;
 
         if (cmd->_descriptorSets.size() > 700)

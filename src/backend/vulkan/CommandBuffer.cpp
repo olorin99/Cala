@@ -1,6 +1,8 @@
 #include "Cala/backend/vulkan/CommandBuffer.h"
 #include <Cala/backend/vulkan/primitives.h>
 
+#include <Ende/profile/profile.h>
+
 cala::backend::vulkan::CommandBuffer::CommandBuffer(VkDevice device, VkQueue queue, VkCommandBuffer buffer)
     : _buffer(buffer),
     _signal(VK_NULL_HANDLE),
@@ -288,6 +290,7 @@ void cala::backend::vulkan::CommandBuffer::pipelineBarrier(PipelineStage srcStag
 
 
 bool cala::backend::vulkan::CommandBuffer::submit(VkSemaphore wait, VkFence fence) {
+    PROFILE
     end();
 
     VkSubmitInfo submitInfo{};
@@ -312,6 +315,7 @@ bool cala::backend::vulkan::CommandBuffer::submit(VkSemaphore wait, VkFence fenc
 
 
 VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
+    PROFILE
     // check if exists in cache
     auto it = _pipelines.find(_pipelineKey);
     if (it != _pipelines.end())
@@ -484,6 +488,7 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
 }
 
 VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) {
+    PROFILE
     assert(set < MAX_SET_COUNT && "set is greater than allowed descriptor count");
     auto key = _descriptorKey[set];
 
