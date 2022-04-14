@@ -9,6 +9,7 @@
 namespace cala::backend::vulkan {
 
     class Driver;
+    class CommandBuffer;
 
     class ShaderProgram {
     public:
@@ -44,8 +45,11 @@ namespace cala::backend::vulkan {
 
         bool stagePresent(ShaderStage stageFlags) const;
 
-//    private:
+        const ShaderInterface& interface() const { return _interface; }
+
+    private:
         friend Builder;
+        friend CommandBuffer;
 
         VkDevice _device;
         ende::Vector<VkPipelineShaderStageCreateInfo> _stages;

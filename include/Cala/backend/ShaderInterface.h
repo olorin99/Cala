@@ -7,20 +7,29 @@
 
 namespace cala::backend {
 
+    namespace vulkan {
+        class ShaderProgram;
+    }
+
     class ShaderInterface {
     public:
 
-        i32 getUniformOffset(u32 set, u32 binding, const char* name);
+        i32 getUniformOffset(u32 set, u32 binding, const char* name) const;
 
-        i32 getUniformSize(u32 set, u32 binding, const char* name);
+        i32 getUniformSize(u32 set, u32 binding, const char* name) const;
 
-        i32 getUniformOffset(u32 set, const char* name);
+        i32 getUniformOffset(u32 set, const char* name) const;
 
-        i32 getUniformSize(u32 set, const char* name);
+        i32 getUniformSize(u32 set, const char* name) const;
 
-        i32 getSamplerBinding(u32 set, const char* name);
+        i32 getSamplerBinding(u32 set, const char* name) const;
 
-//    private:
+        u32 setSize(u32 set) const {
+            return sets[set].byteSize;
+        }
+
+    private:
+        friend cala::backend::vulkan::ShaderProgram;
 
         enum class BindingType {
             UNIFORM,
@@ -35,6 +44,7 @@ namespace cala::backend {
         };
 
         std::unordered_map<std::string, BindingMember>& getMemberList(u32 set, u32 binding);
+        const std::unordered_map<std::string, BindingMember>& getMemberList(u32 set, u32 binding) const;
 
         struct {
             u32 id = 0;

@@ -12,7 +12,7 @@ cala::MaterialInstance &cala::MaterialInstance::addImage(cala::backend::vulkan::
 }
 
 bool cala::MaterialInstance::setUniform(const char *name, u8 *data, u32 size) {
-    i32 offset = _material->_program._interface.getUniformOffset(2, name);
+    i32 offset = _material->_program.interface().getUniformOffset(2, name);
     if (offset < 0)
         return false;
     if (material()->_uniformData.size() < offset + size)
@@ -23,7 +23,7 @@ bool cala::MaterialInstance::setUniform(const char *name, u8 *data, u32 size) {
 }
 
 bool cala::MaterialInstance::setSampler(const char *name, cala::backend::vulkan::Image::View &&view) {
-    i32 binding = material()->_program._interface.getSamplerBinding(2, name);
+    i32 binding = material()->_program.interface().getSamplerBinding(2, name);
     if (binding < 0)
         return false;
     if (_samplers.size() < binding + 1)

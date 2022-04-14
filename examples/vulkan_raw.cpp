@@ -274,7 +274,7 @@ int main() {
             imGuiContext.newFrame();
 //            ImGui::ShowDemoWindow();
 
-            statWindow.update(frameTime.microseconds() / 1000.f, avgFrameTime.microseconds() / 1000.f, driver.commands().count(), cmd ? cmd->_pipelines.size() : 0, cmd ? cmd->_descriptorSets.size() : 0, driver.setLayoutCount(), frameCount);
+            statWindow.update(frameTime.microseconds() / 1000.f, avgFrameTime.microseconds() / 1000.f, driver.commands().count(), cmd ? cmd->pipelineCount() : 0, cmd ? cmd->descriptorCount() : 0, driver.setLayoutCount(), frameCount);
             statWindow.render();
 
             ImGui::Begin("Device");
@@ -359,15 +359,15 @@ int main() {
         ende::profile::ProfileManager::endFrame(frameCount);
         frameCount++;
 
-        if (cmd->_descriptorSets.size() > 700)
+        if (cmd->descriptorCount() > 700)
             running = false;
     }
 
     driver.swapchain().wait();
 
     std::cout << "\n\nCommand Buffers: " << driver.commands().count();
-    std::cout << "\nPipelines: " << (cmd ? cmd->_pipelines.size() : 0);
-    std::cout << "\nDescriptors: " << (cmd ? cmd->_descriptorSets.size() : 0);
+    std::cout << "\nPipelines: " << (cmd ? cmd->pipelineCount() : 0);
+    std::cout << "\nDescriptors: " << (cmd ? cmd->descriptorCount() : 0);
     std::cout << "\nRenderables: " << scene._renderables.size();
     std::cout << "\nUptime: " << runTime.elapsed().seconds() << "sec";
     std::cout << "\nFrame: " << frameCount << '\n';

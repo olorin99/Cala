@@ -113,7 +113,12 @@ namespace cala::backend::vulkan {
 
         bool active() const { return _active; }
 
-//    private:
+
+        u32 pipelineCount() const { return _pipelines.size(); }
+
+        u32 descriptorCount() const { return _descriptorSets.size(); }
+
+    private:
 
         VkPipeline getPipeline();
 
