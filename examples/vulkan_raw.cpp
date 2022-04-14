@@ -161,7 +161,7 @@ int main() {
     VkVertexInputBindingDescription binding{};
     binding.binding = 0;
     binding.stride = 14 * sizeof(f32);
-    binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX; //TODO: enumify
 
     Attribute attributes[5] = {
             {0, 0, AttribType::Vec3f},

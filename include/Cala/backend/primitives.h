@@ -40,7 +40,17 @@ namespace cala::backend {
 
         RGBA8_UINT = 41,
         RGBA8_SINT = 42,
-        RGBA8_SRGB = 43
+        RGBA8_SRGB = 43,
+
+
+
+
+        RGBA32_UINT = 107,
+        RGBA32_SINT = 108,
+        RGBA32_SFLOAT = 109,
+
+        D32_SFLOAT = 126,
+        D24_UNORM_S8_UINT = 129
     };
 
     enum class MemoryProperties {
