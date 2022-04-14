@@ -48,7 +48,7 @@ Image loadImage(Driver& driver, const ende::fs::Path& path) {
     if (!data) throw "unable load image";
     u32 length = width * height * 4;
 
-    Image image(driver._context, {(u32)width, (u32)height, 1, backend::Format::RGBA8_SRGB});
+    Image image(driver, {(u32)width, (u32)height, 1, backend::Format::RGBA8_SRGB});
     image.data(driver, {0, (u32)width, (u32)height, 1, 4, {data, length}});
     stbi_image_free(data);
     return image;
@@ -70,64 +70,64 @@ int main() {
     Transform cameraTransform({0, 0, -1});
     Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
 
-    Buffer cameraBuffer(driver._context, sizeof(Camera::Data), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
+    Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
 
     Transform model({0, 0, 0});
 
     Mesh vertices = cala::shapes::sphereUV();
-    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
 
     vertices = cala::shapes::sphereNormalized();
     model.addPos({1, 0, 0});
-    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
     model.addPos({-1, 0, 0});
 
     vertices = cala::shapes::sphereCube();
     model.addPos({-1, 0, 0});
-    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
     model.addPos({1, 0, 0});
 
     vertices = cala::shapes::icosahedron();
     model.addPos({-2, 0, 0});
-    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
     model.addPos({2, 0, 0});
 
     vertices = cala::shapes::cube(0.5);
     model.addPos({2, 0, 0});
-    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
     model.addPos({-2, 0, 0});
 
     vertices = cala::shapes::quad();
     model.addPos({0, 0, 0});
-    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
     vertices = cala::shapes::quad();
     model.addPos({0, 0, 1});
-    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
     vertices = cala::shapes::quad();
     model.rotate({1, 0, 0}, ende::math::rad(90.f));
     model.addPos({0.5, 0, 0});
-    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
     vertices = cala::shapes::quad();
     model.addPos({-1.5, 0, 0});
-    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
 
     // light marker
     vertices = cala::shapes::sphereNormalized(0.1);
     model.setPos({0, -1, 1});
-    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver._context)), std::move(vertices.indexBuffer(driver._context))}, model});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
 
     ende::Vector<ende::math::Mat4f> models;
     for (auto& transform : scene._renderables)
         models.push(transform.second.toMat());
 
-    Buffer uniformBuffer(driver._context, sizeof(ende::math::Mat4f) * models.size(), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
+    Buffer uniformBuffer(driver, sizeof(ende::math::Mat4f) * models.size(), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
     uniformBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});
 
     PointLight light;
     light.position = {0, -1, 1};
     light.colour = {10, 10, 10};
 
-    Buffer lightBuffer(driver._context, sizeof(light), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
+    Buffer lightBuffer(driver, sizeof(light), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
     lightBuffer.data({&light, sizeof(light)});
 
     // get shader data
@@ -171,13 +171,13 @@ int main() {
             {4, 0, AttribType::Vec3f}
     };
 
-    Sampler sampler(driver._context, {});
+    Sampler sampler(driver, {});
 
     Image brickwall = loadImage(driver, "../../res/textures/brickwall.jpg"_path);
     Image brickwall_normal = loadImage(driver, "../../res/textures/brickwall_normal.jpg"_path);
     Image brickwall_specular = loadImage(driver, "../../res/textures/brickwall_specular.jpg"_path);
 
-    Image brickwall_copy(driver._context, {1024, 1024, 1, Format::RGBA8_UNORM, 1, 1, ImageUsage::STORAGE});
+    Image brickwall_copy(driver, {1024, 1024, 1, Format::RGBA8_UNORM, 1, 1, ImageUsage::STORAGE});
     auto brickwall_copy_view = brickwall_copy.getView();
 
     Material material(driver, std::move(program));
@@ -268,19 +268,19 @@ int main() {
                 cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(45) * dt);
         }
 
-        driver._swapchain.wait();
+        driver.swapchain().wait();
 
         if (renderImGui) {
             imGuiContext.newFrame();
 //            ImGui::ShowDemoWindow();
 
-            statWindow.update(frameTime.microseconds() / 1000.f, avgFrameTime.microseconds() / 1000.f, driver._commands.count(), cmd ? cmd->_pipelines.size() : 0, cmd ? cmd->_descriptorSets.size() : 0, driver._setLayouts.size(), frameCount);
+            statWindow.update(frameTime.microseconds() / 1000.f, avgFrameTime.microseconds() / 1000.f, driver.commands().count(), cmd ? cmd->_pipelines.size() : 0, cmd ? cmd->_descriptorSets.size() : 0, driver.setLayoutCount(), frameCount);
             statWindow.render();
 
             ImGui::Begin("Device");
-            ImGui::Text("Vendor: %s", driver._context.vendor());
-            ImGui::Text("Device: %s", driver._context.deviceName().data());
-            ImGui::Text("Type: %s", driver._context.deviceTypeString());
+            ImGui::Text("Vendor: %s", driver.context().vendor());
+            ImGui::Text("Device: %s", driver.context().deviceName().data());
+            ImGui::Text("Type: %s", driver.context().deviceTypeString());
             ImGui::End();
 
             ImGui::Render();
@@ -291,7 +291,7 @@ int main() {
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
         }
 
-        auto frame = driver._swapchain.nextImage();
+        auto frame = driver.swapchain().nextImage();
 
         cmd = driver.beginFrame();
         {
@@ -341,7 +341,7 @@ int main() {
             cmd->submit(frame.imageAquired, frame.fence);
         }
         driver.endFrame();
-        driver._swapchain.present(frame, cmd->signal());
+        driver.swapchain().present(frame, cmd->signal());
 
         frameTime = frameClock.reset();
         dt = frameTime.milliseconds() / 1000.f;
@@ -363,14 +363,14 @@ int main() {
             running = false;
     }
 
-    driver._swapchain.wait();
+    driver.swapchain().wait();
 
-    std::cout << "\n\nCommand Buffers: " << driver._commands.count();
+    std::cout << "\n\nCommand Buffers: " << driver.commands().count();
     std::cout << "\nPipelines: " << (cmd ? cmd->_pipelines.size() : 0);
     std::cout << "\nDescriptors: " << (cmd ? cmd->_descriptorSets.size() : 0);
     std::cout << "\nRenderables: " << scene._renderables.size();
     std::cout << "\nUptime: " << runTime.elapsed().seconds() << "sec";
-    std::cout << "\nFrame: " << frameCount;
+    std::cout << "\nFrame: " << frameCount << '\n';
 
     return 0;
 }

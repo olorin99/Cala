@@ -4,9 +4,11 @@
 #include <vulkan/vulkan.h>
 #include <Ende/Vector.h>
 #include <Ende/Span.h>
-#include <Cala/backend/vulkan/Context.h>
+#include <Cala/backend/primitives.h>
 
 namespace cala::backend::vulkan {
+
+    class Driver;
 
     class RenderPass {
     public:
@@ -23,7 +25,7 @@ namespace cala::backend::vulkan {
             VkImageLayout internalLayout;
         };
 
-        RenderPass(Context& context, ende::Span<Attachment> attachments);
+        RenderPass(Driver& driver, ende::Span<Attachment> attachments);
 
         ~RenderPass();
 

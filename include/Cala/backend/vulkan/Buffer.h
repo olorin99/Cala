@@ -2,14 +2,17 @@
 #define CALA_BUFFER_H
 
 #include <vulkan/vulkan.h>
-#include <Cala/backend/vulkan/Context.h>
+#include <Cala/backend/primitives.h>
+#include <Ende/Span.h>
 
 namespace cala::backend::vulkan {
+
+    class Driver;
 
     class Buffer {
     public:
 
-        Buffer(Context& context, u32 size, BufferUsage usage, MemoryProperties flags);
+        Buffer(Driver& driver, u32 size, BufferUsage usage, MemoryProperties flags);
 
         ~Buffer();
 
@@ -35,7 +38,7 @@ namespace cala::backend::vulkan {
 
     private:
 
-        Context& _context;
+        Driver& _driver;
         VkBuffer _buffer;
         VkDeviceMemory _memory;
         u32 _size;

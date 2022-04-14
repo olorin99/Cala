@@ -3,7 +3,7 @@
 
 cala::Material::Material(backend::vulkan::Driver &driver, backend::vulkan::ShaderProgram &&program)
     : _program(std::move(program)),
-      _uniformBuffer(driver._context, 256, backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT),
+      _uniformBuffer(driver, 256, backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT),
       _setSize(_program._interface.sets[1].byteSize)
 {}
 

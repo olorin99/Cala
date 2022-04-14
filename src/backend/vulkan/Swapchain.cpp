@@ -1,6 +1,7 @@
 #include <Ende/Vector.h>
 #include <Cala/backend/vulkan/primitives.h>
 #include "Cala/backend/vulkan/Swapchain.h"
+#include <Cala/backend/vulkan/Driver.h>
 
 
 VkSurfaceCapabilitiesKHR getCapabilities(VkPhysicalDevice device, VkSurfaceKHR surface) {
@@ -49,24 +50,24 @@ VkExtent2D getExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
     return extent;
 }
 
-cala::backend::vulkan::Swapchain::Swapchain(Context &context, Platform& platform)
-    : _context(context),
+cala::backend::vulkan::Swapchain::Swapchain(Driver &driver, Platform& platform)
+    : _driver(driver),
     _swapchain(VK_NULL_HANDLE),
     _frame(0),
-    _depthImage(context, {
-        800, 600, 1, _context.depthFormat(), 1, 1, backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT
+    _depthImage(driver, {
+        800, 600, 1, driver.context().depthFormat(), 1, 1, backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT
     }),
     _depthView(_depthImage.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT))
 {
-    _surface = platform.surface(context.instance());
+    _surface = platform.surface(_driver.context().instance());
     VkBool32 supported = VK_FALSE;
-    vkGetPhysicalDeviceSurfaceSupportKHR(context.physicalDevice(), context.queueIndex(VK_QUEUE_GRAPHICS_BIT), _surface, &supported);
+    vkGetPhysicalDeviceSurfaceSupportKHR(_driver.context().physicalDevice(), _driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT), _surface, &supported);
 
     VkFenceCreateInfo fenceCreateInfo{};
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceCreateInfo.pNext = nullptr;
     fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-    vkCreateFence(_context.device(), &fenceCreateInfo, nullptr, &_fence);
+    vkCreateFence(_driver.context().device(), &fenceCreateInfo, nullptr, &_fence);
 
     //TODO: get better error handling
     if (!createSwapchain()) throw "Unable to create swapchain";
@@ -86,7 +87,7 @@ cala::backend::vulkan::Swapchain::Swapchain(Context &context, Platform& platform
                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
             },
             RenderPass::Attachment{
-                    _context.depthFormat(),
+                    _driver.context().depthFormat(),
                     VK_SAMPLE_COUNT_1_BIT,
                     VK_ATTACHMENT_LOAD_OP_CLEAR,
                     VK_ATTACHMENT_STORE_OP_STORE,
@@ -98,11 +99,11 @@ cala::backend::vulkan::Swapchain::Swapchain(Context &context, Platform& platform
             }
     };
 
-    _renderPass = new RenderPass(_context, attachments);
+    _renderPass = new RenderPass(_driver, attachments);
 
     for (auto& view : _imageViews) {
         VkImageView framebufferAttachments[2] = { view, _depthView.view };
-        _framebuffers.emplace(_context.device(), *_renderPass, framebufferAttachments, 800, 600);
+        _framebuffers.emplace(_driver.context().device(), *_renderPass, framebufferAttachments, 800, 600);
     }
 }
 
@@ -110,22 +111,22 @@ cala::backend::vulkan::Swapchain::~Swapchain() {
     delete _renderPass;
 
     for (auto& semaphore : _semaphores) {
-        vkDestroySemaphore(_context.device(), semaphore, nullptr);
+        vkDestroySemaphore(_driver.context().device(), semaphore, nullptr);
     }
 
     for (auto& view : _imageViews)
-        vkDestroyImageView(_context.device(), view, nullptr);
+        vkDestroyImageView(_driver.context().device(), view, nullptr);
 
-    vkDestroyFence(_context.device(), _fence, nullptr);
-    vkDestroySwapchainKHR(_context.device(), _swapchain, nullptr);
-    vkDestroySurfaceKHR(_context.instance(), _surface, nullptr);
+    vkDestroyFence(_driver.context().device(), _fence, nullptr);
+    vkDestroySwapchainKHR(_driver.context().device(), _swapchain, nullptr);
+    vkDestroySurfaceKHR(_driver.context().instance(), _surface, nullptr);
 }
 
 
 cala::backend::vulkan::Swapchain::Frame cala::backend::vulkan::Swapchain::nextImage() {
     auto image = _semaphores.pop().unwrap();
     u32 index = 0;
-    vkAcquireNextImageKHR(_context.device(), _swapchain, std::numeric_limits<u64>::max(), image, VK_NULL_HANDLE, &index);
+    vkAcquireNextImageKHR(_driver.context().device(), _swapchain, std::numeric_limits<u64>::max(), image, VK_NULL_HANDLE, &index);
     return { _frame++, index, image, _fence, _framebuffers[index] };
 }
 
@@ -145,23 +146,23 @@ bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFi
     presentInfo.pImageIndices = &frame.index;
     presentInfo.pResults = nullptr;
 
-    auto res = vkQueuePresentKHR(_context.getQueue(0x20), &presentInfo) == VK_SUCCESS;
+    auto res = vkQueuePresentKHR(_driver.context().getQueue(0x20), &presentInfo) == VK_SUCCESS;
 
     return res;
 }
 
 bool cala::backend::vulkan::Swapchain::wait(u64 timeout) {
-    auto res = vkWaitForFences(_context.device(), 1, &_fence, true, timeout) == VK_SUCCESS;
+    auto res = vkWaitForFences(_driver.context().device(), 1, &_fence, true, timeout) == VK_SUCCESS;
     if (res)
-        vkResetFences(_context.device(), 1, &_fence);
+        vkResetFences(_driver.context().device(), 1, &_fence);
     return res;
 }
 
 
 bool cala::backend::vulkan::Swapchain::createSwapchain() {
-    VkSurfaceCapabilitiesKHR capabilities = getCapabilities(_context.physicalDevice(), _surface);
-    VkSurfaceFormatKHR format = getSurfaceFormat(_context.physicalDevice(), _surface);
-    VkPresentModeKHR mode = getPresentMode(_context.physicalDevice(), _surface);
+    VkSurfaceCapabilitiesKHR capabilities = getCapabilities(_driver.context().physicalDevice(), _surface);
+    VkSurfaceFormatKHR format = getSurfaceFormat(_driver.context().physicalDevice(), _surface);
+    VkPresentModeKHR mode = getPresentMode(_driver.context().physicalDevice(), _surface);
     VkExtent2D extent = getExtent(capabilities);
 
     u32 imageCount = capabilities.minImageCount + 1;
@@ -189,12 +190,12 @@ bool cala::backend::vulkan::Swapchain::createSwapchain() {
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = _swapchain;
 
-    VkResult result = vkCreateSwapchainKHR(_context.device(), &createInfo, nullptr, &_swapchain);
+    VkResult result = vkCreateSwapchainKHR(_driver.context().device(), &createInfo, nullptr, &_swapchain);
 
     u32 count = 0;
-    vkGetSwapchainImagesKHR(_context.device(), _swapchain, &count, nullptr);
+    vkGetSwapchainImagesKHR(_driver.context().device(), _swapchain, &count, nullptr);
     _images.resize(count);
-    vkGetSwapchainImagesKHR(_context.device(), _swapchain, &count, _images.data());
+    vkGetSwapchainImagesKHR(_driver.context().device(), _swapchain, &count, _images.data());
 
     _format = static_cast<Format>(format.format);
     _extent = extent;
@@ -222,7 +223,7 @@ bool cala::backend::vulkan::Swapchain::createImageViews() {
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(_context.device(), &createInfo, nullptr, &_imageViews[i]) != VK_SUCCESS)
+        if (vkCreateImageView(_driver.context().device(), &createInfo, nullptr, &_imageViews[i]) != VK_SUCCESS)
             return false;
     }
     return true;
@@ -238,7 +239,7 @@ bool cala::backend::vulkan::Swapchain::createSemaphores() {
     for (u32 i = 0; i < _imageViews.size(); i++) {
         VkSemaphore imageAcquired;
 
-        if (vkCreateSemaphore(_context.device(), &createInfo, nullptr, &imageAcquired) != VK_SUCCESS)
+        if (vkCreateSemaphore(_driver.context().device(), &createInfo, nullptr, &imageAcquired) != VK_SUCCESS)
             return false;
 
         _semaphores.push(imageAcquired);

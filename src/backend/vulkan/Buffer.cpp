@@ -1,10 +1,11 @@
 #include <cstring>
 #include "Cala/backend/vulkan/Buffer.h"
 #include <Cala/backend/vulkan/primitives.h>
+#include <Cala/backend/vulkan/Driver.h>
 
 
-cala::backend::vulkan::Buffer::Buffer(Context &context, u32 size, BufferUsage usage, MemoryProperties flags)
-    : _context(context),
+cala::backend::vulkan::Buffer::Buffer(Driver &driver, u32 size, BufferUsage usage, MemoryProperties flags)
+    : _driver(driver),
     _buffer(VK_NULL_HANDLE),
     _memory(VK_NULL_HANDLE),
     _size(size),
@@ -17,22 +18,22 @@ cala::backend::vulkan::Buffer::Buffer(Context &context, u32 size, BufferUsage us
     bufferInfo.usage = getBufferUsage(usage);
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    vkCreateBuffer(_context.device(), &bufferInfo, nullptr, &_buffer);
+    vkCreateBuffer(_driver.context().device(), &bufferInfo, nullptr, &_buffer);
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(_context.device(), _buffer, &memRequirements);
-    _memory = _context.allocate(memRequirements.size, memRequirements.memoryTypeBits, flags);
-    vkBindBufferMemory(_context.device(), _buffer, _memory, 0);
+    vkGetBufferMemoryRequirements(_driver.context().device(), _buffer, &memRequirements);
+    _memory = _driver.allocate(memRequirements.size, memRequirements.memoryTypeBits, flags);
+    vkBindBufferMemory(_driver.context().device(), _buffer, _memory, 0);
 }
 
 cala::backend::vulkan::Buffer::~Buffer() {
-    vkFreeMemory(_context.device(), _memory, nullptr);
-    vkDestroyBuffer(_context.device(), _buffer, nullptr);
+    vkFreeMemory(_driver.context().device(), _memory, nullptr);
+    vkDestroyBuffer(_driver.context().device(), _buffer, nullptr);
 }
 
 
 cala::backend::vulkan::Buffer::Buffer(Buffer &&rhs)
-    : _context(rhs._context),
+    : _driver(rhs._driver),
     _buffer(VK_NULL_HANDLE),
     _memory(VK_NULL_HANDLE),
     _size(0),
@@ -53,12 +54,12 @@ cala::backend::vulkan::Buffer::Mapped::~Mapped() {
 
 cala::backend::vulkan::Buffer::Mapped cala::backend::vulkan::Buffer::map(u32 offset, u32 size) {
     void* address = nullptr;
-    vkMapMemory(_context.device(), _memory, offset, size, 0, &address);
+    vkMapMemory(_driver.context().device(), _memory, offset, size, 0, &address);
     return { address, this };
 }
 
 void cala::backend::vulkan::Buffer::unmap() {
-    vkUnmapMemory(_context.device(), _memory);
+    vkUnmapMemory(_driver.context().device(), _memory);
 }
 
 void cala::backend::vulkan::Buffer::data(ende::Span<const void> data, u32 offset) {

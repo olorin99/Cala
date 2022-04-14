@@ -1,7 +1,8 @@
 #include "Cala/backend/vulkan/Sampler.h"
+#include <Cala/backend/vulkan/Driver.h>
 
-cala::backend::vulkan::Sampler::Sampler(Context& context, CreateInfo info)
-    : _context(context)
+cala::backend::vulkan::Sampler::Sampler(Driver& driver, CreateInfo info)
+    : _driver(driver)
 {
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -22,9 +23,9 @@ cala::backend::vulkan::Sampler::Sampler(Context& context, CreateInfo info)
     samplerInfo.borderColor = info.borderColour;
     samplerInfo.unnormalizedCoordinates = info.unnormalizedCoordinates;
 
-    vkCreateSampler(context.device(), &samplerInfo, nullptr, &_sampler);
+    vkCreateSampler(_driver.context().device(), &samplerInfo, nullptr, &_sampler);
 }
 
 cala::backend::vulkan::Sampler::~Sampler() {
-    vkDestroySampler(_context.device(), _sampler, nullptr);
+    vkDestroySampler(_driver.context().device(), _sampler, nullptr);
 }

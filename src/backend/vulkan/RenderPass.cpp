@@ -1,8 +1,9 @@
 #include "Cala/backend/vulkan/RenderPass.h"
+#include <Cala/backend/vulkan/Driver.h>
 #include <Cala/backend/vulkan/primitives.h>
 
-cala::backend::vulkan::RenderPass::RenderPass(Context& context, ende::Span<Attachment> attachments)
-    : _device(context.device()),
+cala::backend::vulkan::RenderPass::RenderPass(Driver& driver, ende::Span<Attachment> attachments)
+    : _device(driver.context().device()),
     _colourAttachments(0)
 {
     _clearValues.reserve(attachments.size());
@@ -14,7 +15,7 @@ cala::backend::vulkan::RenderPass::RenderPass(Context& context, ende::Span<Attac
     bool depthPresent = false;
 
     for (u32 i = 0; i < attachments.size(); i++) {
-        if (attachments[i].format != context.depthFormat()) {
+        if (attachments[i].format != driver.context().depthFormat()) {
             attachmentDescriptions[colourAttachmentCount].format = getFormat(attachments[i].format);
             attachmentDescriptions[colourAttachmentCount].samples = attachments[i].samples;
             attachmentDescriptions[colourAttachmentCount].loadOp = attachments[i].loadOp;

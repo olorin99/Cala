@@ -1,18 +1,20 @@
 #ifndef CALA_SWAPCHAIN_H
 #define CALA_SWAPCHAIN_H
 
-#include <Cala/backend/vulkan/Context.h>
 #include <Cala/backend/vulkan/Image.h>
 #include <Cala/backend/vulkan/RenderPass.h>
 #include <Cala/backend/vulkan/Framebuffer.h>
+#include <Cala/backend/vulkan/Platform.h>
 #include <Ende/Vector.h>
 
 namespace cala::backend::vulkan {
 
+    class Driver;
+
     class Swapchain {
     public:
 
-        Swapchain(Context& context, Platform& platform);
+        Swapchain(Driver& driver, Platform& platform);
 
         ~Swapchain();
 
@@ -53,7 +55,7 @@ namespace cala::backend::vulkan {
         bool createSemaphores();
 
 
-        Context& _context;
+        Driver& _driver;
 
         VkSurfaceKHR _surface;
         VkSwapchainKHR _swapchain;

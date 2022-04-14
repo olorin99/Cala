@@ -3,9 +3,10 @@
 
 #include <vulkan/vulkan.h>
 #include <Ende/platform.h>
-#include <Cala/backend/vulkan/Context.h>
 
 namespace cala::backend::vulkan {
+
+    class Driver;
 
     class Sampler {
     public:
@@ -25,7 +26,7 @@ namespace cala::backend::vulkan {
             bool unnormalizedCoordinates = false;
         };
 
-        Sampler(Context& context, CreateInfo info);
+        Sampler(Driver& driver, CreateInfo info);
 
         ~Sampler();
 
@@ -33,7 +34,7 @@ namespace cala::backend::vulkan {
 
     private:
 
-        Context& _context;
+        Driver& _driver;
         VkSampler _sampler;
 
 

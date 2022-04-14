@@ -2,6 +2,7 @@
 #define CALA_PRIMITIVES_H
 
 #include <Ende/platform.h>
+#include <type_traits>
 
 namespace cala::backend {
 

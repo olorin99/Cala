@@ -3,7 +3,7 @@
 
 cala::backend::vulkan::Driver::Driver(cala::backend::Platform& platform)
     : _context(platform),
-      _swapchain(_context, platform),
+      _swapchain(*this, platform),
       _commands(_context, _context.queueIndex(VK_QUEUE_GRAPHICS_BIT)),
       _commandPool(VK_NULL_HANDLE)
 {
@@ -49,7 +49,7 @@ void cala::backend::vulkan::Driver::draw(CommandBuffer::RasterState state, Primi
 }
 
 cala::backend::vulkan::Buffer cala::backend::vulkan::Driver::stagingBuffer(u32 size) {
-    return Buffer(_context, size, BufferUsage::TRANSFER_SRC, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
+    return Buffer(*this, size, BufferUsage::TRANSFER_SRC, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
 }
 
 
@@ -86,6 +86,14 @@ void cala::backend::vulkan::Driver::endSingleTimeCommands(VkCommandBuffer buffer
 
     vkFreeCommandBuffers(_context.device(), _commandPool, 1, &buffer);
 }
+
+VkDeviceMemory cala::backend::vulkan::Driver::allocate(u32 size, u32 typeBits, MemoryProperties flags) {
+    return _context.allocate(size, typeBits, flags);
+}
+
+
+
+
 
 
 VkDescriptorSetLayout cala::backend::vulkan::Driver::getSetLayout(ende::Span <VkDescriptorSetLayoutBinding> bindings) {

@@ -42,8 +42,20 @@ namespace cala::backend::vulkan {
             endSingleTimeCommands(cmd);
         }
 
+        VkDeviceMemory allocate(u32 size, u32 typeBits, MemoryProperties flags);
 
-//    private:
+        VkDescriptorSetLayout getSetLayout(ende::Span<VkDescriptorSetLayoutBinding> bindings);
+
+
+        const Context& context() const { return _context; }
+
+        Swapchain& swapchain() { return _swapchain; }
+
+        CommandBufferList& commands() { return _commands; }
+
+        u32 setLayoutCount() const { return _setLayouts.size(); }
+
+    private:
 
         Context _context;
         Swapchain _swapchain;
@@ -58,9 +70,6 @@ namespace cala::backend::vulkan {
             }
         };
         std::unordered_map<SetLayoutKey, VkDescriptorSetLayout, ende::util::MurmurHash<SetLayoutKey>> _setLayouts;
-
-
-        VkDescriptorSetLayout getSetLayout(ende::Span<VkDescriptorSetLayoutBinding> bindings);
 
     };
 

@@ -4,7 +4,6 @@
 #include <vulkan/vulkan.h>
 #include <Ende/platform.h>
 #include <Ende/Span.h>
-#include <Cala/backend/vulkan/Context.h>
 
 #include <Cala/backend/primitives.h>
 
@@ -34,7 +33,7 @@ namespace cala::backend::vulkan {
             ende::Span<void> data = nullptr;
         };
 
-        Image(Context& context, CreateInfo info);
+        Image(Driver& driver, CreateInfo info);
 
         ~Image();
 
@@ -65,7 +64,7 @@ namespace cala::backend::vulkan {
 
     private:
 
-        Context& _context;
+        Driver& _driver;
         VkImage _image;
         VkDeviceMemory _memory;
 
@@ -73,7 +72,6 @@ namespace cala::backend::vulkan {
         u32 _height;
         u32 _depth;
         VkFormat _format;
-
 
     };
 

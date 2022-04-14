@@ -2,8 +2,8 @@
 #include <Cala/backend/vulkan/Driver.h>
 #include <Cala/backend/vulkan/primitives.h>
 
-cala::backend::vulkan::Image::Image(Context& context, CreateInfo info)
-    : _context(context),
+cala::backend::vulkan::Image::Image(Driver& driver, CreateInfo info)
+    : _driver(driver),
     _image(VK_NULL_HANDLE),
     _memory(VK_NULL_HANDLE)
 {
@@ -28,12 +28,12 @@ cala::backend::vulkan::Image::Image(Context& context, CreateInfo info)
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 
-    vkCreateImage(_context.device(), &imageInfo, nullptr, &_image);
+    vkCreateImage(_driver.context().device(), &imageInfo, nullptr, &_image);
 
     VkMemoryRequirements memoryRequirements;
-    vkGetImageMemoryRequirements(_context.device(), _image, &memoryRequirements);
-    _memory = _context.allocate(memoryRequirements.size, memoryRequirements.memoryTypeBits, MemoryProperties::DEVICE_LOCAL);
-    vkBindImageMemory(_context.device(), _image, _memory, 0);
+    vkGetImageMemoryRequirements(_driver.context().device(), _image, &memoryRequirements);
+    _memory = _driver.allocate(memoryRequirements.size, memoryRequirements.memoryTypeBits, MemoryProperties::DEVICE_LOCAL);
+    vkBindImageMemory(_driver.context().device(), _image, _memory, 0);
 
     _width = info.width;
     _height = info.height;
@@ -42,8 +42,8 @@ cala::backend::vulkan::Image::Image(Context& context, CreateInfo info)
 }
 
 cala::backend::vulkan::Image::~Image() {
-    vkDestroyImage(_context.device(), _image, nullptr);
-    vkFreeMemory(_context.device(), _memory, nullptr);
+    vkDestroyImage(_driver.context().device(), _image, nullptr);
+    vkFreeMemory(_driver.context().device(), _memory, nullptr);
 }
 
 
@@ -130,10 +130,10 @@ cala::backend::vulkan::Image::View cala::backend::vulkan::Image::getView(VkImage
     viewCreateInfo.subresourceRange.layerCount = layerCount;
 
     VkImageView view;
-    vkCreateImageView(_context.device(), &viewCreateInfo, nullptr, &view);
+    vkCreateImageView(_driver.context().device(), &viewCreateInfo, nullptr, &view);
     View v{};
     v.view = view;
-    v._device = _context.device();
+    v._device = _driver.context().device();
     return v;
 }
 

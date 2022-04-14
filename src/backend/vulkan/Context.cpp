@@ -191,7 +191,7 @@ cala::backend::vulkan::Context::~Context() {
 }
 
 
-u32 cala::backend::vulkan::Context::queueIndex(u32 flags) {
+u32 cala::backend::vulkan::Context::queueIndex(u32 flags) const {
     if (flags & 0x20)
         return 0;
 
@@ -211,7 +211,7 @@ u32 cala::backend::vulkan::Context::queueIndex(u32 flags) {
     return i;
 }
 
-VkQueue cala::backend::vulkan::Context::getQueue(u32 flags) {
+VkQueue cala::backend::vulkan::Context::getQueue(u32 flags) const {
     VkQueue queue;
     vkGetDeviceQueue(_device, queueIndex(flags), 0, &queue);
     return queue;

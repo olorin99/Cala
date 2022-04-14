@@ -4,7 +4,6 @@
 #include <Ende/platform.h>
 #include <Ende/Vector.h>
 #include <array>
-
 #include <Cala/backend/vulkan/Buffer.h>
 
 namespace cala {
@@ -38,9 +37,9 @@ namespace cala {
 
         u32 indexCount() const { return _indices.size(); }
 
-        backend::vulkan::Buffer vertexBuffer(backend::vulkan::Context& context) const;
+        backend::vulkan::Buffer vertexBuffer(backend::vulkan::Driver& driver) const;
 
-        backend::vulkan::Buffer indexBuffer(backend::vulkan::Context& context) const;
+        backend::vulkan::Buffer indexBuffer(backend::vulkan::Driver& driver) const;
 
     private:
 

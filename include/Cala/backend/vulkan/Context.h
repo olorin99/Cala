@@ -17,9 +17,9 @@ namespace cala::backend::vulkan {
 
         ~Context();
 
-        u32 queueIndex(u32 flags);
+        u32 queueIndex(u32 flags) const;
 
-        VkQueue getQueue(u32 flags);
+        VkQueue getQueue(u32 flags) const;
 
         u32 memoryIndex(u32 filter, VkMemoryPropertyFlags properties);
 
