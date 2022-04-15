@@ -12,7 +12,7 @@ namespace cala::backend::vulkan {
     class Buffer {
     public:
 
-        Buffer(Driver& driver, u32 size, BufferUsage usage, MemoryProperties flags);
+        Buffer(Driver& driver, u32 size, BufferUsage usage, MemoryProperties flags = MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
 
         ~Buffer();
 
