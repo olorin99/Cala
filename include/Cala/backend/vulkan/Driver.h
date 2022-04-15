@@ -7,6 +7,8 @@
 #include <Cala/backend/vulkan/CommandBufferList.h>
 #include "Platform.h"
 
+#include <Ende/time/StopWatch.h>
+
 namespace cala::backend::vulkan {
 
     class Driver {
@@ -18,7 +20,7 @@ namespace cala::backend::vulkan {
 
         CommandBuffer* beginFrame();
 
-        bool endFrame();
+        ende::time::Duration endFrame();
 
         struct Primitive {
             VkBuffer vertex;
@@ -55,12 +57,16 @@ namespace cala::backend::vulkan {
 
         u32 setLayoutCount() const { return _setLayouts.size(); }
 
+        f32 fps() const { return 1000.f / (static_cast<f32>(_lastFrameTime.microseconds()) / 1000.f); }
+
     private:
 
         Context _context;
         Swapchain _swapchain;
         CommandBufferList _commands;
         VkCommandPool _commandPool;
+        ende::time::StopWatch _frameClock;
+        ende::time::Duration _lastFrameTime;
 
 
         struct SetLayoutKey {

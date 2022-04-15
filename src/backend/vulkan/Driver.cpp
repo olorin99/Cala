@@ -26,8 +26,10 @@ cala::backend::vulkan::CommandBuffer* cala::backend::vulkan::Driver::beginFrame(
     return _commands.get();
 }
 
-bool cala::backend::vulkan::Driver::endFrame() {
-    return _commands.flush();
+ende::time::Duration cala::backend::vulkan::Driver::endFrame() {
+    _commands.flush();
+    _lastFrameTime = _frameClock.reset();
+    return _lastFrameTime;
 }
 
 

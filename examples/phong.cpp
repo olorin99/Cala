@@ -92,6 +92,7 @@ int main() {
     auto normalView = brickwall_normal.getView();
     auto specularView = brickwall_specular.getView();
 
+    f32 dt = 1.f / 60.f;
     bool running = true;
     SDL_Event event;
     while (running) {
@@ -107,7 +108,7 @@ int main() {
             auto cameraData = camera.data();
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
 
-            modelTransform.rotate(ende::math::Vec3f{0, 1, 0}, ende::math::rad(45) * 1.f / 120.f);
+            modelTransform.rotate(ende::math::Vec3f{0, 1, 0}, ende::math::rad(45) * dt);
             auto model = modelTransform.toMat();
             modelBuffer.data({&model, sizeof(model)});
         }
@@ -142,7 +143,9 @@ int main() {
             cmd->end(frame.framebuffer);
             cmd->submit(frame.imageAquired, frame.fence);
         }
-        driver.endFrame();
+        auto frameTime = driver.endFrame();
+        dt = static_cast<f32>(frameTime.milliseconds()) / 1000.f;
+
         driver.swapchain().present(frame, cmd->signal());
     }
 
