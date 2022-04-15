@@ -43,7 +43,9 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     appInfo.apiVersion = VK_API_VERSION_1_0;
 
     auto extensions = platform.requiredExtensions();
+#ifndef NDEBUG
     extensions.push(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+#endif
 
     VkInstanceCreateInfo instanceCreateInfo{};
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -56,7 +58,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     if (vkCreateInstance(&instanceCreateInfo, nullptr, &_instance) != VK_SUCCESS)
         throw "Instance Creation Error";
 
-
+#ifndef NDEBUG
     VkDebugUtilsMessengerCreateInfoEXT debugInfo{};
     debugInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     debugInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
@@ -66,7 +68,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
 
     auto createDebugUtils = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(_instance, "vkCreateDebugUtilsMessengerEXT");
     createDebugUtils(_instance, &debugInfo, nullptr, &_debugMessenger);
-
+#endif
 
     u32 deviceCount = 0;
     vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr);
@@ -184,8 +186,10 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
 cala::backend::vulkan::Context::~Context() {
     vkDestroyDevice(_device, nullptr);
 
+#ifndef NDEBUG
     auto destroyDebugUtils = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(_instance, "vkDestroyDebugUtilsMessengerEXT");
     destroyDebugUtils(_instance, _debugMessenger, nullptr);
+#endif
 
     vkDestroyInstance(_instance, nullptr);
 }

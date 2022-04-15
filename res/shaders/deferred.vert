@@ -12,5 +12,5 @@ layout (location = 0) out VsOut {
 
 void main() {
     vsOut.TexCoords = inTexCoords;
-    gl_Position = vec4(inPosition.xy, 0.2, 1.0);
+    gl_Position = vec4(inPosition.xy, 0.5, 1.0);
 }

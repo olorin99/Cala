@@ -67,9 +67,8 @@ int main() {
 
     Scene scene;
 
-    Transform cameraTransform({0, 0, -1});
+    Transform cameraTransform({0, 0, -10});
     Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
-
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
 
     Transform model({0, 0, 0});
@@ -114,6 +113,12 @@ int main() {
     // light marker
     vertices = cala::shapes::sphereNormalized(0.1);
     model.setPos({0, -1, 1});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
+
+    f32 quadDistance = 2.f;
+    vertices = cala::shapes::quad();
+    model.setPos(cameraTransform.pos() + ende::math::Vec3f{0, 0, quadDistance});
+    model.setRot({0, 0, 0, 1});
     scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
 
     ende::Vector<ende::math::Mat4f> models;
@@ -281,6 +286,14 @@ int main() {
             ImGui::Text("Vendor: %s", driver.context().vendor());
             ImGui::Text("Device: %s", driver.context().deviceName().data());
             ImGui::Text("Type: %s", driver.context().deviceTypeString());
+
+            if (ImGui::SliderFloat("QuadDistance", &quadDistance, 0.f, 2.f)) {
+                auto q = scene._renderables.back().second;
+                q.setPos(cameraTransform.pos() + ende::math::Vec3f{0, 0, quadDistance});
+                auto data = q.toMat();
+                uniformBuffer.data({&data, sizeof(ende::math::Mat4f)}, (scene._renderables.size() - 1) * sizeof(ende::math::Mat4f));
+            }
+
             ImGui::End();
 
             ImGui::Render();
