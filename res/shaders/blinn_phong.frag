@@ -33,22 +33,20 @@ void main() {
     vec3 normalColour = texture(normalMap, fsIn.TexCoords).rgb;
     vec3 specularColour = texture(specularMap, fsIn.TexCoords).rgb;
 
-    float ambientStrength = 0.1;
-    vec3 ambient = ambientStrength * diffuseColour;
-
-    vec3 norm = normalize(normalColour * 2.0 - 1.0);
-    norm = normalize(fsIn.TBN * norm);
-
-
+    vec3 ambient = 0.05 * diffuseColour;
     vec3 lightDir = normalize(light.position - fsIn.FragPos);
-    float diff = max(dot(norm, lightDir), 0.0);
+
+    vec3 normal = normalize(normalColour * 2.0 - 1.0);
+    normal = normalize(fsIn.TBN * normal);
+
+    float diff = max(dot(lightDir, normal), 0.0);
     vec3 diffuse = diff * diffuseColour;
 
-    float specularStrength = 0.5;
     vec3 viewDir = normalize(fsIn.ViewPos - fsIn.FragPos);
-    vec3 reflectDir = reflect(-lightDir, norm);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
-    vec3 specular = specularStrength * spec * specularColour;
+    vec3 reflectDir = reflect(-lightDir, normal);
+    vec3 halfWayDir = normalize(lightDir + viewDir);
+    float spec = pow(max(dot(normal, halfWayDir), 0.0), 32.0);
+    vec3 specular = vec3(0.3) * spec * specularColour;
 
     vec3 colour = (ambient + diffuse + specular) * light.colour;
     FragColour = vec4(colour, 1.0f);

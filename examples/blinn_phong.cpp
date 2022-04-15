@@ -46,7 +46,7 @@ int main() {
     Driver driver(platform);
 
     //Shaders
-    ShaderProgram program = loadShader(driver, "../../res/shaders/default.vert.spv"_path, "../../res/shaders/phong.frag.spv"_path);
+    ShaderProgram program = loadShader(driver, "../../res/shaders/default.vert.spv"_path, "../../res/shaders/blinn_phong.frag.spv"_path);
 
     //Vertex Input
     VkVertexInputBindingDescription binding{};
