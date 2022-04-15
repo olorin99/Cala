@@ -41,6 +41,23 @@ using namespace cala;
 using namespace cala::backend;
 using namespace cala::backend::vulkan;
 
+ShaderProgram loadShader(Driver& driver, const ende::fs::Path& vertex, const ende::fs::Path& fragment) {
+    ende::fs::File shaderFile;
+    shaderFile.open(vertex, ende::fs::in | ende::fs::binary);
+
+    ende::Vector<u32> vertexData(shaderFile.size() / sizeof(u32));
+    shaderFile.read({reinterpret_cast<char*>(vertexData.data()), static_cast<u32>(vertexData.size() * sizeof(u32))});
+
+    shaderFile.open(fragment, ende::fs::in | ende::fs::binary);
+
+    ende::Vector<u32> fragmentData(shaderFile.size() / sizeof(u32));
+    shaderFile.read({reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32))});
+
+    return ShaderProgram::create()
+            .addStage(vertexData, ShaderStage::VERTEX)
+            .addStage(fragmentData, ShaderStage::FRAGMENT)
+            .compile(driver);
+}
 
 Image loadImage(Driver& driver, const ende::fs::Path& path) {
     i32 width, height, channels;
@@ -137,26 +154,18 @@ int main() {
 
     // get shader data
     ende::fs::File shaderFile;
-    if (!shaderFile.open("../../res/shaders/default.vert.spv"_path, ende::fs::in | ende::fs::binary))
-        return -1;
-
-    ende::Vector<u32> vertexShaderData(shaderFile.size() / sizeof(u32));
-    shaderFile.read({reinterpret_cast<char*>(vertexShaderData.data()), static_cast<u32>(vertexShaderData.size() * sizeof(u32))});
-
-    if (!shaderFile.open("../../res/shaders/default.frag.spv"_path, ende::fs::in | ende::fs::binary))
-        return -2;
-    ende::Vector<u32> fragmentShaderData(shaderFile.size() / sizeof(u32));
-    shaderFile.read({reinterpret_cast<char*>(fragmentShaderData.data()), static_cast<u32>(fragmentShaderData.size() * sizeof(u32))});
-
     if (!shaderFile.open("../../res/shaders/default.comp.spv"_path, ende::fs::in | ende::fs::binary))
         return -2;
     ende::Vector<u32> computeShaderData(shaderFile.size() / sizeof(u32));
     shaderFile.read({reinterpret_cast<char*>(computeShaderData.data()), static_cast<u32>(computeShaderData.size() * sizeof(u32))});
 
-    ShaderProgram program = ShaderProgram::create()
-            .addStage(vertexShaderData, ShaderStage::VERTEX)
-            .addStage(fragmentShaderData, ShaderStage::FRAGMENT)
-            .compile(driver);
+    ShaderProgram program = loadShader(driver, "../../res/shaders/default.vert.spv"_path, "../../res/shaders/default.frag.spv"_path);
+    ShaderProgram triangleProgram = loadShader(driver, "../../res/shaders/triangle.vert.spv"_path, "../../res/shaders/triangle.frag.spv"_path);
+
+//    ShaderProgram program = ShaderProgram::create()
+//            .addStage(vertexShaderData, ShaderStage::VERTEX)
+//            .addStage(fragmentShaderData, ShaderStage::FRAGMENT)
+//            .compile(driver);
 
     ShaderProgram computeProgram = ShaderProgram::create()
             .addStage(computeShaderData, ShaderStage::COMPUTE)
@@ -199,6 +208,10 @@ int main() {
     matInstance.setSampler("normalMap", brickwall_normal.getView());
     matInstance.setSampler("specularMap", brickwall_specular.getView());
     matInstance.setUniform("mixColour", ende::math::Vec3f{0.5, 1, 1.5});
+
+
+    Mesh triangle = cala::shapes::triangle();
+    Buffer triangleVertexBuffer = triangle.vertexBuffer(driver);
 
 
     imgui::Stats statWindow;
@@ -347,6 +360,20 @@ int main() {
                 cmd->bindIndexBuffer(renderable.first.index);
                 cmd->draw(renderable.first.index.size() / sizeof(u32), 1, 0, 0);
             }
+
+            cmd->clearDescriptors();
+            cmd->bindProgram(triangleProgram);
+            cmd->bindBindings({&binding, 1});
+            cmd->bindAttributes(attributes);
+            cmd->bindRasterState({.cullMode=CullMode::NONE});
+            cmd->bindDepthState({});
+            cmd->bindPipeline();
+
+            cmd->bindBuffer(0, 0, cameraBuffer);
+            cmd->bindDescriptors();
+
+            cmd->bindVertexBuffer(0, triangleVertexBuffer.buffer());
+            cmd->draw(3, 1, 0, 0);
 
             imGuiContext.render(*cmd);
 

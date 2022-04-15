@@ -1,4 +1,3 @@
-
 #include <Cala/backend/vulkan/SDLPlatform.h>
 #include <Cala/backend/vulkan/Driver.h>
 #include <Cala/shapes.h>
@@ -85,9 +84,6 @@ int main() {
             cmd->bindRasterState({.cullMode=CullMode::NONE});
             cmd->bindDepthState({});
             cmd->bindPipeline();
-
-            cmd->bindBuffer(0, 0, cameraBuffer);
-            cmd->bindDescriptors();
 
             cmd->bindVertexBuffer(0, vertexBuffer.buffer());
             cmd->draw(3, 1, 0, 0);

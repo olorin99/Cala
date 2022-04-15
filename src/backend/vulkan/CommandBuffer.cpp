@@ -194,7 +194,14 @@ void cala::backend::vulkan::CommandBuffer::bindViewPort(const ViewPort &viewport
 }
 
 void cala::backend::vulkan::CommandBuffer::bindRasterState(RasterState state) {
-    if (ende::util::MurmurHash<RasterState>()(_pipelineKey.raster) != ende::util::MurmurHash<RasterState>()(state)) {
+    if (_pipelineKey.raster.cullMode != state.cullMode ||
+        _pipelineKey.raster.frontFace != state.frontFace ||
+        _pipelineKey.raster.polygonMode != state.polygonMode ||
+        _pipelineKey.raster.lineWidth != state.lineWidth ||
+        _pipelineKey.raster.depthClamp != state.depthClamp ||
+        _pipelineKey.raster.rasterDiscard != state.rasterDiscard ||
+        _pipelineKey.raster.depthBias != state.depthBias)
+    {
         _pipelineKey.raster = state;
 //        _dirty = true;
     }
