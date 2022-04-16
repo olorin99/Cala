@@ -111,9 +111,10 @@ int main() {
     Image gNormal(driver, {800, 600, 1, Format::RGBA32_SFLOAT, 1, 1, ImageUsage::COLOUR_ATTACHMENT | ImageUsage::SAMPLED});
     Image gDepth(driver, {800, 600, 1, Format::D32_SFLOAT, 1, 1, ImageUsage::DEPTH_STENCIL_ATTACHMENT | ImageUsage::SAMPLED});
 
-    auto gAlbedoView = gAlbedo.getView();
-    auto gNormalView = gNormal.getView();
-    auto gDepthView = gDepth.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT);
+    auto deferredInstance = deferredMaterial.instance();
+    deferredInstance.setSampler(0, "gAlbedoMap", gAlbedo.getView(), Sampler(driver, {}));
+    deferredInstance.setSampler(0, "gNormalMap", gNormal.getView(), Sampler(driver, {}));
+    deferredInstance.setSampler(0, "gDepthMap", gDepth.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT), Sampler(driver, {}));
 
     std::array<RenderPass::Attachment, 3> attachments = {
             RenderPass::Attachment{
@@ -153,12 +154,7 @@ int main() {
 
     RenderPass gbufferPass(driver, attachments);
 
-    VkImageView gFrameAttachments[3] = {
-            gAlbedoView.view,
-            gNormalView.view,
-            gDepthView.view
-    };
-    Framebuffer gFrameBuffer(driver.context().device(), gbufferPass, gFrameAttachments, 800, 600);
+    Framebuffer gFrameBuffer(driver.context().device(), gbufferPass, &deferredInstance, 800, 600);
 
     f32 dt = 1.f / 60.f;
     bool running = true;
@@ -252,9 +248,7 @@ int main() {
             cmd->bindDepthState(deferredMaterial._depthState);
             cmd->bindPipeline();
 
-            cmd->bindImage(0, 0, gAlbedoView, sampler);
-            cmd->bindImage(0, 1, gNormalView, sampler);
-            cmd->bindImage(0, 2, gDepthView, sampler);
+            deferredInstance.bind(*cmd, 0);
             cmd->bindDescriptors();
 
             cmd->bindVertexBuffer(0, fullTriangleVertexBuffer.buffer());
@@ -267,7 +261,9 @@ int main() {
             cmd->clearDescriptors();
             cmd->submit(frame.imageAquired, frame.fence);
         }
-        driver.endFrame();
+        auto frameTime = driver.endFrame();
+        dt = static_cast<f32>(frameTime.milliseconds()) / 1000.f;
+
         driver.swapchain().present(frame, cmd->signal());
     }
 

@@ -29,3 +29,15 @@ cala::backend::vulkan::Sampler::Sampler(Driver& driver, CreateInfo info)
 cala::backend::vulkan::Sampler::~Sampler() {
     vkDestroySampler(_driver.context().device(), _sampler, nullptr);
 }
+
+cala::backend::vulkan::Sampler::Sampler(Sampler &&rhs) noexcept
+    : _driver(rhs._driver),
+    _sampler(VK_NULL_HANDLE)
+{
+    std::swap(_sampler, rhs._sampler);
+}
+
+cala::backend::vulkan::Sampler &cala::backend::vulkan::Sampler::operator=(Sampler &&rhs) noexcept {
+    std::swap(_sampler, rhs._sampler);
+    return *this;
+}

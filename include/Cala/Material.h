@@ -27,6 +27,8 @@ namespace cala {
         MaterialInstance instance();
 //    private:
 
+        backend::vulkan::Driver& _driver;
+
         backend::vulkan::ShaderProgram _program;
         backend::vulkan::CommandBuffer::RasterState _rasterState;
         backend::vulkan::CommandBuffer::DepthState _depthState;

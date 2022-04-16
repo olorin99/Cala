@@ -46,6 +46,10 @@ cala::backend::vulkan::Image::~Image() {
     vkFreeMemory(_driver.context().device(), _memory, nullptr);
 }
 
+cala::backend::vulkan::Image::View::View()
+    : _device(VK_NULL_HANDLE),
+    view(VK_NULL_HANDLE)
+{}
 
 cala::backend::vulkan::Image::View::~View() {
     if (_device == VK_NULL_HANDLE) return;

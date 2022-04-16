@@ -30,6 +30,10 @@ namespace cala::backend::vulkan {
 
         ~Sampler();
 
+        Sampler(Sampler&& rhs) noexcept;
+
+        Sampler& operator=(Sampler&& rhs) noexcept;
+
         VkSampler sampler() const { return _sampler; }
 
     private:

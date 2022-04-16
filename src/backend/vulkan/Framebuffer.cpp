@@ -1,4 +1,5 @@
 #include "Cala/backend/vulkan/Framebuffer.h"
+#include <Cala/MaterialInstance.h>
 
 cala::backend::vulkan::Framebuffer::Framebuffer(VkDevice device, RenderPass &renderPass, ende::Span<VkImageView> attachments, u32 width, u32 height)
     : _device(device),
@@ -17,6 +18,28 @@ cala::backend::vulkan::Framebuffer::Framebuffer(VkDevice device, RenderPass &ren
     createInfo.height = height;
     createInfo.layers = 1;
 
+    createInfo.pAttachments = attachments.data();
+
+    vkCreateFramebuffer(_device, &createInfo, nullptr, &_framebuffer);
+}
+
+cala::backend::vulkan::Framebuffer::Framebuffer(VkDevice device, RenderPass &renderPass, MaterialInstance *instance, u32 width, u32 height)
+    : _device(device),
+    _framebuffer(VK_NULL_HANDLE),
+    _renderPass(renderPass),
+    _width(width),
+    _height(height)
+{
+    VkFramebufferCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+
+    auto attachments = instance->_samplers.views();
+
+    createInfo.renderPass = _renderPass.renderPass();
+    createInfo.attachmentCount = instance->_samplers.size();
+    createInfo.width = _width;
+    createInfo.height = _height;
+    createInfo.layers = 1;
     createInfo.pAttachments = attachments.data();
 
     vkCreateFramebuffer(_device, &createInfo, nullptr, &_framebuffer);

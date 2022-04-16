@@ -33,12 +33,8 @@ void main() {
     vec3 normalColour = texture(normalMap, fsIn.TexCoords).rgb;
     vec3 specularColour = texture(specularMap, fsIn.TexCoords).rgb;
 
-    float ambientStrength = 0.1;
-    vec3 ambient = ambientStrength * diffuseColour;
-
     vec3 norm = normalize(normalColour * 2.0 - 1.0);
     norm = normalize(fsIn.TBN * norm);
-
 
     vec3 lightDir = normalize(light.position - fsIn.FragPos);
     float diff = max(dot(norm, lightDir), 0.0);
@@ -50,6 +46,9 @@ void main() {
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
     vec3 specular = specularStrength * spec * specularColour;
 
-    vec3 colour = (ambient + diffuse + specular) * light.colour;
+    float distance = length(light.position - fsIn.FragPos);
+    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * distance * distance);
+
+    vec3 colour = (diffuse + specular) * attenuation * light.colour;
     FragColour = vec4(colour, 1.0f);
 }

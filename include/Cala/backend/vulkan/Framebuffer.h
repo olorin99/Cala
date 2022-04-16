@@ -5,12 +5,18 @@
 
 #include <Cala/backend/vulkan/RenderPass.h>
 
+namespace cala {
+    class MaterialInstance;
+}
+
 namespace cala::backend::vulkan {
 
     class Framebuffer {
     public:
 
         Framebuffer(VkDevice device, RenderPass& renderPass, ende::Span<VkImageView> attachments, u32 width, u32 height);
+
+        Framebuffer(VkDevice device, RenderPass& renderPass, MaterialInstance* instance, u32 width, u32 height);
 
         ~Framebuffer();
 

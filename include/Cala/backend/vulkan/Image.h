@@ -43,7 +43,7 @@ namespace cala::backend::vulkan {
         struct View {
             VkImageView view;
 
-            View() = default;
+            View();
             ~View();
 
             View(View&& rhs) noexcept;

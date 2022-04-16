@@ -3,13 +3,20 @@
 
 #include <Ende/Vector.h>
 #include <Cala/backend/vulkan/Image.h>
+#include <Cala/backend/vulkan/SamplerArray.h>
 
 namespace cala {
+
+    namespace backend::vulkan {
+        class CommandBuffer;
+    }
 
     class Material;
 
     class MaterialInstance {
     public:
+
+        MaterialInstance(MaterialInstance&& rhs) noexcept;
 
         Material* material() const { return _material; }
 
@@ -22,7 +29,11 @@ namespace cala {
             return setUniform(name, (u8*)&data, sizeof(data));
         }
 
-        bool setSampler(const char* name, cala::backend::vulkan::Image::View&& view);
+        bool setSampler(u32 set, const char* name, cala::backend::vulkan::Image::View&& view, backend::vulkan::Sampler&& sampler);
+
+        bool setSampler(const char* name, cala::backend::vulkan::Image::View&& view, backend::vulkan::Sampler&& sampler);
+
+        void bind(backend::vulkan::CommandBuffer& cmd, u32 set);
 
 
 //        void setUniform
@@ -34,7 +45,8 @@ namespace cala {
 
         Material* _material;
         u32 _offset;
-        ende::Vector<cala::backend::vulkan::Image::View> _samplers;
+        backend::vulkan::SamplerArray _samplers;
+//        ende::Vector<cala::backend::vulkan::Image::View> _samplers;
 
     };
 
