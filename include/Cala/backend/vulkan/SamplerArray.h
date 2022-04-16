@@ -19,7 +19,7 @@ namespace cala::backend::vulkan {
 
         std::pair<Image::View&, Sampler&> get(u32 i);
 
-        std::array<VkImageView, 5> views();
+        std::array<VkImageView, 5> views() const;
 
         u32 size() const { return _count; }
 

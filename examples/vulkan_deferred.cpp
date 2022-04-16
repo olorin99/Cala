@@ -218,7 +218,6 @@ int main() {
 
 
             cmd->begin(gFrameBuffer);
-//            cmd->begin(frame.framebuffer);
 
             cmd->bindProgram(gbufferMaterial._program);
             cmd->bindBindings({&binding, 1});

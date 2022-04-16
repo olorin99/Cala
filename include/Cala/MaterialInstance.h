@@ -20,9 +20,14 @@ namespace cala {
 
         Material* material() const { return _material; }
 
-        MaterialInstance& addImage(cala::backend::vulkan::Image::View&& view);
+        bool setUniform(u32 set, const char* name, u8* data, u32 size);
 
         bool setUniform(const char* name, u8* data, u32 size);
+
+        template <typename T>
+        bool setUniform(u32 set, const char* name, const T& data) {
+            return setUniform(set, name, (u8*)&data, sizeof(data));
+        }
 
         template <typename T>
         bool setUniform(const char* name, const T& data) {
@@ -33,12 +38,11 @@ namespace cala {
 
         bool setSampler(const char* name, cala::backend::vulkan::Image::View&& view, backend::vulkan::Sampler&& sampler);
 
-        void bind(backend::vulkan::CommandBuffer& cmd, u32 set);
+        void bind(backend::vulkan::CommandBuffer& cmd, u32 set, u32 first = 0);
 
+        const backend::vulkan::SamplerArray& samplers() const { return _samplers; }
 
-//        void setUniform
-
-//    private:
+    private:
         friend Material;
 
         MaterialInstance(Material& material, u32 offset);
@@ -46,7 +50,6 @@ namespace cala {
         Material* _material;
         u32 _offset;
         backend::vulkan::SamplerArray _samplers;
-//        ende::Vector<cala::backend::vulkan::Image::View> _samplers;
 
     };
 

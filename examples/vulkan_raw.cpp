@@ -204,9 +204,9 @@ int main() {
 
     auto matInstance = material.instance();
 
-    matInstance.setSampler("diffuseMap", brickwall.getView());
-    matInstance.setSampler("normalMap", brickwall_normal.getView());
-    matInstance.setSampler("specularMap", brickwall_specular.getView());
+    matInstance.setSampler("diffuseMap", brickwall.getView(), Sampler(driver, {}));
+    matInstance.setSampler("normalMap", brickwall_normal.getView(), Sampler(driver, {}));
+    matInstance.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
     matInstance.setUniform("mixColour", ende::math::Vec3f{0.5, 1, 1.5});
 
 
@@ -346,9 +346,7 @@ int main() {
 
             cmd->bindBuffer(0, 0, cameraBuffer);
 
-            for (u32 i = 0; i < matInstance._samplers.size(); i++) {
-                cmd->bindImage(2, i, matInstance._samplers[i], sampler);
-            }
+            matInstance.bind(*cmd, 2);
             cmd->bindBuffer(2, 3, matInstance.material()->_uniformBuffer);
             cmd->bindBuffer(3, 0, lightBuffer);
 
@@ -360,20 +358,6 @@ int main() {
                 cmd->bindIndexBuffer(renderable.first.index);
                 cmd->draw(renderable.first.index.size() / sizeof(u32), 1, 0, 0);
             }
-
-            cmd->clearDescriptors();
-            cmd->bindProgram(triangleProgram);
-            cmd->bindBindings({&binding, 1});
-            cmd->bindAttributes(attributes);
-            cmd->bindRasterState({.cullMode=CullMode::NONE});
-            cmd->bindDepthState({});
-            cmd->bindPipeline();
-
-            cmd->bindBuffer(0, 0, cameraBuffer);
-            cmd->bindDescriptors();
-
-            cmd->bindVertexBuffer(0, triangleVertexBuffer.buffer());
-            cmd->draw(3, 1, 0, 0);
 
             imGuiContext.render(*cmd);
 

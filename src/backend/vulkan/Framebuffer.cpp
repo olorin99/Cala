@@ -33,10 +33,10 @@ cala::backend::vulkan::Framebuffer::Framebuffer(VkDevice device, RenderPass &ren
     VkFramebufferCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 
-    auto attachments = instance->_samplers.views();
+    auto attachments = instance->samplers().views();
 
     createInfo.renderPass = _renderPass.renderPass();
-    createInfo.attachmentCount = instance->_samplers.size();
+    createInfo.attachmentCount = instance->samplers().size();
     createInfo.width = _width;
     createInfo.height = _height;
     createInfo.layers = 1;

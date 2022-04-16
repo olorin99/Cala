@@ -1,17 +1,14 @@
 #!/bin/bash
 
-glslangValidator -V -o triangle.vert.spv triangle.vert
-glslangValidator -V -o triangle.frag.spv triangle.frag
+for filename in *; do
+    if [[ $filename == *.spv ]] || [[ $filename == *.sh ]]
+    then
+        continue
+    fi
+#    y=${filename%.*}
+#    echo ${y##*/}
 
-glslangValidator -V -o default.vert.spv default.vert
-glslangValidator -V -o default.frag.spv default.frag
+    output="${filename}.spv"
 
-glslangValidator -V -o gbuffer.frag.spv gbuffer.frag
-
-glslangValidator -V -o deferred.vert.spv deferred.vert
-glslangValidator -V -o deferred.frag.spv deferred.frag
-
-glslangValidator -V -o default.comp.spv default.comp
-
-glslangValidator -V -o phong.frag.spv phong.frag
-glslangValidator -V -o blinn_phong.frag.spv blinn_phong.frag
+    glslangValidator -V -o $output $filename
+done

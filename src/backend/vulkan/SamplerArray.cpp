@@ -29,7 +29,7 @@ std::pair<cala::backend::vulkan::Image::View &, cala::backend::vulkan::Sampler &
     return { _views[i], _samplers[i] };
 }
 
-std::array<VkImageView, 5> cala::backend::vulkan::SamplerArray::views() {
+std::array<VkImageView, 5> cala::backend::vulkan::SamplerArray::views() const {
     std::array<VkImageView, 5> vs = {VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE};
     u32 i = 0;
     for (auto& view : _views) {
