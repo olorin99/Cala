@@ -83,7 +83,7 @@ int main() {
 
     //Image
     Image image = loadImage(driver, "../../res/textures/metal-sheet.jpg"_path);
-    Image::View view = image.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT);
+//    Image::View view = image.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT);
 
     //Material
     Material gbufferMaterial(driver, std::move(gbufferProgram));
@@ -110,6 +110,9 @@ int main() {
     Image gAlbedo(driver, {800, 600, 1, Format::RGBA32_SFLOAT, 1, 1, ImageUsage::COLOUR_ATTACHMENT | ImageUsage::SAMPLED});
     Image gNormal(driver, {800, 600, 1, Format::RGBA32_SFLOAT, 1, 1, ImageUsage::COLOUR_ATTACHMENT | ImageUsage::SAMPLED});
     Image gDepth(driver, {800, 600, 1, Format::D32_SFLOAT, 1, 1, ImageUsage::DEPTH_STENCIL_ATTACHMENT | ImageUsage::SAMPLED});
+
+    auto metalMatInstance = gbufferMaterial.instance();
+    metalMatInstance.setSampler("metalMap", image.getView(), Sampler(driver, {}));
 
     auto deferredInstance = deferredMaterial.instance();
     deferredInstance.setSampler(0, "gAlbedoMap", gAlbedo.getView(), Sampler(driver, {}));
@@ -219,16 +222,13 @@ int main() {
 
             cmd->begin(gFrameBuffer);
 
-            cmd->bindProgram(gbufferMaterial._program);
+            metalMatInstance.bind(*cmd);
             cmd->bindBindings({&binding, 1});
             cmd->bindAttributes(attributes);
-            cmd->bindRasterState(gbufferMaterial._rasterState);
-            cmd->bindDepthState(gbufferMaterial._depthState);
-            cmd->bindPipeline();
 
             cmd->bindBuffer(0, 0, cameraBuffer);
             cmd->bindBuffer(1, 0, modelBuffer);
-            cmd->bindImage(2, 0, view, sampler);
+            cmd->bindPipeline();
             cmd->bindDescriptors();
 
             cmd->bindVertexBuffer(0, vertexBuffer.buffer());
@@ -240,14 +240,11 @@ int main() {
             cmd->clearDescriptors();
             cmd->begin(frame.framebuffer);
 
-            cmd->bindProgram(deferredMaterial._program);
             cmd->bindBindings({&binding, 1});
             cmd->bindAttributes(attributes);
-            cmd->bindRasterState(deferredMaterial._rasterState);
-            cmd->bindDepthState(deferredMaterial._depthState);
-            cmd->bindPipeline();
 
             deferredInstance.bind(*cmd, 0);
+            cmd->bindPipeline();
             cmd->bindDescriptors();
 
             cmd->bindVertexBuffer(0, fullTriangleVertexBuffer.buffer());

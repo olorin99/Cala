@@ -43,6 +43,10 @@ bool cala::MaterialInstance::setSampler(const char *name, backend::vulkan::Image
 }
 
 void cala::MaterialInstance::bind(backend::vulkan::CommandBuffer &cmd, u32 set, u32 first) {
+    cmd.bindProgram(_material->_program);
+    cmd.bindRasterState(_material->_rasterState);
+    cmd.bindDepthState(_material->_depthState);
+
     for (u32 i = 0; i < _samplers.size(); i++) {
         auto viewPair = _samplers.get(i);
         cmd.bindImage(set, first + i, viewPair.first, viewPair.second);

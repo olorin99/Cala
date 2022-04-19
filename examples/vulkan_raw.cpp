@@ -162,11 +162,6 @@ int main() {
     ShaderProgram program = loadShader(driver, "../../res/shaders/default.vert.spv"_path, "../../res/shaders/default.frag.spv"_path);
     ShaderProgram triangleProgram = loadShader(driver, "../../res/shaders/triangle.vert.spv"_path, "../../res/shaders/triangle.frag.spv"_path);
 
-//    ShaderProgram program = ShaderProgram::create()
-//            .addStage(vertexShaderData, ShaderStage::VERTEX)
-//            .addStage(fragmentShaderData, ShaderStage::FRAGMENT)
-//            .compile(driver);
-
     ShaderProgram computeProgram = ShaderProgram::create()
             .addStage(computeShaderData, ShaderStage::COMPUTE)
             .compile(driver);

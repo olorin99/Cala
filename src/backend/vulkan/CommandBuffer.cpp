@@ -12,8 +12,10 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(VkDevice device, VkQueue que
     _renderPass(nullptr),
     _framebuffer(nullptr),
     _indexBuffer(nullptr),
+    _computeBound(false),
     _currentPipeline(VK_NULL_HANDLE),
-    _currentSets{VK_NULL_HANDLE}
+    _currentSets{VK_NULL_HANDLE},
+    _descriptorPool(VK_NULL_HANDLE)
 {
     VkSemaphoreCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -471,13 +473,6 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
         if (vkCreateGraphicsPipelines(_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS)
             throw "Error creating pipeline";
     } else {
-
-//        VkPipelineShaderStageCreateInfo shaderStage{};
-//        shaderStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-//        shaderStage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-//        shaderStage.pName = "main";
-//        shaderStage.module = _pipelineKey.shaders[0];
-
         VkComputePipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
         pipelineInfo.stage = _pipelineKey.shaders[0];
