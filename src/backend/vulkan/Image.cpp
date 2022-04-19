@@ -48,7 +48,8 @@ cala::backend::vulkan::Image::~Image() {
 
 cala::backend::vulkan::Image::View::View()
     : _device(VK_NULL_HANDLE),
-    view(VK_NULL_HANDLE)
+    view(VK_NULL_HANDLE),
+    _image(nullptr)
 {}
 
 cala::backend::vulkan::Image::View::~View() {
@@ -58,15 +59,18 @@ cala::backend::vulkan::Image::View::~View() {
 
 cala::backend::vulkan::Image::View::View(View &&rhs) noexcept
     : _device(VK_NULL_HANDLE),
-    view(VK_NULL_HANDLE)
+    view(VK_NULL_HANDLE),
+    _image(nullptr)
 {
     std::swap(_device, rhs._device);
     std::swap(view, rhs.view);
+    std::swap(_image, rhs._image);
 }
 
 cala::backend::vulkan::Image::View &cala::backend::vulkan::Image::View::operator=(View &&rhs) noexcept {
     std::swap(_device, rhs._device);
     std::swap(view, rhs.view);
+    std::swap(_image, rhs._image);
     return *this;
 }
 
@@ -138,6 +142,7 @@ cala::backend::vulkan::Image::View cala::backend::vulkan::Image::getView(VkImage
     View v{};
     v.view = view;
     v._device = _driver.context().device();
+    v._image = this;
     return v;
 }
 

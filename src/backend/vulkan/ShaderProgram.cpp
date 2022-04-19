@@ -56,6 +56,38 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
             bindings[set][bindingCount[set]].pImmutableSamplers = nullptr;
             bindingCount[set]++;
         }
+        for (auto& resource : resources.storage_buffers) {
+            u32 set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
+            u32 binding = comp.get_decoration(resource.id, spv::DecorationBinding);
+            assert(set < MAX_SET_COUNT && "supplied set count is greater than valid set count per shader program");
+            assert(set < MAX_BINDING_PER_SET && "supplied binding count is greater than valid binding count per shader program");
+
+            const spirv_cross::SPIRType &type = comp.get_type(resource.base_type_id);
+            u32 size = comp.get_declared_struct_size(type);
+            u32 memberCount = type.member_types.size();
+
+
+            program._interface.sets[set].id = set;
+            program._interface.sets[set].byteSize = size;
+
+            program._interface.sets[set].bindings[binding].id = binding;
+            program._interface.sets[set].bindings[binding].type = ShaderInterface::BindingType::STORAGE_BUFFER;
+            program._interface.sets[set].bindings[binding].byteSize = size;
+
+            for (u32 i = 0; i < memberCount; i++) {
+                const std::string name = comp.get_member_name(type.self, i);
+                u32 offset = comp.type_struct_member_offset(type, i);
+                u32 memberSize = comp.get_declared_struct_member_size(type, i);
+                program._interface.getMemberList(set, binding)[name] = {offset, memberSize};
+            }
+
+            bindings[set][bindingCount[set]].binding = binding;
+            bindings[set][bindingCount[set]].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            bindings[set][bindingCount[set]].descriptorCount = 1;
+            bindings[set][bindingCount[set]].stageFlags = getShaderStage(stage.second);
+            bindings[set][bindingCount[set]].pImmutableSamplers = nullptr;
+            bindingCount[set]++;
+        }
         for (auto& resource : resources.sampled_images) {
             u32 set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
             u32 binding = comp.get_decoration(resource.id, spv::DecorationBinding);

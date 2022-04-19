@@ -25,8 +25,8 @@ layout (set = 0, binding = 0) uniform FrameData {
     CameraData camera;
 };
 
-layout (set = 1, binding = 0) uniform ModelData {
-    mat4 inModel[1000];
+layout (set = 1, binding = 0) readonly buffer ModelData {
+    mat4 inModel[];
 };
 
 void main() {

@@ -36,6 +36,8 @@ namespace cala::backend::vulkan {
 
         u32 size() const { return _size; }
 
+        BufferUsage usage() const { return _usage; }
+
     private:
 
         Driver& _driver;

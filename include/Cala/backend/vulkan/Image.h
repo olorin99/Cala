@@ -50,10 +50,13 @@ namespace cala::backend::vulkan {
             View& operator=(View&& rhs) noexcept;
             View(const View&) = delete;
             View& operator=(const View&) = delete;
+
+            Image* parent() const { return _image; }
         private:
 
             friend Image;
             VkDevice _device;
+            Image* _image;
         };
 
         View getView(VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT, u32 mipLevel = 0, u32 levelCount = 1, u32 arrayLayer = 0, u32 layerCount = 1);
@@ -61,6 +64,8 @@ namespace cala::backend::vulkan {
         VkImageMemoryBarrier barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout);
 
         VkImage image() const { return _image; }
+
+        ImageUsage usage() const { return _usage; }
 
     private:
 
@@ -72,6 +77,7 @@ namespace cala::backend::vulkan {
         u32 _height;
         u32 _depth;
         VkFormat _format;
+        ImageUsage _usage;
 
     };
 

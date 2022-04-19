@@ -82,10 +82,10 @@ namespace cala::backend::vulkan {
         void bindPipeline();
 
 
-        void bindBuffer(u32 set, u32 slot, VkBuffer buffer, u32 offset, u32 range);
-        void bindBuffer(u32 set, u32 slot, Buffer& buffer, u32 offset = 0, u32 range = 0);
+//        void bindBuffer(u32 set, u32 slot, VkBuffer buffer, u32 offset, u32 range);
+        void bindBuffer(u32 set, u32 binding, Buffer& buffer, u32 offset = 0, u32 range = 0);
 
-        void bindImage(u32 set, u32 slot, Image::View& image, Sampler& sampler, bool storage = false);
+        void bindImage(u32 set, u32 binding, Image::View& image, Sampler& sampler, bool storage = false);
 
         void bindDescriptors();
         void clearDescriptors();
@@ -158,12 +158,14 @@ namespace cala::backend::vulkan {
         struct DescriptorKey {
             VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
             struct {
-                VkBuffer buffer = VK_NULL_HANDLE;
+                Buffer* buffer = nullptr;
+//                VkBuffer buffer = VK_NULL_HANDLE;
                 u32 offset = 0;
                 u32 range = 0;
             } buffers[MAX_BINDING_PER_SET] {};
             struct {
-                VkImageView image = VK_NULL_HANDLE;
+                Image* image = nullptr;
+                VkImageView view = VK_NULL_HANDLE;
                 VkSampler sampler = VK_NULL_HANDLE;
                 u32 flags = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             } images[MAX_BINDING_PER_SET] {};

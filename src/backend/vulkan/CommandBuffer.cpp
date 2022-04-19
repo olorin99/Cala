@@ -25,6 +25,7 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(VkDevice device, VkQueue que
 
     VkDescriptorPoolSize poolSizes[] = {
             {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
             {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
             {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000}
     };
@@ -228,17 +229,19 @@ void cala::backend::vulkan::CommandBuffer::bindPipeline() {
 }
 
 
-void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 slot, VkBuffer buffer, u32 offset, u32 range) {
+//void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 slot, VkBuffer buffer, u32 offset, u32 range) {
+//    assert(set < MAX_SET_COUNT && "set is greater than valid number of descriptor sets");
+//    _descriptorKey[set].buffers[slot] = {buffer, offset, range};
+//}
+
+void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 binding, Buffer &buffer, u32 offset, u32 range) {
     assert(set < MAX_SET_COUNT && "set is greater than valid number of descriptor sets");
-    _descriptorKey[set].buffers[slot] = {buffer, offset, range};
+    _descriptorKey[set].buffers[binding] = { &buffer, offset, range == 0 ? buffer.size() : range };
+//    bindBuffer(set, slot, buffer.buffer(), offset, range == 0 ? buffer.size() : range);
 }
 
-void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 slot, Buffer &buffer, u32 offset, u32 range) {
-    bindBuffer(set, slot, buffer.buffer(), offset, range == 0 ? buffer.size() : range);
-}
-
-void cala::backend::vulkan::CommandBuffer::bindImage(u32 set, u32 slot, Image::View& image, Sampler& sampler, bool storage) {
-    _descriptorKey[set].images[slot] = { image.view, sampler.sampler(), storage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+void cala::backend::vulkan::CommandBuffer::bindImage(u32 set, u32 binding, Image::View& image, Sampler& sampler, bool storage) {
+    _descriptorKey[set].images[binding] = { image.parent(), image.view, sampler.sampler(), storage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 }
 
 void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
@@ -518,9 +521,10 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
 
     for (u32 i = 0; i < MAX_BINDING_PER_SET; i++) {
 
-        if (key.buffers[i].buffer != VK_NULL_HANDLE) {
+//        if (key.buffers[i].buffer != VK_NULL_HANDLE) {
+        if (key.buffers[i].buffer != nullptr) {
             VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = key.buffers[i].buffer;
+            bufferInfo.buffer = key.buffers[i].buffer->buffer();
             bufferInfo.offset = key.buffers[i].offset;
             bufferInfo.range = key.buffers[i].range;
 
@@ -529,7 +533,7 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
             descriptorWrite.dstSet = descriptorSet;
             descriptorWrite.dstBinding = i;
             descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite.descriptorType = key.buffers[i].buffer->usage() == BufferUsage::UNIFORM ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             descriptorWrite.descriptorCount = 1;
             descriptorWrite.pBufferInfo = &bufferInfo;
             descriptorWrite.pImageInfo = nullptr;
@@ -537,10 +541,11 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
 
             //TODO: batch writes
             vkUpdateDescriptorSets(_device, 1, &descriptorWrite, 0, nullptr);
-        } else if (key.images[i].image != VK_NULL_HANDLE) {
+//        } else if (key.images[i].image != VK_NULL_HANDLE) {
+        } else if (key.images[i].image != nullptr) {
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = static_cast<VkImageLayout>(key.images[i].flags);
-            imageInfo.imageView = key.images[i].image;
+            imageInfo.imageView = key.images[i].view;
             imageInfo.sampler = key.images[i].sampler;
 
             VkWriteDescriptorSet descriptorWrite{};
@@ -548,7 +553,7 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
             descriptorWrite.dstSet = descriptorSet;
             descriptorWrite.dstBinding = i;
             descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType = _computeBound ? VK_DESCRIPTOR_TYPE_STORAGE_IMAGE : VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrite.descriptorType = (key.images[i].image->usage() & ImageUsage::STORAGE) == ImageUsage::STORAGE ? VK_DESCRIPTOR_TYPE_STORAGE_IMAGE : VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             descriptorWrite.descriptorCount = 1;
             descriptorWrite.pBufferInfo = nullptr;
             descriptorWrite.pImageInfo = &imageInfo;

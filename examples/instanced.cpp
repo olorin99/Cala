@@ -5,6 +5,7 @@
 #include <Cala/Camera.h>
 #include <Ende/filesystem/File.h>
 
+#include <Cala/ImGuiContext.h>
 #include "../third_party/stb_image.h"
 
 using namespace cala;
@@ -44,6 +45,7 @@ Image loadImage(Driver& driver, const ende::fs::Path& path) {
 int main() {
     SDLPlatform platform("hello_triangle", 800, 600);
     Driver driver(platform);
+    ImGuiContext imGuiContext(driver, platform.window());
 
     //Shaders
     ShaderProgram program = loadShader(driver, "../../res/shaders/defaultInstanced.vert.spv"_path, "../../res/shaders/default.frag.spv"_path);
@@ -83,21 +85,25 @@ int main() {
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
 
 
+    i32 maxSize = 100 * 100 * 100;
+    i32 width = 1, height = 1, depth = 1;
+
     Transform modelTransform({0, 0, 0});
     ende::Vector<ende::math::Mat4f> models;
-    for (u32 i = 0; i < 100; i++) {
-        auto pos = modelTransform.pos();
-        for (u32 j = 0; j < 10; j++) {
-            modelTransform.addPos({0, 0, 3});
-
-            models.push(modelTransform.toMat());
-
+    for (i32 i = 0; i < width; i++) {
+        auto xpos = modelTransform.pos();
+        for (i32 j = 0; j < height; j++) {
+            auto ypos = modelTransform.pos();
+            for (i32 k = 0; k < depth; k++) {
+                modelTransform.addPos({0, 0, 3});
+                models.push(modelTransform.toMat());
+            }
+            modelTransform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
         }
-        modelTransform.setPos(pos + ende::math::Vec3f{3, 0, 0});
+        modelTransform.setPos(xpos + ende::math::Vec3f{3, 0, 0});
     }
-    models.push(modelTransform.toMat());
 
-    Buffer modelBuffer(driver, sizeof(ende::math::Mat4f) * models.size(), BufferUsage::UNIFORM);
+    Buffer modelBuffer(driver, sizeof(ende::math::Mat4f) * maxSize, BufferUsage::STORAGE);
     modelBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});
 
     Image brickwall = loadImage(driver, "../../res/textures/brickwall.jpg"_path);
@@ -113,6 +119,7 @@ int main() {
     brickwallMat.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
 
     f32 dt = 1.f / 60.f;
+    ende::time::Duration frameTime;
     bool running = true;
     SDL_Event event;
     while (running) {
@@ -147,6 +154,42 @@ int main() {
         }
 
         {
+            imGuiContext.newFrame();
+
+            ImGui::Begin("Stats");
+            ImGui::Text("FPS: %f", driver.fps());
+            ImGui::Text("Instances Drawn: %d", width * height * depth);
+
+            if (ImGui::SliderInt("Width", &width, 1, 100) ||
+                ImGui::SliderInt("Height", &height, 1, 100) ||
+                ImGui::SliderInt("Depth", &depth, 1, 100)) {
+
+                models.clear();
+                auto pos = modelTransform.pos();
+                for (i32 i = 0; i < width; i++) {
+                    auto xpos = modelTransform.pos();
+                    for (i32 j = 0; j < height; j++) {
+                        auto ypos = modelTransform.pos();
+                        for (i32 k = 0; k < depth; k++) {
+                            modelTransform.addPos({0, 0, 3});
+                            models.push(modelTransform.toMat());
+                        }
+                        modelTransform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
+                    }
+                    modelTransform.setPos(xpos + ende::math::Vec3f{3, 0, 0});
+                }
+                modelTransform.setPos(pos);
+
+                modelBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});
+            }
+
+            ImGui::End();
+
+            ImGui::Render();
+        }
+
+
+        {
             auto cameraData = camera.data();
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
         }
@@ -170,7 +213,9 @@ int main() {
 
             cmd->bindVertexBuffer(0, vertexBuffer.buffer());
 //            cmd->bindVertexBuffer(1, modelBuffer.buffer());
-            cmd->draw(36, 1000, 0, 0);
+            cmd->draw(36, models.size(), 0, 0);
+
+            imGuiContext.render(*cmd);
 
             cmd->end(frame.framebuffer);
             cmd->submit(frame.imageAquired, frame.fence);
