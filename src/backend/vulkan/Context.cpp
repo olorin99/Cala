@@ -19,6 +19,8 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData
         ) {
+    if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
+        return VK_FALSE;
     std::cerr << "Validation Layer: " << pCallbackData->pMessage << "\n";
     return VK_FALSE;
 }

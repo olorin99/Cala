@@ -3,6 +3,8 @@
 
 #include <Ende/profile/profile.h>
 
+#include <Ende/log/log.h>
+
 cala::backend::vulkan::CommandBuffer::CommandBuffer(VkDevice device, VkQueue queue, VkCommandBuffer buffer)
     : _buffer(buffer),
     _signal(VK_NULL_HANDLE),
@@ -121,42 +123,44 @@ void cala::backend::vulkan::CommandBuffer::bindProgram(ShaderProgram &program) {
 void cala::backend::vulkan::CommandBuffer::bindAttributes(ende::Span<Attribute> attributes) {
     assert(attributes.size() <= MAX_VERTEX_INPUT_ATTRIBUTES && "number of supplied vertex input attributes is greater than valid count");
     VkVertexInputAttributeDescription attributeDescriptions[MAX_VERTEX_INPUT_ATTRIBUTES]{};
-    u32 i = 0;
+    u32 attribIndex = 0;
     u32 offset = 0;
-    for (; i < attributes.size(); i++) {
-        attributeDescriptions[i].location = attributes[i].location;
-        attributeDescriptions[i].binding = attributes[i].binding;
-        attributeDescriptions[i].offset = offset;
+    for (u32 i = 0; i < attributes.size() && attribIndex < MAX_VERTEX_INPUT_ATTRIBUTES; i++) {
+        assert(attribIndex < MAX_VERTEX_INPUT_ATTRIBUTES);
+        attributeDescriptions[attribIndex].location = attributes[i].location;
+        attributeDescriptions[attribIndex].binding = attributes[i].binding;
+        attributeDescriptions[attribIndex].offset = offset;
         switch (attributes[i].type) {
             case AttribType::Vec2f:
-                attributeDescriptions[i].format = VK_FORMAT_R32G32_SFLOAT;
+                attributeDescriptions[attribIndex].format = VK_FORMAT_R32G32_SFLOAT;
                 break;
             case AttribType::Vec3f:
-                attributeDescriptions[i].format = VK_FORMAT_R32G32B32_SFLOAT;
+                attributeDescriptions[attribIndex].format = VK_FORMAT_R32G32B32_SFLOAT;
                 break;
             case AttribType::Vec4f:
-                attributeDescriptions[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+                attributeDescriptions[attribIndex].format = VK_FORMAT_R32G32B32A32_SFLOAT;
                 break;
             case AttribType::Mat4f:
                 if (i + 4 >= 10) return;
-                attributeDescriptions[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-                attributeDescriptions[++i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-                attributeDescriptions[i].location = attributes[i].location;
-                attributeDescriptions[i].binding = attributes[i].binding;
-                attributeDescriptions[i].offset = offset;
-                attributeDescriptions[++i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-                attributeDescriptions[i].location = attributes[i].location;
-                attributeDescriptions[i].binding = attributes[i].binding;
-                attributeDescriptions[i].offset = offset;
-                attributeDescriptions[++i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-                attributeDescriptions[i].location = attributes[i].location;
-                attributeDescriptions[i].binding = attributes[i].binding;
-                attributeDescriptions[i].offset = offset;
+                attributeDescriptions[attribIndex].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+                attributeDescriptions[++attribIndex].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+                attributeDescriptions[attribIndex].location = attributes[i].location + 1;
+                attributeDescriptions[attribIndex].binding = attributes[i].binding;
+                attributeDescriptions[attribIndex].offset = offset + (4 * sizeof(f32));
+                attributeDescriptions[++attribIndex].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+                attributeDescriptions[attribIndex].location = attributes[i].location + 2;
+                attributeDescriptions[attribIndex].binding = attributes[i].binding;
+                attributeDescriptions[attribIndex].offset = offset + (4 * sizeof(f32)) * 2;
+                attributeDescriptions[++attribIndex].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+                attributeDescriptions[attribIndex].location = attributes[i].location + 3;
+                attributeDescriptions[attribIndex].binding = attributes[i].binding;
+                attributeDescriptions[attribIndex].offset = offset + (4 * sizeof(f32)) * 3;
                 break;
         }
         offset += static_cast<std::underlying_type<AttribType>::type>(attributes[i].type) * sizeof(f32);
+        attribIndex++;
     }
-    bindAttributeDescriptions({&attributeDescriptions[0], i});
+    bindAttributeDescriptions({&attributeDescriptions[0], attribIndex});
 }
 
 void cala::backend::vulkan::CommandBuffer::bindBindings(ende::Span<VkVertexInputBindingDescription> bindings) {

@@ -13,10 +13,6 @@ layout (set = 2, binding = 0) uniform sampler2D diffuseMap;
 layout (set = 2, binding = 1) uniform sampler2D normalMap;
 layout (set = 2, binding = 2) uniform sampler2D specularMap;
 
-layout (set = 2, binding = 3) uniform Material {
-    vec3 mixColour;
-};
-
 struct PointLight {
     vec3 position;
     vec3 colour;
@@ -38,10 +34,6 @@ vec3 calcPointLight(PointLight light, vec3 diffuse, vec3 normal, float specular,
     return (diffuseColour + specColour) * attenuation;
 }
 
-layout (set = 3, binding = 0) uniform LightData {
-    PointLight light;
-};
-
 void main() {
     vec3 diffuseColour = texture(diffuseMap, fsIn.TexCoords).rgb;
     vec3 normalColour = texture(normalMap, fsIn.TexCoords).rgb;
@@ -51,7 +43,7 @@ void main() {
     normalColour = normalize(fsIn.TBN * normalColour);
 
     vec3 viewDir = normalize(fsIn.ViewPos - fsIn.FragPos);
-    vec3 colour = calcPointLight(light, diffuseColour, normalColour, specularColour.r, fsIn.FragPos, viewDir) * mixColour;
+    vec3 colour = diffuseColour;
 
     FragColour = vec4(colour, 1.0f);
 }
