@@ -16,3 +16,6 @@ target_link_libraries(vulkan_deferred Cala Ende stb_image)
 
 add_executable(instanced instanced.cpp)
 target_link_libraries(instanced Cala Ende stb_image)
+
+add_executable(culling culling.cpp)
+target_link_libraries(culling Cala Ende stb_image)

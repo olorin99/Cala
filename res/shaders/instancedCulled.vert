@@ -29,8 +29,12 @@ layout (set = 1, binding = 0) readonly buffer ModelData {
     mat4 inModel[];
 };
 
+layout (set = 1, binding = 1) readonly buffer RenderList {
+    uint modelIndex[];
+};
+
 void main() {
-    const mat4 model = inModel[gl_InstanceIndex];
+    const mat4 model = inModel[modelIndex[gl_InstanceIndex]];
 
     vec3 T = normalize(vec3(model * vec4(inTangent, 0.0)));
     vec3 N = normalize(vec3(model * vec4(inNormal, 0.0)));

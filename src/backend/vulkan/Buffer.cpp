@@ -63,6 +63,8 @@ void cala::backend::vulkan::Buffer::unmap() {
 }
 
 void cala::backend::vulkan::Buffer::data(ende::Span<const void> data, u32 offset) {
+    if (data.size() == 0 || data.size() - offset == 0)
+        return;
     auto mapped = map(offset, data.size());
     memcpy(mapped.address, data.data(), data.size());
 }

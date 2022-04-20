@@ -4,6 +4,7 @@
 #include <Cala/Material.h>
 #include <Cala/Camera.h>
 #include <Ende/filesystem/File.h>
+#include <Ende/math/Frustum.h>
 
 #include <Cala/ImGuiContext.h>
 #include "../third_party/stb_image.h"
@@ -48,7 +49,7 @@ int main() {
     ImGuiContext imGuiContext(driver, platform.window());
 
     //Shaders
-    ShaderProgram program = loadShader(driver, "../../res/shaders/defaultInstanced.vert.spv"_path, "../../res/shaders/default.frag.spv"_path);
+    ShaderProgram program = loadShader(driver, "../../res/shaders/instancedCulled.vert.spv"_path, "../../res/shaders/default.frag.spv"_path);
 
     //Vertex Input
     VkVertexInputBindingDescription binding[2]{};
@@ -86,9 +87,10 @@ int main() {
 
 
     i32 maxSize = 100 * 100 * 100;
-    i32 width = 1, height = 1, depth = 1;
+    i32 width = 20, height = 10, depth = 10;
 
     Transform modelTransform({0, 0, 0});
+    ende::Vector<Transform> transforms;
     ende::Vector<ende::math::Mat4f> models;
     for (i32 i = 0; i < width; i++) {
         auto xpos = modelTransform.pos();
@@ -96,6 +98,7 @@ int main() {
             auto ypos = modelTransform.pos();
             for (i32 k = 0; k < depth; k++) {
                 modelTransform.addPos({0, 0, 3});
+                transforms.push(modelTransform);
                 models.push(modelTransform.toMat());
             }
             modelTransform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
@@ -104,8 +107,13 @@ int main() {
     }
     modelTransform.setPos({0, 0, 0});
 
+    ende::Vector<u32> renderList;
+
     Buffer modelBuffer(driver, sizeof(ende::math::Mat4f) * maxSize, BufferUsage::STORAGE);
     modelBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});
+
+    // use array if integers to index into transform buffer in shader
+    Buffer renderBuffer(driver, sizeof(u32) * maxSize, BufferUsage::STORAGE);
 
     Image brickwall = loadImage(driver, "../../res/textures/brickwall.jpg"_path);
     Image brickwall_normal = loadImage(driver, "../../res/textures/brickwall_normal.jpg"_path);
@@ -159,12 +167,16 @@ int main() {
 
             ImGui::Begin("Stats");
             ImGui::Text("FPS: %f", driver.fps());
-            ImGui::Text("Instances Drawn: %d", width * height * depth);
+            ImGui::Text("Milliseconds: %f", driver.milliseconds());
+            ImGui::Text("Instances: %d", width * height * depth);
+            ImGui::Text("Drawn: %d", renderList.size());
+            ImGui::Text("Culled: %d", width * height * depth - renderList.size());
 
             if (ImGui::SliderInt("Width", &width, 1, 100) ||
                 ImGui::SliderInt("Height", &height, 1, 100) ||
                 ImGui::SliderInt("Depth", &depth, 1, 100)) {
 
+                transforms.clear();
                 models.clear();
                 auto pos = modelTransform.pos();
                 for (i32 i = 0; i < width; i++) {
@@ -173,6 +185,7 @@ int main() {
                         auto ypos = modelTransform.pos();
                         for (i32 k = 0; k < depth; k++) {
                             modelTransform.addPos({0, 0, 3});
+                            transforms.push(modelTransform);
                             models.push(modelTransform.toMat());
                         }
                         modelTransform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
@@ -193,6 +206,14 @@ int main() {
         {
             auto cameraData = camera.data();
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
+
+            renderList.clear();
+            ende::math::Frustum frustum(camera.viewProjection());
+            for (u32 i = 0; i < transforms.size(); i++) {
+                if (frustum.intersect(transforms[i].pos(), 1))
+                    renderList.push(i);
+            }
+            renderBuffer.data({renderList.data(), static_cast<u32>(renderList.size() * sizeof(u32))});
         }
 
         driver.swapchain().wait();
@@ -208,13 +229,15 @@ int main() {
             cmd->bindBuffer(0, 0, cameraBuffer);
 
             cmd->bindBuffer(1, 0, modelBuffer);
+            cmd->bindBuffer(1, 1, renderBuffer);
 
             cmd->bindPipeline();
             cmd->bindDescriptors();
 
             cmd->bindVertexBuffer(0, vertexBuffer.buffer());
 //            cmd->bindVertexBuffer(1, modelBuffer.buffer());
-            cmd->draw(36, models.size(), 0, 0);
+            if (!renderList.empty())
+                cmd->draw(36, renderList.size(), 0, 0);
 
             imGuiContext.render(*cmd);
 

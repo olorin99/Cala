@@ -59,6 +59,8 @@ namespace cala::backend::vulkan {
 
         f32 fps() const { return 1000.f / (static_cast<f32>(_lastFrameTime.microseconds()) / 1000.f); }
 
+        f32 milliseconds() const { return static_cast<f32>(_lastFrameTime.microseconds()) / 1000.f; }
+
     private:
 
         Context _context;
