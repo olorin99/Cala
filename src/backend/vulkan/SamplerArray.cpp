@@ -2,7 +2,8 @@
 
 cala::backend::vulkan::SamplerArray::SamplerArray(Driver &driver)
     : _driver(driver),
-    _samplers{Sampler(driver, {}), Sampler(driver, {}), Sampler(driver, {}), Sampler(driver, {}), Sampler(driver, {})}
+    _samplers{Sampler(driver, {}), Sampler(driver, {}), Sampler(driver, {}), Sampler(driver, {}), Sampler(driver, {})},
+    _count(0)
 {}
 
 cala::backend::vulkan::SamplerArray::SamplerArray(SamplerArray &&rhs) noexcept
@@ -10,11 +11,13 @@ cala::backend::vulkan::SamplerArray::SamplerArray(SamplerArray &&rhs) noexcept
 {
     std::swap(_views, rhs._views);
     std::swap(_samplers, rhs._samplers);
+    std::swap(_count, rhs._count);
 }
 
 cala::backend::vulkan::SamplerArray &cala::backend::vulkan::SamplerArray::operator=(SamplerArray &&rhs) noexcept {
     std::swap(_views, rhs._views);
     std::swap(_samplers, rhs._samplers);
+    std::swap(_count, rhs._count);
     return *this;
 }
 
