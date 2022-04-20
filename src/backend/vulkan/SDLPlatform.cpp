@@ -12,7 +12,7 @@ cala::backend::vulkan::SDLPlatform::SDLPlatform(const char *windowTitle, u32 wid
     _height(height)
 {
     _window = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, flags | SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN);
-    if (!_window) throw "Unable to create window"; //TODO: better error handling
+    if (!_window) throw std::runtime_error("Unable to create window");
 }
 
 cala::backend::vulkan::SDLPlatform::~SDLPlatform() noexcept {
@@ -31,6 +31,6 @@ VkSurfaceKHR cala::backend::vulkan::SDLPlatform::surface(VkInstance instance) {
     if (_surface != VK_NULL_HANDLE)
         return _surface;
     if (!SDL_Vulkan_CreateSurface(_window, instance, &_surface))
-        throw "Unable to create surface";
+        throw std::runtime_error("Unable to create surface");
     return _surface;
 }

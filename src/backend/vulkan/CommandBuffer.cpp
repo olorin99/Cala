@@ -288,7 +288,7 @@ void cala::backend::vulkan::CommandBuffer::bindIndexBuffer(Buffer& buffer, u32 o
 
 
 void cala::backend::vulkan::CommandBuffer::draw(u32 count, u32 instanceCount, u32 first, u32 firstInstance) {
-    if (_computeBound) throw "Trying to draw when compute pipeline is bound";
+    if (_computeBound) throw std::runtime_error("Trying to draw when compute pipeline is bound");
     if (_indexBuffer)
         vkCmdDrawIndexed(_buffer, count, instanceCount, first, 0, firstInstance);
     else
@@ -296,7 +296,7 @@ void cala::backend::vulkan::CommandBuffer::draw(u32 count, u32 instanceCount, u3
 }
 
 void cala::backend::vulkan::CommandBuffer::drawIndirect(Buffer &buffer, u32 offset, u32 drawCount, u32 stride) {
-    if (_computeBound) throw "Trying to draw when compute pipeline is bound";
+    if (_computeBound) throw std::runtime_error("Trying to draw when compute pipeline is bound");
 
     if (stride == 0)
         stride = sizeof(u32) * 4;
@@ -304,7 +304,7 @@ void cala::backend::vulkan::CommandBuffer::drawIndirect(Buffer &buffer, u32 offs
 }
 
 void cala::backend::vulkan::CommandBuffer::dispatchCompute(u32 x, u32 y, u32 z) {
-    if (!_computeBound) throw "Trying to dispatch compute when graphics pipeline is bound";
+    if (!_computeBound) throw std::runtime_error("Trying to dispatch compute when graphics pipeline is bound");
     vkCmdDispatch(_buffer, x, y, z);
 }
 
@@ -486,7 +486,7 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
 
 //        VkPipeline pipeline;
         if (vkCreateGraphicsPipelines(_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS)
-            throw "Error creating pipeline";
+            throw std::runtime_error("Error creating pipeline");
     } else {
         VkComputePipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
@@ -496,7 +496,7 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
         pipelineInfo.basePipelineIndex = -1;
 
         if (vkCreateComputePipelines(_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS)
-            throw "Error creating compute pipeline";
+            throw std::runtime_error("Error creating compute pipeline");
     }
 
     _pipelines.emplace(std::make_pair(_pipelineKey, pipeline));

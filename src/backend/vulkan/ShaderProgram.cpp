@@ -148,7 +148,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
         createInfo.pCode = stage.first.data();
 
         if (vkCreateShaderModule(driver.context().device(), &createInfo, nullptr, &shader) != VK_SUCCESS)
-            throw "Unable to create shader";
+            throw std::runtime_error("Unable to create shader");
 
         VkPipelineShaderStageCreateInfo stageCreateInfo{};
         stageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

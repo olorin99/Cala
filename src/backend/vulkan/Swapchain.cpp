@@ -70,9 +70,9 @@ cala::backend::vulkan::Swapchain::Swapchain(Driver &driver, Platform& platform)
     vkCreateFence(_driver.context().device(), &fenceCreateInfo, nullptr, &_fence);
 
     //TODO: get better error handling
-    if (!createSwapchain()) throw "Unable to create swapchain";
-    if (!createImageViews()) throw "Unable to create swapchains image views";
-    if (!createSemaphores()) throw "Unable to create swapchains semaphores";
+    if (!createSwapchain()) throw std::runtime_error("Unable to create swapchain");
+    if (!createImageViews()) throw std::runtime_error("Unable to create swapchains image views");
+    if (!createSemaphores()) throw std::runtime_error("Unable to create swapchains semaphores");
 
     std::array<RenderPass::Attachment, 2> attachments = {
             RenderPass::Attachment{

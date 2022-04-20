@@ -5,6 +5,27 @@
 #include <cstring>
 #include <iostream>
 
+class VulkanContextException : public std::exception {
+public:
+
+    explicit VulkanContextException(const char* msg)
+        : _msg("Unable to create Vulkan Device: ")
+    {
+        _msg += msg;
+    }
+
+    virtual ~VulkanContextException() noexcept {}
+
+    virtual const char* what() const noexcept {
+        return _msg.c_str();
+    }
+
+protected:
+
+    std::string _msg;
+
+};
+
 const char* validationLayers[] = {
         "VK_LAYER_KHRONOS_validation"
 };
@@ -59,7 +80,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     instanceCreateInfo.ppEnabledExtensionNames = extensions.data();
 
     if (vkCreateInstance(&instanceCreateInfo, nullptr, &_instance) != VK_SUCCESS)
-        throw "Instance Creation Error";
+        throw VulkanContextException("Instance Creation Error");
 
 #ifndef NDEBUG
     VkDebugUtilsMessengerCreateInfoEXT debugInfo{};
@@ -76,7 +97,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     u32 deviceCount = 0;
     vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr);
     if (deviceCount == 0)
-        throw "No GPUs found with vulkan support";
+        throw VulkanContextException("No GPUs found with vulkan support");
 
     ende::Vector<VkPhysicalDevice> devices(deviceCount);
     vkEnumeratePhysicalDevices(_instance, &deviceCount, devices.data());
@@ -90,7 +111,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     }
 
     if (_physicalDevice == VK_NULL_HANDLE)
-        throw "No suitable GPU found";
+        throw VulkanContextException("No GPUs found with required functionality");
 
     u32 queuCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queuCount, nullptr);
@@ -174,7 +195,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     createInfo.ppEnabledLayerNames = validationLayers;
 
     if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device) != VK_SUCCESS)
-        throw "Failed to create logical device";
+        throw VulkanContextException("Failed to create logical device");
 
 
     for (VkFormat format : {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT}) {
