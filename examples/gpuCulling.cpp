@@ -206,9 +206,6 @@ int main() {
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
             ende::math::Frustum frustum(camera.viewProjection());
             cameraBuffer.data({&frustum, sizeof(frustum)}, sizeof(cameraData));
-
-            u32 count = 0;
-            renderBuffer.data({&count, sizeof(count)});
         }
 
         driver.swapchain().wait();

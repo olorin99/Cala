@@ -65,6 +65,10 @@ void main() {
     frustum.planes[5].z = viewProj[2][3] + viewProj[2][2];
     frustum.planes[5].w = viewProj[3][3] + viewProj[3][2];
 
+    if (idx == 0) {
+        atomicExchange(index, 0);
+    }
+
     vec3 point = inModel[idx][3].xyz;
 
     for (int i = 0; i < 6; i++) {
