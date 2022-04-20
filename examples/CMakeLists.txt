@@ -19,3 +19,6 @@ target_link_libraries(instanced Cala Ende stb_image)
 
 add_executable(culling culling.cpp)
 target_link_libraries(culling Cala Ende stb_image)
+
+add_executable(gpuCulling gpuCulling.cpp)
+target_link_libraries(gpuCulling Cala Ende stb_image)

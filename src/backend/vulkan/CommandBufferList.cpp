@@ -1,6 +1,6 @@
 #include "Cala/backend/vulkan/CommandBufferList.h"
 
-cala::backend::vulkan::CommandBufferList::CommandBufferList(Context& context, u32 queueIndex)
+cala::backend::vulkan::CommandBufferList::CommandBufferList(const Context& context, u32 queueIndex)
     : _context(context),
     _pool(VK_NULL_HANDLE),
     _queue(VK_NULL_HANDLE),

@@ -11,7 +11,7 @@ namespace cala::backend::vulkan {
     class CommandBufferList {
     public:
 
-        CommandBufferList(Context& context, u32 queueIndex);
+        CommandBufferList(const Context& context, u32 queueIndex);
 
         ~CommandBufferList();
 
@@ -24,7 +24,7 @@ namespace cala::backend::vulkan {
 
     private:
 
-        Context& _context;
+        const Context& _context;
         VkCommandPool _pool;
         VkQueue _queue;
         CommandBuffer* _current;

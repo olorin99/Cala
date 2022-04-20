@@ -103,7 +103,7 @@ namespace cala::backend::vulkan {
         void dispatchCompute(u32 x, u32 y, u32 z);
 
 
-        void pipelineBarrier(PipelineStage srcStage, PipelineStage dstStage, VkDependencyFlags dependencyFlags, ende::Span<VkImageMemoryBarrier> imageBarriers);
+        void pipelineBarrier(PipelineStage srcStage, PipelineStage dstStage, VkDependencyFlags dependencyFlags, ende::Span<VkBufferMemoryBarrier> bufferBarriers, ende::Span<VkImageMemoryBarrier> imageBarriers);
 
 
 

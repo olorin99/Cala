@@ -236,7 +236,7 @@ void cala::backend::vulkan::CommandBuffer::bindPipeline() {
 
 void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 binding, Buffer &buffer, u32 offset, u32 range) {
     assert(set < MAX_SET_COUNT && "set is greater than valid number of descriptor sets");
-    _descriptorKey[set].buffers[binding] = { &buffer, offset, range == 0 ? buffer.size() : range };
+    _descriptorKey[set].buffers[binding] = { &buffer, offset, range == 0 ? (buffer.size() - offset) : range };
 //    bindBuffer(set, slot, buffer.buffer(), offset, range == 0 ? buffer.size() : range);
 }
 
@@ -300,8 +300,8 @@ void cala::backend::vulkan::CommandBuffer::dispatchCompute(u32 x, u32 y, u32 z) 
     vkCmdDispatch(_buffer, x, y, z);
 }
 
-void cala::backend::vulkan::CommandBuffer::pipelineBarrier(PipelineStage srcStage, PipelineStage dstStage, VkDependencyFlags dependencyFlags, ende::Span<VkImageMemoryBarrier> imageBarriers) {
-    vkCmdPipelineBarrier(_buffer, getPipelineStage(srcStage), getPipelineStage(dstStage), dependencyFlags, 0, nullptr, 0, nullptr, imageBarriers.size(), imageBarriers.data());
+void cala::backend::vulkan::CommandBuffer::pipelineBarrier(PipelineStage srcStage, PipelineStage dstStage, VkDependencyFlags dependencyFlags, ende::Span<VkBufferMemoryBarrier> bufferBarriers, ende::Span<VkImageMemoryBarrier> imageBarriers) {
+    vkCmdPipelineBarrier(_buffer, getPipelineStage(srcStage), getPipelineStage(dstStage), dependencyFlags, 0, nullptr, bufferBarriers.size(), bufferBarriers.data(), imageBarriers.size(), imageBarriers.data());
 }
 
 
