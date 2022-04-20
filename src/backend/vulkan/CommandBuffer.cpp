@@ -295,6 +295,14 @@ void cala::backend::vulkan::CommandBuffer::draw(u32 count, u32 instanceCount, u3
         vkCmdDraw(_buffer, count, instanceCount, first, firstInstance);
 }
 
+void cala::backend::vulkan::CommandBuffer::drawIndirect(Buffer &buffer, u32 offset, u32 drawCount, u32 stride) {
+    if (_computeBound) throw "Trying to draw when compute pipeline is bound";
+
+    if (stride == 0)
+        stride = sizeof(u32) * 4;
+    vkCmdDrawIndirect(_buffer, buffer.buffer(), offset, drawCount, stride);
+}
+
 void cala::backend::vulkan::CommandBuffer::dispatchCompute(u32 x, u32 y, u32 z) {
     if (!_computeBound) throw "Trying to dispatch compute when graphics pipeline is bound";
     vkCmdDispatch(_buffer, x, y, z);

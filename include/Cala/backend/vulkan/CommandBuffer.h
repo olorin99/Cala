@@ -100,6 +100,8 @@ namespace cala::backend::vulkan {
 
         void draw(u32 count, u32 instanceCount, u32 first, u32 firstInstance);
 
+        void drawIndirect(Buffer& buffer, u32 offset, u32 drawCount, u32 stride = 0);
+
         void dispatchCompute(u32 x, u32 y, u32 z);
 
 

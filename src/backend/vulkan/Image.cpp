@@ -39,6 +39,7 @@ cala::backend::vulkan::Image::Image(Driver& driver, CreateInfo info)
     _height = info.height;
     _depth = info.depth;
     _format = getFormat(info.format);
+    _usage = info.usage;
 }
 
 cala::backend::vulkan::Image::~Image() {

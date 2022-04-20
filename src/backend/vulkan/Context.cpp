@@ -25,14 +25,14 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     return VK_FALSE;
 }
 
-bool checkDeviceSuitable(VkPhysicalDevice device) {
+bool checkDeviceSuitable(VkPhysicalDevice device, VkPhysicalDeviceFeatures* deviceFeatures) {
     VkPhysicalDeviceProperties deviceProperties;
     vkGetPhysicalDeviceProperties(device, &deviceProperties);
 
-    VkPhysicalDeviceFeatures deviceFeatures;
-    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+//    VkPhysicalDeviceFeatures deviceFeatures;
+    vkGetPhysicalDeviceFeatures(device, deviceFeatures);
 
-    return deviceFeatures.geometryShader;
+    return deviceFeatures->geometryShader;
 }
 
 cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
@@ -80,8 +80,9 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     ende::Vector<VkPhysicalDevice> devices(deviceCount);
     vkEnumeratePhysicalDevices(_instance, &deviceCount, devices.data());
 
+    VkPhysicalDeviceFeatures deviceFeatures;
     for (auto& device : devices) {
-        if (checkDeviceSuitable(device)) {
+        if (checkDeviceSuitable(device, &deviceFeatures)) {
             _physicalDevice = device;
             break;
         }
@@ -156,7 +157,8 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     _deviceName = {deviceProperties.deviceName, static_cast<u32>(strlen(deviceProperties.deviceName))};
 
 
-    VkPhysicalDeviceFeatures deviceFeatures{};
+//    VkPhysicalDeviceFeatures deviceFeatures{};
+//    deviceFeatures = {};
 
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

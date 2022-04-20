@@ -22,3 +22,6 @@ target_link_libraries(culling Cala Ende stb_image)
 
 add_executable(gpuCulling gpuCulling.cpp)
 target_link_libraries(gpuCulling Cala Ende stb_image)
+
+add_executable(indirect_draw indirect_draw.cpp)
+target_link_libraries(indirect_draw Cala Ende stb_image)
