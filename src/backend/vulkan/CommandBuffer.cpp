@@ -313,13 +313,17 @@ void cala::backend::vulkan::CommandBuffer::pipelineBarrier(PipelineStage srcStag
 }
 
 void cala::backend::vulkan::CommandBuffer::pushDebugLabel(std::string_view label, std::array<f32, 4> colour) {
+#ifndef NDEBUG
     _debugLabels.push(label);
     _driver.context().beginDebugLabel(_buffer, label, colour);
+#endif
 }
 
 void cala::backend::vulkan::CommandBuffer::popDebugLabel() {
+#ifndef NDEBUG
     _driver.context().endDebugLabel(_buffer);
     _debugLabels.pop();
+#endif
 }
 
 
@@ -328,6 +332,10 @@ void cala::backend::vulkan::CommandBuffer::popDebugLabel() {
 
 bool cala::backend::vulkan::CommandBuffer::submit(ende::Span<VkSemaphore> wait, VkFence fence) {
     PROFILE
+#ifndef NDEBUG
+    for (auto& label : _debugLabels)
+        popDebugLabel();
+#endif
     end();
 
     VkSubmitInfo submitInfo{};

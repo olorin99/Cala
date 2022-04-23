@@ -210,6 +210,7 @@ cala::backend::vulkan::Context::~Context() {
 }
 
 void cala::backend::vulkan::Context::beginDebugLabel(VkCommandBuffer buffer, std::string_view label, std::array<f32, 4> colour) const {
+#ifndef NDEBUG
     static auto beginDebugLabel = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(_instance, "vkCmdBeginDebugUtilsLabelEXT");
     VkDebugUtilsLabelEXT labelExt{};
     labelExt.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
@@ -217,11 +218,14 @@ void cala::backend::vulkan::Context::beginDebugLabel(VkCommandBuffer buffer, std
     for (i32 i = 0; i < 4; i++)
         labelExt.color[i] = colour[i];
     beginDebugLabel(buffer, &labelExt);
+#endif
 }
 
 void cala::backend::vulkan::Context::endDebugLabel(VkCommandBuffer buffer) const {
+#ifndef NDEBUG
     static auto endDebugLabel = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetInstanceProcAddr(_instance, "vkCmdEndDebugUtilsLabelEXT");
     endDebugLabel(buffer);
+#endif
 }
 
 

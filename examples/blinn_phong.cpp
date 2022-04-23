@@ -127,6 +127,7 @@ int main() {
             cmd->bindPipeline();
 
 
+            cmd->pushDebugLabel("Test Label");
             cmd->bindBuffer(0, 0, cameraBuffer);
             cmd->bindBuffer(1, 0, modelBuffer);
             cmd->bindBuffer(3, 0, lightBuffer);
@@ -139,6 +140,7 @@ int main() {
 
             cmd->bindVertexBuffer(0, vertexBuffer.buffer());
             cmd->draw(36, 1, 0, 0);
+            cmd->popDebugLabel();
 
             cmd->end(frame.framebuffer);
             cmd->submit({&frame.imageAquired, 1}, frame.fence);

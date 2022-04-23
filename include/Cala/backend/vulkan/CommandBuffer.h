@@ -185,8 +185,9 @@ namespace cala::backend::vulkan {
 
         VkDescriptorPool _descriptorPool;
 
-
+#ifndef NDEBUG
         ende::Vector<std::string_view> _debugLabels;
+#endif
 
     };
 
