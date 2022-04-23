@@ -17,16 +17,30 @@ layout (set = 1, binding = 0) readonly buffer ModelData {
     mat4 inModel[];
 };
 
-layout (set = 1, binding = 1) buffer RenderList {
-    uint index;
+layout (set = 1, binding = 1) writeonly buffer RenderList {
     uint modelIndex[];
 };
 
+layout (set = 1, binding = 2) readonly buffer PositionList {
+    vec3 position[];
+};
+
+layout (set = 2, binding = 0) buffer Output {
+    uint drawCount;
+};
 
 struct Frustum {
     vec4 planes[6];
 };
 
+bool frustumCheck(vec4 pos, float radius) {
+    for (int i = 0; i < 6; i++) {
+        if (dot(pos, planes[i].xyzw) + radius < 0.0) {
+            return false;
+        }
+    }
+    return true;
+}
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;
@@ -35,47 +49,114 @@ void main() {
 
     Frustum frustum;
 
-    frustum.planes[0].x = viewProj[0][3] - viewProj[0][0];
-    frustum.planes[0].y = viewProj[1][3] - viewProj[1][0];
-    frustum.planes[0].z = viewProj[2][3] - viewProj[2][0];
-    frustum.planes[0].w = viewProj[3][3] - viewProj[3][0];
+    //left
+//    vec4 row = vec4(viewProj[0].w, viewProj[1].w, viewProj[2].w, viewProj[3].w);
+    frustum.planes[0].x = viewProj[3][0] + viewProj[2][0];
+    frustum.planes[0].y = viewProj[3][1] + viewProj[2][1];
+    frustum.planes[0].z = viewProj[3][2] + viewProj[2][2];
+    frustum.planes[0].w = viewProj[3][3] + viewProj[2][3];
 
-    frustum.planes[1].x = viewProj[0][3] + viewProj[0][0];
-    frustum.planes[1].y = viewProj[1][3] + viewProj[1][0];
-    frustum.planes[1].z = viewProj[2][3] + viewProj[2][0];
-    frustum.planes[1].w = viewProj[3][3] + viewProj[3][0];
+    //right
+    frustum.planes[1].x = viewProj[3][0] - viewProj[2][0];
+    frustum.planes[1].y = viewProj[3][1] - viewProj[2][1];
+    frustum.planes[1].z = viewProj[3][2] - viewProj[2][2];
+    frustum.planes[1].w = viewProj[3][3] - viewProj[2][3];
 
-    frustum.planes[2].x = viewProj[0][3] - viewProj[0][1];
-    frustum.planes[2].y = viewProj[1][3] - viewProj[1][1];
-    frustum.planes[2].z = viewProj[2][3] - viewProj[2][1];
-    frustum.planes[2].w = viewProj[3][3] - viewProj[3][1];
+    //bottom
+    frustum.planes[2].x = viewProj[3][0] + viewProj[2][0];
+    frustum.planes[2].y = viewProj[3][1] + viewProj[2][1];
+    frustum.planes[2].z = viewProj[3][2] + viewProj[2][2];
+    frustum.planes[2].w = viewProj[3][3] + viewProj[2][3];
 
-    frustum.planes[3].x = viewProj[0][3] + viewProj[0][1];
-    frustum.planes[3].y = viewProj[1][3] + viewProj[1][1];
-    frustum.planes[3].z = viewProj[2][3] + viewProj[2][1];
-    frustum.planes[3].w = viewProj[3][3] + viewProj[3][1];
+    //top
+    frustum.planes[3].x = viewProj[3][0] - viewProj[2][0];
+    frustum.planes[3].y = viewProj[3][1] - viewProj[2][1];
+    frustum.planes[3].z = viewProj[3][2] - viewProj[2][2];
+    frustum.planes[3].w = viewProj[3][3] - viewProj[2][3];
 
-    frustum.planes[4].x = viewProj[0][3] - viewProj[0][2];
-    frustum.planes[4].y = viewProj[1][3] - viewProj[1][2];
-    frustum.planes[4].z = viewProj[2][3] - viewProj[2][2];
-    frustum.planes[4].w = viewProj[3][3] - viewProj[3][2];
+    //near
+    frustum.planes[4].x = viewProj[3][0] + viewProj[2][0];
+    frustum.planes[4].y = viewProj[3][1] + viewProj[2][1];
+    frustum.planes[4].z = viewProj[3][2] + viewProj[2][2];
+    frustum.planes[4].w = viewProj[3][3] + viewProj[2][3];
 
-    frustum.planes[5].x = viewProj[0][3] + viewProj[0][2];
-    frustum.planes[5].y = viewProj[1][3] + viewProj[1][2];
-    frustum.planes[5].z = viewProj[2][3] + viewProj[2][2];
-    frustum.planes[5].w = viewProj[3][3] + viewProj[3][2];
+    //far
+    frustum.planes[5].x = viewProj[3][0] - viewProj[2][0];
+    frustum.planes[5].y = viewProj[3][1] - viewProj[2][1];
+    frustum.planes[5].z = viewProj[3][2] - viewProj[2][2];
+    frustum.planes[5].w = viewProj[3][3] - viewProj[2][3];
 
     if (idx == 0) {
-        atomicExchange(index, 0);
+        atomicExchange(drawCount, 0);
     }
 
-    vec3 point = inModel[idx][3].xyz;
+//    mat3 rot = mat3(inModel[idx]);
+//    vec3 d = vec3(inModel[idx][3]);
+//    vec3 point = -d * rot;
 
-    for (int i = 0; i < 6; i++) {
-        if (dot(point, frustum.planes[i].xyz) + frustum.planes[i].w > 0.0) {
-            uint a = atomicAdd(index, 1);
-            modelIndex[a] = idx;
-        }
+    vec4 point = vec4(position[idx], 1.0);
+
+//    vec4 point = vec4(inModel[idx][3].xyz, 1.0);
+//    vec3 point = inModel[idx][3].xyz;
+
+//    for (int i = 0; i < 6; i++) {
+//
+//        if (dot(point, planes[i].xyzw) < -1.0) {
+////        if (dot(point, normals[i]) + 1 < distances[i]) {
+//            uint a = atomicAdd(drawCount, 1);
+//            modelIndex[a] = idx;
+//            break;
+//        }
+//    }
+
+
+    if (frustumCheck(point, 1.0)) {
+        uint a = atomicAdd(drawCount, 1);
+        modelIndex[a] = idx;
     }
-
 }
+
+
+//layout (set = 3, binding = 0) readonly buffer Transforms {
+//    mat4 inModels[];
+//};
+//
+//layout (set = 3, binding = 1) writeonly buffer OutputTransforms {
+//    mat4 outModels[];
+//};
+//
+//struct DrawCommand {
+//    uint vertexCount;
+//    uint instanceCount;
+//    uint firstVertex;
+//    uint firstInstance;
+//};
+//
+//layout (set = 3, binding = 2) writeonly buffer DrawCommands {
+//    DrawCommand commands[];
+//};
+//
+//layout (set = 3, binding = 3) buffer DrawInfo {
+//    uint drawCount;
+//};
+//
+//void main() {
+//    uint idx = gl_GlobalInvocationID.x;
+//    if (idx == 0) {
+//        atomicExchange(drawCount, 0);
+//    }
+//
+//    mat4 model = inModels[idx];
+//
+//
+//    uint id = atomicAdd(drawCount);
+//    outModels[id] = model;
+//
+//    DrawCommand draw;
+//    draw.vertexCount = 36;
+//    draw.instanceCount = 1;
+//    draw.firstVertex = 0;
+//    draw.firstInstance = 0;
+//    commands[id] = draw;
+//
+//}

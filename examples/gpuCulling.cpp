@@ -90,6 +90,7 @@ int main() {
     Transform modelTransform({0, 0, 0});
     ende::Vector<Transform> transforms;
     ende::Vector<ende::math::Mat4f> models;
+    ende::Vector<ende::math::Vec3f> positions;
     for (i32 i = 0; i < width; i++) {
         auto xpos = modelTransform.pos();
         for (i32 j = 0; j < height; j++) {
@@ -98,6 +99,7 @@ int main() {
                 modelTransform.addPos({0, 0, 3});
                 transforms.push(modelTransform);
                 models.push(modelTransform.toMat());
+                positions.push(modelTransform.pos());
             }
             modelTransform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
         }
@@ -110,8 +112,13 @@ int main() {
     Buffer modelBuffer(driver, sizeof(ende::math::Mat4f) * maxSize, BufferUsage::STORAGE);
     modelBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});
 
+    Buffer positionBuffer(driver, sizeof(ende::math::Vec3f) * maxSize, BufferUsage::STORAGE);
+    positionBuffer.data({positions.data(), static_cast<u32>(positions.size() * sizeof(ende::math::Vec3f))});
     // use array if integers to index into transform buffer in shader
-    Buffer renderBuffer(driver, sizeof(u32) + sizeof(u32) * maxSize, BufferUsage::STORAGE);
+    Buffer renderBuffer(driver, sizeof(u32) * maxSize, BufferUsage::STORAGE);
+    Buffer outputBuffer(driver, sizeof(u32), BufferUsage::STORAGE);
+
+    auto mappedOutput = outputBuffer.map(0, sizeof(u32));
 
     Image brickwall = loadImage(driver, "../../res/textures/brickwall.jpg"_path);
     Image brickwall_normal = loadImage(driver, "../../res/textures/brickwall_normal.jpg"_path);
@@ -125,6 +132,13 @@ int main() {
     brickwallMat.setSampler("normalMap", brickwall_normal.getView(), Sampler(driver, {}));
     brickwallMat.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
 
+
+    CommandBufferList computeList(driver.context(), driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT));
+
+    ende::math::Mat4f viewProj = camera.viewProjection();
+    bool freezeFrustum = false;
+
+    u32 drawCount = 0;
     f32 dt = 1.f / 60.f;
     ende::time::Duration frameTime;
     bool running = true;
@@ -167,8 +181,9 @@ int main() {
             ImGui::Text("FPS: %f", driver.fps());
             ImGui::Text("Milliseconds: %f", driver.milliseconds());
             ImGui::Text("Instances: %d", width * height * depth);
-            ImGui::Text("Drawn: %d", renderList.size());
-            ImGui::Text("Culled: %d", width * height * depth - renderList.size());
+            ImGui::Text("Drawn: %d", drawCount);
+            ImGui::Text("Culled: %d", width * height * depth - drawCount);
+            ImGui::Checkbox("Frustum", &freezeFrustum);
 
             if (ImGui::SliderInt("Width", &width, 1, 100) ||
                 ImGui::SliderInt("Height", &height, 1, 100) ||
@@ -185,6 +200,7 @@ int main() {
                             modelTransform.addPos({0, 0, 3});
                             transforms.push(modelTransform);
                             models.push(modelTransform.toMat());
+                            positions.push(modelTransform.pos());
                         }
                         modelTransform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
                     }
@@ -204,59 +220,92 @@ int main() {
         {
             auto cameraData = camera.data();
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
-            ende::math::Frustum frustum(camera.viewProjection());
+            if (!freezeFrustum)
+                viewProj = camera.viewProjection();
+            ende::math::Frustum frustum(viewProj);
             cameraBuffer.data({&frustum, sizeof(frustum)}, sizeof(cameraData));
         }
 
         driver.swapchain().wait();
         auto frame = driver.swapchain().nextImage();
         CommandBuffer* cmd = driver.beginFrame();
+        CommandBuffer* computeCmd = computeList.get();
         {
 
-            VkBufferMemoryBarrier barriers[3] = {};
-            barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-            barriers[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            barriers[0].buffer = cameraBuffer.buffer();
-            barriers[0].offset = 0;
-            barriers[0].size = cameraBuffer.size();
+//            VkBufferMemoryBarrier barriers[4] = {};
+//            barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+//            barriers[0].srcAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+//            barriers[0].dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+//            barriers[0].buffer = cameraBuffer.buffer();
+//            barriers[0].offset = 0;
+//            barriers[0].size = cameraBuffer.size();
+//            barriers[0].srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
+//            barriers[0].dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
+//
+//            barriers[1] = barriers[0];
+//            barriers[1].buffer = modelBuffer.buffer();
+//            barriers[1].size = modelBuffer.size();
+//
+//            barriers[2] = barriers[0];
+//            barriers[2].dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+//            barriers[2].buffer = renderBuffer.buffer();
+//            barriers[2].size = renderBuffer.size();
+//
+//            barriers[3] = barriers[0];
+//            barriers[3].dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+//            barriers[3].buffer = renderBuffer.buffer();
+//            barriers[3].size = renderBuffer.size();
 
-            barriers[1] = barriers[0];
-            barriers[1].buffer = modelBuffer.buffer();
-            barriers[1].size = modelBuffer.size();
+            VkBufferMemoryBarrier barrier{};
+            barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            barrier.buffer = renderBuffer.buffer();
+            barrier.offset = 0;
+            barrier.size = renderBuffer.size();
+            barrier.srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
+            barrier.dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
+            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
 
-            barriers[2] = barriers[0];
-            barriers[2].dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-            barriers[2].buffer = renderBuffer.buffer();
-            barriers[2].size = renderBuffer.size();
+
+            computeCmd->pipelineBarrier(PipelineStage::VERTEX_SHADER, PipelineStage::COMPUTE_SHADER, 0, {&barrier, 1}, nullptr);
+
+            computeCmd->clearDescriptors();
+            computeCmd->bindProgram(computeProgram);
+            computeCmd->bindBuffer(0, 0, cameraBuffer);
+            computeCmd->bindBuffer(1, 0, modelBuffer);
+            computeCmd->bindBuffer(1, 1, renderBuffer);
+            computeCmd->bindBuffer(1, 2, positionBuffer);
+            computeCmd->bindBuffer(2, 0, outputBuffer);
+
+            computeCmd->bindPipeline();
+            computeCmd->bindDescriptors();
+            computeCmd->dispatchCompute(models.size() / 16, 1, 1);
 
 
-            cmd->pipelineBarrier(PipelineStage::VERTEX_SHADER, PipelineStage::COMPUTE_SHADER, 0, {barriers, 3}, nullptr);
+//            barriers[0].dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+//            barriers[0].dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
+//            barriers[0].srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
+//            barriers[1].dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+//            barriers[1].dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
+//            barriers[1].srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
+//            barriers[2].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+//            barriers[2].dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+//            barriers[2].dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
+//            barriers[2].srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
+//            barriers[3].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+//            barriers[3].dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+//            barriers[3].dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
+//            barriers[3].srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
+
+            barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            barrier.srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
+            barrier.dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
+            computeCmd->pipelineBarrier(PipelineStage::COMPUTE_SHADER, PipelineStage::VERTEX_SHADER, 0, {&barrier, 1}, nullptr);
+
+            computeCmd->submit();
 
             cmd->clearDescriptors();
-            cmd->bindProgram(computeProgram);
-            cmd->bindBuffer(0, 0, cameraBuffer);
-            cmd->bindBuffer(1, 0, modelBuffer);
-            cmd->bindBuffer(1, 1, renderBuffer);
-
-            cmd->bindPipeline();
-            cmd->bindDescriptors();
-            cmd->dispatchCompute(models.size() / 16, 1, 1);
-
-
-            barriers[0].dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-            barriers[1].dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-            barriers[2].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-            barriers[2].dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-            cmd->pipelineBarrier(PipelineStage::COMPUTE_SHADER, PipelineStage::HOST, 0, {barriers, 3}, nullptr);
-
-//            u32 drawCount = 0;
-//            {
-//                auto mapped = renderBuffer.map(0, sizeof(u32));
-//                drawCount = *static_cast<u32*>(mapped.address);
-//            }
-//            ende::log::info("drawCount: {}", drawCount);
-
             cmd->begin(frame.framebuffer);
 
             cmd->bindBindings({binding, 1});
@@ -266,21 +315,25 @@ int main() {
             cmd->bindBuffer(0, 0, cameraBuffer);
 
             cmd->bindBuffer(1, 0, modelBuffer);
-            cmd->bindBuffer(1, 1, renderBuffer, sizeof(u32));
+            cmd->bindBuffer(1, 1, renderBuffer);
 
             cmd->bindPipeline();
             cmd->bindDescriptors();
 
             cmd->bindVertexBuffer(0, vertexBuffer.buffer());
-//            cmd->bindVertexBuffer(1, modelBuffer.buffer());
-//            if (drawCount)
-                cmd->draw(36, models.size(), 0, 0);
+            if (drawCount)
+                cmd->draw(36, drawCount, 0, 0);
 
             imGuiContext.render(*cmd);
 
             cmd->end(frame.framebuffer);
-            cmd->submit(frame.imageAquired, frame.fence);
+
+            VkSemaphore wait[2] = { frame.imageAquired, computeCmd->signal() };
+            cmd->submit(wait, frame.fence);
+
+            drawCount = *static_cast<u32*>(mappedOutput.address);
         }
+        computeList.flush();
         dt = driver.endFrame().milliseconds() / 1000.f;
         driver.swapchain().present(frame, cmd->signal());
     }

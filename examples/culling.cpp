@@ -242,7 +242,7 @@ int main() {
             imGuiContext.render(*cmd);
 
             cmd->end(frame.framebuffer);
-            cmd->submit(frame.imageAquired, frame.fence);
+            cmd->submit({&frame.imageAquired, 1}, frame.fence);
         }
         dt = driver.endFrame().milliseconds() / 1000.f;
         driver.swapchain().present(frame, cmd->signal());

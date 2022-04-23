@@ -313,19 +313,23 @@ void cala::backend::vulkan::CommandBuffer::pipelineBarrier(PipelineStage srcStag
 }
 
 
-bool cala::backend::vulkan::CommandBuffer::submit(VkSemaphore wait, VkFence fence) {
+bool cala::backend::vulkan::CommandBuffer::submit(ende::Span<VkSemaphore> wait, VkFence fence) {
     PROFILE
     end();
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkPipelineStageFlags waitDstStageMask[1] = { VK_PIPELINE_STAGE_ALL_COMMANDS_BIT };
-    VkSemaphore waitSemaphore[1] = { wait };
+    assert(wait.size() <= 2);
+    VkPipelineStageFlags waitDstStageMask[2] = { VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT };
+//    VkSemaphore waitSemaphore[wait] = { wait };
 
-    submitInfo.waitSemaphoreCount = wait == VK_NULL_HANDLE ? 0 : 1;
-    submitInfo.pWaitSemaphores = waitSemaphore;
+//    submitInfo.waitSemaphoreCount = wait == VK_NULL_HANDLE ? 0 : 1;
+//    submitInfo.pWaitSemaphores = waitSemaphore;
     submitInfo.pWaitDstStageMask = waitDstStageMask;
+
+    submitInfo.waitSemaphoreCount = wait.size();
+    submitInfo.pWaitSemaphores = wait.data();
 
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = &_signal;

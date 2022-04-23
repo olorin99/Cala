@@ -109,7 +109,7 @@ namespace cala::backend::vulkan {
 
 
 
-        bool submit(VkSemaphore wait = VK_NULL_HANDLE, VkFence fence = VK_NULL_HANDLE);
+        bool submit(ende::Span<VkSemaphore> wait = nullptr, VkFence fence = VK_NULL_HANDLE);
 
         VkSemaphore signal() const { return _signal; }
 
