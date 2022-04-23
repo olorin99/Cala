@@ -19,7 +19,7 @@ namespace cala::backend::vulkan {
     class CommandBuffer {
     public:
 
-        CommandBuffer(VkDevice device, VkQueue queue, VkCommandBuffer buffer);
+        CommandBuffer(Driver& driver, VkQueue queue, VkCommandBuffer buffer);
 
         ~CommandBuffer();
 
@@ -107,6 +107,9 @@ namespace cala::backend::vulkan {
 
         void pipelineBarrier(PipelineStage srcStage, PipelineStage dstStage, VkDependencyFlags dependencyFlags, ende::Span<VkBufferMemoryBarrier> bufferBarriers, ende::Span<VkImageMemoryBarrier> imageBarriers);
 
+        void pushDebugLabel(std::string_view label, std::array<f32, 4> colour = {0, 1, 0, 1});
+
+        void popDebugLabel();
 
 
         bool submit(ende::Span<VkSemaphore> wait = nullptr, VkFence fence = VK_NULL_HANDLE);
@@ -126,10 +129,9 @@ namespace cala::backend::vulkan {
 
         VkDescriptorSet getDescriptorSet(u32 set);
 
-
+        Driver& _driver;
         VkCommandBuffer _buffer;
         VkSemaphore _signal;
-        VkDevice _device;
         VkQueue _queue;
         bool _active;
 
@@ -182,6 +184,9 @@ namespace cala::backend::vulkan {
         std::unordered_map<DescriptorKey, VkDescriptorSet, ende::util::MurmurHash<DescriptorKey>> _descriptorSets;
 
         VkDescriptorPool _descriptorPool;
+
+
+        ende::Vector<std::string_view> _debugLabels;
 
     };
 

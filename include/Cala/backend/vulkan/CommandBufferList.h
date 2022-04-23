@@ -4,14 +4,15 @@
 #include <vulkan/vulkan.h>
 #include <Ende/Vector.h>
 #include <Cala/backend/vulkan/CommandBuffer.h>
-#include <Cala/backend/vulkan/Context.h>
 
 namespace cala::backend::vulkan {
+
+    class Driver;
 
     class CommandBufferList {
     public:
 
-        CommandBufferList(const Context& context, u32 queueIndex);
+        CommandBufferList(Driver& driver, QueueType queue);
 
         ~CommandBufferList();
 
@@ -24,7 +25,7 @@ namespace cala::backend::vulkan {
 
     private:
 
-        const Context& _context;
+        Driver& _driver;
         VkCommandPool _pool;
         VkQueue _queue;
         CommandBuffer* _current;

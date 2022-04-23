@@ -17,28 +17,18 @@ namespace cala::backend::vulkan {
 
         ~Context();
 
-        u32 queueIndex(u32 flags) const;
-
-        VkQueue getQueue(u32 flags) const;
-
-        u32 memoryIndex(u32 filter, VkMemoryPropertyFlags properties);
-
-
         VkDeviceMemory allocate(u32 size, u32 typeBits, MemoryProperties flags);
 
-        std::pair<VkBuffer, VkDeviceMemory> createBuffer(u32 size, u32 usage, MemoryProperties flags);
 
-        struct CreateImage {
-            VkImageType imageType;
-            VkFormat format;
-            VkImageUsageFlags usage;
-            u32 width = 1;
-            u32 height = 1;
-            u32 depth = 1;
-            u32 mipLevels = 1;
-            u32 arrayLayers = 1;
-        };
-        std::pair<VkImage, VkDeviceMemory> createImage(const CreateImage info);
+        void beginDebugLabel(VkCommandBuffer buffer, std::string_view label, std::array<f32, 4> colour) const;
+
+        void endDebugLabel(VkCommandBuffer buffer) const;
+
+
+        //internal objects
+        u32 queueIndex(QueueType type) const;
+
+        VkQueue getQueue(QueueType type) const;
 
         VkInstance instance() const { return _instance; }
 
@@ -49,6 +39,7 @@ namespace cala::backend::vulkan {
         Format depthFormat() const { return _depthFormat; }
 
 
+        //query info
         u32 apiVersion() const { return _apiVersion; }
 
         u32 driverVersion() const { return _driverVersion; }
@@ -61,7 +52,27 @@ namespace cala::backend::vulkan {
 
         ende::Span<char> deviceName() const { return _deviceName; }
 
+
+
+        //maybe deprecate
+        std::pair<VkBuffer, VkDeviceMemory> createBuffer(u32 size, u32 usage, MemoryProperties flags);
+
+        struct CreateImage {
+            VkImageType imageType;
+            VkFormat format;
+            VkImageUsageFlags usage;
+            u32 width = 1;
+            u32 height = 1;
+            u32 depth = 1;
+            u32 mipLevels = 1;
+            u32 arrayLayers = 1;
+        };
+
+        std::pair<VkImage, VkDeviceMemory> createImage(const CreateImage info);
+
     private:
+
+        u32 memoryIndex(u32 filter, VkMemoryPropertyFlags properties);
 
         VkInstance _instance;
         VkPhysicalDevice _physicalDevice;
@@ -69,6 +80,9 @@ namespace cala::backend::vulkan {
         VkDebugUtilsMessengerEXT _debugMessenger;
 
         Format _depthFormat;
+
+        VkQueue _graphicsQueue;
+        VkQueue _computeQueue;
 
         u32 _apiVersion;
         u32 _driverVersion;

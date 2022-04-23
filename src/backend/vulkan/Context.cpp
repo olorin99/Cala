@@ -71,6 +71,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     extensions.push(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
 
+    //create instance with required extensions
     VkInstanceCreateInfo instanceCreateInfo{};
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceCreateInfo.pApplicationInfo = &appInfo;
@@ -82,6 +83,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     if (vkCreateInstance(&instanceCreateInfo, nullptr, &_instance) != VK_SUCCESS)
         throw VulkanContextException("Instance Creation Error");
 
+    //create debug messenger
 #ifndef NDEBUG
     VkDebugUtilsMessengerCreateInfoEXT debugInfo{};
     debugInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -94,6 +96,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     createDebugUtils(_instance, &debugInfo, nullptr, &_debugMessenger);
 #endif
 
+    //get physical device
     u32 deviceCount = 0;
     vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr);
     if (deviceCount == 0)
@@ -135,22 +138,6 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
         queueCreateInfos.push(queueCreateInfo);
     }
 
-
-//    //TODO: store extensions for queries
-//    u32 extensionCount = 0;
-//    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-//    ende::Vector<VkExtensionProperties> extensions1(extensionCount);
-//    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions1.data());
-//
-//    std::cout << "Extensions:\n";
-//    for (auto& extension : extensions1)
-//        std::cout << '\t' << extension.extensionName << '\n';
-
-
-//    VkPhysicalDeviceFeatures deviceFeatures1{};
-//    vkGetPhysicalDeviceFeatures(_physicalDevice, &deviceFeatures1);
-//
-
     VkPhysicalDeviceProperties deviceProperties{};
     vkGetPhysicalDeviceProperties(_physicalDevice, &deviceProperties);
     _apiVersion = deviceProperties.apiVersion;
@@ -179,9 +166,6 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     _deviceName = {deviceProperties.deviceName, static_cast<u32>(strlen(deviceProperties.deviceName))};
 
 
-//    VkPhysicalDeviceFeatures deviceFeatures{};
-//    deviceFeatures = {};
-
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     createInfo.pQueueCreateInfos = queueCreateInfos.data();
@@ -198,6 +182,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
         throw VulkanContextException("Failed to create logical device");
 
 
+    //get depth format supported for swapchain
     for (VkFormat format : {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT}) {
         VkFormatProperties depthProperties;
         vkGetPhysicalDeviceFormatProperties(_physicalDevice, format, &depthProperties);
@@ -207,6 +192,10 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
             break;
         }
     }
+
+    //cache queues for later use
+    vkGetDeviceQueue(_device, queueIndex(QueueType::GRAPHICS), 0, &_graphicsQueue);
+    vkGetDeviceQueue(_device, queueIndex(QueueType::COMPUTE), 0, &_computeQueue);
 }
 
 cala::backend::vulkan::Context::~Context() {
@@ -220,8 +209,25 @@ cala::backend::vulkan::Context::~Context() {
     vkDestroyInstance(_instance, nullptr);
 }
 
+void cala::backend::vulkan::Context::beginDebugLabel(VkCommandBuffer buffer, std::string_view label, std::array<f32, 4> colour) const {
+    static auto beginDebugLabel = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(_instance, "vkCmdBeginDebugUtilsLabelEXT");
+    VkDebugUtilsLabelEXT labelExt{};
+    labelExt.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+    labelExt.pLabelName = label.data();
+    for (i32 i = 0; i < 4; i++)
+        labelExt.color[i] = colour[i];
+    beginDebugLabel(buffer, &labelExt);
+}
 
-u32 cala::backend::vulkan::Context::queueIndex(u32 flags) const {
+void cala::backend::vulkan::Context::endDebugLabel(VkCommandBuffer buffer) const {
+    static auto endDebugLabel = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetInstanceProcAddr(_instance, "vkCmdEndDebugUtilsLabelEXT");
+    endDebugLabel(buffer);
+}
+
+
+
+u32 cala::backend::vulkan::Context::queueIndex(QueueType type) const {
+    u32 flags = static_cast<u32>(type);
     if (flags & 0x20)
         return 0;
 
@@ -241,9 +247,15 @@ u32 cala::backend::vulkan::Context::queueIndex(u32 flags) const {
     return i;
 }
 
-VkQueue cala::backend::vulkan::Context::getQueue(u32 flags) const {
+VkQueue cala::backend::vulkan::Context::getQueue(QueueType type) const {
+    switch (type) {
+        case QueueType::GRAPHICS:
+            return _graphicsQueue;
+        case QueueType::COMPUTE:
+            return _computeQueue;
+    }
     VkQueue queue;
-    vkGetDeviceQueue(_device, queueIndex(flags), 0, &queue);
+    vkGetDeviceQueue(_device, queueIndex(type), 0, &queue);
     return queue;
 }
 

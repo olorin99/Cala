@@ -22,6 +22,14 @@ namespace cala::backend {
         CPU = 4
     };
 
+    enum class QueueType {
+        GRAPHICS = 0x00000001,
+        COMPUTE = 0x00000002,
+        TRANSFER = 0x00000004,
+        SPARSE_BINDING = 0x00000008,
+        PRESENT = 0x20
+    };
+
     enum class Format {
         UNDEFINED = 0,
         //TODO: fill in extras

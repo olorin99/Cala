@@ -133,7 +133,7 @@ int main() {
     brickwallMat.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
 
 
-    CommandBufferList computeList(driver.context(), driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT));
+    CommandBufferList computeList(driver.context(), QueueType::COMPUTE);
 
     ende::math::Mat4f viewProj = camera.viewProjection();
     bool freezeFrustum = false;

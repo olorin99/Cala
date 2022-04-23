@@ -141,7 +141,7 @@ int main() {
             cmd->draw(36, 1, 0, 0);
 
             cmd->end(frame.framebuffer);
-            cmd->submit(frame.imageAquired, frame.fence);
+            cmd->submit({&frame.imageAquired, 1}, frame.fence);
         }
         auto frameTime = driver.endFrame();
         dt = static_cast<f32>(frameTime.milliseconds()) / 1000.f;

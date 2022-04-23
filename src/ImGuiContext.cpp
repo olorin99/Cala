@@ -90,7 +90,7 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Driver &driver, SDL_Window* wi
 
     VkCommandPoolCreateInfo commandPoolInfo{};
     commandPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    commandPoolInfo.queueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
+    commandPoolInfo.queueFamilyIndex = driver.context().queueIndex(cala::backend::QueueType::GRAPHICS);
     commandPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     vkCreateCommandPool(driver.context().device(), &commandPoolInfo, nullptr, &_commandPool);
 
@@ -108,8 +108,8 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Driver &driver, SDL_Window* wi
     initInfo.Instance = driver.context().instance();
     initInfo.PhysicalDevice = driver.context().physicalDevice();
     initInfo.Device = driver.context().device();
-    initInfo.QueueFamily = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
-    initInfo.Queue = driver.context().getQueue(VK_QUEUE_GRAPHICS_BIT);
+    initInfo.QueueFamily = driver.context().queueIndex(cala::backend::QueueType::GRAPHICS);
+    initInfo.Queue = driver.context().getQueue(cala::backend::QueueType::GRAPHICS);
     initInfo.PipelineCache = VK_NULL_HANDLE;
     initInfo.DescriptorPool = _descriptorPool;
     initInfo.Allocator = nullptr;
@@ -120,7 +120,7 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Driver &driver, SDL_Window* wi
 
     VkCommandBuffer a = beginSingleTimeCommands(driver.context().device(), _commandPool);
     ImGui_ImplVulkan_CreateFontsTexture(a);
-    endSingleTimeCommands(a, driver.context().device(), driver.context().getQueue(VK_QUEUE_GRAPHICS_BIT), _commandPool);
+    endSingleTimeCommands(a, driver.context().device(), driver.context().getQueue(cala::backend::QueueType::GRAPHICS), _commandPool);
 }
 
 ImGuiContext::~ImGuiContext() {

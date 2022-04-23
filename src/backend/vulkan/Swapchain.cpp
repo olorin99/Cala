@@ -61,7 +61,7 @@ cala::backend::vulkan::Swapchain::Swapchain(Driver &driver, Platform& platform)
 {
     _surface = platform.surface(_driver.context().instance());
     VkBool32 supported = VK_FALSE;
-    vkGetPhysicalDeviceSurfaceSupportKHR(_driver.context().physicalDevice(), _driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT), _surface, &supported);
+    vkGetPhysicalDeviceSurfaceSupportKHR(_driver.context().physicalDevice(), _driver.context().queueIndex(QueueType::GRAPHICS), _surface, &supported);
 
     VkFenceCreateInfo fenceCreateInfo{};
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -146,7 +146,7 @@ bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFi
     presentInfo.pImageIndices = &frame.index;
     presentInfo.pResults = nullptr;
 
-    auto res = vkQueuePresentKHR(_driver.context().getQueue(0x20), &presentInfo) == VK_SUCCESS;
+    auto res = vkQueuePresentKHR(_driver.context().getQueue(QueueType::PRESENT), &presentInfo) == VK_SUCCESS;
 
     return res;
 }

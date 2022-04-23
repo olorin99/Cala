@@ -1,24 +1,21 @@
 #include "Cala/backend/vulkan/CommandBufferList.h"
+#include <Cala/backend/vulkan/Driver.h>
 
-cala::backend::vulkan::CommandBufferList::CommandBufferList(const Context& context, u32 queueIndex)
-    : _context(context),
+cala::backend::vulkan::CommandBufferList::CommandBufferList(Driver& driver, QueueType queue)
+    : _driver(driver),
     _pool(VK_NULL_HANDLE),
-    _queue(VK_NULL_HANDLE),
+    _queue(_driver.context().getQueue(queue)),
     _current(nullptr)
 {
-
     VkCommandPoolCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    createInfo.queueFamilyIndex = queueIndex;
+    createInfo.queueFamilyIndex = _driver.context().queueIndex(queue);
     createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(_context.device(), &createInfo, nullptr, &_pool);
-
-    vkGetDeviceQueue(_context.device(), queueIndex, 0, &_queue);
-
+    vkCreateCommandPool(_driver.context().device(), &createInfo, nullptr, &_pool);
 }
 
 cala::backend::vulkan::CommandBufferList::~CommandBufferList() {
-    vkDestroyCommandPool(_context.device(), _pool, nullptr);
+    vkDestroyCommandPool(_driver.context().device(), _pool, nullptr);
 }
 
 
@@ -52,9 +49,9 @@ cala::backend::vulkan::CommandBuffer* cala::backend::vulkan::CommandBufferList::
         allocInfo.commandBufferCount = 1;
 
         VkCommandBuffer buffer;
-        vkAllocateCommandBuffers(_context.device(), &allocInfo, &buffer);
+        vkAllocateCommandBuffers(_driver.context().device(), &allocInfo, &buffer);
 
-        _buffers.emplace(_context.device(), _queue, buffer);
+        _buffers.emplace(_driver, _queue, buffer);
         _current = &_buffers.back();
     }
 

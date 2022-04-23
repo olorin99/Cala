@@ -4,12 +4,12 @@
 cala::backend::vulkan::Driver::Driver(cala::backend::Platform& platform)
     : _context(platform),
       _swapchain(*this, platform),
-      _commands(_context, _context.queueIndex(VK_QUEUE_GRAPHICS_BIT)),
+      _commands(*this, QueueType::GRAPHICS),
       _commandPool(VK_NULL_HANDLE)
 {
     VkCommandPoolCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    createInfo.queueFamilyIndex = _context.queueIndex(VK_QUEUE_GRAPHICS_BIT);
+    createInfo.queueFamilyIndex = _context.queueIndex(QueueType::GRAPHICS);
     createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     vkCreateCommandPool(_context.device(), &createInfo, nullptr, &_commandPool);
 }
@@ -82,7 +82,7 @@ void cala::backend::vulkan::Driver::endSingleTimeCommands(VkCommandBuffer buffer
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &buffer;
 
-    VkQueue graphicsQueue = _context.getQueue(VK_QUEUE_GRAPHICS_BIT);
+    VkQueue graphicsQueue = _context.getQueue(QueueType::GRAPHICS);
     vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
     vkQueueWaitIdle(graphicsQueue);
 
