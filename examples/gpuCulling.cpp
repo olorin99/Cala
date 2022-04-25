@@ -90,7 +90,7 @@ int main() {
     Transform modelTransform({0, 0, 0});
     ende::Vector<Transform> transforms;
     ende::Vector<ende::math::Mat4f> models;
-    ende::Vector<ende::math::Vec3f> positions;
+    ende::Vector<std::pair<ende::math::Vec3f, f32>> positions;
     for (i32 i = 0; i < width; i++) {
         auto xpos = modelTransform.pos();
         for (i32 j = 0; j < height; j++) {
@@ -99,7 +99,7 @@ int main() {
                 modelTransform.addPos({0, 0, 3});
                 transforms.push(modelTransform);
                 models.push(modelTransform.toMat());
-                positions.push(modelTransform.pos());
+                positions.push({modelTransform.pos(), 1});
             }
             modelTransform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
         }
@@ -112,8 +112,8 @@ int main() {
     Buffer modelBuffer(driver, sizeof(ende::math::Mat4f) * maxSize, BufferUsage::STORAGE);
     modelBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});
 
-    Buffer positionBuffer(driver, sizeof(ende::math::Vec3f) * maxSize, BufferUsage::STORAGE);
-    positionBuffer.data({positions.data(), static_cast<u32>(positions.size() * sizeof(ende::math::Vec3f))});
+    Buffer positionBuffer(driver, (sizeof(ende::math::Vec3f) + sizeof(f32)) * maxSize, BufferUsage::STORAGE);
+    positionBuffer.data({positions.data(), static_cast<u32>(positions.size() * (sizeof(ende::math::Vec3f) + sizeof(f32)))});
     // use array if integers to index into transform buffer in shader
     Buffer renderBuffer(driver, sizeof(u32) * maxSize, BufferUsage::STORAGE);
     Buffer outputBuffer(driver, sizeof(u32), BufferUsage::STORAGE);
@@ -133,7 +133,7 @@ int main() {
     brickwallMat.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
 
 
-    CommandBufferList computeList(driver.context(), QueueType::COMPUTE);
+    CommandBufferList computeList(driver, QueueType::COMPUTE);
 
     ende::math::Mat4f viewProj = camera.viewProjection();
     bool freezeFrustum = false;
@@ -200,7 +200,7 @@ int main() {
                             modelTransform.addPos({0, 0, 3});
                             transforms.push(modelTransform);
                             models.push(modelTransform.toMat());
-                            positions.push(modelTransform.pos());
+                            positions.push({modelTransform.pos(), 1});
                         }
                         modelTransform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
                     }
@@ -261,8 +261,8 @@ int main() {
             barrier.buffer = renderBuffer.buffer();
             barrier.offset = 0;
             barrier.size = renderBuffer.size();
-            barrier.srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
-            barrier.dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
+            barrier.srcQueueFamilyIndex = driver.context().queueIndex(QueueType::GRAPHICS);
+            barrier.dstQueueFamilyIndex = driver.context().queueIndex(QueueType::COMPUTE);
             barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
 
@@ -299,8 +299,8 @@ int main() {
 
             barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            barrier.srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
-            barrier.dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
+            barrier.srcQueueFamilyIndex = driver.context().queueIndex(QueueType::COMPUTE);
+            barrier.dstQueueFamilyIndex = driver.context().queueIndex(QueueType::GRAPHICS);
             computeCmd->pipelineBarrier(PipelineStage::COMPUTE_SHADER, PipelineStage::VERTEX_SHADER, 0, {&barrier, 1}, nullptr);
 
             computeCmd->submit();

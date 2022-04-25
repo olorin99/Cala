@@ -127,6 +127,9 @@ int main() {
     brickwallMat.setSampler("normalMap", brickwall_normal.getView(), Sampler(driver, {}));
     brickwallMat.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
 
+    ende::math::Mat4f viewProj = camera.viewProjection();
+    bool freezeFrustum = false;
+
     f32 dt = 1.f / 60.f;
     ende::time::Duration frameTime;
     bool running = true;
@@ -171,6 +174,7 @@ int main() {
             ImGui::Text("Instances: %d", width * height * depth);
             ImGui::Text("Drawn: %d", renderList.size());
             ImGui::Text("Culled: %d", width * height * depth - renderList.size());
+            ImGui::Checkbox("Frustum", &freezeFrustum);
 
             if (ImGui::SliderInt("Width", &width, 1, 100) ||
                 ImGui::SliderInt("Height", &height, 1, 100) ||
@@ -206,9 +210,11 @@ int main() {
         {
             auto cameraData = camera.data();
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
+            if (!freezeFrustum)
+                viewProj = camera.viewProjection();
 
             renderList.clear();
-            ende::math::Frustum frustum(camera.viewProjection());
+            ende::math::Frustum frustum(viewProj);
             for (u32 i = 0; i < transforms.size(); i++) {
                 if (frustum.intersect(transforms[i].pos(), 1))
                     renderList.push(i);
@@ -235,7 +241,6 @@ int main() {
             cmd->bindDescriptors();
 
             cmd->bindVertexBuffer(0, vertexBuffer.buffer());
-//            cmd->bindVertexBuffer(1, modelBuffer.buffer());
             if (!renderList.empty())
                 cmd->draw(36, renderList.size(), 0, 0);
 
