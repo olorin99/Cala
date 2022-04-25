@@ -38,7 +38,7 @@ void main() {
     vec3 normal = normalize(normalColour * 2.0 - 1.0);
     normal = normalize(fsIn.TBN * normal);
 
-    float diff = max(dot(lightDir, normal), 0.0);
+    float diff = max(dot(lightDir, normal), 0.0) * light.intensity;
     vec3 diffuse = diff * diffuseColour;
 
     vec3 viewDir = normalize(fsIn.ViewPos - fsIn.FragPos);

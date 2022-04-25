@@ -4,7 +4,8 @@
 #include <Cala/Camera.h>
 #include <Cala/Light.h>
 #include <Ende/filesystem/File.h>
-
+#include <Cala/ImGuiContext.h>
+#include <Ende/math/random.h>
 #include "../../third_party/stb_image.h"
 
 using namespace cala;
@@ -41,9 +42,33 @@ Image loadImage(Driver& driver, const ende::fs::Path& path) {
     return image;
 }
 
+ende::math::Vec3f lerpPositions(ende::Span<ende::math::Vec3f> inputs, f32 factor) {
+    ende::Vector<ende::math::Vec3f> positions(inputs.size(), inputs.begin());
+    ende::Vector<ende::math::Vec3f> tmpPositions;
+
+    while (positions.size() > 1) {
+        for (u32 i = 0; i < positions.size(); i++) {
+//            ende::math::Vec3f pos;
+//            if (i == positions.size() - 1)
+//                pos = positions[0];
+//            else
+//                pos = positions[i + 1];
+
+            if (i + 1 >= positions.size())
+                break;
+            tmpPositions.push(positions[i].lerp(positions[i+1], factor));
+        }
+        positions = tmpPositions;
+        tmpPositions.clear();
+    }
+    return positions.front();
+}
+
 int main() {
     SDLPlatform platform("hello_triangle", 800, 600);
     Driver driver(platform);
+
+    ImGuiContext imGuiContext(driver, platform.window());
 
     //Shaders
     ShaderProgram program = loadShader(driver, "../../res/shaders/default.vert.spv"_path, "../../res/shaders/blinn_phong.frag.spv"_path);
@@ -69,11 +94,27 @@ int main() {
 
     Transform modelTransform({0, 0, 0});
 
-    Buffer modelBuffer(driver, sizeof(ende::math::Mat4f), BufferUsage::UNIFORM);
+    ende::Vector<ende::math::Mat4f> models;
+    for (u32 i = 0; i < 100; i++) {
+        models.push(Transform({
+            ende::math::rand(-10.f, 10.f), ende::math::rand(-10.f, 10.f), ende::math::rand(-10.f, 10.f)
+        }).toMat());
+    }
+    Buffer modelBuffer(driver, models.size() * sizeof(ende::math::Mat4f), BufferUsage::UNIFORM);
+    modelBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});
 
     Transform cameraTransform({0, 0, -10});
     Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
+
+
+    ende::Vector<ende::math::Vec3f> lightPositions = {
+            {0, 0, 10},
+            {10, 0, 0},
+            {0, 0, -10},
+            {-10, 0, 0},
+            {0, 0, 10}
+    };
 
     PointLight light;
     light.position = {-3, 3, -1};
@@ -92,6 +133,8 @@ int main() {
     auto normalView = brickwall_normal.getView();
     auto specularView = brickwall_specular.getView();
 
+    auto systemTime = ende::time::SystemTime::now();
+
     f32 dt = 1.f / 60.f;
     bool running = true;
     SDL_Event event;
@@ -105,12 +148,34 @@ int main() {
         }
 
         {
+            imGuiContext.newFrame();
+
+            ImGui::Begin("Light Data");
+
+            if (ImGui::ColorEdit3("Colour", &light.colour[0]))
+                lightBuffer.data({&light, sizeof(light)});
+            if (ImGui::SliderFloat("Intensity", &light.intensity, 1, 50))
+                lightBuffer.data({&light, sizeof(light)});
+
+
+            ImGui::End();
+
+            ImGui::Render();
+        }
+
+        {
+            f32 factor = (std::sin(systemTime.elapsed().milliseconds() / 1000.f) + 1) / 2.f;
+            auto lightPos = lerpPositions(lightPositions, factor);
+            light.position = lightPos;
+            lightBuffer.data({&light, sizeof(light)});
+
             auto cameraData = camera.data();
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
 
-            modelTransform.rotate(ende::math::Vec3f{0, 1, 0}, ende::math::rad(45) * dt);
-            auto model = modelTransform.toMat();
-            modelBuffer.data({&model, sizeof(model)});
+//            modelTransform.rotate(ende::math::Vec3f{0, 1, 0}, ende::math::rad(45) * dt);
+//            modelTransform.setPos(lightPos);
+//            auto model = modelTransform.toMat();
+//            modelBuffer.data({&model, sizeof(model)});
         }
 
         driver.swapchain().wait();
@@ -129,18 +194,24 @@ int main() {
 
             cmd->pushDebugLabel("Test Label");
             cmd->bindBuffer(0, 0, cameraBuffer);
-            cmd->bindBuffer(1, 0, modelBuffer);
             cmd->bindBuffer(3, 0, lightBuffer);
 
             cmd->bindImage(2, 0, diffuseView, sampler);
             cmd->bindImage(2, 1, normalView, sampler);
             cmd->bindImage(2, 2, specularView, sampler);
 
-            cmd->bindDescriptors();
 
             cmd->bindVertexBuffer(0, vertexBuffer.buffer());
-            cmd->draw(36, 1, 0, 0);
+
+            for (u32 i = 0; i < models.size(); i++) {
+                cmd->bindBuffer(1, 0, modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+                cmd->bindDescriptors();
+
+                cmd->draw(36, 1, 0, 0);
+            }
             cmd->popDebugLabel();
+
+            imGuiContext.render(*cmd);
 
             cmd->end(frame.framebuffer);
             cmd->submit({&frame.imageAquired, 1}, frame.fence);

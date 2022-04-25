@@ -9,7 +9,7 @@ namespace cala {
         ende::math::Vec3f position = { 0, 0, 0 };
         f32 padding = 0;
         ende::math::Vec3f colour = { 1, 1, 1 };
-        f32 intensity = 16;
+        f32 intensity = 1;
     };
 
     struct PointLight : public BaseLight {
