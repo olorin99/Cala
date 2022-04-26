@@ -59,13 +59,19 @@ namespace cala::backend::vulkan {
             Image* _image;
         };
 
-        View getView(VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT, u32 mipLevel = 0, u32 levelCount = 1, u32 arrayLayer = 0, u32 layerCount = 1);
+        View getView(VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D, u32 mipLevel = 0, u32 levelCount = 1, u32 arrayLayer = 0, u32 layerCount = 1);
 
         VkImageMemoryBarrier barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout);
 
         VkImage image() const { return _image; }
 
         ImageUsage usage() const { return _usage; }
+
+        u32 width() const { return _width; }
+
+        u32 height() const { return _height; }
+
+        u32 depth() const { return _depth; }
 
     private:
 
@@ -76,7 +82,7 @@ namespace cala::backend::vulkan {
         u32 _width;
         u32 _height;
         u32 _depth;
-        VkFormat _format;
+        Format _format;
         ImageUsage _usage;
 
     };

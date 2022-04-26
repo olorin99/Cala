@@ -18,10 +18,43 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
     u32 bindingCount[4] = {0};
     VkDescriptorSetLayoutBinding bindings[4][8]; // 4 sets 4 buffers each stage TODO: find proper value
 
+    bool hasPushConstant = false;
+    VkPushConstantRange pushConstant{};
+
     for (auto& stage : _stages) {
         // reflection
         spirv_cross::Compiler comp(stage.first.data(), stage.first.size());
         spirv_cross::ShaderResources resources = comp.get_shader_resources();
+
+        for (auto& resource : resources.push_constant_buffers) {
+            u32 set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
+            u32 binding = comp.get_decoration(resource.id, spv::DecorationBinding);
+            assert(set < MAX_SET_COUNT && "supplied set count is greater than valid set count per shader program");
+            assert(set < MAX_BINDING_PER_SET && "supplied binding count is greater than valid binding count per shader program");
+
+            const spirv_cross::SPIRType &type = comp.get_type(resource.base_type_id);
+            u32 size = comp.get_declared_struct_size(type);
+            u32 memberCount = type.member_types.size();
+
+
+            program._interface.sets[set].id = set;
+            program._interface.sets[set].byteSize = size;
+
+            program._interface.sets[set].bindings[binding].id = binding;
+            program._interface.sets[set].bindings[binding].type = ShaderInterface::BindingType::PUSH_CONSTANT;
+            program._interface.sets[set].bindings[binding].byteSize = size;
+
+            for (u32 i = 0; i < memberCount; i++) {
+                const std::string name = comp.get_member_name(type.self, i);
+                u32 offset = comp.type_struct_member_offset(type, i);
+                u32 memberSize = comp.get_declared_struct_member_size(type, i);
+                program._interface.getMemberList(set, binding)[name] = {offset, memberSize};
+            }
+            pushConstant.offset = 0;
+            pushConstant.size = size;
+            pushConstant.stageFlags = getShaderStage(stage.second);
+            hasPushConstant = true;
+        }
 
         // uniform buffers
         for (auto& resource : resources.uniform_buffers) {
@@ -173,8 +206,11 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = MAX_SET_COUNT;
     pipelineLayoutInfo.pSetLayouts = setLayouts;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-    pipelineLayoutInfo.pPushConstantRanges = nullptr;
+
+
+
+    pipelineLayoutInfo.pushConstantRangeCount = hasPushConstant ? 1 : 0;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstant;
 
     VkPipelineLayout  pipelineLayout;
     vkCreatePipelineLayout(driver.context().device(), &pipelineLayoutInfo, nullptr, &pipelineLayout);

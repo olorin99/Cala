@@ -28,6 +28,9 @@ cala::backend::vulkan::Image::Image(Driver& driver, CreateInfo info)
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 
+    if (imageInfo.arrayLayers == 6)
+        imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+
     vkCreateImage(_driver.context().device(), &imageInfo, nullptr, &_image);
 
     VkMemoryRequirements memoryRequirements;
@@ -38,7 +41,7 @@ cala::backend::vulkan::Image::Image(Driver& driver, CreateInfo info)
     _width = info.width;
     _height = info.height;
     _depth = info.depth;
-    _format = getFormat(info.format);
+    _format = info.format;
     _usage = info.usage;
 }
 
@@ -124,15 +127,15 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Driver& driver, D
 }
 
 
-cala::backend::vulkan::Image::View cala::backend::vulkan::Image::getView(VkImageViewType viewType, VkImageAspectFlags aspect, u32 mipLevel, u32 levelCount, u32 arrayLayer, u32 layerCount) {
+cala::backend::vulkan::Image::View cala::backend::vulkan::Image::getView(VkImageViewType viewType, u32 mipLevel, u32 levelCount, u32 arrayLayer, u32 layerCount) {
     VkImageViewCreateInfo viewCreateInfo{};
     viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 
     viewCreateInfo.image = _image;
     viewCreateInfo.viewType = viewType;
-    viewCreateInfo.format = _format;
+    viewCreateInfo.format = getFormat(_format);
 
-    viewCreateInfo.subresourceRange.aspectMask = aspect;
+    viewCreateInfo.subresourceRange.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     viewCreateInfo.subresourceRange.baseMipLevel = mipLevel;
     viewCreateInfo.subresourceRange.levelCount = levelCount;
     viewCreateInfo.subresourceRange.baseArrayLayer = arrayLayer;
@@ -149,7 +152,7 @@ cala::backend::vulkan::Image::View cala::backend::vulkan::Image::getView(VkImage
 
 VkImageMemoryBarrier cala::backend::vulkan::Image::barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout) {
     VkImageSubresourceRange range{};
-    range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    range.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     range.baseMipLevel = 0;
     range.levelCount = 1;
     range.baseArrayLayer = 0;

@@ -25,3 +25,6 @@ target_link_libraries(gpuCulling Cala Ende stb_image)
 
 add_executable(indirect_draw indirect_draw.cpp)
 target_link_libraries(indirect_draw Cala Ende stb_image)
+
+add_executable(point_shadows point_shadows.cpp)
+target_link_libraries(point_shadows Cala Ende stb_image)

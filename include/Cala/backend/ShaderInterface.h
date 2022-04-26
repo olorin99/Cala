@@ -32,6 +32,7 @@ namespace cala::backend {
         friend cala::backend::vulkan::ShaderProgram;
 
         enum class BindingType {
+            PUSH_CONSTANT,
             UNIFORM,
             SAMPLER,
             STORAGE_IMAGE,

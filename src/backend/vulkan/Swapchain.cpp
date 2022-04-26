@@ -57,7 +57,7 @@ cala::backend::vulkan::Swapchain::Swapchain(Driver &driver, Platform& platform)
     _depthImage(driver, {
         800, 600, 1, driver.context().depthFormat(), 1, 1, backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT
     }),
-    _depthView(_depthImage.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT))
+    _depthView(_depthImage.getView())
 {
     _surface = platform.surface(_driver.context().instance());
     VkBool32 supported = VK_FALSE;

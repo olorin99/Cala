@@ -87,6 +87,8 @@ namespace cala::backend::vulkan {
 
         void bindImage(u32 set, u32 binding, Image::View& image, Sampler& sampler, bool storage = false);
 
+        void pushConstants(ende::Span<const void> data, u32 offset = 0);
+
         void bindDescriptors();
         void clearDescriptors();
 
