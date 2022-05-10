@@ -3,6 +3,7 @@
 
 #include "Ende/platform.h"
 #include <unordered_map>
+#include <string>
 #include <Cala/backend/primitives.h>
 
 namespace cala::backend {
