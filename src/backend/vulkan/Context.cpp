@@ -2,6 +2,7 @@
 #include "Cala/backend/vulkan/primitives.h"
 
 #include <Ende/Vector.h>
+#include <Ende/log/log.h>
 #include <cstring>
 #include <iostream>
 
@@ -43,7 +44,22 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         ) {
     if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
         return VK_FALSE;
-    std::cerr << "Validation Layer: " << pCallbackData->pMessage << "\n";
+    switch (messageSeverity) {
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+            ende::log::info("{}", pCallbackData->pMessage);
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+            ende::log::info("{}", pCallbackData->pMessage);
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+            ende::log::warn("{}", pCallbackData->pMessage);
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+            ende::log::error("{}", pCallbackData->pMessage);
+            break;
+        default:
+            break;
+    }
     return VK_FALSE;
 }
 
