@@ -5,6 +5,7 @@
 #include <Cala/Camera.h>
 #include <Ende/filesystem/File.h>
 #include <Ende/math/Frustum.h>
+#include <Ende/thread/thread.h>
 
 #include <Cala/ImGuiContext.h>
 #include "../third_party/stb_image.h"
@@ -251,6 +252,7 @@ int main() {
         }
         dt = driver.endFrame().milliseconds() / 1000.f;
         driver.swapchain().present(frame, cmd->signal());
+        ende::thread::sleep(10_milli);
     }
 
     driver.swapchain().wait();

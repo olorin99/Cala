@@ -317,7 +317,7 @@ int main() {
         cmd = driver.beginFrame();
         {
             VkImageMemoryBarrier barriers[] = { brickwall_copy.barrier(Access::SHADER_READ, Access::SHADER_WRITE, ImageLayout::UNDEFINED, ImageLayout::GENERAL) };
-            cmd->pipelineBarrier(PipelineStage::VERTEX_SHADER, PipelineStage::COMPUTE_SHADER, 0, barriers);
+            cmd->pipelineBarrier(PipelineStage::VERTEX_SHADER, PipelineStage::COMPUTE_SHADER, 0, nullptr, barriers);
 
             cmd->clearDescriptors();
             cmd->bindProgram(computeProgram);
@@ -328,7 +328,7 @@ int main() {
             cmd->dispatchCompute(1024 / 16, 1024 / 16, 1);
 
             barriers[0] = brickwall_copy.barrier(Access::SHADER_WRITE, Access::SHADER_READ, ImageLayout::GENERAL, ImageLayout::GENERAL);
-            cmd->pipelineBarrier(PipelineStage::COMPUTE_SHADER, PipelineStage::VERTEX_SHADER, 0, barriers);
+            cmd->pipelineBarrier(PipelineStage::COMPUTE_SHADER, PipelineStage::VERTEX_SHADER, 0, nullptr, barriers);
 
             cmd->begin(frame.framebuffer);
 
@@ -357,7 +357,7 @@ int main() {
             imGuiContext.render(*cmd);
 
             cmd->end(frame.framebuffer);
-            cmd->submit(frame.imageAquired, frame.fence);
+            cmd->submit({&frame.imageAquired, 1}, frame.fence);
         }
         driver.endFrame();
         driver.swapchain().present(frame, cmd->signal());

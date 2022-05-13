@@ -89,7 +89,7 @@ int main() {
             cmd->draw(3, 1, 0, 0);
 
             cmd->end(frame.framebuffer);
-            cmd->submit(frame.imageAquired, frame.fence);
+            cmd->submit({&frame.imageAquired, 1}, frame.fence);
         }
         driver.endFrame();
         driver.swapchain().present(frame, cmd->signal());

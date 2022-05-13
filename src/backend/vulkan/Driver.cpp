@@ -28,7 +28,7 @@ cala::backend::vulkan::CommandBuffer* cala::backend::vulkan::Driver::beginFrame(
 
 ende::time::Duration cala::backend::vulkan::Driver::endFrame() {
     _commands.flush();
-    _lastFrameTime = _frameClock.reset();
+    _lastFrameTime = _frameClock.reset(); //TODO: issues with frame time precision, instances when dt = 0
     return _lastFrameTime;
 }
 

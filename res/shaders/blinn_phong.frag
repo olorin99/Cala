@@ -5,13 +5,12 @@ layout (location = 0) in VsOut {
     vec2 TexCoords;
     mat3 TBN;
     vec3 ViewPos;
-    vec3 Pos;
 } fsIn;
 
 layout (location = 0) out vec4 FragColour;
 
-//layout (set = 2, binding = 0) uniform sampler2D diffuseMap;
-layout (set = 2, binding = 0) uniform samplerCube diffuseMap;
+layout (set = 2, binding = 0) uniform sampler2D diffuseMap;
+//layout (set = 2, binding = 0) uniform samplerCube diffuseMap;
 layout (set = 2, binding = 1) uniform sampler2D normalMap;
 layout (set = 2, binding = 2) uniform sampler2D specularMap;
 
@@ -31,7 +30,7 @@ layout (set = 3, binding = 0) uniform LightData {
 
 void main() {
 
-    vec3 diffuseColour = texture(diffuseMap, fsIn.Pos).rgb;
+    vec3 diffuseColour = texture(diffuseMap, fsIn.TexCoords).rgb;
     vec3 normalColour = texture(normalMap, fsIn.TexCoords).rgb;
     vec3 specularColour = texture(specularMap, fsIn.TexCoords).rgb;
 
@@ -41,7 +40,7 @@ void main() {
     normal = normalize(fsIn.TBN * normal);
 
     float diff = max(dot(lightDir, normal), 0.0) * light.intensity;
-    vec3 diffuse = diff * diffuseColour + vec3(0.1);
+    vec3 diffuse = diff * diffuseColour;
 
     vec3 viewDir = normalize(fsIn.ViewPos - fsIn.FragPos);
     vec3 reflectDir = reflect(-lightDir, normal);

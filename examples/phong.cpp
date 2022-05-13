@@ -4,6 +4,8 @@
 #include <Cala/Camera.h>
 #include <Cala/Light.h>
 #include <Ende/filesystem/File.h>
+#include <Cala/ImGuiContext.h>
+#include <Ende/thread/thread.h>
 
 #include "../../third_party/stb_image.h"
 
@@ -44,6 +46,8 @@ Image loadImage(Driver& driver, const ende::fs::Path& path) {
 int main() {
     SDLPlatform platform("hello_triangle", 800, 600);
     Driver driver(platform);
+
+    ImGuiContext imGuiContext(driver, platform.window());
 
     //Shaders
     ShaderProgram program = loadShader(driver, "../../res/shaders/default.vert.spv"_path, "../../res/shaders/phong.frag.spv"_path);
@@ -92,7 +96,7 @@ int main() {
     auto normalView = brickwall_normal.getView();
     auto specularView = brickwall_specular.getView();
 
-    f32 dt = 1.f / 60.f;
+    f64 dt = 1.f / 60.f;
     bool running = true;
     SDL_Event event;
     while (running) {
@@ -102,6 +106,17 @@ int main() {
                     running = false;
                     break;
             }
+        }
+
+        {
+            imGuiContext.newFrame();
+
+            ImGui::Begin("Stats");
+            ImGui::Text("FPS: %f", driver.fps());
+            ImGui::Text("Milliseconds: %f", driver.milliseconds());
+            ImGui::Text("DT: %f", dt);
+            ImGui::End();
+            ImGui::Render();
         }
 
         {
@@ -140,13 +155,16 @@ int main() {
             cmd->bindVertexBuffer(0, vertexBuffer.buffer());
             cmd->draw(36, 1, 0, 0);
 
+            imGuiContext.render(*cmd);
+
             cmd->end(frame.framebuffer);
-            cmd->submit(frame.imageAquired, frame.fence);
+            cmd->submit({&frame.imageAquired, 1}, frame.fence);
         }
         auto frameTime = driver.endFrame();
-        dt = static_cast<f32>(frameTime.milliseconds()) / 1000.f;
+        dt = static_cast<f64>(frameTime.milliseconds()) / 1000;
 
         driver.swapchain().present(frame, cmd->signal());
+        ende::thread::sleep(10_milli);
     }
 
     driver.swapchain().wait();
