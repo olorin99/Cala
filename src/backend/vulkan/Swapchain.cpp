@@ -3,6 +3,7 @@
 #include "Cala/backend/vulkan/Swapchain.h"
 #include <Cala/backend/vulkan/Driver.h>
 #include <limits>
+#include <algorithm>
 
 
 VkSurfaceCapabilitiesKHR getCapabilities(VkPhysicalDevice device, VkSurfaceKHR surface) {

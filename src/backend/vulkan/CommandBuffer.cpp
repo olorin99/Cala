@@ -265,7 +265,7 @@ void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
 
 void cala::backend::vulkan::CommandBuffer::clearDescriptors() {
     for (auto& setKey : _descriptorKey)
-        setKey = {};
+        setKey = DescriptorKey{};
 }
 
 
