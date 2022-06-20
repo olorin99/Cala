@@ -252,7 +252,7 @@ int main() {
         }
         dt = driver.endFrame().milliseconds() / 1000.f;
         driver.swapchain().present(frame, cmd->signal());
-        ende::thread::sleep(10_milli);
+        //ende::thread::sleep(10_milli);
     }
 
     driver.swapchain().wait();

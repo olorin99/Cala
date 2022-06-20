@@ -164,7 +164,7 @@ int main() {
         dt = static_cast<f64>(frameTime.milliseconds()) / 1000;
 
         driver.swapchain().present(frame, cmd->signal());
-        ende::thread::sleep(10_milli);
+        //ende::thread::sleep(10_milli);
     }
 
     driver.swapchain().wait();
