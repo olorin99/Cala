@@ -9,6 +9,8 @@
 
 #include "../../third_party/stb_image.h"
 
+#include <iostream>
+
 using namespace cala;
 using namespace cala::backend;
 using namespace cala::backend::vulkan;
@@ -44,7 +46,7 @@ Image loadImage(Driver& driver, const ende::fs::Path& path) {
 }
 
 int main() {
-    SDLPlatform platform("hello_triangle", 800, 600);
+    SDLPlatform platform("hello_triangle", 800, 600, SDL_WINDOW_RESIZABLE);
     Driver driver(platform);
 
     ImGuiContext imGuiContext(driver, platform.window());
@@ -76,7 +78,7 @@ int main() {
     Buffer modelBuffer(driver, sizeof(ende::math::Mat4f), BufferUsage::UNIFORM);
 
     Transform cameraTransform({0, 0, -10});
-    Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
+    Camera camera((f32)ende::math::rad(54.4), 800.f, 600.f, 0.1f, 1000.f, cameraTransform);
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
 
     PointLight light;
@@ -105,6 +107,15 @@ int main() {
                 case SDL_QUIT:
                     running = false;
                     break;
+                case SDL_WINDOWEVENT:
+                    switch (event.window.event) {
+                        case SDL_WINDOWEVENT_RESIZED:
+                            driver.swapchain().wait();
+                            driver.swapchain().resize(event.window.data1, event.window.data2);
+                            camera.resize(event.window.data1, event.window.data2);
+                            break;
+                    }
+                    break;
             }
         }
 
@@ -129,8 +140,8 @@ int main() {
         }
 
         driver.swapchain().wait();
-        auto frame = driver.swapchain().nextImage();
         CommandBuffer* cmd = driver.beginFrame();
+        auto frame = driver.swapchain().nextImage();
         {
             cmd->begin(frame.framebuffer);
 
@@ -160,11 +171,10 @@ int main() {
             cmd->end(frame.framebuffer);
             cmd->submit({&frame.imageAquired, 1}, frame.fence);
         }
-        auto frameTime = driver.endFrame();
-        dt = static_cast<f64>(frameTime.milliseconds()) / 1000;
+        driver.endFrame();
+        dt = driver.milliseconds() / (f64)1000;
 
         driver.swapchain().present(frame, cmd->signal());
-        //ende::thread::sleep(10_milli);
     }
 
     driver.swapchain().wait();

@@ -9,7 +9,10 @@ namespace cala {
     class Camera {
     public:
 
+        Camera(f32 fov, f32 width, f32 height, f32 near, f32 far, Transform& transform);
         Camera(const ende::math::Mat4f& projection, Transform& transform);
+
+        void resize(f32 width, f32 height);
 
         inline ende::math::Mat4f projection() const { return _projection; }
 
@@ -31,6 +34,11 @@ namespace cala {
 
         ende::math::Mat4f _projection;
         Transform& _transform;
+        f32 _fov;
+        f32 _width;
+        f32 _height;
+        f32 _near;
+        f32 _far;
 
     };
 

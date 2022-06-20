@@ -128,7 +128,11 @@ cala::backend::vulkan::Swapchain::~Swapchain() {
 cala::backend::vulkan::Swapchain::Frame cala::backend::vulkan::Swapchain::nextImage() {
     auto image = _semaphores.pop().unwrap();
     u32 index = 0;
-    vkAcquireNextImageKHR(_driver.context().device(), _swapchain, std::numeric_limits<u64>::max(), image, VK_NULL_HANDLE, &index);
+    VkResult result = vkAcquireNextImageKHR(_driver.context().device(), _swapchain, std::numeric_limits<u64>::max(), image, VK_NULL_HANDLE, &index);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        resize(_depthImage.width(), _depthImage.height());
+    }
+
     return { _frame++, index, image, _fence, _framebuffers[index] };
 }
 
@@ -158,6 +162,53 @@ bool cala::backend::vulkan::Swapchain::wait(u64 timeout) {
     if (res)
         vkResetFences(_driver.context().device(), 1, &_fence);
     return res;
+}
+
+bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {
+    delete _renderPass;
+    _framebuffers.clear();
+    for (auto& view : _imageViews)
+        vkDestroyImageView(_driver.context().device(), view, nullptr);
+    //vkDestroySwapchainKHR(_driver.context().device(), _swapchain, nullptr);
+
+    _depthImage = Image(_driver, { width, height, 1, _driver.context().depthFormat(), 1, 1, ImageUsage::DEPTH_STENCIL_ATTACHMENT });
+    _depthView = _depthImage.getView();
+
+    createSwapchain();
+    createImageViews();
+
+    std::array<RenderPass::Attachment, 2> attachments = {
+            RenderPass::Attachment{
+                    format(),
+                    VK_SAMPLE_COUNT_1_BIT,
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_STORE,
+                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            },
+            RenderPass::Attachment{
+                    _driver.context().depthFormat(),
+                    VK_SAMPLE_COUNT_1_BIT,
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_STORE,
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+            }
+    };
+
+    _renderPass = new RenderPass(_driver, attachments);
+
+    for (auto& view : _imageViews) {
+        VkImageView framebufferAttachments[2] = { view, _depthView.view };
+        _framebuffers.emplace(_driver.context().device(), *_renderPass, framebufferAttachments, width, height);
+    }
+    return true;
 }
 
 

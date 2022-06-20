@@ -37,6 +37,10 @@ namespace cala::backend::vulkan {
 
         ~Image();
 
+        Image(Image&& rhs) noexcept;
+
+        Image& operator=(Image&& rhs) noexcept;
+
         void data(Driver& driver, DataInfo info);
 
 

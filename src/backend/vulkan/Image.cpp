@@ -50,6 +50,37 @@ cala::backend::vulkan::Image::~Image() {
     vkFreeMemory(_driver.context().device(), _memory, nullptr);
 }
 
+cala::backend::vulkan::Image::Image(Image &&rhs) noexcept
+    : _driver(rhs._driver),
+    _image(VK_NULL_HANDLE),
+    _memory(VK_NULL_HANDLE),
+    _width(0),
+    _height(0),
+    _depth(0),
+    _format(Format::UNDEFINED),
+    _usage(ImageUsage::COLOUR_ATTACHMENT)
+{
+    std::swap(_image, rhs._image);
+    std::swap(_memory, rhs._memory);
+    std::swap(_width, rhs._width);
+    std::swap(_height, rhs._height);
+    std::swap(_depth, rhs._depth);
+    std::swap(_format, rhs._format);
+    std::swap(_usage, rhs._usage);
+}
+
+cala::backend::vulkan::Image &cala::backend::vulkan::Image::operator=(Image &&rhs) noexcept {
+    assert(&_driver == &rhs._driver);
+    std::swap(_image, rhs._image);
+    std::swap(_memory, rhs._memory);
+    std::swap(_width, rhs._width);
+    std::swap(_height, rhs._height);
+    std::swap(_depth, rhs._depth);
+    std::swap(_format, rhs._format);
+    std::swap(_usage, rhs._usage);
+    return *this;
+}
+
 cala::backend::vulkan::Image::View::View()
     : _device(VK_NULL_HANDLE),
     view(VK_NULL_HANDLE),

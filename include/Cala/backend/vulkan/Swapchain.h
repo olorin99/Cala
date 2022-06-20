@@ -32,6 +32,8 @@ namespace cala::backend::vulkan {
 
         bool wait(u64 timeout = 1000000000);
 
+        bool resize(u32 width, u32 height);
+
         VkExtent2D extent() const { return _extent; }
 
         Format format() const { return _format; }
