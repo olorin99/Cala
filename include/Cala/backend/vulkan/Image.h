@@ -43,6 +43,10 @@ namespace cala::backend::vulkan {
 
         void data(Driver& driver, DataInfo info);
 
+        void* map(u32 format = 4);
+
+        void unmap();
+
 
         struct View {
             VkImageView view;

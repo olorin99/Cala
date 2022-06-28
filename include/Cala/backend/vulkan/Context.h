@@ -38,6 +38,8 @@ namespace cala::backend::vulkan {
 
         Format depthFormat() const { return _depthFormat; }
 
+        VkQueryPool queryPool() const { return _queryPool; }
+
 
         //query info
         u32 apiVersion() const { return _apiVersion; }
@@ -84,11 +86,15 @@ namespace cala::backend::vulkan {
         VkQueue _graphicsQueue;
         VkQueue _computeQueue;
 
+        VkQueryPool _queryPool;
+
+        // context info
         u32 _apiVersion;
         u32 _driverVersion;
         const char* _vendor;
         PhysicalDeviceType _deviceType;
         ende::Span<char> _deviceName;
+        float _timestampPeriod;
 
     };
 

@@ -80,7 +80,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "Cala";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_0;
+    appInfo.apiVersion = VK_API_VERSION_1_2;
 
     auto extensions = platform.requiredExtensions();
 #ifndef NDEBUG
@@ -180,6 +180,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     }
     _deviceType = static_cast<PhysicalDeviceType>(deviceProperties.deviceType);
     _deviceName = {deviceProperties.deviceName, static_cast<u32>(strlen(deviceProperties.deviceName))};
+    _timestampPeriod = deviceProperties.limits.timestampPeriod;
 
 
     VkDeviceCreateInfo createInfo{};
@@ -193,6 +194,11 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     createInfo.ppEnabledExtensionNames = deviceExtensions;
     createInfo.enabledLayerCount = 1;
     createInfo.ppEnabledLayerNames = validationLayers;
+
+    VkPhysicalDeviceHostQueryResetFeatures resetFeatures{};
+    resetFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES;
+    resetFeatures.hostQueryReset = VK_TRUE;
+    createInfo.pNext = &resetFeatures;
 
     if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device) != VK_SUCCESS)
         throw VulkanContextException("Failed to create logical device");
@@ -212,6 +218,17 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     //cache queues for later use
     vkGetDeviceQueue(_device, queueIndex(QueueType::GRAPHICS), 0, &_graphicsQueue);
     vkGetDeviceQueue(_device, queueIndex(QueueType::COMPUTE), 0, &_computeQueue);
+
+    VkQueryPoolCreateInfo queryPoolCreateInfo{};
+    queryPoolCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+    queryPoolCreateInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
+    queryPoolCreateInfo.queryCount = 10;
+    _queryPool = VK_NULL_HANDLE;
+    VkResult res = vkCreateQueryPool(_device, &queryPoolCreateInfo, nullptr, &_queryPool);
+    if (res != VK_SUCCESS)
+        throw "Unable to create query pool";
+
+    vkResetQueryPool(_device, _queryPool, 0, 10);
 }
 
 cala::backend::vulkan::Context::~Context() {

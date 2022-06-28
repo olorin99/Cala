@@ -157,6 +157,16 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Driver& driver, D
     });
 }
 
+void *cala::backend::vulkan::Image::map(u32 format) {
+    void* address = nullptr;
+    vkMapMemory(_driver.context().device(), _memory, 0, _width * _height * _depth * format, 0, &address);
+    return address;
+}
+
+void cala::backend::vulkan::Image::unmap() {
+    vkUnmapMemory(_driver.context().device(), _memory);
+}
+
 
 cala::backend::vulkan::Image::View cala::backend::vulkan::Image::getView(VkImageViewType viewType, u32 mipLevel, u32 levelCount, u32 arrayLayer, u32 layerCount) {
     VkImageViewCreateInfo viewCreateInfo{};

@@ -6,7 +6,7 @@
 #include <Ende/filesystem/File.h>
 #include <Cala/ImGuiContext.h>
 #include <Ende/thread/thread.h>
-
+#include <Cala/backend/vulkan/Timer.h>
 #include "../../third_party/stb_image.h"
 
 #include <iostream>
@@ -101,6 +101,7 @@ int main() {
     f64 dt = 1.f / 60.f;
     bool running = true;
     SDL_Event event;
+    u32 fIndex = 0;
     while (running) {
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
