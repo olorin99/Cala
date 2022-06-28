@@ -8,6 +8,8 @@
 #include <Cala/backend/primitives.h>
 #include "Platform.h"
 
+#include "../third_party/vk_mem_alloc.h"
+
 namespace cala::backend::vulkan {
 
     class Context {
@@ -35,6 +37,8 @@ namespace cala::backend::vulkan {
         VkPhysicalDevice physicalDevice() const { return _physicalDevice; }
 
         VkDevice device() const { return _device; }
+
+        VmaAllocator allocator() const { return _allocator; }
 
         Format depthFormat() const { return _depthFormat; }
 
@@ -80,6 +84,7 @@ namespace cala::backend::vulkan {
         VkPhysicalDevice _physicalDevice;
         VkDevice _device;
         VkDebugUtilsMessengerEXT _debugMessenger;
+        VmaAllocator _allocator;
 
         Format _depthFormat;
 

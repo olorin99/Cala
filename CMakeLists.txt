@@ -19,6 +19,7 @@ target_include_directories(Cala
         $<INSTALL_INTERFACE:install>
         PRIVATE
         src
-        libs)
+        libs
+        third_party)
 
 target_link_libraries(Cala Ende ${Vulkan_LIBRARIES} ${SDL2_LIBRARIES} ${X11_LIBRARIES} imgui spirv-cross-cpp IMGUI)

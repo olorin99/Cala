@@ -7,7 +7,7 @@
 cala::backend::vulkan::Buffer::Buffer(Driver &driver, u32 size, BufferUsage usage, MemoryProperties flags)
     : _driver(driver),
     _buffer(VK_NULL_HANDLE),
-    _memory(VK_NULL_HANDLE),
+    _allocation(0),
     _size(size),
     _usage(usage),
     _flags(flags)
@@ -18,30 +18,26 @@ cala::backend::vulkan::Buffer::Buffer(Driver &driver, u32 size, BufferUsage usag
     bufferInfo.usage = getBufferUsage(usage);
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    vkCreateBuffer(_driver.context().device(), &bufferInfo, nullptr, &_buffer);
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(_driver.context().device(), _buffer, &memRequirements);
-    _memory = _driver.allocate(memRequirements.size, memRequirements.memoryTypeBits, flags);
-    vkBindBufferMemory(_driver.context().device(), _buffer, _memory, 0);
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
+    vmaCreateBuffer(_driver.context().allocator(), &bufferInfo, &allocInfo, &_buffer, &_allocation, nullptr);
 }
 
 cala::backend::vulkan::Buffer::~Buffer() {
-    vkFreeMemory(_driver.context().device(), _memory, nullptr);
-    vkDestroyBuffer(_driver.context().device(), _buffer, nullptr);
+    vmaDestroyBuffer(_driver.context().allocator(), _buffer, _allocation);
 }
 
 
 cala::backend::vulkan::Buffer::Buffer(Buffer &&rhs)
     : _driver(rhs._driver),
     _buffer(VK_NULL_HANDLE),
-    _memory(VK_NULL_HANDLE),
+    _allocation(0),
     _size(0),
     _flags(MemoryProperties::HOST_VISIBLE),
     _usage(BufferUsage::UNIFORM)
 {
     std::swap(_buffer, rhs._buffer);
-    std::swap(_memory, rhs._memory);
+    std::swap(_allocation, rhs._allocation);
     std::swap(_size, rhs._size);
     std::swap(_flags, rhs._flags);
     std::swap(_usage, rhs._usage);
@@ -54,12 +50,12 @@ cala::backend::vulkan::Buffer::Mapped::~Mapped() {
 
 cala::backend::vulkan::Buffer::Mapped cala::backend::vulkan::Buffer::map(u32 offset, u32 size) {
     void* address = nullptr;
-    vkMapMemory(_driver.context().device(), _memory, offset, size, 0, &address);
+    vmaMapMemory(_driver.context().allocator(), _allocation, &address);
     return { address, this };
 }
 
 void cala::backend::vulkan::Buffer::unmap() {
-    vkUnmapMemory(_driver.context().device(), _memory);
+    vmaUnmapMemory(_driver.context().allocator(), _allocation);
 }
 
 void cala::backend::vulkan::Buffer::data(ende::Span<const void> data, u32 offset) {

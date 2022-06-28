@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.h>
 #include <Cala/backend/primitives.h>
 #include <Ende/Span.h>
+#include "../third_party/vk_mem_alloc.h"
 
 namespace cala::backend::vulkan {
 
@@ -42,7 +43,7 @@ namespace cala::backend::vulkan {
 
         Driver& _driver;
         VkBuffer _buffer;
-        VkDeviceMemory _memory;
+        VmaAllocation _allocation;
         u32 _size;
         BufferUsage _usage;
         MemoryProperties _flags;

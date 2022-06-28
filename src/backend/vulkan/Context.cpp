@@ -1,3 +1,6 @@
+#define VMA_IMPLEMENTATION
+#include "../third_party/vk_mem_alloc.h"
+
 #include "Cala/backend/vulkan/Context.h"
 #include "Cala/backend/vulkan/primitives.h"
 
@@ -203,6 +206,17 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device) != VK_SUCCESS)
         throw VulkanContextException("Failed to create logical device");
 
+    VmaAllocatorCreateInfo allocatorCreateInfo{};
+    allocatorCreateInfo.vulkanApiVersion = appInfo.apiVersion;
+    allocatorCreateInfo.physicalDevice = _physicalDevice;
+    allocatorCreateInfo.device = _device;
+    allocatorCreateInfo.instance = _instance;
+    VmaVulkanFunctions vulkanFunctions{};
+    vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
+    vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
+    allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
+
+    vmaCreateAllocator(&allocatorCreateInfo, &_allocator);
 
     //get depth format supported for swapchain
     for (VkFormat format : {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT}) {
@@ -232,6 +246,8 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
 }
 
 cala::backend::vulkan::Context::~Context() {
+    vkDestroyQueryPool(_device, _queryPool, nullptr);
+    vmaDestroyAllocator(_allocator);
     vkDestroyDevice(_device, nullptr);
 
 #ifndef NDEBUG
