@@ -6,9 +6,9 @@
 #include <Ende/Vector.h>
 #include <Ende/Span.h>
 #include <Cala/backend/primitives.h>
-#include "Platform.h"
+#include <Cala/backend/vulkan/Platform.h>
 
-#include "../third_party/vk_mem_alloc.h"
+#include <Cala/backend/vulkan/vk_mem_alloc.h>
 
 namespace cala::backend::vulkan {
 

@@ -4,7 +4,7 @@
 #include <vulkan/vulkan.h>
 #include <Cala/backend/primitives.h>
 #include <Ende/Span.h>
-#include "../third_party/vk_mem_alloc.h"
+#include <Cala/backend/vulkan/vk_mem_alloc.h>
 
 namespace cala::backend::vulkan {
 

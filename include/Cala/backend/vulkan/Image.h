@@ -4,7 +4,7 @@
 #include <vulkan/vulkan.h>
 #include <Ende/platform.h>
 #include <Ende/Span.h>
-
+#include <Cala/backend/vulkan/vk_mem_alloc.h>
 #include <Cala/backend/primitives.h>
 
 namespace cala::backend::vulkan {
@@ -85,7 +85,7 @@ namespace cala::backend::vulkan {
 
         Driver& _driver;
         VkImage _image;
-        VkDeviceMemory _memory;
+        VmaAllocation _allocation;
 
         u32 _width;
         u32 _height;

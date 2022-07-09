@@ -51,7 +51,7 @@ void cala::backend::vulkan::Driver::draw(CommandBuffer::RasterState state, Primi
 }
 
 cala::backend::vulkan::Buffer cala::backend::vulkan::Driver::stagingBuffer(u32 size) {
-    return Buffer(*this, size, BufferUsage::TRANSFER_SRC, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
+    return {*this, size, BufferUsage::TRANSFER_SRC, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT};
 }
 
 

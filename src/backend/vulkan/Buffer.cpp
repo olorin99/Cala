@@ -1,5 +1,5 @@
 #include <cstring>
-#include "Cala/backend/vulkan/Buffer.h"
+#include <Cala/backend/vulkan/Buffer.h>
 #include <Cala/backend/vulkan/primitives.h>
 #include <Cala/backend/vulkan/Driver.h>
 
@@ -7,7 +7,7 @@
 cala::backend::vulkan::Buffer::Buffer(Driver &driver, u32 size, BufferUsage usage, MemoryProperties flags)
     : _driver(driver),
     _buffer(VK_NULL_HANDLE),
-    _allocation(0),
+    _allocation(nullptr),
     _size(size),
     _usage(usage),
     _flags(flags)
@@ -19,7 +19,11 @@ cala::backend::vulkan::Buffer::Buffer(Driver &driver, u32 size, BufferUsage usag
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VmaAllocationCreateInfo allocInfo{};
-    allocInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
+    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+
+    if ((flags & MemoryProperties::HOST_VISIBLE) == MemoryProperties::HOST_VISIBLE)
+        allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+
     vmaCreateBuffer(_driver.context().allocator(), &bufferInfo, &allocInfo, &_buffer, &_allocation, nullptr);
 }
 
@@ -31,7 +35,7 @@ cala::backend::vulkan::Buffer::~Buffer() {
 cala::backend::vulkan::Buffer::Buffer(Buffer &&rhs)
     : _driver(rhs._driver),
     _buffer(VK_NULL_HANDLE),
-    _allocation(0),
+    _allocation(nullptr),
     _size(0),
     _flags(MemoryProperties::HOST_VISIBLE),
     _usage(BufferUsage::UNIFORM)

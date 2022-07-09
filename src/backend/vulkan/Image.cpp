@@ -5,7 +5,7 @@
 cala::backend::vulkan::Image::Image(Driver& driver, CreateInfo info)
     : _driver(driver),
     _image(VK_NULL_HANDLE),
-    _memory(VK_NULL_HANDLE)
+    _allocation(nullptr)
 {
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -31,12 +31,11 @@ cala::backend::vulkan::Image::Image(Driver& driver, CreateInfo info)
     if (imageInfo.arrayLayers == 6)
         imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 
-    vkCreateImage(_driver.context().device(), &imageInfo, nullptr, &_image);
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 
-    VkMemoryRequirements memoryRequirements;
-    vkGetImageMemoryRequirements(_driver.context().device(), _image, &memoryRequirements);
-    _memory = _driver.allocate(memoryRequirements.size, memoryRequirements.memoryTypeBits, MemoryProperties::DEVICE_LOCAL);
-    vkBindImageMemory(_driver.context().device(), _image, _memory, 0);
+    vmaCreateImage(driver.context().allocator(), &imageInfo, &allocInfo, &_image, &_allocation, nullptr);
 
     _width = info.width;
     _height = info.height;
@@ -46,14 +45,13 @@ cala::backend::vulkan::Image::Image(Driver& driver, CreateInfo info)
 }
 
 cala::backend::vulkan::Image::~Image() {
-    vkDestroyImage(_driver.context().device(), _image, nullptr);
-    vkFreeMemory(_driver.context().device(), _memory, nullptr);
+    vmaDestroyImage(_driver.context().allocator(), _image, _allocation);
 }
 
 cala::backend::vulkan::Image::Image(Image &&rhs) noexcept
     : _driver(rhs._driver),
     _image(VK_NULL_HANDLE),
-    _memory(VK_NULL_HANDLE),
+    _allocation(nullptr),
     _width(0),
     _height(0),
     _depth(0),
@@ -61,7 +59,7 @@ cala::backend::vulkan::Image::Image(Image &&rhs) noexcept
     _usage(ImageUsage::COLOUR_ATTACHMENT)
 {
     std::swap(_image, rhs._image);
-    std::swap(_memory, rhs._memory);
+    std::swap(_allocation, rhs._allocation);
     std::swap(_width, rhs._width);
     std::swap(_height, rhs._height);
     std::swap(_depth, rhs._depth);
@@ -72,7 +70,7 @@ cala::backend::vulkan::Image::Image(Image &&rhs) noexcept
 cala::backend::vulkan::Image &cala::backend::vulkan::Image::operator=(Image &&rhs) noexcept {
     assert(&_driver == &rhs._driver);
     std::swap(_image, rhs._image);
-    std::swap(_memory, rhs._memory);
+    std::swap(_allocation, rhs._allocation);
     std::swap(_width, rhs._width);
     std::swap(_height, rhs._height);
     std::swap(_depth, rhs._depth);
@@ -159,12 +157,12 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Driver& driver, D
 
 void *cala::backend::vulkan::Image::map(u32 format) {
     void* address = nullptr;
-    vkMapMemory(_driver.context().device(), _memory, 0, _width * _height * _depth * format, 0, &address);
+    vmaMapMemory(_driver.context().allocator(), _allocation, &address);
     return address;
 }
 
 void cala::backend::vulkan::Image::unmap() {
-    vkUnmapMemory(_driver.context().device(), _memory);
+    vmaUnmapMemory(_driver.context().allocator(), _allocation);
 }
 
 
