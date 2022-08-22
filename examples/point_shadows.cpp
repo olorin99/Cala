@@ -168,7 +168,7 @@ int main() {
 
     auto systemTime = ende::time::SystemTime::now();
 
-    f32 dt = 1.f / 60.f;
+    f64 dt = 1.f / 60.f;
     bool running = true;
     SDL_Event event;
     while (running) {
@@ -310,7 +310,7 @@ int main() {
                 cubeFaceRange.baseMipLevel = 0;
                 cubeFaceRange.levelCount = 1;
                 cubeFaceRange.baseArrayLayer = j;
-                cubeFaceRange.layerCount = 1;
+                cubeFaceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
                 barriers[1].subresourceRange = cubeFaceRange;
                 cubeFaceRange.baseArrayLayer = 0;
@@ -341,6 +341,14 @@ int main() {
 //                barriers[0] = depthMap.barrier(Access::TRANSFER_READ, Access::DEPTH_STENCIL_WRITE, ImageLayout::TRANSFER_SRC, ImageLayout::DEPTH_STENCIL_ATTACHMENT);
                 barriers[0] = depthMap.barrier(Access::TRANSFER_READ, Access::DEPTH_STENCIL_WRITE, ImageLayout::TRANSFER_SRC, ImageLayout::COLOUR_ATTACHMENT);
                 barriers[1] = shadowMap.barrier(Access::TRANSFER_WRITE, Access::SHADER_READ, ImageLayout::TRANSFER_DST, ImageLayout::SHADER_READ_ONLY);
+
+                cubeFaceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                cubeFaceRange.baseMipLevel = 0;
+                cubeFaceRange.levelCount = 1;
+                cubeFaceRange.baseArrayLayer = j;
+                cubeFaceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+                barriers[1].subresourceRange = cubeFaceRange;
 
                 cmd->pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::EARLY_FRAGMENT, 0, nullptr, {&barriers[0], 1});
                 cmd->pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::FRAGMENT_SHADER, 0, nullptr, {&barriers[1], 1});
@@ -395,8 +403,8 @@ int main() {
             cmd->end(frame.framebuffer);
             cmd->submit({&frame.imageAquired, 1}, frame.fence);
         }
-        auto frameTime = driver.endFrame();
-        dt = static_cast<f32>(frameTime.milliseconds()) / 1000.f;
+        driver.endFrame();
+        dt = driver.milliseconds() / (f64)1000;
 
         driver.swapchain().present(frame, cmd->signal());
     }

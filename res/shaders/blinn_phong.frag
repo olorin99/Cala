@@ -9,8 +9,8 @@ layout (location = 0) in VsOut {
 
 layout (location = 0) out vec4 FragColour;
 
-layout (set = 2, binding = 0) uniform sampler2D diffuseMap;
-//layout (set = 2, binding = 0) uniform samplerCube diffuseMap;
+//layout (set = 2, binding = 0) uniform sampler2D diffuseMap;
+layout (set = 2, binding = 0) uniform samplerCube diffuseMap;
 layout (set = 2, binding = 1) uniform sampler2D normalMap;
 layout (set = 2, binding = 2) uniform sampler2D specularMap;
 
@@ -30,7 +30,7 @@ layout (set = 3, binding = 0) uniform LightData {
 
 void main() {
 
-    vec3 diffuseColour = texture(diffuseMap, fsIn.TexCoords).rgb;
+    vec3 diffuseColour = texture(diffuseMap, fsIn.FragPos).rgb;
     vec3 normalColour = texture(normalMap, fsIn.TexCoords).rgb;
     vec3 specularColour = texture(specularMap, fsIn.TexCoords).rgb;
 

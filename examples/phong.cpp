@@ -7,6 +7,9 @@
 #include <Cala/ImGuiContext.h>
 #include <Ende/thread/thread.h>
 #include <Cala/backend/vulkan/Timer.h>
+#include <Cala/Material.h>
+#include <Cala/MaterialInstance.h>
+#include <Cala/Scene.h>
 #include "../../third_party/stb_image.h"
 
 #include <iostream>
@@ -46,13 +49,13 @@ Image loadImage(Driver& driver, const ende::fs::Path& path) {
 }
 
 int main() {
-    SDLPlatform platform("hello_triangle", 800, 600, SDL_WINDOW_RESIZABLE);
+    SDLPlatform platform("hello_triangle", 800, 600);
     Driver driver(platform);
 
     ImGuiContext imGuiContext(driver, platform.window());
 
     //Shaders
-    ShaderProgram program = loadShader(driver, "../../res/shaders/default.vert.spv"_path, "../../res/shaders/phong.frag.spv"_path);
+    ShaderProgram program = loadShader(driver, "../../res/shaders/default.vert.spv"_path, "../../res/shaders/phong_directional.frag.spv"_path);
 
     //Vertex Input
     VkVertexInputBindingDescription binding{};
@@ -75,18 +78,17 @@ int main() {
 
     Transform modelTransform({0, 0, 0});
 
-    Buffer modelBuffer(driver, sizeof(ende::math::Mat4f), BufferUsage::UNIFORM);
-
     Transform cameraTransform({0, 0, -10});
     Camera camera((f32)ende::math::rad(54.4), 800.f, 600.f, 0.1f, 1000.f, cameraTransform);
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
 
-    PointLight light;
-    light.position = {-3, 3, -1};
-    light.colour = {1, 1, 1};
 
-    Buffer lightBuffer(driver, sizeof(light), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
-    lightBuffer.data({&light, sizeof(light)});
+    Transform lightTransform({-3, 3, -1});
+    Light light(cala::Light::DIRECTIONAL, lightTransform);
+
+    Buffer lightBuffer(driver, sizeof(Light::Data), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
+    auto lightData = light.data();
+    lightBuffer.data({&lightData, sizeof(lightData)});
 
     Sampler sampler(driver, {});
 
@@ -94,9 +96,25 @@ int main() {
     Image brickwall_normal = loadImage(driver, "../../res/textures/brickwall_normal.jpg"_path);
     Image brickwall_specular = loadImage(driver, "../../res/textures/brickwall_specular.jpg"_path);
 
-    auto diffuseView = brickwall.getView();
-    auto normalView = brickwall_normal.getView();
-    auto specularView = brickwall_specular.getView();
+
+    Material material(driver, std::move(program));
+    material._depthState = { true, true, CompareOp::LESS_EQUAL };
+
+    auto matInstance = material.instance();
+    matInstance.setSampler("diffuseMap", brickwall.getView(), Sampler(driver, {}));
+    matInstance.setSampler("normalMap", brickwall_normal.getView(), Sampler(driver, {}));
+    matInstance.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
+
+
+    Scene scene(driver, 1);
+
+    scene.addRenderable({
+        &vertexBuffer,
+        nullptr,
+        &matInstance,
+        {&binding, 1},
+        attributes
+        }, &modelTransform);
 
     f64 dt = 1.f / 60.f;
     bool running = true;
@@ -136,8 +154,12 @@ int main() {
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
 
             modelTransform.rotate(ende::math::Vec3f{0, 1, 0}, ende::math::rad(45) * dt);
-            auto model = modelTransform.toMat();
-            modelBuffer.data({&model, sizeof(model)});
+
+            lightTransform.rotate(ende::math::Vec3f{0, 1, 1}, ende::math::rad(45) * dt);
+            lightData = light.data();
+            lightBuffer.data({&lightData, sizeof(lightData)});
+
+            scene.prepare();
         }
 
         driver.swapchain().wait();
@@ -146,26 +168,9 @@ int main() {
         {
             cmd->begin(frame.framebuffer);
 
-            cmd->bindProgram(program);
-            cmd->bindBindings({&binding, 1});
-            cmd->bindAttributes(attributes);
-            cmd->bindRasterState({});
-            cmd->bindDepthState({});
-            cmd->bindPipeline();
-
-
             cmd->bindBuffer(0, 0, cameraBuffer);
-            cmd->bindBuffer(1, 0, modelBuffer);
             cmd->bindBuffer(3, 0, lightBuffer);
-
-            cmd->bindImage(2, 0, diffuseView, sampler);
-            cmd->bindImage(2, 1, normalView, sampler);
-            cmd->bindImage(2, 2, specularView, sampler);
-
-            cmd->bindDescriptors();
-
-            cmd->bindVertexBuffer(0, vertexBuffer.buffer());
-            cmd->draw(36, 1, 0, 0);
+            scene.render(*cmd);
 
             imGuiContext.render(*cmd);
 

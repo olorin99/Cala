@@ -1,1 +1,45 @@
 #include "Cala/Light.h"
+
+
+cala::Light::Light(LightType type, Transform &transform)
+    : _type(type),
+      _transform(transform),
+      _direction({0, 1, 0}),
+      _colour({1, 1, 1}),
+      _intensity(1),
+      _constant(1),
+      _linear(0.045),
+      _quadratic(0.0075),
+      _radius(80)
+{}
+
+cala::Light::Data cala::Light::data() const {
+    Data data {
+        _direction,
+        0,
+        _colour,
+        _intensity,
+        _constant,
+        _linear,
+        _quadratic,
+        _radius
+    };
+
+    if (_type == POINT)
+        data.position = _transform.pos();
+    else if (_type == DIRECTIONAL)
+        data.position = _transform.rot().front();
+    return data;
+}
+
+void cala::Light::setDirection(const ende::math::Vec3f &dir) {
+    _direction = dir;
+}
+
+void cala::Light::setColour(const ende::math::Vec3f &colour) {
+    _colour = colour;
+}
+
+void cala::Light::setIntensity(f32 intensity) {
+    _intensity = intensity;
+}

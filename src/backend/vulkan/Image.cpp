@@ -178,7 +178,7 @@ cala::backend::vulkan::Image::View cala::backend::vulkan::Image::getView(VkImage
     viewCreateInfo.subresourceRange.baseMipLevel = mipLevel;
     viewCreateInfo.subresourceRange.levelCount = levelCount;
     viewCreateInfo.subresourceRange.baseArrayLayer = arrayLayer;
-    viewCreateInfo.subresourceRange.layerCount = layerCount;
+    viewCreateInfo.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
     VkImageView view;
     vkCreateImageView(_driver.context().device(), &viewCreateInfo, nullptr, &view);
