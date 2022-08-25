@@ -31,13 +31,15 @@ void cala::Scene::addRenderable(cala::Mesh &mesh, cala::MaterialInstance *materi
 
 
 void cala::Scene::prepare() {
-    //ende::Vector<ende::math::Mat4f> _modelTransforms; //TODO: preallocate memory
     _modelTransforms.clear();
 
     for (auto& renderablePair : _renderables) {
         _modelTransforms.push(renderablePair.second->toMat());
     }
 
+
+    if (_modelTransforms.size() * sizeof(ende::math::Mat4f) > _modelBuffer.size())
+        _modelBuffer.resize(_modelTransforms.size() * sizeof(ende::math::Mat4f) * 2);
     _modelBuffer.data({_modelTransforms.data(), static_cast<u32>(_modelTransforms.size() * sizeof(ende::math::Mat4f))});
 }
 

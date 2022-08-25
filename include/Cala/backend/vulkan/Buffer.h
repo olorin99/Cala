@@ -18,9 +18,10 @@ namespace cala::backend::vulkan {
         ~Buffer();
 
         Buffer(const Buffer&) = delete;
-        Buffer(Buffer&& rhs);
+        Buffer(Buffer&& rhs) noexcept;
 
-        Buffer& operator=(Buffer&& rhs);
+        Buffer& operator=(const Buffer&) = delete;
+        Buffer& operator=(Buffer&& rhs) noexcept;
 
 
         struct Mapped {
@@ -33,6 +34,8 @@ namespace cala::backend::vulkan {
         void unmap();
 
         void data(ende::Span<const void> data, u32 offset = 0);
+
+        void resize(u32 capacity);
 
 
         VkBuffer buffer() const { return _buffer; }

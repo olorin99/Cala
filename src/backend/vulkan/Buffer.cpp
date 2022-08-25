@@ -33,7 +33,7 @@ cala::backend::vulkan::Buffer::~Buffer() {
 }
 
 
-cala::backend::vulkan::Buffer::Buffer(Buffer &&rhs)
+cala::backend::vulkan::Buffer::Buffer(Buffer &&rhs) noexcept
     : _driver(rhs._driver),
     _buffer(VK_NULL_HANDLE),
     _allocation(nullptr),
@@ -48,7 +48,7 @@ cala::backend::vulkan::Buffer::Buffer(Buffer &&rhs)
     std::swap(_usage, rhs._usage);
 }
 
-cala::backend::vulkan::Buffer &cala::backend::vulkan::Buffer::operator=(cala::backend::vulkan::Buffer &&rhs) {
+cala::backend::vulkan::Buffer &cala::backend::vulkan::Buffer::operator=(cala::backend::vulkan::Buffer &&rhs) noexcept {
     std::swap(_buffer, rhs._buffer);
     std::swap(_allocation, rhs._allocation);
     std::swap(_size, rhs._size);
@@ -77,4 +77,28 @@ void cala::backend::vulkan::Buffer::data(ende::Span<const void> data, u32 offset
         return;
     auto mapped = map(offset, data.size());
     memcpy(mapped.address, data.data(), data.size());
+}
+
+void cala::backend::vulkan::Buffer::resize(u32 capacity) {
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = capacity;
+    bufferInfo.usage = getBufferUsage(_usage);
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+
+    if ((_flags & MemoryProperties::HOST_VISIBLE) == MemoryProperties::HOST_VISIBLE)
+        allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+
+    VkBuffer buffer;
+    VmaAllocation allocation;
+    if (VK_SUCCESS == vmaCreateBuffer(_driver.context().allocator(), &bufferInfo, &allocInfo, &buffer, &allocation, nullptr)) {
+        vmaDestroyBuffer(_driver.context().allocator(), _buffer, _allocation);
+        _buffer = buffer;
+        _allocation = allocation;
+        _size = capacity;
+    }
+
 }

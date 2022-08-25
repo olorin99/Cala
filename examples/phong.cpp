@@ -92,7 +92,7 @@ int main() {
     matInstance.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
 
 
-    Scene scene(driver, 15);
+    Scene scene(driver, 11);
     scene.addRenderable(mesh, &matInstance, &modelTransform);
 
 
