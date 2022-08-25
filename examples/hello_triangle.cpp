@@ -47,8 +47,8 @@ int main() {
             {4, 0, AttribType::Vec3f}
     };
 
-    //Mesh data
-    Mesh vertices = cala::shapes::triangle();
+    //MeshData data
+    MeshData vertices = cala::shapes::triangle();
     Buffer vertexBuffer = vertices.vertexBuffer(driver);
 //    Buffer indexBuffer = vertices.indexBuffer(driver);
 

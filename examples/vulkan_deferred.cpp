@@ -91,13 +91,13 @@ int main() {
     Material deferredMaterial(driver, std::move(deferredProgram));
     deferredMaterial._rasterState = {.cullMode = CullMode::NONE};
 
-    //Mesh data
-    Mesh vertices = cala::shapes::sphereNormalized();
+    //MeshData data
+    MeshData vertices = cala::shapes::sphereNormalized();
     Buffer vertexBuffer = vertices.vertexBuffer(driver);
     Buffer indexBuffer = vertices.indexBuffer(driver);
 
-    Mesh fullTriangle = cala::shapes::triangle(6, 6);
-//    Mesh fullTriangle = cala::shapes::cube();
+    MeshData fullTriangle = cala::shapes::triangle(6, 6);
+//    MeshData fullTriangle = cala::shapes::cube();
     Buffer fullTriangleVertexBuffer = fullTriangle.vertexBuffer(driver);
     Buffer fullTriangleIndexBuffer = fullTriangle.indexBuffer(driver);
 

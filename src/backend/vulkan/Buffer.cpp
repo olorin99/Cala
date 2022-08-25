@@ -28,7 +28,8 @@ cala::backend::vulkan::Buffer::Buffer(Driver &driver, u32 size, BufferUsage usag
 }
 
 cala::backend::vulkan::Buffer::~Buffer() {
-    vmaDestroyBuffer(_driver.context().allocator(), _buffer, _allocation);
+    if (_allocation)
+        vmaDestroyBuffer(_driver.context().allocator(), _buffer, _allocation);
 }
 
 
@@ -45,6 +46,15 @@ cala::backend::vulkan::Buffer::Buffer(Buffer &&rhs)
     std::swap(_size, rhs._size);
     std::swap(_flags, rhs._flags);
     std::swap(_usage, rhs._usage);
+}
+
+cala::backend::vulkan::Buffer &cala::backend::vulkan::Buffer::operator=(cala::backend::vulkan::Buffer &&rhs) {
+    std::swap(_buffer, rhs._buffer);
+    std::swap(_allocation, rhs._allocation);
+    std::swap(_size, rhs._size);
+    std::swap(_flags, rhs._flags);
+    std::swap(_usage, rhs._usage);
+    return *this;
 }
 
 

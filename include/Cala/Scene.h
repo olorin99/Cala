@@ -6,6 +6,7 @@
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include <Cala/Transform.h>
 #include <Cala/MaterialInstance.h>
+#include <Cala/Mesh.h>
 
 namespace cala {
 
@@ -24,6 +25,8 @@ namespace cala {
 
         void addRenderable(Renderable&& renderable, Transform* transform);
 
+        void addRenderable(Mesh& mesh, MaterialInstance* materialInstance, Transform* transform);
+
         void prepare();
 
         void render(backend::vulkan::CommandBuffer& cmd);
@@ -33,6 +36,7 @@ namespace cala {
         ende::Vector<std::pair<Renderable, Transform*>> _renderables;
 
         backend::vulkan::Buffer _modelBuffer;
+        ende::Vector<ende::math::Mat4f> _modelTransforms;
 
     };
 

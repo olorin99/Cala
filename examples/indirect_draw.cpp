@@ -69,8 +69,8 @@ int main() {
             {4, 0, AttribType::Vec3f}
     };
 
-    //Mesh data
-    Mesh vertices = cala::shapes::cube();
+    //MeshData data
+    MeshData vertices = cala::shapes::cube();
     Buffer vertexBuffer = vertices.vertexBuffer(driver);
 //    Buffer indexBuffer = vertices.indexBuffer(driver);
 

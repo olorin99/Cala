@@ -11,6 +11,8 @@
 #include <Cala/MaterialInstance.h>
 #include <Cala/Scene.h>
 #include "../../third_party/stb_image.h"
+#include "Ende/math/random.h"
+#include <Cala/Mesh.h>
 
 #include <iostream>
 
@@ -57,26 +59,10 @@ int main() {
     //Shaders
     ShaderProgram program = loadShader(driver, "../../res/shaders/default.vert.spv"_path, "../../res/shaders/phong_directional.frag.spv"_path);
 
-    //Vertex Input
-    VkVertexInputBindingDescription binding{};
-    binding.binding = 0;
-    binding.stride = 14 * sizeof(f32);
-    binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    Attribute attributes[5] = {
-            {0, 0, AttribType::Vec3f},
-            {1, 0, AttribType::Vec3f},
-            {2, 0, AttribType::Vec2f},
-            {3, 0, AttribType::Vec3f},
-            {4, 0, AttribType::Vec3f}
-    };
-
-    //Mesh data
-    Mesh vertices = cala::shapes::cube();
-    Buffer vertexBuffer = vertices.vertexBuffer(driver);
-//    Buffer indexBuffer = vertices.indexBuffer(driver);
+    Mesh mesh = cala::shapes::cube().mesh(driver);
 
     Transform modelTransform({0, 0, 0});
+    ende::Vector<Transform> models;
 
     Transform cameraTransform({0, 0, -10});
     Camera camera((f32)ende::math::rad(54.4), 800.f, 600.f, 0.1f, 1000.f, cameraTransform);
@@ -106,15 +92,16 @@ int main() {
     matInstance.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
 
 
-    Scene scene(driver, 1);
+    Scene scene(driver, 15);
+    scene.addRenderable(mesh, &matInstance, &modelTransform);
 
-    scene.addRenderable({
-        &vertexBuffer,
-        nullptr,
-        &matInstance,
-        {&binding, 1},
-        attributes
-        }, &modelTransform);
+
+    models.reserve(10);
+    for (u32 i = 0; i < 10; i++) {
+
+        models.push(Transform({ende::math::rand(-5.f, 5.f), ende::math::rand(-5.f, 5.f), ende::math::rand(-5.f, 5.f)}));
+        scene.addRenderable(mesh, &matInstance, &models.back());
+    }
 
     f64 dt = 1.f / 60.f;
     bool running = true;

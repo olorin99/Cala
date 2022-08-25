@@ -75,8 +75,8 @@ int main() {
 //            {5, 1, AttribType::Mat4f}
     };
 
-    //Mesh data
-    Mesh vertices = cala::shapes::cube();
+    //MeshData data
+    MeshData vertices = cala::shapes::cube();
     Buffer vertexBuffer = vertices.vertexBuffer(driver);
 //    Buffer indexBuffer = vertices.indexBuffer(driver);
 

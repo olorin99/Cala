@@ -1,8 +1,8 @@
 #include <Cala/shapes.h>
 #include <Ende/math/math.h>
 
-cala::Mesh cala::shapes::triangle(f32 width, f32 height) {
-    Mesh data;
+cala::MeshData cala::shapes::triangle(f32 width, f32 height) {
+    MeshData data;
 
     f32 halfWidth = width / 2.f;
     f32 halfHeight = height / 2.f;
@@ -16,8 +16,8 @@ cala::Mesh cala::shapes::triangle(f32 width, f32 height) {
     return data;
 }
 
-cala::Mesh cala::shapes::quad(f32 edge) {
-    Mesh data;
+cala::MeshData cala::shapes::quad(f32 edge) {
+    MeshData data;
 
     data.addVertex({ { -edge, -edge, -edge }, { 0, 0, -1 }, { 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 } });
     data.addVertex({ { -edge, edge, -edge }, { 0, 0, -1 }, { 0, 1 }, { 1, 0, 0 }, { 0, 1, 0 } });
@@ -29,8 +29,8 @@ cala::Mesh cala::shapes::quad(f32 edge) {
     return data;
 }
 
-cala::Mesh cala::shapes::cube(f32 edge) {
-    Mesh data;
+cala::MeshData cala::shapes::cube(f32 edge) {
+    MeshData data;
 
     //top
     data.addVertex({ { -edge, edge, -edge }, { 0, 1, 0 }, { 0, 0 }, { 1, 0, 0 }, { 0, 0, 1 } });
@@ -112,8 +112,8 @@ namespace sphereUtils {
 
 
 
-cala::Mesh cala::shapes::sphereUV(f32 radius, u32 rings, u32 sectors) {
-    Mesh data;
+cala::MeshData cala::shapes::sphereUV(f32 radius, u32 rings, u32 sectors) {
+    MeshData data;
 
     ende::math::Vec<2, f32> uv = sphereUtils::normalToUV({0, 0.5, 0});
 
@@ -204,8 +204,8 @@ ende::math::Vec3f mult(const ende::math::Vec3f& lhs, const ende::math::Vec3f& rh
 }
 
 
-cala::Mesh cala::shapes::sphereNormalized(f32 radius, u32 divisions) {
-    Mesh data;
+cala::MeshData cala::shapes::sphereNormalized(f32 radius, u32 divisions) {
+    MeshData data;
 
     f32 step = 1.0f / (f32)divisions;
     ende::math::Vec3f step3{step, step, step};
@@ -245,8 +245,8 @@ cala::Mesh cala::shapes::sphereNormalized(f32 radius, u32 divisions) {
     return data;
 }
 
-cala::Mesh cala::shapes::sphereCube(f32 radius, u32 divisions) {
-    Mesh data;
+cala::MeshData cala::shapes::sphereCube(f32 radius, u32 divisions) {
+    MeshData data;
 
     f32 step = 1.0f / (f32)divisions;
     ende::math::Vec3f step3{step, step, step};
@@ -299,8 +299,8 @@ cala::Mesh cala::shapes::sphereCube(f32 radius, u32 divisions) {
     pos = normal * radius;                \
     data.addVertex({{pos.x(), pos.y(), pos.z()}, {normal.x(), normal.y(), normal.z()}, {uv.x(), uv.y()}, {-1, 0, 0}, {0, 0, 1}});
 
-cala::Mesh cala::shapes::icosahedron(f32 radius) {
-    Mesh data;
+cala::MeshData cala::shapes::icosahedron(f32 radius) {
+    MeshData data;
 
     f32 t = (1.0f + std::sqrt(5.0f)) / 2.0f;
 
@@ -348,7 +348,7 @@ cala::Mesh cala::shapes::icosahedron(f32 radius) {
 
 
 
-cala::Mesh cala::shapes::frustum(const ende::math::Mat4f &matrix) {
-    Mesh data;
+cala::MeshData cala::shapes::frustum(const ende::math::Mat4f &matrix) {
+    MeshData data;
     return data;
 }

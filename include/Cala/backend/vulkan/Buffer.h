@@ -20,6 +20,8 @@ namespace cala::backend::vulkan {
         Buffer(const Buffer&) = delete;
         Buffer(Buffer&& rhs);
 
+        Buffer& operator=(Buffer&& rhs);
+
 
         struct Mapped {
             void* address = nullptr;

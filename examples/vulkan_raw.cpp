@@ -24,7 +24,7 @@
 #include <Cala/backend/vulkan/Sampler.h>
 
 #include <Cala/backend/vulkan/SDLPlatform.h>
-
+#include <Cala/Mesh.h>
 #include <Cala/ImGuiContext.h>
 
 #include <Cala/Camera.h>
@@ -82,7 +82,7 @@ int main() {
     Driver driver(platform);
     ImGuiContext imGuiContext(driver, platform.window());
 
-    Scene scene;
+    Scene scene(driver, 10);
 
     Transform cameraTransform({0, 0, -10});
     Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
@@ -90,12 +90,18 @@ int main() {
 
     Transform model({0, 0, 0});
 
-    Mesh vertices = cala::shapes::sphereUV();
-    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
+    MeshData vertices = cala::shapes::sphereUV();
 
-    vertices = cala::shapes::sphereNormalized();
-    model.addPos({1, 0, 0});
-    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
+    Mesh sphereUV(driver, shapes::sphereUV(), true);
+    Mesh sphereNormalized(driver, shapes::sphereNormalized(), true);
+
+    //scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
+
+
+
+    //vertices = cala::shapes::sphereNormalized();
+    /*model.addPos({1, 0, 0});
+    //scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
     model.addPos({-1, 0, 0});
 
     vertices = cala::shapes::sphereCube();
@@ -136,14 +142,14 @@ int main() {
     vertices = cala::shapes::quad();
     model.setPos(cameraTransform.pos() + ende::math::Vec3f{0, 0, quadDistance});
     model.setRot({0, 0, 0, 1});
-    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});*/
 
-    ende::Vector<ende::math::Mat4f> models;
-    for (auto& transform : scene._renderables)
-        models.push(transform.second.toMat());
+    //ende::Vector<ende::math::Mat4f> models;
+    //for (auto& transform : scene._renderables)
+    //    models.push(transform.second.toMat());
 
-    Buffer uniformBuffer(driver, sizeof(ende::math::Mat4f) * models.size(), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
-    uniformBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});
+    //Buffer uniformBuffer(driver, sizeof(ende::math::Mat4f) * models.size(), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
+    //uniformBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});
 
     PointLight light;
     light.position = {0, -1, 1};
@@ -204,8 +210,27 @@ int main() {
     matInstance.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
     matInstance.setUniform("mixColour", ende::math::Vec3f{0.5, 1, 1.5});
 
+    scene.addRenderable({
+        &sphereUV._vertex,
+        &(*sphereUV._index),
+        &matInstance,
+        {&binding, 1},
+        attributes
+        }, &model);
 
-    Mesh triangle = cala::shapes::triangle();
+    Transform model1({1, 1, 1});
+    scene.addRenderable({
+        &sphereUV._vertex,
+        &(*sphereUV._index),
+        &matInstance,
+        {&binding, 1},
+        attributes
+        }, &model1);
+
+
+
+
+    MeshData triangle = cala::shapes::triangle();
     Buffer triangleVertexBuffer = triangle.vertexBuffer(driver);
 
 
@@ -295,12 +320,12 @@ int main() {
             ImGui::Text("Device: %s", driver.context().deviceName().data());
             ImGui::Text("Type: %s", driver.context().deviceTypeString());
 
-            if (ImGui::SliderFloat("QuadDistance", &quadDistance, 0.f, 2.f)) {
+            /*if (ImGui::SliderFloat("QuadDistance", &quadDistance, 0.f, 2.f)) {
                 auto q = scene._renderables.back().second;
                 q.setPos(cameraTransform.pos() + ende::math::Vec3f{0, 0, quadDistance});
                 auto data = q.toMat();
                 uniformBuffer.data({&data, sizeof(ende::math::Mat4f)}, (scene._renderables.size() - 1) * sizeof(ende::math::Mat4f));
-            }
+            }*/
 
             ImGui::End();
 
@@ -310,6 +335,7 @@ int main() {
         {
             auto cameraData = camera.data();
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
+            scene.prepare();
         }
 
         auto frame = driver.swapchain().nextImage();
@@ -332,7 +358,7 @@ int main() {
 
             cmd->begin(frame.framebuffer);
 
-            cmd->bindProgram(material._program);
+            /*cmd->bindProgram(material._program);
             cmd->bindBindings({&binding, 1});
             cmd->bindAttributes(attributes);
             cmd->bindRasterState(material._rasterState);
@@ -352,7 +378,9 @@ int main() {
                 cmd->bindVertexBuffer(0, renderable.first.vertex.buffer());
                 cmd->bindIndexBuffer(renderable.first.index);
                 cmd->draw(renderable.first.index.size() / sizeof(u32), 1, 0, 0);
-            }
+            }*/
+            cmd->bindBuffer(0, 0, cameraBuffer);
+            scene.render(*cmd);
 
             imGuiContext.render(*cmd);
 
@@ -363,7 +391,7 @@ int main() {
         driver.swapchain().present(frame, cmd->signal());
 
         frameTime = frameClock.reset();
-        dt = frameTime.milliseconds() / 1000.f;
+        dt = driver.milliseconds() / (f64)1000;
         if (frameCount == 0) avgFrameTime = frameTime;
         auto deviation = avgFrameTime - frameTime;
         if (deviation < 0)

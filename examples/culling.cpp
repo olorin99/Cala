@@ -77,8 +77,8 @@ int main() {
 //            {5, 1, AttribType::Mat4f}
     };
 
-    //Mesh data
-    Mesh vertices = cala::shapes::cube();
+    //MeshData data
+    MeshData vertices = cala::shapes::cube();
     Buffer vertexBuffer = vertices.vertexBuffer(driver);
 //    Buffer indexBuffer = vertices.indexBuffer(driver);
 
@@ -250,7 +250,8 @@ int main() {
             cmd->end(frame.framebuffer);
             cmd->submit({&frame.imageAquired, 1}, frame.fence);
         }
-        dt = driver.endFrame().milliseconds() / 1000.f;
+        driver.endFrame();
+        dt = driver.milliseconds() / (f64)1000;
         driver.swapchain().present(frame, cmd->signal());
         //ende::thread::sleep(10_milli);
     }
