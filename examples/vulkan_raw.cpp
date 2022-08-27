@@ -92,8 +92,8 @@ int main() {
 
     MeshData vertices = cala::shapes::sphereUV();
 
-    Mesh sphereUV(driver, shapes::sphereUV(), true);
-    Mesh sphereNormalized(driver, shapes::sphereNormalized(), true);
+    Mesh sphereUV = shapes::sphereUV().mesh(driver);
+    Mesh sphereNormalized = shapes::sphereNormalized().mesh(driver);
 
     //scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
 
@@ -210,23 +210,10 @@ int main() {
     matInstance.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
     matInstance.setUniform("mixColour", ende::math::Vec3f{0.5, 1, 1.5});
 
-    scene.addRenderable({
-        &sphereUV._vertex,
-        &(*sphereUV._index),
-        &matInstance,
-        {&binding, 1},
-        attributes
-        }, &model);
+    scene.addRenderable(sphereUV, &matInstance, &model);
 
     Transform model1({1, 1, 1});
-    scene.addRenderable({
-        &sphereUV._vertex,
-        &(*sphereUV._index),
-        &matInstance,
-        {&binding, 1},
-        attributes
-        }, &model1);
-
+    scene.addRenderable(sphereNormalized, &matInstance, &model1);
 
 
 
@@ -358,27 +345,6 @@ int main() {
 
             cmd->begin(frame.framebuffer);
 
-            /*cmd->bindProgram(material._program);
-            cmd->bindBindings({&binding, 1});
-            cmd->bindAttributes(attributes);
-            cmd->bindRasterState(material._rasterState);
-            cmd->bindDepthState(material._depthState);
-            cmd->bindPipeline();
-
-            cmd->bindBuffer(0, 0, cameraBuffer);
-
-            matInstance.bind(*cmd, 2);
-            cmd->bindBuffer(2, 3, matInstance.material()->_uniformBuffer);
-            cmd->bindBuffer(3, 0, lightBuffer);
-
-            u32 i = 0;
-            for (auto& renderable : scene._renderables) {
-                cmd->bindBuffer(1, 0, uniformBuffer, sizeof(ende::math::Mat4f) * i++, sizeof(ende::math::Mat4f));
-                cmd->bindDescriptors();
-                cmd->bindVertexBuffer(0, renderable.first.vertex.buffer());
-                cmd->bindIndexBuffer(renderable.first.index);
-                cmd->draw(renderable.first.index.size() / sizeof(u32), 1, 0, 0);
-            }*/
             cmd->bindBuffer(0, 0, cameraBuffer);
             scene.render(*cmd);
 

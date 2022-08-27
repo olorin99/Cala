@@ -111,7 +111,7 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Driver& driver, D
 
     auto staging = driver.stagingBuffer(info.width * info.height * info.depth * info.format);
     staging.data(info.data);
-    driver.immediate([&](VkCommandBuffer buffer) {
+    driver.immediate([&](CommandBuffer& buffer) {
         VkImageSubresourceRange range;
         range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         range.baseMipLevel = 0;
@@ -127,7 +127,7 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Driver& driver, D
         imageBarrier.subresourceRange = range;
         imageBarrier.srcAccessMask = 0;
         imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        vkCmdPipelineBarrier(buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+        vkCmdPipelineBarrier(buffer.buffer(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 
         VkBufferImageCopy copyRegion{};
         copyRegion.bufferOffset = 0;
@@ -142,7 +142,7 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Driver& driver, D
         copyRegion.imageExtent.height = info.height;
         copyRegion.imageExtent.depth = info.depth;
 
-        vkCmdCopyBufferToImage(buffer, staging.buffer(), _image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+        vkCmdCopyBufferToImage(buffer.buffer(), staging.buffer(), _image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
 //        VkImageMemoryBarrier imageBarrier1{}
         imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -150,7 +150,7 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Driver& driver, D
         imageBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        vkCmdPipelineBarrier(buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+        vkCmdPipelineBarrier(buffer.buffer(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 
     });
 }

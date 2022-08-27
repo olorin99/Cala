@@ -55,7 +55,7 @@ cala::backend::vulkan::Buffer cala::backend::vulkan::Driver::stagingBuffer(u32 s
 }
 
 
-VkCommandBuffer cala::backend::vulkan::Driver::beginSingleTimeCommands() {
+cala::backend::vulkan::CommandBuffer cala::backend::vulkan::Driver::beginSingleTimeCommands() {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -64,29 +64,28 @@ VkCommandBuffer cala::backend::vulkan::Driver::beginSingleTimeCommands() {
 
     VkCommandBuffer commandBuffer;
     vkAllocateCommandBuffers(_context.device(), &allocInfo, &commandBuffer);
+    VkQueue graphicsQueue = _context.getQueue(QueueType::GRAPHICS);
+    CommandBuffer buffer(*this, graphicsQueue, commandBuffer);
 
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-    return commandBuffer;
+    buffer.begin();
+    return buffer;
 }
 
-void cala::backend::vulkan::Driver::endSingleTimeCommands(VkCommandBuffer buffer) {
-    vkEndCommandBuffer(buffer);
+void cala::backend::vulkan::Driver::endSingleTimeCommands(CommandBuffer& buffer) {
+    VkCommandBuffer buf = buffer.buffer();
+    VkFence fence; //TODO: dont create/destroy fence each time
+    VkFenceCreateInfo fenceCreateInfo{};
+    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceCreateInfo.pNext = nullptr;
+    vkCreateFence(context().device(), &fenceCreateInfo, nullptr, &fence);
+    buffer.submit(nullptr, fence);
 
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &buffer;
+    auto res = vkWaitForFences(context().device(), 1, &fence, true, 1000000000) == VK_SUCCESS;
+    if (res)
+        vkResetFences(context().device(), 1, &fence);
+    vkDestroyFence(context().device(), fence, nullptr);
 
-    VkQueue graphicsQueue = _context.getQueue(QueueType::GRAPHICS);
-    vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(graphicsQueue);
-
-    vkFreeCommandBuffers(_context.device(), _commandPool, 1, &buffer);
+    vkFreeCommandBuffers(_context.device(), _commandPool, 1, &buf);
 }
 
 VkDeviceMemory cala::backend::vulkan::Driver::allocate(u32 size, u32 typeBits, MemoryProperties flags) {

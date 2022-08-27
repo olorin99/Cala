@@ -33,9 +33,9 @@ namespace cala::backend::vulkan {
         Buffer stagingBuffer(u32 size);
 
 
-        VkCommandBuffer beginSingleTimeCommands();
+        CommandBuffer beginSingleTimeCommands();
 
-        void endSingleTimeCommands(VkCommandBuffer buffer);
+        void endSingleTimeCommands(CommandBuffer& buffer);
 
         template <typename F>
         void immediate(F func) {
