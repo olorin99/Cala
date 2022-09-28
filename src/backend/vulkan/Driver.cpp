@@ -98,7 +98,7 @@ VkDeviceMemory cala::backend::vulkan::Driver::allocate(u32 size, u32 typeBits, M
 
 
 VkDescriptorSetLayout cala::backend::vulkan::Driver::getSetLayout(ende::Span <VkDescriptorSetLayoutBinding> bindings) {
-    SetLayoutKey key;
+    SetLayoutKey key{};
     for (u32 i = 0; i < bindings.size(); i++) {
         key.bindings[i] = bindings[i];
     }

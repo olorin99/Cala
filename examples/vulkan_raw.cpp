@@ -221,6 +221,16 @@ int main() {
     Buffer triangleVertexBuffer = triangle.vertexBuffer(driver);
 
 
+    Image frameCopy(driver, {
+        driver.swapchain().extent().width,
+        driver.swapchain().extent().height,
+        1,
+        driver.swapchain().format(),
+        1,
+        1,
+        ImageUsage::COLOUR_ATTACHMENT | ImageUsage::TRANSFER_DST
+    });
+
     imgui::Stats statWindow;
 
 
@@ -236,6 +246,7 @@ int main() {
 
     CommandBuffer* cmd = nullptr;
 
+    u32 prevFrame = 0;
     bool running = true;
     bool lockMouse = false;
     SDL_Event event;
@@ -294,6 +305,7 @@ int main() {
         }
 
         driver.swapchain().wait();
+        //driver.swapchain().copyFrameToImage(prevFrame, frameCopy);
 
         if (renderImGui) {
             imGuiContext.newFrame();
@@ -355,6 +367,7 @@ int main() {
         }
         driver.endFrame();
         driver.swapchain().present(frame, cmd->signal());
+        prevFrame = frame.index;
 
         frameTime = frameClock.reset();
         dt = driver.milliseconds() / (f64)1000;

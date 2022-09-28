@@ -211,6 +211,39 @@ bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {
     return true;
 }
 
+void cala::backend::vulkan::Swapchain::copyFrameToImage(u32 index, cala::backend::vulkan::CommandBuffer &buffer, cala::backend::vulkan::Image &dst) {
+    assert(_extent.width == dst.width() && _extent.height == dst.height() && 1 == dst.depth());
+
+    VkImageMemoryBarrier barriers[] = { dst.barrier(Access::TRANSFER_WRITE, Access::TRANSFER_WRITE, ImageLayout::UNDEFINED, ImageLayout::TRANSFER_DST) };
+    buffer.pipelineBarrier(PipelineStage::ALL_COMMANDS, PipelineStage::ALL_COMMANDS, 0, nullptr, barriers);
+
+    VkImageCopy region{};
+
+    region.srcSubresource.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    region.srcSubresource.mipLevel = 0;
+    region.srcSubresource.baseArrayLayer = 0;
+    region.srcSubresource.layerCount = 1;
+
+    region.dstSubresource.aspectMask = dst.format() == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    region.dstSubresource.mipLevel = 0;
+    region.dstSubresource.baseArrayLayer = 0;
+    region.dstSubresource.layerCount = 1;
+
+    region.srcOffset = { 0, 0, 0 };
+    region.dstOffset = { 0, 0, 0 };
+    region.extent = { _extent.width, _extent.height, 1 };
+    vkCmdCopyImage(buffer.buffer(), _images[index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, dst.image(), getImageLayout(dst.layout()), 1, &region);
+
+
+}
+
+void cala::backend::vulkan::Swapchain::copyFrameToImage(u32 index, cala::backend::vulkan::Image &dst) {
+    _driver.immediate([&](CommandBuffer& cmd) {
+        copyFrameToImage(index, cmd, dst);
+    });
+}
+
+
 
 bool cala::backend::vulkan::Swapchain::createSwapchain() {
     VkSurfaceCapabilitiesKHR capabilities = getCapabilities(_driver.context().physicalDevice(), _surface);
@@ -231,7 +264,7 @@ bool cala::backend::vulkan::Swapchain::createSwapchain() {
     createInfo.imageColorSpace = format.colorSpace;
     createInfo.imageExtent = extent;
     createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
     createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     createInfo.queueFamilyIndexCount = 0;

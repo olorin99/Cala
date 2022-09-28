@@ -10,6 +10,7 @@
 namespace cala::backend::vulkan {
 
     class Driver;
+    class CommandBuffer;
 
     class Image {
     public:
@@ -47,6 +48,8 @@ namespace cala::backend::vulkan {
 
         void unmap();
 
+        void copy(CommandBuffer& buffer, Image& dst);
+
 
         struct View {
             VkImageView view;
@@ -73,7 +76,11 @@ namespace cala::backend::vulkan {
 
         VkImage image() const { return _image; }
 
+        Format format() const { return _format; }
+
         ImageUsage usage() const { return _usage; }
+
+        ImageLayout layout() const { return _layout; }
 
         u32 width() const { return _width; }
 
@@ -92,6 +99,7 @@ namespace cala::backend::vulkan {
         u32 _depth;
         Format _format;
         ImageUsage _usage;
+        ImageLayout _layout;
 
     };
 

@@ -5,7 +5,8 @@
 cala::backend::vulkan::Image::Image(Driver& driver, CreateInfo info)
     : _driver(driver),
     _image(VK_NULL_HANDLE),
-    _allocation(nullptr)
+    _allocation(nullptr),
+    _layout(ImageLayout::UNDEFINED)
 {
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -153,6 +154,8 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Driver& driver, D
         vkCmdPipelineBarrier(buffer.buffer(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 
     });
+
+    _layout = ImageLayout::SHADER_READ_ONLY;
 }
 
 void *cala::backend::vulkan::Image::map(u32 format) {
@@ -163,6 +166,28 @@ void *cala::backend::vulkan::Image::map(u32 format) {
 
 void cala::backend::vulkan::Image::unmap() {
     vmaUnmapMemory(_driver.context().allocator(), _allocation);
+}
+
+void
+cala::backend::vulkan::Image::copy(cala::backend::vulkan::CommandBuffer &buffer, cala::backend::vulkan::Image &dst) {
+    assert(_width == dst._width && _height == dst._height && _depth == dst._depth);
+
+    VkImageCopy region{};
+
+    region.srcSubresource.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    region.srcSubresource.mipLevel = 0;
+    region.srcSubresource.baseArrayLayer = 0;
+    region.srcSubresource.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+    region.dstSubresource.aspectMask = dst._format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    region.dstSubresource.mipLevel = 0;
+    region.dstSubresource.baseArrayLayer = 0;
+    region.dstSubresource.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+    region.srcOffset = { 0, 0, 0 };
+    region.dstOffset = { 0, 0, 0 };
+    region.extent = { _width, _height, _depth };
+    vkCmdCopyImage(buffer.buffer(), _image, getImageLayout(_layout), dst.image(), getImageLayout(dst._layout), 1, &region);
 }
 
 

@@ -34,6 +34,10 @@ namespace cala::backend::vulkan {
 
         bool resize(u32 width, u32 height);
 
+        void copyFrameToImage(u32 index, CommandBuffer& buffer, Image& dst);
+
+        void copyFrameToImage(u32 index, Image& dst);
+
         VkExtent2D extent() const { return _extent; }
 
         Format format() const { return _format; }
