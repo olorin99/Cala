@@ -118,6 +118,7 @@ void cala::backend::vulkan::CommandBuffer::bindProgram(ShaderProgram &program) {
 //            _dirty = true;
 //        }
     }
+    _pipelineKey.shaderCount = program._stages.size();
     _computeBound = program.stagePresent(ShaderStage::COMPUTE);
 }
 
@@ -381,7 +382,7 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
         VkGraphicsPipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 
-        pipelineInfo.stageCount = 2;
+        pipelineInfo.stageCount = _pipelineKey.shaderCount;
         pipelineInfo.pStages = _pipelineKey.shaders;
 
         pipelineInfo.renderPass = _pipelineKey.renderPass;

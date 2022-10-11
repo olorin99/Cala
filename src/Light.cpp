@@ -32,8 +32,14 @@ cala::Light::Data cala::Light::data() const {
     return data;
 }
 
-void cala::Light::setDirection(const ende::math::Vec3f &dir) {
-    _direction = dir;
+void cala::Light::setDirection(const ende::math::Quaternion &dir) {
+    assert(_type == DIRECTIONAL);
+    _transform.setRot(dir);
+}
+
+void cala::Light::setPosition(const ende::math::Vec3f &pos) {
+    assert(_type == POINT);
+    _transform.setPos(pos);
 }
 
 void cala::Light::setColour(const ende::math::Vec3f &colour) {

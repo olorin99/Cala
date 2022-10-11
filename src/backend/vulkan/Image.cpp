@@ -174,7 +174,8 @@ cala::backend::vulkan::Image::View cala::backend::vulkan::Image::getView(VkImage
     viewCreateInfo.viewType = viewType;
     viewCreateInfo.format = getFormat(_format);
 
-    viewCreateInfo.subresourceRange.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    viewCreateInfo.subresourceRange.aspectMask = (_format == Format::D16_UNORM || _format == Format::D32_SFLOAT || _format == Format::D24_UNORM_S8_UINT) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+//    viewCreateInfo.subresourceRange.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     viewCreateInfo.subresourceRange.baseMipLevel = mipLevel;
     viewCreateInfo.subresourceRange.levelCount = levelCount;
     viewCreateInfo.subresourceRange.baseArrayLayer = arrayLayer;

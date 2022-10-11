@@ -51,11 +51,21 @@ namespace cala {
         LightType type() const { return _type; }
 
 
-        void setDirection(const ende::math::Vec3f& dir);
+        void setDirection(const ende::math::Quaternion& dir);
+
+        void setPosition(const ende::math::Vec3f& pos);
 
         void setColour(const ende::math::Vec3f& colour);
 
+        ende::math::Vec3f getColour() const {
+            return _colour;
+        }
+
         void setIntensity(f32 intensity);
+
+        f32 getIntensity() const {
+            return _intensity;
+        }
 
     private:
         Transform& _transform;

@@ -93,7 +93,7 @@ int main() {
     matInstance.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
 
 
-    Transform cameraTransform({0, 0, -10});
+    Transform cameraTransform({0, 0, 10});
     Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
 
