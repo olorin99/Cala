@@ -120,7 +120,7 @@ int main() {
 
 
     //Transform cameraTransform({0, 0, 10});
-    Transform cameraTransform({0, -10, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(90)));
+    Transform cameraTransform({0, 10, 0});//, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-90)));
     Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
     //Camera camera(ende::math::orthographic<f32>(-10, 10, -10, 10, 1, 100), cameraTransform);
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
@@ -154,7 +154,9 @@ int main() {
 //    };
 
 
-    Transform lightTransform({-2, -20, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(90)));
+    Transform lightTransform({-2, 20, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-90)));
+
+    scene.addRenderable(cube, &matInstance, &lightTransform);
     Light light(Light::DIRECTIONAL, lightTransform);
 
     Buffer lightBuffer(driver, sizeof(light), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
@@ -190,7 +192,7 @@ int main() {
 
     Sampler sampler(driver, {
         .filter = VK_FILTER_NEAREST,
-        .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
         .maxLod = 1.0,
         .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
     });
@@ -219,17 +221,17 @@ int main() {
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_D])
                 cameraTransform.addPos(cameraTransform.rot().right() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LSHIFT])
-                cameraTransform.addPos(cameraTransform.rot().down() * -dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().down() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_SPACE])
-                cameraTransform.addPos(cameraTransform.rot().up() * -dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().up() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LEFT])
                 cameraTransform.rotate({0, -1, 0}, ende::math::rad(-45) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_RIGHT])
                 cameraTransform.rotate({0, -1, 0}, ende::math::rad(45) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_UP])
-                cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(-45) * dt);
-            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_DOWN])
                 cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(45) * dt);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_DOWN])
+                cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(-45) * dt);
         }
 
         {
@@ -256,14 +258,16 @@ int main() {
         }
 
         {
-            //f32 factor = (std::sin(systemTime.elapsed().milliseconds() / 1000.f) + 1) / 2.f;
-            //auto lightPos = lerpPositions(lightPositions, factor);
-            //light.setDirection({lightPos, 10});
-            //lightData = light.data();
-            //lightBuffer.data({&lightData, sizeof(lightData)});
+            //lightTransform.rotate({1, 0, 0}, std::sin(systemTime.elapsed().milliseconds() / 1000.f) * dt);
+            //lightTransform.setPos(lightTransform.rot().back() * 20);
+//            f32 factor = (std::sin(systemTime.elapsed().milliseconds() / 1000.f) + 1) / 2.f;
+//            auto lightPos = lerpPositions(lightPositions, factor);
+//            light.setDirection({lightPos, 10});
+            lightData = light.data();
+            lightBuffer.data({&lightData, sizeof(lightData)});
 
-//            auto lightCameraData = lightCamera.data();
-//            lightCamBuf.data({ &lightCameraData, sizeof(lightCameraData) });
+            auto lightCameraData = lightCamera.data();
+            lightCamBuf.data({ &lightCameraData, sizeof(lightCameraData) });
 
             auto cameraData = camera.data();
             cameraBuffer.data({&cameraData, sizeof(cameraData)});

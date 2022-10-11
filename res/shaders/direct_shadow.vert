@@ -33,6 +33,12 @@ layout (set = 1, binding = 0) uniform ModelData {
     mat4 model;
 };
 
+const mat4 bias = mat4(
+0.5, 0.0, 0.0, 0.0,
+0.0, 0.5, 0.0, 0.0,
+0.0, 0.0, 1.0, 0.0,
+0.5, 0.5, 0.0, 1.0 );
+
 void main() {
     vec3 T = normalize(vec3(model * vec4(inTangent, 0.0)));
     vec3 N = normalize(vec3(model * vec4(inNormal, 0.0)));
@@ -44,7 +50,7 @@ void main() {
     vsOut.TBN = mat3(T, B, N);
     vsOut.Normal = inNormal;
     vsOut.ViewPos = camera.position;
-    vsOut.FragPosLightSpace = lightCamera.projection * lightCamera.view * model * vec4(inPosition, 1.0);
+    vsOut.FragPosLightSpace = bias * lightCamera.projection * lightCamera.view * model * vec4(inPosition, 1.0);
 
     gl_Position = camera.projection * camera.view * model * vec4(inPosition, 1.0);
 }

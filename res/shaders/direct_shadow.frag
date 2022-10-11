@@ -32,11 +32,17 @@ layout (set = 3, binding = 0) uniform LightData {
 };
 
 float calcShadows(vec4 fragPosLight, float bias) {
-    vec4 projCoords = fragPosLight / fragPosLight.w;
-    projCoords = projCoords * 0.5 + 0.5;
-    float closestDepth = texture(shadowMap, projCoords.xy).r;
-    float currentDepth = projCoords.z;
-    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+    float shadow = 1.0;
+    vec4 shadowCoords = fragPosLight / fragPosLight.w;
+    if(texture( shadowMap, shadowCoords.xy ).r < shadowCoords.z - bias)
+    {
+        shadow = 0.0;
+    }
+//    vec4 projCoords = fragPosLight / fragPosLight.w;
+//    //projCoords = projCoords * 0.5 + 0.5;
+//    float closestDepth = texture(shadowMap, projCoords.xy).r;
+//    float currentDepth = projCoords.z;
+//    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
     return shadow;
 //    float shadow = 1;
 //    vec4 shadowCoord = fragPosLight / fragPosLight.w;
@@ -55,7 +61,7 @@ void main() {
     vec3 normalColour = texture(normalMap, fsIn.TexCoords).rgb;
     vec3 specularColour = texture(specularMap, fsIn.TexCoords).rgb;
 
-    vec3 lightDir = normalize(-light.position);
+    vec3 lightDir = normalize(light.position);
 
     vec3 normal = normalize(normalColour * 2.0 - 1.0);
     normal = normalize(fsIn.TBN * normal);
@@ -73,7 +79,6 @@ void main() {
     float bias = max(0.01 * (1.0 - dot(fsIn.Normal, lightDir)), 0.005);
     float shadow = calcShadows(fsIn.FragPosLightSpace, bias);
 
-    vec3 colour = (diffuse + specular) * light.colour * (1 - shadow);
-    //FragColour = vec4(shadow, shadow, shadow, 1.0f);
+    vec3 colour = (diffuse + specular) * light.colour * (shadow);
     FragColour = vec4(colour, 1.0f);
 }
