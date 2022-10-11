@@ -70,10 +70,10 @@ void main() {
     float spec = pow(max(dot(normal, halfWayDir), 0.0), 32.0);
     vec3 specular = vec3(0.3) * spec * specularColour;
 
-    float bias = max(0.05 * (1.0 - dot(fsIn.Normal, lightDir)), 0.009);
+    float bias = max(0.01 * (1.0 - dot(fsIn.Normal, lightDir)), 0.005);
     float shadow = calcShadows(fsIn.FragPosLightSpace, bias);
 
     vec3 colour = (diffuse + specular) * light.colour * (1 - shadow);
-    //FragColour = vec4(shadow, 0, 0, 1.0f);
+    //FragColour = vec4(shadow, shadow, shadow, 1.0f);
     FragColour = vec4(colour, 1.0f);
 }

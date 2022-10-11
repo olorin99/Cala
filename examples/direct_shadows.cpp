@@ -162,7 +162,7 @@ int main() {
     lightBuffer.data({&lightData, sizeof(lightData)});
 
     //Camera lightCamera(ende::math::orthographic<f32>(-10, 10, -10, 10, 1, 100), lightTransform);
-    Camera lightCamera(ende::math::perspective((f32)ende::math::rad(54.4), 1024.f / 1024.f, 0.1f, 1000.f), lightTransform);
+    Camera lightCamera(ende::math::perspective((f32)ende::math::rad(45.f), 1024.f / 1024.f, 0.1f, 100.f), lightTransform);
     Buffer lightCamBuf(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
     auto lightCameraData = lightCamera.data();
     lightCamBuf.data({ &lightCameraData, sizeof(lightCameraData) });
