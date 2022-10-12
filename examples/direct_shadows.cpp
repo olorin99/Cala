@@ -79,6 +79,19 @@ ende::math::Vec3f lerpPositions(ende::Span<ende::math::Vec3f> inputs, f32 factor
 }
 
 int main() {
+
+    ende::math::Mat4f m(std::array<std::array<f32, 4>, 4>{
+        std::array<f32, 4>{1.f, 1.f, 1.f, -1.f},
+        std::array<f32, 4>{1.f, 1.f, -1.f, 1.f},
+        std::array<f32, 4>{1.f, -1.f, 1.f, 1.f},
+        std::array<f32, 4>{-1.f, 1.f, 1.f, 1.f}
+    });
+
+    ende::math::Mat4f inv = m.inverse();
+
+    auto i = m * inv;
+
+
     SDLPlatform platform("hello_triangle", 800, 600);
     Driver driver(platform);
 
@@ -119,14 +132,16 @@ int main() {
     auto shadowMatInstance = shadowMaterial.instance();
 
 
-    //Transform cameraTransform({0, 0, 10});
-    Transform cameraTransform({0, 10, 0});//, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-90)));
+//    Transform cameraTransform({0, 0, 10});
+    Transform cameraTransform({-2, 20, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-90)));
     Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
     //Camera camera(ende::math::orthographic<f32>(-10, 10, -10, 10, 1, 100), cameraTransform);
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
 
     Scene scene(driver, 10);
     Mesh cube = shapes::cube().mesh(driver);
+
+//    Mesh frustum = shapes::frustum(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f) * camera.view()).mesh(driver);
 
     ende::Vector<cala::Transform> transforms;
     transforms.reserve(100);
@@ -136,8 +151,8 @@ int main() {
         }));
         scene.addRenderable(cube, &matInstance, &transforms.back());
     }
-    Transform centrePos({0, 0, 0}, {0, 0, 0, 1}, {0.2, 0.2, 0.2});
-    scene.addRenderable(cube, &matInstance, &centrePos);
+//    Transform centrePos({0, 0, 0}, {0, 0, 0, 1}, {0.2, 0.2, 0.2});
+//    scene.addRenderable(frustum, &matInstance, &centrePos);
     Transform lightPos({1, -1, 1}, {0, 0, 0, 1}, {0.5, 0.5, 0.5});
     scene.addRenderable(cube, &matInstance, &lightPos);
 
@@ -163,7 +178,7 @@ int main() {
     auto lightData = light.data();
     lightBuffer.data({&lightData, sizeof(lightData)});
 
-    //Camera lightCamera(ende::math::orthographic<f32>(-10, 10, -10, 10, 1, 100), lightTransform);
+//    Camera lightCamera(ende::math::orthographic<f32>(-10, 10, -10, 10, 1, 100), lightTransform);
     Camera lightCamera(ende::math::perspective((f32)ende::math::rad(45.f), 1024.f / 1024.f, 0.1f, 100.f), lightTransform);
     Buffer lightCamBuf(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
     auto lightCameraData = lightCamera.data();
@@ -258,8 +273,13 @@ int main() {
         }
 
         {
-            //lightTransform.rotate({1, 0, 0}, std::sin(systemTime.elapsed().milliseconds() / 1000.f) * dt);
-            //lightTransform.setPos(lightTransform.rot().back() * 20);
+            lightTransform.rotate({1, 0, 0}, std::sin(systemTime.elapsed().milliseconds() / 1000.f) * dt);
+            auto lightPos = lightTransform.rot().front() * 20;
+//            lightPos = lightPos * -1;
+//            lightPos[1] *= -1;
+            lightTransform.setPos(lightPos);
+//            cameraTransform.rotate({1, 0, 0}, std::sin(systemTime.elapsed().milliseconds() / 1000.f) * dt);
+//            cameraTransform.setPos(cameraTransform.rot().front() * 20);
 //            f32 factor = (std::sin(systemTime.elapsed().milliseconds() / 1000.f) + 1) / 2.f;
 //            auto lightPos = lerpPositions(lightPositions, factor);
 //            light.setDirection({lightPos, 10});

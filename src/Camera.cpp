@@ -26,7 +26,7 @@ ende::math::Mat4f cala::Camera::view() const {
     pos[1] *= -1; //inverses all movement on y axis
     ende::math::Mat4f translation = ende::math::translation<4, f32>(pos);
     ende::math::Quaternion rot = _transform.rot().conjugate().unit();
-    ende::math::Mat4f rotation = ende::math::Quaternion(-rot.x(), rot.y(), -rot.z(), rot.w()).toMat();
+    ende::math::Mat4f rotation = ende::math::Quaternion(-rot.x(), rot.y(), -rot.z(), rot.w()).toMat(); //inverse rotation of y axis
     return rotation * translation;
 }
 

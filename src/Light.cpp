@@ -27,8 +27,10 @@ cala::Light::Data cala::Light::data() const {
 
     if (_type == POINT)
         data.position = _transform.pos();
-    else if (_type == DIRECTIONAL)
-        data.position = _transform.rot().front();
+    else if (_type == DIRECTIONAL) {
+        data.position = _transform.rot().back();
+//        data.position[1] *= -1; // inverse y axis of direction vector
+    }
     return data;
 }
 

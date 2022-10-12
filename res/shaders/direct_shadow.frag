@@ -31,28 +31,39 @@ layout (set = 3, binding = 0) uniform LightData {
     PointLight light;
 };
 
-float calcShadows(vec4 fragPosLight, float bias) {
+float calcShadows(vec4 fragPosLight, vec2 offset, float bias) {
     float shadow = 1.0;
     vec4 shadowCoords = fragPosLight / fragPosLight.w;
-    if(texture( shadowMap, shadowCoords.xy ).r < shadowCoords.z - bias)
-    {
+    if(texture(shadowMap, shadowCoords.xy + offset).r < shadowCoords.z - bias) {
         shadow = 0.0;
     }
-//    vec4 projCoords = fragPosLight / fragPosLight.w;
-//    //projCoords = projCoords * 0.5 + 0.5;
-//    float closestDepth = texture(shadowMap, projCoords.xy).r;
-//    float currentDepth = projCoords.z;
-//    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+    if (shadowCoords.z > 1.0) {
+        shadow = 1.0;
+    }
     return shadow;
-//    float shadow = 1;
-//    vec4 shadowCoord = fragPosLight / fragPosLight.w;
-//    if (shadowCoord.z > -1.0 && shadowCoord.z < 1.0) {
-//        float dist = texture(shadowMap, shadowCoord.xy).r;
-//        if (shadowCoord.w > 0.0 && dist < shadowCoord.z) {
-//            shadow = 0;
-//        }
-//    }
-//    return shadow;
+}
+
+float filterPCF(vec4 fragPosLight, float bias) {
+    vec4 shadowCoords = fragPosLight / fragPosLight.w;
+    ivec2 texDim = textureSize(shadowMap, 0);
+    float scale = 1.5;
+    float dx = scale * 1.0 / float(texDim.x);
+    float dy = scale * 1.0 / float(texDim.y);
+
+    float shadowFactor = 0.0;
+    int count = 0;
+    int range = 1;
+
+    for (int x = -range; x <= range; x++)
+    {
+        for (int y = -range; y <= range; y++)
+        {
+            shadowFactor += calcShadows(fragPosLight, vec2(dx*x, dy*y), bias);
+            count++;
+        }
+
+    }
+    return shadowFactor / count;
 }
 
 void main() {
@@ -61,7 +72,7 @@ void main() {
     vec3 normalColour = texture(normalMap, fsIn.TexCoords).rgb;
     vec3 specularColour = texture(specularMap, fsIn.TexCoords).rgb;
 
-    vec3 lightDir = normalize(light.position);
+    vec3 lightDir = normalize(-light.position);
 
     vec3 normal = normalize(normalColour * 2.0 - 1.0);
     normal = normalize(fsIn.TBN * normal);
@@ -76,8 +87,11 @@ void main() {
     float spec = pow(max(dot(normal, halfWayDir), 0.0), 32.0);
     vec3 specular = vec3(0.3) * spec * specularColour;
 
-    float bias = max(0.01 * (1.0 - dot(fsIn.Normal, lightDir)), 0.005);
-    float shadow = calcShadows(fsIn.FragPosLightSpace, bias);
+    float bias = max(0.01 * (1.0 - dot(fsIn.Normal, lightDir)), 0.00001);
+//    float bias = 0.005*tan(acos(dot(normal, lightDir))); // cosTheta is dot( n,l ), clamped between 0 and 1
+//    bias = clamp(bias, 0,0.01);
+//    float shadow = calcShadows(fsIn.FragPosLightSpace, vec2(0), bias);
+    float shadow = filterPCF(fsIn.FragPosLightSpace, bias);
 
     vec3 colour = (diffuse + specular) * light.colour * (shadow);
     FragColour = vec4(colour, 1.0f);
