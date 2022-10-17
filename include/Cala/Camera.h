@@ -26,6 +26,8 @@ namespace cala {
             ende::math::Mat4f projection;
             ende::math::Mat4f view;
             alignas(16) ende::math::Vec3f position;
+            f32 near;
+            f32 far;
         };
 
         Data data() const;

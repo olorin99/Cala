@@ -80,16 +80,22 @@ ende::math::Vec3f lerpPositions(ende::Span<ende::math::Vec3f> inputs, f32 factor
 
 int main() {
 
-    ende::math::Mat4f m(std::array<std::array<f32, 4>, 4>{
-        std::array<f32, 4>{1.f, 1.f, 1.f, -1.f},
-        std::array<f32, 4>{1.f, 1.f, -1.f, 1.f},
-        std::array<f32, 4>{1.f, -1.f, 1.f, 1.f},
-        std::array<f32, 4>{-1.f, 1.f, 1.f, 1.f}
-    });
+    Transform testTransform({0, 0, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(90)));
+    testTransform.rotate(ende::math::Quaternion({0, 0, 1}, ende::math::rad(45)));
 
-    ende::math::Mat4f inv = m.inverse();
+    auto testDir = testTransform.rot().front();
 
-    auto i = m * inv;
+    auto testDir1 = testTransform.rot().rotate({0, 0, 1});
+
+    auto testMat = testTransform.rot().toMat();
+
+    auto testDir2 = testMat.transform(ende::math::Vec<3, f32>{0.f, 0.f, 1.f});
+
+
+
+
+
+
 
 
     SDLPlatform platform("hello_triangle", 800, 600);
@@ -141,8 +147,6 @@ int main() {
     Scene scene(driver, 10);
     Mesh cube = shapes::cube().mesh(driver);
 
-//    Mesh frustum = shapes::frustum(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f) * camera.view()).mesh(driver);
-
     ende::Vector<cala::Transform> transforms;
     transforms.reserve(100);
     for (int i = 0; i < 10; i++) {
@@ -151,8 +155,8 @@ int main() {
         }));
         scene.addRenderable(cube, &matInstance, &transforms.back());
     }
-//    Transform centrePos({0, 0, 0}, {0, 0, 0, 1}, {0.2, 0.2, 0.2});
-//    scene.addRenderable(frustum, &matInstance, &centrePos);
+    Transform centrePos({0, 0, 0}, {0, 0, 0, 1}, {0.2, 0.2, 0.2});
+    scene.addRenderable(cube, &matInstance, &centrePos);
     Transform lightPos({1, -1, 1}, {0, 0, 0, 1}, {0.5, 0.5, 0.5});
     scene.addRenderable(cube, &matInstance, &lightPos);
 
@@ -228,17 +232,17 @@ int main() {
         }
         {
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_W])
-                cameraTransform.addPos(cameraTransform.rot().front() * -dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().front() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_S])
-                cameraTransform.addPos(cameraTransform.rot().back() * -dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().back() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_A])
-                cameraTransform.addPos(cameraTransform.rot().left() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().left() * -dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_D])
-                cameraTransform.addPos(cameraTransform.rot().right() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().right() * -dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LSHIFT])
-                cameraTransform.addPos(cameraTransform.rot().down() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().down() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_SPACE])
-                cameraTransform.addPos(cameraTransform.rot().up() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().up() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LEFT])
                 cameraTransform.rotate({0, -1, 0}, ende::math::rad(-45) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_RIGHT])
@@ -265,7 +269,6 @@ int main() {
                 lightData = light.data();
                 lightBuffer.data({&lightData, sizeof(lightData)});
             }
-
 
             ImGui::End();
 
@@ -307,7 +310,7 @@ int main() {
             //vkCmdSetDepthBias(cmd->buffer(), 1.25f, 0.f, 1.75f);
 
             //cmd->bindBuffer(0, 0, cameraBuffer);
-            cmd->bindBuffer(0, 0, lightCamBuf);
+//            cmd->bindBuffer(0, 0, lightCamBuf);
             cmd->bindBuffer(3, 0, lightBuffer);
 
             shadowMatInstance.bind(*cmd);
@@ -318,6 +321,12 @@ int main() {
                 cmd->bindAttributes(renderable.first.attributes);
 
                 cmd->bindBuffer(1, 0, scene._modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+
+                ende::math::Mat4f constants[2] = {
+                        lightCamera.projection(),
+                        lightCamera.view()
+                };
+                cmd->pushConstants({constants, sizeof(constants)});
 
                 cmd->bindPipeline();
                 cmd->bindDescriptors();

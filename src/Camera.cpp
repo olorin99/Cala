@@ -23,10 +23,11 @@ void cala::Camera::resize(f32 width, f32 height) {
 
 ende::math::Mat4f cala::Camera::view() const {
     ende::math::Vec3f pos = _transform.pos();
-    pos[1] *= -1; //inverses all movement on y axis
+    pos = pos * -1;
+//    pos[1] *= -1; //inverses all movement on y axis
     ende::math::Mat4f translation = ende::math::translation<4, f32>(pos);
     ende::math::Quaternion rot = _transform.rot().conjugate().unit();
-    ende::math::Mat4f rotation = ende::math::Quaternion(-rot.x(), rot.y(), -rot.z(), rot.w()).toMat(); //inverse rotation of y axis
+    ende::math::Mat4f rotation = rot.invertY().toMat(); //inverse rotation of y axis
     return rotation * translation;
 }
 
@@ -39,9 +40,14 @@ cala::Transform &cala::Camera::transform() const {
 }
 
 cala::Camera::Data cala::Camera::data() const {
+    auto viewPos = _transform.pos();
+    viewPos = viewPos * ende::math::Vec3f({-1.f, 1.f, -1.f});
+
     return  {
         _projection,
         view(),
-        _transform.pos()
+        viewPos,
+        _near,
+        _far
     };
 }
