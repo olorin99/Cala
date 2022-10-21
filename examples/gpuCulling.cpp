@@ -153,25 +153,25 @@ int main() {
         }
         {
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_W])
-                cameraTransform.addPos(cameraTransform.rot().front() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().front() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_S])
-                cameraTransform.addPos(cameraTransform.rot().back() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().back() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_A])
-                cameraTransform.addPos(cameraTransform.rot().left() * -dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().left() * -dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_D])
-                cameraTransform.addPos(cameraTransform.rot().right() * -dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().right() * -dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LSHIFT])
-                cameraTransform.addPos(cameraTransform.rot().down() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().down() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_SPACE])
-                cameraTransform.addPos(cameraTransform.rot().up() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().up() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LEFT])
                 cameraTransform.rotate({0, 1, 0}, ende::math::rad(45) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_RIGHT])
                 cameraTransform.rotate({0, 1, 0}, ende::math::rad(-45) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_UP])
-                cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(-45) * dt);
-            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_DOWN])
                 cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(45) * dt);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_DOWN])
+                cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(-45) * dt);
         }
 
         {
@@ -191,6 +191,7 @@ int main() {
 
                 transforms.clear();
                 models.clear();
+                positions.clear();
                 auto pos = modelTransform.pos();
                 for (i32 i = 0; i < width; i++) {
                     auto xpos = modelTransform.pos();
@@ -209,6 +210,7 @@ int main() {
                 modelTransform.setPos(pos);
 
                 modelBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});
+                positionBuffer.data({positions.data(), static_cast<u32>(positions.size() * (sizeof(ende::math::Vec3f) + sizeof(f32)))});
             }
 
             ImGui::End();
@@ -334,7 +336,8 @@ int main() {
             drawCount = *static_cast<u32*>(mappedOutput.address);
         }
         computeList.flush();
-        dt = driver.endFrame().milliseconds() / 1000.f;
+        driver.endFrame();
+        dt = driver.milliseconds() / 1000.f;
         driver.swapchain().present(frame, cmd->signal());
     }
 
