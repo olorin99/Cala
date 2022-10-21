@@ -22,7 +22,7 @@
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include <Cala/backend/vulkan/Buffer.h>
 #include <Cala/backend/vulkan/Sampler.h>
-
+#include <Cala/backend/vulkan/Timer.h>
 #include <Cala/backend/vulkan/SDLPlatform.h>
 #include <Cala/Mesh.h>
 #include <Cala/ImGuiContext.h>
@@ -234,7 +234,11 @@ int main() {
     ende::time::Duration avgFrameTime;
     ende::time::Duration maxDeviation;
 
+    u64 gpuTime = 0;
+
     CommandBuffer* cmd = nullptr;
+
+    Timer timer(driver);
 
     bool running = true;
     bool lockMouse = false;
@@ -272,25 +276,25 @@ int main() {
         }
         {
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_W])
-                cameraTransform.addPos(cameraTransform.rot().front() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().front() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_S])
-                cameraTransform.addPos(cameraTransform.rot().back() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().back() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_A])
-                cameraTransform.addPos(cameraTransform.rot().left() * -dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().left() * -dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_D])
-                cameraTransform.addPos(cameraTransform.rot().right() * -dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().right() * -dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LSHIFT])
-                cameraTransform.addPos(cameraTransform.rot().down() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().down() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_SPACE])
-                cameraTransform.addPos(cameraTransform.rot().up() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().up() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LEFT])
                 cameraTransform.rotate({0, 1, 0}, ende::math::rad(45) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_RIGHT])
                 cameraTransform.rotate({0, 1, 0}, ende::math::rad(-45) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_UP])
-                cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(-45) * dt);
-            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_DOWN])
                 cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(45) * dt);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_DOWN])
+                cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(-45) * dt);
         }
 
         driver.swapchain().wait();
@@ -306,6 +310,7 @@ int main() {
             ImGui::Text("Vendor: %s", driver.context().vendor());
             ImGui::Text("Device: %s", driver.context().deviceName().data());
             ImGui::Text("Type: %s", driver.context().deviceTypeString());
+            ImGui::Text("GPU Time: %f", gpuTime / 1e6);
 
             /*if (ImGui::SliderFloat("QuadDistance", &quadDistance, 0.f, 2.f)) {
                 auto q = scene._renderables.back().second;
@@ -328,6 +333,7 @@ int main() {
         auto frame = driver.swapchain().nextImage();
 
         cmd = driver.beginFrame();
+        timer.start(*cmd);
         {
             VkImageMemoryBarrier barriers[] = { brickwall_copy.barrier(Access::SHADER_READ, Access::SHADER_WRITE, ImageLayout::UNDEFINED, ImageLayout::GENERAL) };
             cmd->pipelineBarrier(PipelineStage::VERTEX_SHADER, PipelineStage::COMPUTE_SHADER, 0, nullptr, barriers);
@@ -350,6 +356,7 @@ int main() {
 
             imGuiContext.render(*cmd);
 
+            timer.stop();
             cmd->end(frame.framebuffer);
             cmd->submit({&frame.imageAquired, 1}, frame.fence);
         }
@@ -368,6 +375,8 @@ int main() {
             avgFrameTime = sumAvgFrameTime / 100;
             sumAvgFrameTime = 0;
         }
+
+        gpuTime = timer.result();
 
         ende::profile::ProfileManager::endFrame(frameCount);
         frameCount++;

@@ -58,6 +58,8 @@ namespace cala::backend::vulkan {
 
         ende::Span<char> deviceName() const { return _deviceName; }
 
+        f32 timestampPeriod() const { return _timestampPeriod; }
+
 
 
         //maybe deprecate
@@ -99,7 +101,7 @@ namespace cala::backend::vulkan {
         const char* _vendor;
         PhysicalDeviceType _deviceType;
         ende::Span<char> _deviceName;
-        float _timestampPeriod;
+        f32 _timestampPeriod;
 
     };
 

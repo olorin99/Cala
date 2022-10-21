@@ -30,7 +30,7 @@ u64 cala::backend::vulkan::Timer::result() {
     if (res == VK_NOT_READY)
         return 0;
     else if (res == VK_SUCCESS) {
-        _result = buffer[1] - buffer[0];
+        _result = (buffer[1] - buffer[0]) * (u32)_driver->context().timestampPeriod();
     } else {
         throw "query fail";
     }
