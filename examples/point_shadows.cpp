@@ -9,6 +9,8 @@
 #include <Cala/Material.h>
 #include <Cala/MaterialInstance.h>
 #include <Cala/Scene.h>
+#include <Ende/math/Frustum.h>
+#include <Cala/backend/vulkan/Timer.h>
 #include "../../third_party/stb_image.h"
 
 using namespace cala;
@@ -220,6 +222,12 @@ int main() {
 
     auto systemTime = ende::time::SystemTime::now();
 
+    Timer shadowPassTimer(driver);
+    Timer lightPassTimer(driver, 1);
+
+    u64 shadowPassTime = 0;
+    u64 lightPassTime = 0;
+
     f32 dt = 1.f / 60.f;
     bool running = true;
     SDL_Event event;
@@ -260,6 +268,8 @@ int main() {
             ImGui::Begin("Light Data");
             ImGui::Text("FPS: %f", driver.fps());
             ImGui::Text("Milliseconds: %f", driver.milliseconds());
+            ImGui::Text("Shadow Milliseconds: %f", shadowPassTime / 1e6);
+            ImGui::Text("Light Milliseconds: %f", lightPassTime / 1e6);
 
             ende::math::Vec3f colour = light.getColour();
             f32 intensity = light.getIntensity();
@@ -298,6 +308,7 @@ int main() {
         auto frame = driver.swapchain().nextImage();
         CommandBuffer* cmd = driver.beginFrame();
         {
+            shadowPassTimer.start(*cmd);
 
             lightTransform.setRot({0, 0, 0, 1});
             for (u32 j = 0; j < 6; j++) {
@@ -353,8 +364,14 @@ int main() {
                     cmd->pushConstants({constants, sizeof(constants)});
                 }
 
+                ende::math::Frustum frustum(lightCamera.viewProjection());
+
                 for (u32 i = 0; i < scene._renderables.size(); i++) {
                     auto& renderable = scene._renderables[i];
+
+                    if (!frustum.intersect(renderable.second->pos()))
+                        continue;
+
                     cmd->bindBindings(renderable.first.bindings);
                     cmd->bindAttributes(renderable.first.attributes);
 
@@ -428,10 +445,12 @@ int main() {
                 cmd->pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::EARLY_FRAGMENT, 0, nullptr, {&barriers[0], 1});
                 cmd->pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::FRAGMENT_SHADER, 0, nullptr, {&barriers[1], 1});
             }
+            shadowPassTimer.stop();
 
 
             cmd->clearDescriptors();
 
+            lightPassTimer.start(*cmd);
             cmd->begin(frame.framebuffer);
 
             cmd->bindBuffer(0, 0, cameraBuffer);
@@ -444,12 +463,16 @@ int main() {
             imGuiContext.render(*cmd);
 
             cmd->end(frame.framebuffer);
+            lightPassTimer.stop();
             cmd->submit({&frame.imageAquired, 1}, frame.fence);
         }
         driver.endFrame();
         dt = driver.milliseconds() / (f64)1000;
 
         driver.swapchain().present(frame, cmd->signal());
+
+        shadowPassTime = shadowPassTimer.result() ? shadowPassTimer.result() : shadowPassTime;
+        lightPassTime = lightPassTimer.result() ? lightPassTimer.result() : lightPassTime;
     }
 
     driver.swapchain().wait();

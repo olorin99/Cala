@@ -244,30 +244,6 @@ int main() {
         {
             computeTimer.start(*computeCmd);
 
-//            VkBufferMemoryBarrier barriers[4] = {};
-//            barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-//            barriers[0].srcAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-//            barriers[0].dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-//            barriers[0].buffer = cameraBuffer.buffer();
-//            barriers[0].offset = 0;
-//            barriers[0].size = cameraBuffer.size();
-//            barriers[0].srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
-//            barriers[0].dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
-//
-//            barriers[1] = barriers[0];
-//            barriers[1].buffer = modelBuffer.buffer();
-//            barriers[1].size = modelBuffer.size();
-//
-//            barriers[2] = barriers[0];
-//            barriers[2].dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-//            barriers[2].buffer = renderBuffer.buffer();
-//            barriers[2].size = renderBuffer.size();
-//
-//            barriers[3] = barriers[0];
-//            barriers[3].dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-//            barriers[3].buffer = renderBuffer.buffer();
-//            barriers[3].size = renderBuffer.size();
-
             VkBufferMemoryBarrier barrier{};
             barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
             barrier.buffer = renderBuffer.buffer();
@@ -292,22 +268,6 @@ int main() {
             computeCmd->bindPipeline();
             computeCmd->bindDescriptors();
             computeCmd->dispatchCompute(models.size() / 16, 1, 1);
-
-
-//            barriers[0].dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-//            barriers[0].dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
-//            barriers[0].srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
-//            barriers[1].dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-//            barriers[1].dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
-//            barriers[1].srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
-//            barriers[2].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-//            barriers[2].dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-//            barriers[2].dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
-//            barriers[2].srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
-//            barriers[3].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-//            barriers[3].dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-//            barriers[3].dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
-//            barriers[3].srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
 
             barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
