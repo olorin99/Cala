@@ -1,10 +1,10 @@
 #include "Cala/Light.h"
 
 
-cala::Light::Light(LightType type, Transform &transform)
+cala::Light::Light(LightType type, bool shadows, Transform &transform)
     : _type(type),
+      _shadowing(shadows),
       _transform(transform),
-      _direction({0, 1, 0}),
       _colour({1, 1, 1}),
       _intensity(1),
       _constant(1),
@@ -13,9 +13,24 @@ cala::Light::Light(LightType type, Transform &transform)
       _radius(80)
 {}
 
+cala::Light &cala::Light::operator=(const cala::Light &rhs) {
+    Transform& tmp = rhs._transform;
+    std::swap(_transform, tmp);
+    _shadowing = rhs._shadowing;
+    _colour = rhs._colour;
+    _intensity = rhs._intensity;
+    _constant = rhs._constant;
+    _linear = rhs._linear;
+    _quadratic = rhs._quadratic;
+    _radius = rhs._radius;
+    return *this;
+}
+
+
+
 cala::Light::Data cala::Light::data() const {
     Data data {
-        _direction,
+            {},
         0,
         _colour,
         _intensity,
@@ -29,7 +44,6 @@ cala::Light::Data cala::Light::data() const {
         data.position = _transform.pos();
     else if (_type == DIRECTIONAL) {
         data.position = _transform.rot().back();
-//        data.position[1] *= -1; // inverse y axis of direction vector
     }
     return data;
 }

@@ -246,7 +246,7 @@ void cala::backend::vulkan::CommandBuffer::bindImage(u32 set, u32 binding, Image
 }
 
 void cala::backend::vulkan::CommandBuffer::pushConstants(ende::Span<const void> data, u32 offset) {
-    vkCmdPushConstants(_buffer, _pipelineKey.layout, VK_SHADER_STAGE_VERTEX_BIT, offset, data.size(), data.data());
+    vkCmdPushConstants(_buffer, _pipelineKey.layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, offset, data.size(), data.data());
 }
 
 void cala::backend::vulkan::CommandBuffer::bindDescriptors() {

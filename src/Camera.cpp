@@ -3,17 +3,23 @@
 cala::Camera::Camera(f32 fov, f32 width, f32 height, f32 near, f32 far, Transform &transform)
     : _transform(transform),
     _projection(ende::math::perspective(fov, width / height, near, far)),
+    _frustum(_projection),
     _fov(fov),
     _width(width),
     _height(height),
     _near(near),
     _far(far)
-{}
+{
+    _frustum.update(viewProjection());
+}
 
 cala::Camera::Camera(const ende::math::Mat4f &projection, Transform &transform)
     : _projection(projection),
+      _frustum(projection),
     _transform(transform)
-{}
+{
+    _frustum.update(viewProjection());
+}
 
 void cala::Camera::resize(f32 width, f32 height) {
     _width = width;
@@ -37,6 +43,10 @@ ende::math::Mat4f cala::Camera::viewProjection() const {
 
 cala::Transform &cala::Camera::transform() const {
     return _transform;
+}
+
+void cala::Camera::updateFrustum() {
+    _frustum.update(viewProjection());
 }
 
 cala::Camera::Data cala::Camera::data() const {

@@ -65,12 +65,6 @@ ende::math::Vec3f lerpPositions(ende::Span<ende::math::Vec3f> inputs, f32 factor
 
     while (positions.size() > 1) {
         for (u32 i = 0; i < positions.size(); i++) {
-//            ende::math::Vec3f pos;
-//            if (i == positions.size() - 1)
-//                pos = positions[0];
-//            else
-//                pos = positions[i + 1];
-
             if (i + 1 >= positions.size())
                 break;
             tmpPositions.push(positions[i].lerp(positions[i+1], factor));
@@ -124,10 +118,7 @@ int main() {
 
 
     Transform cameraTransform({0, 0, 0});
-//    Transform cameraTransform({-2, 20, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-90)));
-//    Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
     Camera camera(ende::math::perspective((f32)ende::math::rad(90), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
-    //Camera camera(ende::math::orthographic<f32>(-10, 10, -10, 10, 1, 100), cameraTransform);
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
 
     Scene scene(driver, 10);
@@ -151,17 +142,17 @@ int main() {
 //    scene.addRenderable(cube, &matInstance, &lightPos);
 
     f32 width = volume * 2;
-    Transform floorPos({0, -width, 0}, {0, 0, 0, 1}, {100, 1, 100});
+    Transform floorPos({0, -width, 0}, {0, 0, 0, 1}, {width, 1, width});
     scene.addRenderable(cube, &matInstance, &floorPos);
-    Transform roofPos({0, width, 0}, {0, 0, 0, 1}, {100, 1, 100});
+    Transform roofPos({0, width, 0}, {0, 0, 0, 1}, {width, 1, width});
     scene.addRenderable(cube, &matInstance, &roofPos);
-    Transform leftPos({-width, 0, 0}, {0, 0, 0, 1}, {1, 100, 100});
+    Transform leftPos({-width, 0, 0}, {0, 0, 0, 1}, {1, width, width});
     scene.addRenderable(cube, &matInstance, &leftPos);
-    Transform rightPos({width, 0, 0}, {0, 0, 0, 1}, {1, 100, 100});
+    Transform rightPos({width, 0, 0}, {0, 0, 0, 1}, {1, width, width});
     scene.addRenderable(cube, &matInstance, &rightPos);
-    Transform frontPos({0, 0, -width}, {0, 0, 0, 1}, {100, 100, 1});
+    Transform frontPos({0, 0, -width}, {0, 0, 0, 1}, {width, width, 1});
     scene.addRenderable(cube, &matInstance, &frontPos);
-    Transform backPos({0, 0, width}, {0, 0, 0, 1}, {100, 100, 1});
+    Transform backPos({0, 0, width}, {0, 0, 0, 1}, {width, width, 1});
     scene.addRenderable(cube, &matInstance, &backPos);
 
 
@@ -178,14 +169,16 @@ int main() {
     Transform lightTransform({0, 0, 0});
 
     scene.addRenderable(cube, &matInstance, &lightTransform);
-    Light light(Light::POINT, lightTransform);
+    Light light(Light::POINT, true, lightTransform);
 
     Buffer lightBuffer(driver, sizeof(light), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
     auto lightData = light.data();
     lightBuffer.data({&lightData, sizeof(lightData)});
 
+    scene.addLight(light);
+
 //    Camera lightCamera(ende::math::orthographic<f32>(-10, 10, -10, 10, 1, 100), lightTransform);
-    Camera lightCamera(ende::math::perspective((f32)ende::math::rad(90.f), 1024.f / 1024.f, 0.1f, 100.f), lightTransform);
+    Camera lightCamera((f32)ende::math::rad(90.f), 1024.f, 1024.f, 0.1f, 100.f, lightTransform);
     Buffer lightCamBuf(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
     auto lightCameraData = lightCamera.data();
     lightCamBuf.data({ &lightCameraData, sizeof(lightCameraData) });
@@ -202,14 +195,11 @@ int main() {
             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
     };
     RenderPass shadowPass(driver, {&shadowPassAttachment, 1});
-//    Image depthMap(driver, {512, 512, 1, driver.context().depthFormat(), 1, 1, ImageUsage::SAMPLED | ImageUsage::DEPTH_STENCIL_ATTACHMENT | ImageUsage::TRANSFER_SRC});
     Image depthMap(driver, {1024, 1024, 1, Format::D32_SFLOAT, 1, 1, ImageUsage::SAMPLED | ImageUsage::DEPTH_STENCIL_ATTACHMENT | ImageUsage::TRANSFER_SRC});
     Image::View depthMapView = depthMap.getView();
     VkImageView shadowAttachment = depthMapView.view;
     Framebuffer shadowFramebuffer(driver.context().device(), shadowPass, {&shadowAttachment, 1}, 1024, 1024);
 
-
-//    Image shadowMap(driver, {512, 512, 1, driver.context().depthFormat(), 1, 6, ImageUsage::SAMPLED | ImageUsage::DEPTH_STENCIL_ATTACHMENT | ImageUsage::TRANSFER_DST});
     Image shadowMap(driver, {1024, 1024, 1, Format::D32_SFLOAT, 1, 6, ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST});
     auto shadowView = shadowMap.getView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 1, 0, 1);
 
@@ -271,13 +261,13 @@ int main() {
             ImGui::Text("Shadow Milliseconds: %f", shadowPassTime / 1e6);
             ImGui::Text("Light Milliseconds: %f", lightPassTime / 1e6);
 
-            ende::math::Vec3f colour = light.getColour();
-            f32 intensity = light.getIntensity();
+            ende::math::Vec3f colour = scene._lights.front().getColour();
+            f32 intensity = scene._lights.front().getIntensity();
             if (ImGui::ColorEdit3("Colour", &colour[0]) ||
                 ImGui::SliderFloat("Intensity", &intensity, 1, 50)) {
-                light.setColour(colour);
-                light.setIntensity(intensity);
-                lightData = light.data();
+                scene._lights.front().setColour(colour);
+                scene._lights.front().setIntensity(intensity);
+                lightData = scene._lights.front().data();
                 lightBuffer.data({&lightData, sizeof(lightData)});
             }
 
@@ -292,7 +282,7 @@ int main() {
             lightTransform.setPos(lPos);
 //            lightTransform.rotate({1, 0, 0}, std::sin(systemTime.elapsed().milliseconds() / 1000.f) * dt);
 //            auto lightPos = lightTransform.rot().front() * 20;
-            lightData = light.data();
+            lightData = scene._lights.front().data();
             lightBuffer.data({&lightData, sizeof(lightData)});
 
             lightCameraData = lightCamera.data();
@@ -322,70 +312,54 @@ int main() {
                     switch (j) {
                         case 0:
                             lightTransform.rotate({0, 1, 0}, ende::math::rad(90));
-//                            lightTransform.setRot({0, 0.707, 0, 0.707});
-//                            lightTransform.rotate({0, 1, 0}, ende::math::rad(90));
-//                            lightTransform.rotate({1, 0, 0}, ende::math::rad(180));
                             break;
                         case 1:
                             lightTransform.rotate({0, 1, 0}, ende::math::rad(180));
-//                            lightTransform.setRot(ende::math::Quaternion{0.707, 0, -0.707, 0} * ende::math::Quaternion{0, 0, -0.707, 0.707});
-//                            lightTransform.rotate({0, 1, 0}, ende::math::rad(-90));
-//                            lightTransform.rotate({1, 0, 0}, ende::math::rad(180));
                             break;
                         case 2:
                             lightTransform.rotate({0, 1, 0}, ende::math::rad(90));
                             lightTransform.rotate({1, 0, 0}, ende::math::rad(90));
-//                            lightTransform.setRot({-0.5, -0.5, -0.5, 0.5});
-//                            lightTransform.rotate({1, 0, 0}, ende::math::rad(-90));
                             break;
                         case 3:
                             lightTransform.rotate({1, 0, 0}, ende::math::rad(180));
-//                            lightTransform.setRot({0.5, -0.5, 0.5, 0.5});
-//                            lightTransform.rotate({1, 0, 0}, ende::math::rad(90));
                             break;
                         case 4:
                             lightTransform.rotate({1, 0, 0}, ende::math::rad(90));
-//                            lightTransform.rotate({1, 0, 0}, ende::math::rad(90));
-//                            lightTransform.setRot({0, 0, 0, 1});
-//                            lightTransform.rotate({1, 0, 0}, ende::math::rad(180));
                             break;
                         case 5:
                             lightTransform.rotate({0, 1, 0}, ende::math::rad(180));
-//                            lightTransform.setRot({0, -0.707, 0.707, 0});
-//                            lightTransform.rotate({0, 0, 1}, ende::math::rad(180));
                             break;
                     }
 
 
-                    ende::math::Mat4f constants[2] = {
-                            lightCamera.projection(),
-                            lightCamera.view()
-                    };
-                    cmd->pushConstants({constants, sizeof(constants)});
+                    lightCameraData = lightCamera.data();
+                    cmd->pushConstants({&lightCameraData, sizeof(lightCameraData)});
                 }
 
-                ende::math::Frustum frustum(lightCamera.viewProjection());
+                lightCamera.updateFrustum();
+
 
                 for (u32 i = 0; i < scene._renderables.size(); i++) {
-                    auto& renderable = scene._renderables[i];
+                    auto& renderable = scene._renderables[i].second.first;
+                    auto& transform = scene._renderables[i].second.second;
 
-                    if (!frustum.intersect(renderable.second->pos()))
+                    if (!lightCamera.frustum().intersect(transform->pos(), 2)) //if radius is too small clips edges
                         continue;
 
-                    cmd->bindBindings(renderable.first.bindings);
-                    cmd->bindAttributes(renderable.first.attributes);
+                    cmd->bindBindings(renderable.bindings);
+                    cmd->bindAttributes(renderable.attributes);
 
                     cmd->bindBuffer(1, 0, scene._modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
 
                     cmd->bindPipeline();
                     cmd->bindDescriptors();
 
-                    cmd->bindVertexBuffer(0, renderable.first.vertex->buffer());
-                    if (renderable.first.index) {
-                        cmd->bindIndexBuffer(*renderable.first.index);
-                        cmd->draw(renderable.first.index->size() / sizeof(u32), 1, 0, 0);
+                    cmd->bindVertexBuffer(0, renderable.vertex->buffer());
+                    if (renderable.index) {
+                        cmd->bindIndexBuffer(*renderable.index);
+                        cmd->draw(renderable.index->size() / sizeof(u32), 1, 0, 0);
                     } else
-                        cmd->draw(renderable.first.vertex->size() / (4 * 14), 1, 0, 0);
+                        cmd->draw(renderable.vertex->size() / (4 * 14), 1, 0, 0);
 
                 }
 
@@ -393,7 +367,6 @@ int main() {
 
 
                 VkImageMemoryBarrier barriers[2];
-//                barriers[0] = depthMap.barrier(Access::DEPTH_STENCIL_WRITE, Access::TRANSFER_READ, ImageLayout::DEPTH_STENCIL_ATTACHMENT, ImageLayout::TRANSFER_SRC);
                 barriers[0] = depthMap.barrier(Access::DEPTH_STENCIL_WRITE, Access::TRANSFER_READ, ImageLayout::DEPTH_STENCIL_ATTACHMENT, ImageLayout::TRANSFER_SRC);
                 barriers[1] = shadowMap.barrier(Access::SHADER_READ, Access::TRANSFER_WRITE, ImageLayout::UNDEFINED, ImageLayout::TRANSFER_DST);
 
@@ -430,7 +403,6 @@ int main() {
 
                 vkCmdCopyImage(cmd->buffer(), depthMap.image(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, shadowMap.image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
-//                barriers[0] = depthMap.barrier(Access::TRANSFER_READ, Access::DEPTH_STENCIL_WRITE, ImageLayout::TRANSFER_SRC, ImageLayout::DEPTH_STENCIL_ATTACHMENT);
                 barriers[0] = depthMap.barrier(Access::TRANSFER_READ, Access::DEPTH_STENCIL_WRITE, ImageLayout::TRANSFER_SRC, ImageLayout::DEPTH_STENCIL_ATTACHMENT);
                 barriers[1] = shadowMap.barrier(Access::TRANSFER_WRITE, Access::SHADER_READ, ImageLayout::TRANSFER_DST, ImageLayout::SHADER_READ_ONLY);
 
@@ -454,7 +426,7 @@ int main() {
             cmd->begin(frame.framebuffer);
 
             cmd->bindBuffer(0, 0, cameraBuffer);
-            cmd->bindBuffer(3, 0, lightBuffer);
+//            cmd->bindBuffer(3, 0, lightBuffer);
             cmd->bindBuffer(0, 1, lightCamBuf);
             cmd->bindImage(2, 3, shadowView, sampler);
             scene.render(*cmd);

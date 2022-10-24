@@ -33,7 +33,9 @@ namespace cala {
             SPOT
         };
 
-        Light(LightType type, Transform& transform);
+        Light(LightType type, bool shadows, Transform& transform);
+
+        Light& operator=(const Light& rhs);
 
         struct Data {
             ende::math::Vec3f position;
@@ -49,6 +51,8 @@ namespace cala {
         Data data() const;
 
         LightType type() const { return _type; }
+
+        bool shadowing() const { return _shadowing; }
 
 
         void setDirection(const ende::math::Quaternion& dir);
@@ -70,8 +74,8 @@ namespace cala {
     private:
         Transform& _transform;
         LightType _type;
+        bool _shadowing;
 
-        ende::math::Vec3f _direction;
         ende::math::Vec3f _colour;
         f32 _intensity;
         f32 _constant;

@@ -1,15 +1,19 @@
 #include <Cala/Scene.h>
+#include <algorithm>
 
-cala::Scene::Scene(backend::vulkan::Driver &driver, u32 count)
-    : _modelBuffer(driver, count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM)
+cala::Scene::Scene(backend::vulkan::Driver &driver, u32 count, u32 lightCount)
+    : _modelBuffer(driver, count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM),
+      _lightBuffer(driver, lightCount * sizeof(Light::Data), backend::BufferUsage::UNIFORM)
 {}
 
 
 void cala::Scene::addRenderable(cala::Scene::Renderable &&renderable, cala::Transform *transform) {
-    _renderables.push(std::make_pair(renderable, transform));
+    u32 key = 0;
+
+    _renderables.push(std::make_pair(key, std::make_pair(renderable, transform)));
 }
 
-void cala::Scene::addRenderable(cala::Mesh &mesh, cala::MaterialInstance *materialInstance, cala::Transform *transform) {
+void cala::Scene::addRenderable(cala::Mesh &mesh, cala::MaterialInstance *materialInstance, cala::Transform *transform, bool castShadow) {
     if (mesh._index) {
         addRenderable(Renderable{
             &mesh._vertex,
@@ -29,12 +33,31 @@ void cala::Scene::addRenderable(cala::Mesh &mesh, cala::MaterialInstance *materi
     }
 }
 
+void cala::Scene::addLight(cala::Light &light) {
+    _lights.push(std::move(light));
+}
+
 
 void cala::Scene::prepare() {
+//    std::sort(_lights.begin(), _lights.end(), [](const Light& lhs, const Light& rhs) {
+//        return !lhs.shadowing() and rhs.shadowing();
+//    });
+//
+//    std::sort(_renderables.begin(), _renderables.end(), [](const std::pair<u32, std::pair<Renderable, Transform*>>& lhs, const std::pair<u32, std::pair<Renderable, Transform*>>& rhs) {
+//        return lhs.first < rhs.first;
+//    });
+
+    _lightData.clear();
+    for (auto& light : _lights) {
+        _lightData.push(light.data());
+    }
+    _lightBuffer.data({_lightData.data(), static_cast<u32>(_lightData.size() * sizeof(Light::Data))});
+
     _modelTransforms.clear();
 
     for (auto& renderablePair : _renderables) {
-        _modelTransforms.push(renderablePair.second->toMat());
+        auto& transform = renderablePair.second.second;
+        _modelTransforms.push(transform->toMat());
     }
 
 
@@ -47,29 +70,34 @@ void cala::Scene::render(backend::vulkan::CommandBuffer& cmd) {
 
     MaterialInstance* materialInstance = nullptr;
 
-    for (u32 i = 0; i < _renderables.size(); i++) {
-        auto& renderable = _renderables[i];
+    for (u32 light = 0; light < _lightData.size(); light++) {
+        cmd.bindBuffer(3, 0, _lightBuffer, light * sizeof(Light::Data), sizeof(Light::Data));
 
-        cmd.bindBindings(renderable.first.bindings);
-        cmd.bindAttributes(renderable.first.attributes);
+        for (u32 i = 0; i < _renderables.size(); i++) {
+            auto& renderable = _renderables[i].second.first;
+            auto& transform = _renderables[i].second.second;
 
-        if (materialInstance != renderable.first.materialInstance) {
-            materialInstance = renderable.first.materialInstance;
-            renderable.first.materialInstance->bind(cmd);
+            cmd.bindBindings(renderable.bindings);
+            cmd.bindAttributes(renderable.attributes);
+
+            if (materialInstance != renderable.materialInstance) {
+                materialInstance = renderable.materialInstance;
+                renderable.materialInstance->bind(cmd);
+            }
+
+            cmd.bindBuffer(1, 0, _modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+
+            cmd.bindPipeline();
+            cmd.bindDescriptors();
+
+            cmd.bindVertexBuffer(0, renderable.vertex->buffer());
+            if (renderable.index)
+                cmd.bindIndexBuffer(*renderable.index);
+
+            if (renderable.index)
+                cmd.draw(renderable.index->size() / sizeof(u32), 1, 0, 0);
+            else
+                cmd.draw(renderable.vertex->size() / (4 * 14), 1, 0, 0);
         }
-
-        cmd.bindBuffer(1, 0, _modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
-
-        cmd.bindPipeline();
-        cmd.bindDescriptors();
-
-        cmd.bindVertexBuffer(0, renderable.first.vertex->buffer());
-        if (renderable.first.index)
-            cmd.bindIndexBuffer(*renderable.first.index);
-
-        if (renderable.first.index)
-            cmd.draw(renderable.first.index->size() / sizeof(u32), 1, 0, 0);
-        else
-            cmd.draw(renderable.first.vertex->size() / (4 * 14), 1, 0, 0);
     }
 }

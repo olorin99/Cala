@@ -4,8 +4,6 @@ layout (location = 0) in VsOut {
     vec3 FragPos;
 } fsIn;
 
-//layout (location = 0) out float FragColour;
-
 struct PointLight {
     vec3 position;
     vec3 colour;
@@ -20,7 +18,19 @@ layout (set = 3, binding = 0) uniform LightData {
     PointLight light;
 };
 
+struct CameraData {
+    mat4 projection;
+    mat4 view;
+    vec3 position;
+    float near;
+    float far;
+};
+
+layout (push_constant) uniform PushConstants {
+    CameraData camera;
+};
+
 void main() {
     vec3 lightVec = fsIn.FragPos - light.position;
-    gl_FragDepth = length(lightVec) / 100.f;
+    gl_FragDepth = length(lightVec) / (camera.far - camera.near);
 }

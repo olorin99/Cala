@@ -3,6 +3,7 @@
 
 #include <Ende/math/Mat.h>
 #include <Cala/Transform.h>
+#include <Ende/math/Frustum.h>
 
 namespace cala {
 
@@ -22,10 +23,14 @@ namespace cala {
 
         Transform& transform() const;
 
+        const ende::math::Frustum& frustum() const { return _frustum; }
+
+        void updateFrustum();
+
         struct Data {
             ende::math::Mat4f projection;
             ende::math::Mat4f view;
-            alignas(16) ende::math::Vec3f position;
+            ende::math::Vec3f position;
             f32 near;
             f32 far;
         };
@@ -33,6 +38,8 @@ namespace cala {
         Data data() const;
 
     private:
+
+        ende::math::Frustum _frustum;
 
         ende::math::Mat4f _projection;
         Transform& _transform;
