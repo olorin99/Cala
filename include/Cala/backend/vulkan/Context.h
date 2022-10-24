@@ -2,7 +2,7 @@
 #define CALA_CONTEXT_H
 
 #include <vulkan/vulkan.h>
-
+#include <string>
 #include <Ende/Vector.h>
 #include <Ende/Span.h>
 #include <Cala/backend/primitives.h>
@@ -56,7 +56,7 @@ namespace cala::backend::vulkan {
 
         const char* deviceTypeString() const;
 
-        ende::Span<char> deviceName() const { return _deviceName; }
+        ende::Span<const char> deviceName() const { return _deviceName; }
 
         f32 timestampPeriod() const { return _timestampPeriod; }
 
@@ -100,7 +100,7 @@ namespace cala::backend::vulkan {
         u32 _driverVersion;
         const char* _vendor;
         PhysicalDeviceType _deviceType;
-        ende::Span<char> _deviceName;
+        std::string _deviceName;
         f32 _timestampPeriod;
 
     };
