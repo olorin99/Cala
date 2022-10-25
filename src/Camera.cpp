@@ -21,6 +21,19 @@ cala::Camera::Camera(const ende::math::Mat4f &projection, Transform &transform)
     _frustum.update(viewProjection());
 }
 
+cala::Camera &cala::Camera::operator=(const cala::Camera &rhs) {
+    auto& tmp = rhs._transform;
+    std::swap(_transform, tmp);
+    _projection = rhs._projection;
+    _frustum = rhs._frustum;
+    _fov = rhs._fov;
+    _width = rhs._width;
+    _height = rhs._height;
+    _near = rhs._near;
+    _far = rhs._far;
+    return *this;
+}
+
 void cala::Camera::resize(f32 width, f32 height) {
     _width = width;
     _height = height;

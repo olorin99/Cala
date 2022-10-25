@@ -3,6 +3,7 @@
 
 #include <Ende/math/Vec.h>
 #include <Cala/Transform.h>
+#include <Cala/Camera.h>
 
 namespace cala {
 
@@ -71,8 +72,13 @@ namespace cala {
             return _intensity;
         }
 
+        Transform& transform() const { return _transform; }
+
+        Camera& camera() { return _camera; }
+
     private:
         Transform& _transform;
+        Camera _camera;
         LightType _type;
         bool _shadowing;
 

@@ -3,6 +3,7 @@
 
 cala::Light::Light(LightType type, bool shadows, Transform &transform)
     : _type(type),
+      _camera(ende::math::rad(90), 1024, 1024, 0.1, 100, transform),
       _shadowing(shadows),
       _transform(transform),
       _colour({1, 1, 1}),
@@ -11,7 +12,15 @@ cala::Light::Light(LightType type, bool shadows, Transform &transform)
       _linear(0.045),
       _quadratic(0.0075),
       _radius(80)
-{}
+{
+    switch (_type) {
+        case DIRECTIONAL:
+            _camera = Camera(ende::math::rad(45.f), 1024, 1024, 0.1, 100, _transform);
+            break;
+        default:
+            break;
+    }
+}
 
 cala::Light &cala::Light::operator=(const cala::Light &rhs) {
     Transform& tmp = rhs._transform;
