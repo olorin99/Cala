@@ -15,8 +15,8 @@ namespace cala {
     public:
 
         struct Renderable {
-            backend::vulkan::Buffer* vertex = nullptr;
-            backend::vulkan::Buffer* index = nullptr;
+            backend::vulkan::Buffer::View vertex;
+            backend::vulkan::Buffer::View index;
             MaterialInstance* materialInstance = nullptr;
             ende::Span<VkVertexInputBindingDescription> bindings = nullptr;
             ende::Span<backend::Attribute> attributes = nullptr;

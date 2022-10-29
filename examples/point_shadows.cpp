@@ -354,12 +354,12 @@ int main() {
                     cmd->bindPipeline();
                     cmd->bindDescriptors();
 
-                    cmd->bindVertexBuffer(0, renderable.vertex->buffer());
+                    cmd->bindVertexBuffer(0, renderable.vertex.buffer().buffer());
                     if (renderable.index) {
-                        cmd->bindIndexBuffer(*renderable.index);
-                        cmd->draw(renderable.index->size() / sizeof(u32), 1, 0, 0);
+                        cmd->bindIndexBuffer(renderable.index.buffer());
+                        cmd->draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
                     } else
-                        cmd->draw(renderable.vertex->size() / (4 * 14), 1, 0, 0);
+                        cmd->draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
 
                 }
 

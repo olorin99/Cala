@@ -42,26 +42,44 @@ float calcShadows(vec3 fragPosLight, vec3 offset, float bias) {
     return shadow;
 }
 
+vec3 sampleOffsetDirections[20] = vec3[](
+    vec3(1, 1, 1), vec3(1, -1, 1), vec3(-1, -1, 1), vec3(-1, 1, 1),
+    vec3(1, 1, -1), vec3(1, -1, -1), vec3(-1, -1, -1), vec3(-1, 1, -1),
+    vec3(1, 1, 0), vec3(1, -1, 0), vec3(-1, -1, 0), vec3(-1, 1, 0),
+    vec3(1, 0, 1), vec3(-1, 0, 1), vec3(1, 0, -1), vec3(-1, 0, -1),
+    vec3(0, 1, 1), vec3(0, -1, 1), vec3(0, -1, -1), vec3(0, 1, -1)
+);
+
 float filterPCF(vec3 fragPosLight, float bias) {
-    ivec2 texDim = textureSize(shadowMap, 0);
-    float scale = 1.5;
-    float dx = scale * 1.0 / float(texDim.x);
-    float dy = scale * 1.0 / float(texDim.y);
+	float shadow = 0;
+	int samples = 20;
+	float viewDistance = length(light.position - fsIn.FragPos);
+	float diskRadius = (1.0 + (viewDistance / 100.f)) / 25.0;
+	
+	for (int i = 0; i < samples; i++) {
+		shadow += calcShadows(fragPosLight, sampleOffsetDirections[i] * diskRadius, bias);	
+	}
+	
+	return shadow / samples;
+	
+    //ivec2 texDim = textureSize(shadowMap, 0);
+    //float scale = 1.5;
+    //float dx = scale * 1.0 / float(texDim.x);
+    //float dy = scale * 1.0 / float(texDim.y);
 
-    float shadowFactor = 0.0;
-    int count = 0;
-    int range = 1;
+    //float shadowFactor = 0.0;
+    //int count = 0;
+    //int range = 1;
 
-    for (int x = -range; x <= range; x++)
-    {
-        for (int y = -range; y <= range; y++)
-        {
-            shadowFactor += calcShadows(fragPosLight, vec3(dx*x, dy*y, 0), bias);
-            count++;
-        }
-
-    }
-    return shadowFactor / count;
+    //for (int x = -range; x <= range; x++)
+    //{
+    //    for (int y = -range; y <= range; y++)
+    //    {
+    //        shadowFactor += calcShadows(fragPosLight, vec3(dx*x, dy*y, 0), bias);
+    //        count++;
+    //    }
+    //}
+    //return shadowFactor / count;
 }
 
 void main() {

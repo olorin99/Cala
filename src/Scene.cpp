@@ -16,16 +16,16 @@ void cala::Scene::addRenderable(cala::Scene::Renderable &&renderable, cala::Tran
 void cala::Scene::addRenderable(cala::Mesh &mesh, cala::MaterialInstance *materialInstance, cala::Transform *transform, bool castShadow) {
     if (mesh._index) {
         addRenderable(Renderable{
-            &mesh._vertex,
-            &(*mesh._index),
+            mesh._vertex,
+            (*mesh._index),
             materialInstance,
             {&mesh._binding, 1},
             mesh._attributes
         }, transform);
     } else {
         addRenderable(Renderable{
-            &mesh._vertex,
-            nullptr,
+            mesh._vertex,
+            {},
             materialInstance,
             {&mesh._binding, 1},
             mesh._attributes
@@ -90,14 +90,14 @@ void cala::Scene::render(backend::vulkan::CommandBuffer& cmd) {
             cmd.bindPipeline();
             cmd.bindDescriptors();
 
-            cmd.bindVertexBuffer(0, renderable.vertex->buffer());
+            cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
             if (renderable.index)
-                cmd.bindIndexBuffer(*renderable.index);
+                cmd.bindIndexBuffer(renderable.index.buffer());
 
             if (renderable.index)
-                cmd.draw(renderable.index->size() / sizeof(u32), 1, 0, 0);
+                cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
             else
-                cmd.draw(renderable.vertex->size() / (4 * 14), 1, 0, 0);
+                cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
         }
     }
 }
