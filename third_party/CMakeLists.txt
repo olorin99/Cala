@@ -1,9 +1,3 @@
-
-add_library(glad STATIC glad.c)
-if (UNIX)
-    target_link_libraries(glad dl)
-endif()
-
 add_library(stb_image STATIC stb_image.cpp stb_image.h)
 
 set(IMGUI_PATH "imgui")
