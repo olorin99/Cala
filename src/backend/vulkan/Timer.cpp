@@ -1,7 +1,3 @@
-//
-// Created by christian on 27/06/22.
-//
-
 #include "Cala/backend/vulkan/Timer.h"
 #include <Cala/backend/vulkan/Driver.h>
 

@@ -1,7 +1,3 @@
-//
-// Created by christian on 24/10/22.
-//
-
 #ifndef CALA_ENGINE_H
 #define CALA_ENGINE_H
 

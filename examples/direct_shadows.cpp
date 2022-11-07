@@ -140,8 +140,8 @@ int main() {
 
 //    Transform cameraTransform({0, 0, 10});
     Transform cameraTransform({-2, 20, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-90)));
-    Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
-    //Camera camera(ende::math::orthographic<f32>(-10, 10, -10, 10, 1, 100), cameraTransform);
+//    Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
+    Camera camera(ende::math::orthographic<f32>(-10, 10, -10, 10, 1, 100), cameraTransform);
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
 
     Scene scene(driver, 10);
@@ -176,7 +176,7 @@ int main() {
     Transform lightTransform({-2, 20, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-90)));
 
     scene.addRenderable(cube, &matInstance, &lightTransform);
-    Light light(Light::DIRECTIONAL, lightTransform);
+    Light light(Light::DIRECTIONAL, true, lightTransform);
 
     Buffer lightBuffer(driver, sizeof(light), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
     auto lightData = light.data();
@@ -316,9 +316,10 @@ int main() {
             shadowMatInstance.bind(*cmd);
 
             for (u32 i = 0; i < scene._renderables.size(); i++) {
-                auto& renderable = scene._renderables[i];
-                cmd->bindBindings(renderable.first.bindings);
-                cmd->bindAttributes(renderable.first.attributes);
+                auto& renderable = scene._renderables[i].second.first;
+                auto& transform = scene._renderables[i].second.second;
+                cmd->bindBindings(renderable.bindings);
+                cmd->bindAttributes(renderable.attributes);
 
                 cmd->bindBuffer(1, 0, scene._modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
 
@@ -331,14 +332,14 @@ int main() {
                 cmd->bindPipeline();
                 cmd->bindDescriptors();
 
-                cmd->bindVertexBuffer(0, renderable.first.vertex->buffer());
-                if (renderable.first.index)
-                    cmd->bindIndexBuffer(*renderable.first.index);
+                cmd->bindVertexBuffer(0, renderable.vertex.buffer().buffer());
+                if (renderable.index)
+                    cmd->bindIndexBuffer(renderable.index.buffer());
 
-                if (renderable.first.index)
-                    cmd->draw(renderable.first.index->size() / sizeof(u32), 1, 0, 0);
+                if (renderable.index)
+                    cmd->draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
                 else
-                    cmd->draw(renderable.first.vertex->size() / (4 * 14), 1, 0, 0);
+                    cmd->draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
             }
 
             cmd->end(shadowFramebuffer);

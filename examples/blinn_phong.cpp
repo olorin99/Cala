@@ -93,7 +93,7 @@ int main() {
     matInstance.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
 
 
-    Transform cameraTransform({0, 0, 10});
+    Transform cameraTransform({0, 0, -15});
     Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
 
@@ -118,12 +118,12 @@ int main() {
             {0, 0, 10}
     };
 
-    PointLight light;
-    light.position = {-3, 3, -1};
-    light.colour = {1, 1, 1};
+    Transform lightTransform({ -3, 3, -1 });
+    Light light(Light::POINT, false, lightTransform);
 
-    Buffer lightBuffer(driver, sizeof(light), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
-    lightBuffer.data({&light, sizeof(light)});
+    scene.addLight(light);
+
+    scene.addRenderable(cube, &matInstance, &lightTransform);
 
     Sampler sampler(driver, {});
 
@@ -146,11 +146,13 @@ int main() {
 
             ImGui::Begin("Light Data");
 
-            if (ImGui::ColorEdit3("Colour", &light.colour[0]))
-                lightBuffer.data({&light, sizeof(light)});
-            if (ImGui::SliderFloat("Intensity", &light.intensity, 1, 50))
-                lightBuffer.data({&light, sizeof(light)});
-
+            ende::math::Vec3f colour = scene._lights.front().getColour();
+            f32 intensity = scene._lights.front().getIntensity();
+            if (ImGui::ColorEdit3("Colour", &colour[0]) ||
+                ImGui::SliderFloat("Intensity", &intensity, 1, 50)) {
+                scene._lights.front().setColour(colour);
+                scene._lights.front().setIntensity(intensity);
+            }
 
             ImGui::End();
 
@@ -160,8 +162,7 @@ int main() {
         {
             f32 factor = (std::sin(systemTime.elapsed().milliseconds() / 1000.f) + 1) / 2.f;
             auto lightPos = lerpPositions(lightPositions, factor);
-            light.position = lightPos;
-            lightBuffer.data({&light, sizeof(light)});
+            scene._lights.front().setPosition(lightPos);
 
             auto cameraData = camera.data();
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
@@ -177,7 +178,6 @@ int main() {
             cmd->begin(frame.framebuffer);
 
             cmd->bindBuffer(0, 0, cameraBuffer);
-            cmd->bindBuffer(3, 0, lightBuffer);
             scene.render(*cmd);
 
             imGuiContext.render(*cmd);

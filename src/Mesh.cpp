@@ -1,7 +1,3 @@
-//
-// Created by christian on 22/08/22.
-//
-
 #include "Cala/Mesh.h"
 
 cala::Mesh::Mesh(backend::vulkan::Buffer &&vertex, std::optional<backend::vulkan::Buffer> index, VkVertexInputBindingDescription binding, std::array<backend::Attribute, 5> attributes)
