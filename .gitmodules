@@ -1,7 +1,3 @@
 [submodule "libs/Ende"]
 	path = libs/Ende
 	url = https://github.com/olorin99/Ende
-[submodule "third_party/imgui"]
-	path = third_party/imgui
-	url = https://github.com/ocornut/imgui.git
-	branch = docking
