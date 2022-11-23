@@ -52,7 +52,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
             }
             pushConstant.offset = 0;
             pushConstant.size = size;
-            pushConstant.stageFlags = getShaderStage(stage.second);
+            pushConstant.stageFlags |= getShaderStage(stage.second);
             hasPushConstant = true;
         }
 

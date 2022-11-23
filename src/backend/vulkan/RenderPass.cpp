@@ -15,7 +15,7 @@ cala::backend::vulkan::RenderPass::RenderPass(Driver& driver, ende::Span<Attachm
     bool depthPresent = false;
 
     for (u32 i = 0; i < attachments.size(); i++) {
-        if (attachments[i].format != driver.context().depthFormat()) {
+        if (attachments[i].format != Format::D16_UNORM && attachments[i].format != Format::D32_SFLOAT && attachments[i].format != Format::D24_UNORM_S8_UINT) {
             attachmentDescriptions[colourAttachmentCount].format = getFormat(attachments[i].format);
             attachmentDescriptions[colourAttachmentCount].samples = attachments[i].samples;
             attachmentDescriptions[colourAttachmentCount].loadOp = attachments[i].loadOp;

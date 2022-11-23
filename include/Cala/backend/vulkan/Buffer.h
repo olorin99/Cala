@@ -38,6 +38,34 @@ namespace cala::backend::vulkan {
         void resize(u32 capacity);
 
 
+        class View {
+        public:
+            View();
+
+            View(Buffer& buffer);
+
+            View(Buffer& buffer, u32 size, u32 offset);
+
+            Mapped map(u32 offset = 0, u32 size = 0);
+
+            void data(ende::Span<const void> data, u32 offset = 0);
+
+            u32 size() const { return _size; }
+
+            u32 offset() const { return _offset; }
+
+            Buffer& buffer() const { return *_parent; }
+
+            explicit operator bool() const { return _parent == nullptr; }
+
+        private:
+            Buffer* _parent;
+            u32 _size;
+            u32 _offset;
+
+        };
+
+
         VkBuffer buffer() const { return _buffer; }
 
         u32 size() const { return _size; }

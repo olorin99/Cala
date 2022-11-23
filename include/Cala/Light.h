@@ -3,6 +3,7 @@
 
 #include <Ende/math/Vec.h>
 #include <Cala/Transform.h>
+#include <Cala/Camera.h>
 
 namespace cala {
 
@@ -33,7 +34,9 @@ namespace cala {
             SPOT
         };
 
-        Light(LightType type, Transform& transform);
+        Light(LightType type, bool shadows, Transform& transform);
+
+        Light& operator=(const Light& rhs);
 
         struct Data {
             ende::math::Vec3f position;
@@ -50,18 +53,35 @@ namespace cala {
 
         LightType type() const { return _type; }
 
+        bool shadowing() const { return _shadowing; }
 
-        void setDirection(const ende::math::Vec3f& dir);
+
+        void setDirection(const ende::math::Quaternion& dir);
+
+        void setPosition(const ende::math::Vec3f& pos);
 
         void setColour(const ende::math::Vec3f& colour);
 
+        ende::math::Vec3f getColour() const {
+            return _colour;
+        }
+
         void setIntensity(f32 intensity);
+
+        f32 getIntensity() const {
+            return _intensity;
+        }
+
+        Transform& transform() const { return _transform; }
+
+        Camera& camera() { return _camera; }
 
     private:
         Transform& _transform;
+        Camera _camera;
         LightType _type;
+        bool _shadowing;
 
-        ende::math::Vec3f _direction;
         ende::math::Vec3f _colour;
         f32 _intensity;
         f32 _constant;

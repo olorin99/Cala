@@ -118,6 +118,7 @@ void cala::backend::vulkan::CommandBuffer::bindProgram(ShaderProgram &program) {
 //            _dirty = true;
 //        }
     }
+    _pipelineKey.shaderCount = program._stages.size();
     _computeBound = program.stagePresent(ShaderStage::COMPUTE);
 }
 
@@ -245,7 +246,7 @@ void cala::backend::vulkan::CommandBuffer::bindImage(u32 set, u32 binding, Image
 }
 
 void cala::backend::vulkan::CommandBuffer::pushConstants(ende::Span<const void> data, u32 offset) {
-    vkCmdPushConstants(_buffer, _pipelineKey.layout, VK_SHADER_STAGE_VERTEX_BIT, offset, data.size(), data.data());
+    vkCmdPushConstants(_buffer, _pipelineKey.layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, offset, data.size(), data.data());
 }
 
 void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
@@ -381,7 +382,7 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
         VkGraphicsPipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 
-        pipelineInfo.stageCount = 2;
+        pipelineInfo.stageCount = _pipelineKey.shaderCount;
         pipelineInfo.pStages = _pipelineKey.shaders;
 
         pipelineInfo.renderPass = _pipelineKey.renderPass;

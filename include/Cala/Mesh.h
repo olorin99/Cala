@@ -1,7 +1,3 @@
-//
-// Created by christian on 22/08/22.
-//
-
 #ifndef CALA_MESH_H
 #define CALA_MESH_H
 

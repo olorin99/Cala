@@ -7,6 +7,8 @@
 #include <Cala/ImGuiContext.h>
 #include <Ende/math/random.h>
 #include "../../third_party/stb_image.h"
+#include "Cala/Scene.h"
+#include "Cala/Material.h"
 
 using namespace cala;
 using namespace cala::backend;
@@ -73,39 +75,39 @@ int main() {
     //Shaders
     ShaderProgram program = loadShader(driver, "../../res/shaders/default.vert.spv"_path, "../../res/shaders/blinn_phong.frag.spv"_path);
 
-    //Vertex Input
-    VkVertexInputBindingDescription binding{};
-    binding.binding = 0;
-    binding.stride = 14 * sizeof(f32);
-    binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    Attribute attributes[5] = {
-            {0, 0, AttribType::Vec3f},
-            {1, 0, AttribType::Vec3f},
-            {2, 0, AttribType::Vec2f},
-            {3, 0, AttribType::Vec3f},
-            {4, 0, AttribType::Vec3f}
+    Material material(driver, std::move(program));
+    material._rasterState = {
+            CullMode::BACK,
+            FrontFace::CCW,
+            PolygonMode::FILL
     };
+    material._depthState = { true, true };
 
-    //MeshData data
-    MeshData vertices = cala::shapes::cube();
-    Buffer vertexBuffer = vertices.vertexBuffer(driver);
-//    Buffer indexBuffer = vertices.indexBuffer(driver);
+    auto matInstance = material.instance();
 
-    Transform modelTransform({0, 0, 0});
+    Image brickwall = loadImage(driver, "../../res/textures/brickwall.jpg"_path);
+    Image brickwall_normal = loadImage(driver, "../../res/textures/brickwall_normal.jpg"_path);
+    Image brickwall_specular = loadImage(driver, "../../res/textures/brickwall_specular.jpg"_path);
+    matInstance.setSampler("diffuseMap", brickwall.getView(), Sampler(driver, {}));
+    matInstance.setSampler("normalMap", brickwall_normal.getView(), Sampler(driver, {}));
+    matInstance.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
 
-    ende::Vector<ende::math::Mat4f> models;
-    for (u32 i = 0; i < 100; i++) {
-        models.push(Transform({
-            ende::math::rand(-10.f, 10.f), ende::math::rand(-10.f, 10.f), ende::math::rand(-10.f, 10.f)
-        }).toMat());
-    }
-    Buffer modelBuffer(driver, models.size() * sizeof(ende::math::Mat4f), BufferUsage::UNIFORM);
-    modelBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});
 
-    Transform cameraTransform({0, 0, -10});
+    Transform cameraTransform({0, 0, -15});
     Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
+
+    Scene scene(driver, 10);
+    Mesh cube = shapes::cube().mesh(driver);
+
+    ende::Vector<cala::Transform> transforms;
+    transforms.reserve(100);
+    for (int i = 0; i < 10; i++) {
+        transforms.push(Transform({
+            ende::math::rand(-5.f, 5.f), ende::math::rand(-5.f, 5.f), ende::math::rand(-5.f, 5.f)
+        }));
+        scene.addRenderable(cube, &matInstance, &transforms.back());
+    }
 
 
     ende::Vector<ende::math::Vec3f> lightPositions = {
@@ -116,22 +118,14 @@ int main() {
             {0, 0, 10}
     };
 
-    PointLight light;
-    light.position = {-3, 3, -1};
-    light.colour = {1, 1, 1};
+    Transform lightTransform({ -3, 3, -1 });
+    Light light(Light::POINT, false, lightTransform);
 
-    Buffer lightBuffer(driver, sizeof(light), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
-    lightBuffer.data({&light, sizeof(light)});
+    scene.addLight(light);
+
+    scene.addRenderable(cube, &matInstance, &lightTransform);
 
     Sampler sampler(driver, {});
-
-    Image brickwall = loadImage(driver, "../../res/textures/brickwall.jpg"_path);
-    Image brickwall_normal = loadImage(driver, "../../res/textures/brickwall_normal.jpg"_path);
-    Image brickwall_specular = loadImage(driver, "../../res/textures/brickwall_specular.jpg"_path);
-
-    auto diffuseView = brickwall.getView();
-    auto normalView = brickwall_normal.getView();
-    auto specularView = brickwall_specular.getView();
 
     auto systemTime = ende::time::SystemTime::now();
 
@@ -152,11 +146,13 @@ int main() {
 
             ImGui::Begin("Light Data");
 
-            if (ImGui::ColorEdit3("Colour", &light.colour[0]))
-                lightBuffer.data({&light, sizeof(light)});
-            if (ImGui::SliderFloat("Intensity", &light.intensity, 1, 50))
-                lightBuffer.data({&light, sizeof(light)});
-
+            ende::math::Vec3f colour = scene._lights.front().getColour();
+            f32 intensity = scene._lights.front().getIntensity();
+            if (ImGui::ColorEdit3("Colour", &colour[0]) ||
+                ImGui::SliderFloat("Intensity", &intensity, 1, 50)) {
+                scene._lights.front().setColour(colour);
+                scene._lights.front().setIntensity(intensity);
+            }
 
             ImGui::End();
 
@@ -166,16 +162,13 @@ int main() {
         {
             f32 factor = (std::sin(systemTime.elapsed().milliseconds() / 1000.f) + 1) / 2.f;
             auto lightPos = lerpPositions(lightPositions, factor);
-            light.position = lightPos;
-            lightBuffer.data({&light, sizeof(light)});
+            scene._lights.front().setPosition(lightPos);
 
             auto cameraData = camera.data();
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
 
-//            modelTransform.rotate(ende::math::Vec3f{0, 1, 0}, ende::math::rad(45) * dt);
-//            modelTransform.setPos(lightPos);
-//            auto model = modelTransform.toMat();
-//            modelBuffer.data({&model, sizeof(model)});
+            scene.prepare();
+
         }
 
         driver.swapchain().wait();
@@ -184,32 +177,8 @@ int main() {
         {
             cmd->begin(frame.framebuffer);
 
-            cmd->bindProgram(program);
-            cmd->bindBindings({&binding, 1});
-            cmd->bindAttributes(attributes);
-            cmd->bindRasterState({});
-            cmd->bindDepthState({});
-            cmd->bindPipeline();
-
-
-            cmd->pushDebugLabel("Test Label");
             cmd->bindBuffer(0, 0, cameraBuffer);
-            cmd->bindBuffer(3, 0, lightBuffer);
-
-            cmd->bindImage(2, 0, diffuseView, sampler);
-            cmd->bindImage(2, 1, normalView, sampler);
-            cmd->bindImage(2, 2, specularView, sampler);
-
-
-            cmd->bindVertexBuffer(0, vertexBuffer.buffer());
-
-            for (u32 i = 0; i < models.size(); i++) {
-                cmd->bindBuffer(1, 0, modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
-                cmd->bindDescriptors();
-
-                cmd->draw(36, 1, 0, 0);
-            }
-            cmd->popDebugLabel();
+            scene.render(*cmd);
 
             imGuiContext.render(*cmd);
 

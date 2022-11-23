@@ -63,9 +63,10 @@ cala::backend::vulkan::Buffer::Mapped::~Mapped() {
 }
 
 cala::backend::vulkan::Buffer::Mapped cala::backend::vulkan::Buffer::map(u32 offset, u32 size) {
+    assert(_size >= size + offset);
     void* address = nullptr;
     vmaMapMemory(_driver.context().allocator(), _allocation, &address);
-    return { address, this };
+    return { (void*)((char*)address + offset), this };
 }
 
 void cala::backend::vulkan::Buffer::unmap() {
@@ -101,4 +102,30 @@ void cala::backend::vulkan::Buffer::resize(u32 capacity) {
         _size = capacity;
     }
 
+}
+
+cala::backend::vulkan::Buffer::View::View()
+    : _parent(nullptr),
+    _size(0),
+    _offset(0)
+{}
+
+cala::backend::vulkan::Buffer::View::View(cala::backend::vulkan::Buffer &buffer)
+    : _parent(&buffer),
+      _size(buffer.size()),
+      _offset(0)
+{}
+
+cala::backend::vulkan::Buffer::View::View(cala::backend::vulkan::Buffer &buffer, u32 size, u32 offset)
+    : _parent(&buffer),
+      _size(size),
+      _offset(offset)
+{}
+
+cala::backend::vulkan::Buffer::Mapped cala::backend::vulkan::Buffer::View::map(u32 offset, u32 size) {
+    return _parent->map(_offset + offset, _size + size);
+}
+
+void cala::backend::vulkan::Buffer::View::data(ende::Span<const void> data, u32 offset) {
+    _parent->data(data, _offset + offset);
 }

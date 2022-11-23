@@ -143,6 +143,7 @@ namespace cala::backend::vulkan {
         bool _computeBound;
 
         struct PipelineKey {
+            u32 shaderCount = 0;
             VkPipelineShaderStageCreateInfo shaders[2] = {};
             VkVertexInputBindingDescription bindings[MAX_VERTEX_INPUT_BINDINGS]{};
             VkVertexInputAttributeDescription attributes[MAX_VERTEX_INPUT_ATTRIBUTES]{};

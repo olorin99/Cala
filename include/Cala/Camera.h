@@ -3,6 +3,7 @@
 
 #include <Ende/math/Mat.h>
 #include <Cala/Transform.h>
+#include <Ende/math/Frustum.h>
 
 namespace cala {
 
@@ -11,6 +12,8 @@ namespace cala {
 
         Camera(f32 fov, f32 width, f32 height, f32 near, f32 far, Transform& transform);
         Camera(const ende::math::Mat4f& projection, Transform& transform);
+
+        Camera& operator=(const Camera& rhs);
 
         void resize(f32 width, f32 height);
 
@@ -22,15 +25,23 @@ namespace cala {
 
         Transform& transform() const;
 
+        const ende::math::Frustum& frustum() const { return _frustum; }
+
+        void updateFrustum();
+
         struct Data {
             ende::math::Mat4f projection;
             ende::math::Mat4f view;
-            alignas(16) ende::math::Vec3f position;
+            ende::math::Vec3f position;
+            f32 near;
+            f32 far;
         };
 
         Data data() const;
 
     private:
+
+        ende::math::Frustum _frustum;
 
         ende::math::Mat4f _projection;
         Transform& _transform;

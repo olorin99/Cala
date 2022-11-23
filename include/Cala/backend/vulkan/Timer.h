@@ -1,7 +1,3 @@
-//
-// Created by christian on 27/06/22.
-//
-
 #ifndef CALA_TIMER_H
 #define CALA_TIMER_H
 

@@ -8,6 +8,7 @@
 #include <Ende/log/log.h>
 #include <Cala/ImGuiContext.h>
 #include <Cala/backend/vulkan/CommandBufferList.h>
+#include <Cala/backend/vulkan/Timer.h>
 #include "../third_party/stb_image.h"
 
 using namespace cala;
@@ -135,6 +136,12 @@ int main() {
 
     CommandBufferList computeList(driver, QueueType::COMPUTE);
 
+    Timer computeTimer(driver);
+    Timer rasterTimer(driver, 1);
+
+    u64 computeTime = 0;
+    u64 rasterTime = 0;
+
     ende::math::Mat4f viewProj = camera.viewProjection();
     bool freezeFrustum = false;
 
@@ -153,25 +160,25 @@ int main() {
         }
         {
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_W])
-                cameraTransform.addPos(cameraTransform.rot().front() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().front() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_S])
-                cameraTransform.addPos(cameraTransform.rot().back() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().back() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_A])
-                cameraTransform.addPos(cameraTransform.rot().left() * -dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().left() * -dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_D])
-                cameraTransform.addPos(cameraTransform.rot().right() * -dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().right() * -dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LSHIFT])
-                cameraTransform.addPos(cameraTransform.rot().down() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().down() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_SPACE])
-                cameraTransform.addPos(cameraTransform.rot().up() * dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().up() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LEFT])
                 cameraTransform.rotate({0, 1, 0}, ende::math::rad(45) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_RIGHT])
                 cameraTransform.rotate({0, 1, 0}, ende::math::rad(-45) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_UP])
-                cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(-45) * dt);
-            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_DOWN])
                 cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(45) * dt);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_DOWN])
+                cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(-45) * dt);
         }
 
         {
@@ -180,6 +187,8 @@ int main() {
             ImGui::Begin("Stats");
             ImGui::Text("FPS: %f", driver.fps());
             ImGui::Text("Milliseconds: %f", driver.milliseconds());
+            ImGui::Text("Compute Milliseconds: %f", computeTime / 1e6);
+            ImGui::Text("Raster Milliseconds: %f", rasterTime / 1e6);
             ImGui::Text("Instances: %d", width * height * depth);
             ImGui::Text("Drawn: %d", drawCount);
             ImGui::Text("Culled: %d", width * height * depth - drawCount);
@@ -191,6 +200,7 @@ int main() {
 
                 transforms.clear();
                 models.clear();
+                positions.clear();
                 auto pos = modelTransform.pos();
                 for (i32 i = 0; i < width; i++) {
                     auto xpos = modelTransform.pos();
@@ -209,6 +219,7 @@ int main() {
                 modelTransform.setPos(pos);
 
                 modelBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});
+                positionBuffer.data({positions.data(), static_cast<u32>(positions.size() * (sizeof(ende::math::Vec3f) + sizeof(f32)))});
             }
 
             ImGui::End();
@@ -231,30 +242,7 @@ int main() {
         CommandBuffer* cmd = driver.beginFrame();
         CommandBuffer* computeCmd = computeList.get();
         {
-
-//            VkBufferMemoryBarrier barriers[4] = {};
-//            barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-//            barriers[0].srcAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-//            barriers[0].dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-//            barriers[0].buffer = cameraBuffer.buffer();
-//            barriers[0].offset = 0;
-//            barriers[0].size = cameraBuffer.size();
-//            barriers[0].srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
-//            barriers[0].dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
-//
-//            barriers[1] = barriers[0];
-//            barriers[1].buffer = modelBuffer.buffer();
-//            barriers[1].size = modelBuffer.size();
-//
-//            barriers[2] = barriers[0];
-//            barriers[2].dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-//            barriers[2].buffer = renderBuffer.buffer();
-//            barriers[2].size = renderBuffer.size();
-//
-//            barriers[3] = barriers[0];
-//            barriers[3].dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-//            barriers[3].buffer = renderBuffer.buffer();
-//            barriers[3].size = renderBuffer.size();
+            computeTimer.start(*computeCmd);
 
             VkBufferMemoryBarrier barrier{};
             barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -281,31 +269,17 @@ int main() {
             computeCmd->bindDescriptors();
             computeCmd->dispatchCompute(models.size() / 16, 1, 1);
 
-
-//            barriers[0].dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-//            barriers[0].dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
-//            barriers[0].srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
-//            barriers[1].dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-//            barriers[1].dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
-//            barriers[1].srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
-//            barriers[2].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-//            barriers[2].dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-//            barriers[2].dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
-//            barriers[2].srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
-//            barriers[3].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-//            barriers[3].dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-//            barriers[3].dstQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_GRAPHICS_BIT);
-//            barriers[3].srcQueueFamilyIndex = driver.context().queueIndex(VK_QUEUE_COMPUTE_BIT);
-
             barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
             barrier.srcQueueFamilyIndex = driver.context().queueIndex(QueueType::COMPUTE);
             barrier.dstQueueFamilyIndex = driver.context().queueIndex(QueueType::GRAPHICS);
             computeCmd->pipelineBarrier(PipelineStage::COMPUTE_SHADER, PipelineStage::VERTEX_SHADER, 0, {&barrier, 1}, nullptr);
 
+            computeTimer.stop();
             computeCmd->submit();
 
             cmd->clearDescriptors();
+            rasterTimer.start(*cmd);
             cmd->begin(frame.framebuffer);
 
             cmd->bindBindings({binding, 1});
@@ -326,6 +300,7 @@ int main() {
 
             imGuiContext.render(*cmd);
 
+            rasterTimer.stop();
             cmd->end(frame.framebuffer);
 
             VkSemaphore wait[2] = { frame.imageAquired, computeCmd->signal() };
@@ -334,8 +309,12 @@ int main() {
             drawCount = *static_cast<u32*>(mappedOutput.address);
         }
         computeList.flush();
-        dt = driver.endFrame().milliseconds() / 1000.f;
+        driver.endFrame();
+        dt = driver.milliseconds() / 1000.f;
         driver.swapchain().present(frame, cmd->signal());
+
+        computeTime = computeTimer.result() ? computeTimer.result() : computeTime;
+        rasterTime = rasterTimer.result() ? rasterTimer.result() : rasterTime;
     }
 
     driver.swapchain().wait();

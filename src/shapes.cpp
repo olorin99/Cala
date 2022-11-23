@@ -1,5 +1,6 @@
 #include <Cala/shapes.h>
 #include <Ende/math/math.h>
+#include <Ende/math/Frustum.h>
 
 cala::MeshData cala::shapes::triangle(f32 width, f32 height) {
     MeshData data;
@@ -349,6 +350,104 @@ cala::MeshData cala::shapes::icosahedron(f32 radius) {
 
 
 cala::MeshData cala::shapes::frustum(const ende::math::Mat4f &matrix) {
+
+    ende::math::Mat4f inv = matrix.inverse();
+
+    ende::math::Vec4f a({-1, -1, 1, 1});
+    ende::math::Vec4f b({1, -1, 1, 1});
+    ende::math::Vec4f c({-1, 1, 1, 1});
+    ende::math::Vec4f d({1, 1, 1, 1});
+
+    ende::math::Vec4f e({-1, -1, -1, 1});
+    ende::math::Vec4f f({1, -1, -1, 1});
+    ende::math::Vec4f g({-1, 1, -1, 1});
+    ende::math::Vec4f h({1, 1, -1, 1});
+
+
+    auto i = inv.transform(a); // far top left
+    auto j = inv.transform(b); // far top right
+    auto k = inv.transform(c); // far bottom left
+    auto l = inv.transform(d); // far bottom right
+
+    auto m = inv.transform(e); // near top left
+    auto n = inv.transform(f); // near top right
+    auto o = inv.transform(g); // near bottom left
+    auto p = inv.transform(h); // near bottom right
+
+    i = i / i.w();
+    j = j / j.w();
+    k = k / k.w();
+    l = l / l.w();
+    m = m / m.w();
+    n = n / n.w();
+    o = o / o.w();
+    p = p / p.w();
+
+
     MeshData data;
+
+    //top
+    data.addVertex({ { o.x(), o.y(), o.z() }, { 0, 1, 0 }, { 0, 0 }, { 1, 0, 0 }, { 0, 0, 1 } });
+    data.addVertex({ { k.x(), k.y(), k.z() }, { 0, 1, 0 }, { 0, 1 }, { 1, 0, 0 }, { 0, 0, 1 } });
+    data.addVertex({ { l.x(), l.y(), l.z() }, { 0, 1, 0 }, { 1, 1 }, { 1, 0, 0 }, { 0, 0, 1 } });
+
+    data.addVertex({ { l.x(), l.y(), l.z() }, { 0, 1, 0 }, { 1, 1 }, { 1, 0, 0 }, { 0, 0, 1 } });
+    data.addVertex({ { p.x(), p.y(), p.z() }, { 0, 1, 0 }, { 1, 0 }, { 1, 0, 0 }, { 0, 0, 1 } });
+    data.addVertex({ { o.x(), o.y(), o.z() }, { 0, 1, 0 }, { 0, 0 }, { 1, 0, 0 }, { 0, 0, 1 } });
+
+
+    //front
+    data.addVertex({ { m.x(), m.y(), m.z() }, { 0, 0, -1 }, { 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 } });
+    data.addVertex({ { o.x(), o.y(), o.z() }, { 0, 0, -1 }, { 0, 1 }, { 1, 0, 0 }, { 0, 1, 0 } });
+    data.addVertex({ { p.x(), p.y(), p.z() }, { 0, 0, -1 }, { 1, 1 }, { 1, 0, 0 }, { 0, 1, 0 } });
+
+    data.addVertex({ { p.x(), p.y(), p.z() }, { 0, 0, -1 }, { 1, 1 }, { 1, 0, 0 }, { 0, 1, 0 } });
+    data.addVertex({ { n.x(), n.y(), n.z() }, { 0, 0, -1 }, { 1, 0 }, { 1, 0, 0 }, { 0, 1, 0 } });
+    data.addVertex({ { m.x(), m.y(), m.z() }, { 0, 0, -1 }, { 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 } });
+
+
+    //left
+    data.addVertex({ { i.x(), i.y(), i.z() }, { -1, 0, 0 }, { 0, 0 }, { 0, 0, -1 }, { 0, 1, 0 } });
+    data.addVertex({ { k.x(), k.y(), k.z() }, { -1, 0, 0 }, { 0, 1 }, { 0, 0, -1 }, { 0, 1, 0 } });
+    data.addVertex({ { o.x(), o.y(), o.z() }, { -1, 0, 0 }, { 1, 1 }, { 0, 0, -1 }, { 0, 1, 0 } });
+
+    data.addVertex({ { o.x(), o.y(), o.z() }, { -1, 0, 0 }, { 1, 1 }, { 0, 0, -1 }, { 0, 1, 0 } });
+    data.addVertex({ { m.x(), m.y(), m.z() }, { -1, 0, 0 }, { 1, 0 }, { 0, 0, -1 }, { 0, 1, 0 } });
+    data.addVertex({ { i.x(), i.y(), i.z() }, { -1, 0, 0 }, { 0, 0 }, { 0, 0, -1 }, { 0, 1, 0 } });
+
+
+    //right
+    data.addVertex({ { n.x(), n.y(), n.z() }, { 1, 0, 0 }, { 0, 0 }, { 0, 0, 1 }, { 0, 1, 0 } });
+    data.addVertex({ { p.x(), p.y(), p.z() }, { 1, 0, 0 }, { 0, 1 }, { 0, 0, 1 }, { 0, 1, 0 } });
+    data.addVertex({ { l.x(), l.y(), l.z() }, { 1, 0, 0 }, { 1, 1 }, { 0, 0, 1 }, { 0, 1, 0 } });
+
+    data.addVertex({ { l.x(), l.y(), l.z() }, { 1, 0, 0 }, { 1, 1 }, { 0, 0, 1 }, { 0, 1, 0 } });
+    data.addVertex({ { j.x(), j.y(), j.z() }, { 1, 0, 0 }, { 1, 0 }, { 0, 0, 1 }, { 0, 1, 0 } });
+    data.addVertex({ { n.x(), n.y(), n.z() }, { 1, 0, 0 }, { 0, 0 }, { 0, 0, 1 }, { 0, 1, 0 } });
+
+
+    //bottom
+    data.addVertex({ { i.x(), i.y(), i.z() }, { 0, -1, 0 }, { 0, 0 }, { 1, 0, 0 }, { 0, 0, -1 } });
+    data.addVertex({ { m.x(), m.y(), m.z() }, { 0, -1, 0 }, { 0, 1 }, { 1, 0, 0 }, { 0, 0, -1 } });
+    data.addVertex({ { n.x(), n.y(), n.z() }, { 0, -1, 0 }, { 1, 1 }, { 1, 0, 0 }, { 0, 0, -1 } });
+
+    data.addVertex({ { n.x(), n.y(), n.z() }, { 0, -1, 0 }, { 1, 1 }, { 1, 0, 0 }, { 0, 0, -1 } });
+    data.addVertex({ { j.x(), j.y(), j.z() }, { 0, -1, 0 }, { 1, 0 }, { 1, 0, 0 }, { 0, 0, -1 } });
+    data.addVertex({ { i.x(), i.y(), i.z() }, { 0, -1, 0 }, { 0, 0 }, { 1, 0, 0 }, { 0, 0, -1 } });
+
+
+    //back
+    data.addVertex({ { j.x(), j.y(), j.z() }, { 0, 0, 1 }, { 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 } });
+    data.addVertex({ { l.x(), l.y(), l.z() }, { 0, 0, 1 }, { 0, 1 }, { -1, 0, 0 }, { 0, 1, 0 } });
+    data.addVertex({ { k.x(), k.y(), k.z() }, { 0, 0, 1 }, { 1, 1 }, { -1, 0, 0 }, { 0, 1, 0 } });
+
+    data.addVertex({ { k.x(), k.y(), k.z() }, { 0, 0, 1 }, { 1, 1 }, { -1, 0, 0 }, { 0, 1, 0 } });
+    data.addVertex({ { i.x(), i.y(), i.z() }, { 0, 0, 1 }, { 1, 0 }, { -1, 0, 0 }, { 0, 1, 0 } });
+    data.addVertex({ { j.x(), j.y(), j.z() }, { 0, 0, 1 }, { 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 } });
+
+
+    for (u32 i = 0; i < 36; i++)
+        data.addIndex(i);
+
     return data;
 }

@@ -182,7 +182,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
             break;
     }
     _deviceType = static_cast<PhysicalDeviceType>(deviceProperties.deviceType);
-    _deviceName = {deviceProperties.deviceName, static_cast<u32>(strlen(deviceProperties.deviceName))};
+    _deviceName = deviceProperties.deviceName;
     _timestampPeriod = deviceProperties.limits.timestampPeriod;
 
 
