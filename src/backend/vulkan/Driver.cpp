@@ -15,6 +15,8 @@ cala::backend::vulkan::Driver::Driver(cala::backend::Platform& platform)
 }
 
 cala::backend::vulkan::Driver::~Driver() {
+    vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS)); //ensures last frame finished before destroying stuff
+
     vkDestroyCommandPool(_context.device(), _commandPool, nullptr);
 
     for (auto& setLayout : _setLayouts)
