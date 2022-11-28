@@ -70,7 +70,7 @@ int main() {
 
 
     Transform lightTransform({-3, 3, -1});
-    Light light(cala::Light::DIRECTIONAL, lightTransform);
+    Light light(cala::Light::DIRECTIONAL, false, lightTransform);
 
     Buffer lightBuffer(driver, sizeof(Light::Data), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
     auto lightData = light.data();
@@ -116,7 +116,7 @@ int main() {
                 case SDL_WINDOWEVENT:
                     switch (event.window.event) {
                         case SDL_WINDOWEVENT_RESIZED:
-                            driver.swapchain().wait();
+                            driver.wait();
                             driver.swapchain().resize(event.window.data1, event.window.data2);
                             camera.resize(event.window.data1, event.window.data2);
                             break;
@@ -149,26 +149,28 @@ int main() {
             scene.prepare();
         }
 
-        driver.swapchain().wait();
-        CommandBuffer* cmd = driver.beginFrame();
+        Driver::FrameInfo frameInfo = driver.beginFrame();
+        driver.waitFrame(frameInfo.frame);
         auto frame = driver.swapchain().nextImage();
         {
-            cmd->begin(frame.framebuffer);
+            frameInfo.cmd->begin();
+            frameInfo.cmd->begin(frame.framebuffer);
 
-            cmd->bindBuffer(0, 0, cameraBuffer);
-            cmd->bindBuffer(3, 0, lightBuffer);
-            scene.render(*cmd);
+            frameInfo.cmd->bindBuffer(0, 0, cameraBuffer);
+            frameInfo.cmd->bindBuffer(3, 0, lightBuffer);
+            scene.render(*frameInfo.cmd);
 
-            imGuiContext.render(*cmd);
+            imGuiContext.render(*frameInfo.cmd);
 
-            cmd->end(frame.framebuffer);
-            cmd->submit({&frame.imageAquired, 1}, frame.fence);
+            frameInfo.cmd->end(frame.framebuffer);
+            frameInfo.cmd->end();
+            frameInfo.cmd->submit({&frame.imageAquired, 1}, frameInfo.fence);
         }
         driver.endFrame();
         dt = driver.milliseconds() / (f64)1000;
 
-        driver.swapchain().present(frame, cmd->signal());
+        driver.swapchain().present(frame, frameInfo.cmd->signal());
     }
 
-    driver.swapchain().wait();
+    driver.wait();
 }

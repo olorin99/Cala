@@ -12,17 +12,17 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera) {
     _cameraBuffer.data({ &cameraData, sizeof(cameraData) });
 
     auto frame = _driver.swapchain().nextImage();
-    backend::vulkan::CommandBuffer* cmd = _driver.beginFrame();
-
-    cmd->begin(frame.framebuffer);
-
-    cmd->bindBuffer(0, 0, _cameraBuffer);
-
-    scene.render(*cmd);
-
-    cmd->end(frame.framebuffer);
-
-    cmd->submit({ &frame.imageAquired, 1 }, frame.fence);
+//    backend::vulkan::CommandBuffer* cmd = _driver.beginFrame();
+//
+//    cmd->begin(frame.framebuffer);
+//
+//    cmd->bindBuffer(0, 0, _cameraBuffer);
+//
+//    scene.render(*cmd);
+//
+//    cmd->end(frame.framebuffer);
+//
+//    cmd->submit({ &frame.imageAquired, 1 }, frame.fence);
     _driver.endFrame();
 
 }

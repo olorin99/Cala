@@ -299,70 +299,72 @@ int main() {
 
         }
 
-        driver.swapchain().wait();
+        Driver::FrameInfo frameInfo = driver.beginFrame();
+        driver.waitFrame(frameInfo.frame);
         auto frame = driver.swapchain().nextImage();
-        CommandBuffer* cmd = driver.beginFrame();
         {
+            frameInfo.cmd->begin();
             //cmd->begin(frame.framebuffer);
-            cmd->begin(shadowFramebuffer);
-            cmd->clearDescriptors();
+            frameInfo.cmd->begin(shadowFramebuffer);
+            frameInfo.cmd->clearDescriptors();
 
             //vkCmdSetDepthBias(cmd->buffer(), 1.25f, 0.f, 1.75f);
 
             //cmd->bindBuffer(0, 0, cameraBuffer);
 //            cmd->bindBuffer(0, 0, lightCamBuf);
-            cmd->bindBuffer(3, 0, lightBuffer);
+            frameInfo.cmd->bindBuffer(3, 0, lightBuffer);
 
-            shadowMatInstance.bind(*cmd);
+            shadowMatInstance.bind(*frameInfo.cmd);
 
             for (u32 i = 0; i < scene._renderables.size(); i++) {
                 auto& renderable = scene._renderables[i].second.first;
                 auto& transform = scene._renderables[i].second.second;
-                cmd->bindBindings(renderable.bindings);
-                cmd->bindAttributes(renderable.attributes);
+                frameInfo.cmd->bindBindings(renderable.bindings);
+                frameInfo.cmd->bindAttributes(renderable.attributes);
 
-                cmd->bindBuffer(1, 0, scene._modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+                frameInfo.cmd->bindBuffer(1, 0, scene._modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
 
                 ende::math::Mat4f constants[2] = {
                         lightCamera.projection(),
                         lightCamera.view()
                 };
-                cmd->pushConstants({constants, sizeof(constants)});
+                frameInfo.cmd->pushConstants({constants, sizeof(constants)});
 
-                cmd->bindPipeline();
-                cmd->bindDescriptors();
+                frameInfo.cmd->bindPipeline();
+                frameInfo.cmd->bindDescriptors();
 
-                cmd->bindVertexBuffer(0, renderable.vertex.buffer().buffer());
+                frameInfo.cmd->bindVertexBuffer(0, renderable.vertex.buffer().buffer());
                 if (renderable.index)
-                    cmd->bindIndexBuffer(renderable.index.buffer());
+                    frameInfo.cmd->bindIndexBuffer(renderable.index.buffer());
 
                 if (renderable.index)
-                    cmd->draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
+                    frameInfo.cmd->draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
                 else
-                    cmd->draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
+                    frameInfo.cmd->draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
             }
 
-            cmd->end(shadowFramebuffer);
+            frameInfo.cmd->end(shadowFramebuffer);
             //cmd->end(frame.framebuffer);
 
-            cmd->begin(frame.framebuffer);
 
-            cmd->bindBuffer(0, 0, cameraBuffer);
-            cmd->bindBuffer(3, 0, lightBuffer);
-            cmd->bindBuffer(0, 1, lightCamBuf);
-            cmd->bindImage(2, 3, shadowView, sampler);
-            scene.render(*cmd);
+            frameInfo.cmd->begin(frame.framebuffer);
 
-            imGuiContext.render(*cmd);
+            frameInfo.cmd->bindBuffer(0, 0, cameraBuffer);
+            frameInfo.cmd->bindBuffer(3, 0, lightBuffer);
+            frameInfo.cmd->bindBuffer(0, 1, lightCamBuf);
+            frameInfo.cmd->bindImage(2, 3, shadowView, sampler);
+            scene.render(*frameInfo.cmd);
 
-            cmd->end(frame.framebuffer);
-            cmd->submit({&frame.imageAquired, 1}, frame.fence);
+            imGuiContext.render(*frameInfo.cmd);
+
+            frameInfo.cmd->end(frame.framebuffer);
+            frameInfo.cmd->submit({&frame.imageAquired, 1}, frameInfo.fence);
         }
         auto frameTime = driver.endFrame();
         dt = static_cast<f32>(frameTime.milliseconds()) / 1000.f;
 
-        driver.swapchain().present(frame, cmd->signal());
+        driver.swapchain().present(frame, frameInfo.cmd->signal());
     }
 
-    driver.swapchain().wait();
+    driver.wait();
 }

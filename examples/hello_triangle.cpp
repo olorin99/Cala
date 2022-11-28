@@ -72,28 +72,29 @@ int main() {
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
         }
 
-        driver.swapchain().wait();
+        Driver::FrameInfo frameInfo = driver.beginFrame();
+        driver.waitFrame(frameInfo.frame);
         auto frame = driver.swapchain().nextImage();
-        CommandBuffer* cmd = driver.beginFrame();
         {
-            cmd->begin(frame.framebuffer);
+            frameInfo.cmd->begin();
+            frameInfo.cmd->begin(frame.framebuffer);
 
-            cmd->bindProgram(program);
-            cmd->bindBindings({&binding, 1});
-            cmd->bindAttributes(attributes);
-            cmd->bindRasterState({.cullMode=CullMode::NONE});
-            cmd->bindDepthState({});
-            cmd->bindPipeline();
+            frameInfo.cmd->bindProgram(program);
+            frameInfo.cmd->bindBindings({&binding, 1});
+            frameInfo.cmd->bindAttributes(attributes);
+            frameInfo.cmd->bindRasterState({.cullMode=CullMode::NONE});
+            frameInfo.cmd->bindDepthState({});
+            frameInfo.cmd->bindPipeline();
 
-            cmd->bindVertexBuffer(0, vertexBuffer.buffer());
-            cmd->draw(3, 1, 0, 0);
+            frameInfo.cmd->bindVertexBuffer(0, vertexBuffer.buffer());
+            frameInfo.cmd->draw(3, 1, 0, 0);
 
-            cmd->end(frame.framebuffer);
-            cmd->submit({&frame.imageAquired, 1}, frame.fence);
+            frameInfo.cmd->end(frame.framebuffer);
+            frameInfo.cmd->submit({&frame.imageAquired, 1}, frameInfo.fence);
         }
         driver.endFrame();
-        driver.swapchain().present(frame, cmd->signal());
+        driver.swapchain().present(frame, frameInfo.cmd->signal());
     }
 
-    driver.swapchain().wait();
+    driver.wait();
 }

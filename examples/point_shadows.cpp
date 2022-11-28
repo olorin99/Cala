@@ -294,20 +294,21 @@ int main() {
             scene.prepare();
         }
 
-        driver.swapchain().wait();
+        Driver::FrameInfo frameInfo = driver.beginFrame();
+        driver.waitFrame(frameInfo.frame);
         auto frame = driver.swapchain().nextImage();
-        CommandBuffer* cmd = driver.beginFrame();
         {
-            shadowPassTimer.start(*cmd);
+            frameInfo.cmd->begin();
+            shadowPassTimer.start(*frameInfo.cmd);
 
             lightTransform.setRot({0, 0, 0, 1});
             for (u32 j = 0; j < 6; j++) {
-                cmd->begin(shadowFramebuffer);
-                cmd->clearDescriptors();
-//                cmd->bindBuffer(0, 0, lightCamBuf);
-                cmd->bindBuffer(3, 0, lightBuffer);
+                frameInfo.cmd->begin(shadowFramebuffer);
+                frameInfo.cmd->clearDescriptors();
+//                frameInfo.cmd->bindBuffer(0, 0, lightCamBuf);
+                frameInfo.cmd->bindBuffer(3, 0, lightBuffer);
 
-                shadowMatInstance.bind(*cmd);
+                shadowMatInstance.bind(*frameInfo.cmd);
                 {
                     switch (j) {
                         case 0:
@@ -333,7 +334,7 @@ int main() {
 
 
                     lightCameraData = lightCamera.data();
-                    cmd->pushConstants({&lightCameraData, sizeof(lightCameraData)});
+                    frameInfo.cmd->pushConstants({&lightCameraData, sizeof(lightCameraData)});
                 }
 
                 lightCamera.updateFrustum();
@@ -346,24 +347,24 @@ int main() {
                     if (!lightCamera.frustum().intersect(transform->pos(), 2)) //if radius is too small clips edges
                         continue;
 
-                    cmd->bindBindings(renderable.bindings);
-                    cmd->bindAttributes(renderable.attributes);
+                    frameInfo.cmd->bindBindings(renderable.bindings);
+                    frameInfo.cmd->bindAttributes(renderable.attributes);
 
-                    cmd->bindBuffer(1, 0, scene._modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+                    frameInfo.cmd->bindBuffer(1, 0, scene._modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
 
-                    cmd->bindPipeline();
-                    cmd->bindDescriptors();
+                    frameInfo.cmd->bindPipeline();
+                    frameInfo.cmd->bindDescriptors();
 
-                    cmd->bindVertexBuffer(0, renderable.vertex.buffer().buffer());
+                    frameInfo.cmd->bindVertexBuffer(0, renderable.vertex.buffer().buffer());
                     if (renderable.index) {
-                        cmd->bindIndexBuffer(renderable.index.buffer());
-                        cmd->draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
+                        frameInfo.cmd->bindIndexBuffer(renderable.index.buffer());
+                        frameInfo.cmd->draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
                     } else
-                        cmd->draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
+                        frameInfo.cmd->draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
 
                 }
 
-                cmd->end(shadowFramebuffer);
+                frameInfo.cmd->end(shadowFramebuffer);
 
 
                 VkImageMemoryBarrier barriers[2];
@@ -381,8 +382,8 @@ int main() {
                 cubeFaceRange.baseArrayLayer = 0;
                 barriers[0].subresourceRange = cubeFaceRange;
 
-                cmd->pipelineBarrier(PipelineStage::LATE_FRAGMENT, PipelineStage::TRANSFER, 0, nullptr, {&barriers[0], 1});
-                cmd->pipelineBarrier(PipelineStage::FRAGMENT_SHADER, PipelineStage::TRANSFER, 0, nullptr, {&barriers[1], 1});
+                frameInfo.cmd->pipelineBarrier(PipelineStage::LATE_FRAGMENT, PipelineStage::TRANSFER, 0, nullptr, {&barriers[0], 1});
+                frameInfo.cmd->pipelineBarrier(PipelineStage::FRAGMENT_SHADER, PipelineStage::TRANSFER, 0, nullptr, {&barriers[1], 1});
 
                 VkImageCopy copyRegion{};
                 copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -401,7 +402,7 @@ int main() {
                 copyRegion.extent.height = shadowMap.height();
                 copyRegion.extent.depth = shadowMap.depth();
 
-                vkCmdCopyImage(cmd->buffer(), depthMap.image(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, shadowMap.image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+                vkCmdCopyImage(frameInfo.cmd->buffer(), depthMap.image(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, shadowMap.image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
                 barriers[0] = depthMap.barrier(Access::TRANSFER_READ, Access::DEPTH_STENCIL_WRITE, ImageLayout::TRANSFER_SRC, ImageLayout::DEPTH_STENCIL_ATTACHMENT);
                 barriers[1] = shadowMap.barrier(Access::TRANSFER_WRITE, Access::SHADER_READ, ImageLayout::TRANSFER_DST, ImageLayout::SHADER_READ_ONLY);
@@ -414,38 +415,38 @@ int main() {
 
                 barriers[1].subresourceRange = cubeFaceRange;
 
-                cmd->pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::EARLY_FRAGMENT, 0, nullptr, {&barriers[0], 1});
-                cmd->pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::FRAGMENT_SHADER, 0, nullptr, {&barriers[1], 1});
+                frameInfo.cmd->pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::EARLY_FRAGMENT, 0, nullptr, {&barriers[0], 1});
+                frameInfo.cmd->pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::FRAGMENT_SHADER, 0, nullptr, {&barriers[1], 1});
             }
             shadowPassTimer.stop();
 
 
-            cmd->clearDescriptors();
+            frameInfo.cmd->clearDescriptors();
 
-            lightPassTimer.start(*cmd);
-            cmd->begin(frame.framebuffer);
+            lightPassTimer.start(*frameInfo.cmd);
+            frameInfo.cmd->begin(frame.framebuffer);
 
-            cmd->bindBuffer(0, 0, cameraBuffer);
-//            cmd->bindBuffer(3, 0, lightBuffer);
-            cmd->bindBuffer(0, 1, lightCamBuf);
-            cmd->bindImage(2, 3, shadowView, sampler);
-            scene.render(*cmd);
+            frameInfo.cmd->bindBuffer(0, 0, cameraBuffer);
+//            frameInfo.cmd->bindBuffer(3, 0, lightBuffer);
+            frameInfo.cmd->bindBuffer(0, 1, lightCamBuf);
+            frameInfo.cmd->bindImage(2, 3, shadowView, sampler);
+            scene.render(*frameInfo.cmd);
 
 
-            imGuiContext.render(*cmd);
+            imGuiContext.render(*frameInfo.cmd);
 
-            cmd->end(frame.framebuffer);
+            frameInfo.cmd->end(frame.framebuffer);
             lightPassTimer.stop();
-            cmd->submit({&frame.imageAquired, 1}, frame.fence);
+            frameInfo.cmd->submit({&frame.imageAquired, 1}, frameInfo.fence);
         }
         driver.endFrame();
         dt = driver.milliseconds() / (f64)1000;
 
-        driver.swapchain().present(frame, cmd->signal());
+        driver.swapchain().present(frame, frameInfo.cmd->signal());
 
         shadowPassTime = shadowPassTimer.result() ? shadowPassTimer.result() : shadowPassTime;
         lightPassTime = lightPassTimer.result() ? lightPassTimer.result() : lightPassTime;
     }
 
-    driver.swapchain().wait();
+    driver.wait();
 }

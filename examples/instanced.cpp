@@ -195,35 +195,37 @@ int main() {
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
         }
 
-        driver.swapchain().wait();
+        Driver::FrameInfo frameInfo = driver.beginFrame();
+        driver.waitFrame(frameInfo.frame);
         auto frame = driver.swapchain().nextImage();
-        CommandBuffer* cmd = driver.beginFrame();
         {
-            cmd->begin(frame.framebuffer);
+            frameInfo.cmd->begin();
+            frameInfo.cmd->begin(frame.framebuffer);
 
-            cmd->bindBindings({binding, 1});
-            cmd->bindAttributes(attributes);
+            frameInfo.cmd->bindBindings({binding, 1});
+            frameInfo.cmd->bindAttributes(attributes);
 
-            brickwallMat.bind(*cmd);
-            cmd->bindBuffer(0, 0, cameraBuffer);
+            brickwallMat.bind(*frameInfo.cmd);
+            frameInfo.cmd->bindBuffer(0, 0, cameraBuffer);
 
-            cmd->bindBuffer(1, 0, modelBuffer);
+            frameInfo.cmd->bindBuffer(1, 0, modelBuffer);
 
-            cmd->bindPipeline();
-            cmd->bindDescriptors();
+            frameInfo.cmd->bindPipeline();
+            frameInfo.cmd->bindDescriptors();
 
-            cmd->bindVertexBuffer(0, vertexBuffer.buffer());
+            frameInfo.cmd->bindVertexBuffer(0, vertexBuffer.buffer());
 //            cmd->bindVertexBuffer(1, modelBuffer.buffer());
-            cmd->draw(36, models.size(), 0, 0);
+            frameInfo.cmd->draw(36, models.size(), 0, 0);
 
-            imGuiContext.render(*cmd);
+            imGuiContext.render(*frameInfo.cmd);
 
-            cmd->end(frame.framebuffer);
-            cmd->submit(frame.imageAquired, frame.fence);
+            frameInfo.cmd->end(frame.framebuffer);
+            frameInfo.cmd->end();
+            frameInfo.cmd->submit({ &frame.imageAquired, 1 }, frameInfo.fence);
         }
         dt = driver.endFrame().milliseconds() / 1000.f;
-        driver.swapchain().present(frame, cmd->signal());
+        driver.swapchain().present(frame, frameInfo.cmd->signal());
     }
 
-    driver.swapchain().wait();
+    driver.wait();
 }

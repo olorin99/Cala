@@ -223,38 +223,40 @@ int main() {
             renderBuffer.data({renderList.data(), static_cast<u32>(renderList.size() * sizeof(u32))});
         }
 
-        driver.swapchain().wait();
+        Driver::FrameInfo frameInfo = driver.beginFrame();
+        driver.waitFrame(frameInfo.frame);
         auto frame = driver.swapchain().nextImage();
-        CommandBuffer* cmd = driver.beginFrame();
         {
-            cmd->begin(frame.framebuffer);
+            frameInfo.cmd->begin();
+            frameInfo.cmd->begin(frame.framebuffer);
 
-            cmd->bindBindings({binding, 1});
-            cmd->bindAttributes(attributes);
+            frameInfo.cmd->bindBindings({binding, 1});
+            frameInfo.cmd->bindAttributes(attributes);
 
-            brickwallMat.bind(*cmd);
-            cmd->bindBuffer(0, 0, cameraBuffer);
+            brickwallMat.bind(*frameInfo.cmd);
+            frameInfo.cmd->bindBuffer(0, 0, cameraBuffer);
 
-            cmd->bindBuffer(1, 0, modelBuffer);
-            cmd->bindBuffer(1, 1, renderBuffer);
+            frameInfo.cmd->bindBuffer(1, 0, modelBuffer);
+            frameInfo.cmd->bindBuffer(1, 1, renderBuffer);
 
-            cmd->bindPipeline();
-            cmd->bindDescriptors();
+            frameInfo.cmd->bindPipeline();
+            frameInfo.cmd->bindDescriptors();
 
-            cmd->bindVertexBuffer(0, vertexBuffer.buffer());
+            frameInfo.cmd->bindVertexBuffer(0, vertexBuffer.buffer());
             if (!renderList.empty())
-                cmd->draw(36, renderList.size(), 0, 0);
+                frameInfo.cmd->draw(36, renderList.size(), 0, 0);
 
-            imGuiContext.render(*cmd);
+            imGuiContext.render(*frameInfo.cmd);
 
-            cmd->end(frame.framebuffer);
-            cmd->submit({&frame.imageAquired, 1}, frame.fence);
+            frameInfo.cmd->end(frame.framebuffer);
+            frameInfo.cmd->end();
+            frameInfo.cmd->submit({&frame.imageAquired, 1}, frameInfo.fence);
         }
         driver.endFrame();
         dt = driver.milliseconds() / (f64)1000;
-        driver.swapchain().present(frame, cmd->signal());
+        driver.swapchain().present(frame, frameInfo.cmd->signal());
         //ende::thread::sleep(10_milli);
     }
 
-    driver.swapchain().wait();
+    driver.wait();
 }

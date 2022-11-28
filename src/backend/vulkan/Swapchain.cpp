@@ -65,12 +65,6 @@ cala::backend::vulkan::Swapchain::Swapchain(Driver &driver, Platform& platform)
     VkBool32 supported = VK_FALSE;
     vkGetPhysicalDeviceSurfaceSupportKHR(_driver.context().physicalDevice(), _driver.context().queueIndex(QueueType::GRAPHICS), _surface, &supported);
 
-    VkFenceCreateInfo fenceCreateInfo{};
-    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceCreateInfo.pNext = nullptr;
-    fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-    vkCreateFence(_driver.context().device(), &fenceCreateInfo, nullptr, &_fence);
-
     //TODO: get better error handling
     if (!createSwapchain()) throw std::runtime_error("Unable to create swapchain");
     if (!createImageViews()) throw std::runtime_error("Unable to create swapchains image views");
@@ -119,7 +113,6 @@ cala::backend::vulkan::Swapchain::~Swapchain() {
     for (auto& view : _imageViews)
         vkDestroyImageView(_driver.context().device(), view, nullptr);
 
-    vkDestroyFence(_driver.context().device(), _fence, nullptr);
     vkDestroySwapchainKHR(_driver.context().device(), _swapchain, nullptr);
     vkDestroySurfaceKHR(_driver.context().instance(), _surface, nullptr);
 }
@@ -133,7 +126,7 @@ cala::backend::vulkan::Swapchain::Frame cala::backend::vulkan::Swapchain::nextIm
         resize(_depthImage.width(), _depthImage.height());
     }
 
-    return { _frame++, index, image, _fence, _framebuffers[index] };
+    return { _frame++, index, image, _framebuffers[index] };
 }
 
 bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFinish) {
@@ -154,13 +147,6 @@ bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFi
 
     auto res = vkQueuePresentKHR(_driver.context().getQueue(QueueType::PRESENT), &presentInfo) == VK_SUCCESS;
 
-    return res;
-}
-
-bool cala::backend::vulkan::Swapchain::wait(u64 timeout) {
-    auto res = vkWaitForFences(_driver.context().device(), 1, &_fence, true, timeout) == VK_SUCCESS;
-    if (res)
-        vkResetFences(_driver.context().device(), 1, &_fence);
     return res;
 }
 

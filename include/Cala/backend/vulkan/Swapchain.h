@@ -22,15 +22,12 @@ namespace cala::backend::vulkan {
             u64 id = 0;
             u32 index = 0;
             VkSemaphore imageAquired = VK_NULL_HANDLE;
-            VkFence fence = VK_NULL_HANDLE;
             Framebuffer& framebuffer;
         };
 
         Frame nextImage();
 
         bool present(Frame frame, VkSemaphore renderFinish);
-
-        bool wait(u64 timeout = 1000000000);
 
         bool resize(u32 width, u32 height);
 
@@ -45,8 +42,6 @@ namespace cala::backend::vulkan {
         u32 size() const { return _images.size(); }
 
         VkImageView view(u32 i) const { return _imageViews[i]; }
-
-        VkFence fence() const { return _fence; }
 
         RenderPass& renderPass() const { return *_renderPass; }
 
@@ -78,8 +73,6 @@ namespace cala::backend::vulkan {
 
         RenderPass* _renderPass;
         ende::Vector<Framebuffer> _framebuffers;
-
-        VkFence _fence;
 
     };
 

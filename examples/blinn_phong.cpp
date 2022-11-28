@@ -145,6 +145,8 @@ int main() {
             imGuiContext.newFrame();
 
             ImGui::Begin("Light Data");
+            ImGui::Text("FPS: %f", driver.fps());
+            ImGui::Text("Milliseconds: %f", driver.milliseconds());
 
             ende::math::Vec3f colour = scene._lights.front().getColour();
             f32 intensity = scene._lights.front().getIntensity();
@@ -171,25 +173,27 @@ int main() {
 
         }
 
-        driver.swapchain().wait();
+        Driver::FrameInfo frameInfo = driver.beginFrame();
+        driver.waitFrame(frameInfo.frame);
         auto frame = driver.swapchain().nextImage();
-        CommandBuffer* cmd = driver.beginFrame();
         {
-            cmd->begin(frame.framebuffer);
+            frameInfo.cmd->begin();
+            frameInfo.cmd->begin(frame.framebuffer);
 
-            cmd->bindBuffer(0, 0, cameraBuffer);
-            scene.render(*cmd);
+            frameInfo.cmd->bindBuffer(0, 0, cameraBuffer);
+            scene.render(*frameInfo.cmd);
 
-            imGuiContext.render(*cmd);
+            imGuiContext.render(*frameInfo.cmd);
 
-            cmd->end(frame.framebuffer);
-            cmd->submit({&frame.imageAquired, 1}, frame.fence);
+            frameInfo.cmd->end(frame.framebuffer);
+            frameInfo.cmd->end();
+            frameInfo.cmd->submit({&frame.imageAquired, 1}, frameInfo.fence);
         }
         auto frameTime = driver.endFrame();
-        dt = static_cast<f32>(frameTime.milliseconds()) / 1000.f;
+        dt = static_cast<f32>(driver.milliseconds()) / 1000.f;
 
-        driver.swapchain().present(frame, cmd->signal());
+        driver.swapchain().present(frame, frameInfo.cmd->signal());
     }
 
-    driver.swapchain().wait();
+    driver.wait();
 }

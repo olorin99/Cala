@@ -58,6 +58,14 @@ bool cala::backend::vulkan::CommandBuffer::begin() {
 }
 
 bool cala::backend::vulkan::CommandBuffer::end() {
+    if (!_active)
+        return false;
+
+#ifndef NDEBUG
+    for (auto& label : _debugLabels)
+        popDebugLabel();
+#endif
+
     bool res = vkEndCommandBuffer(_buffer) == VK_SUCCESS;
     if (res) {
         _active = false;
@@ -337,10 +345,7 @@ void cala::backend::vulkan::CommandBuffer::popDebugLabel() {
 
 bool cala::backend::vulkan::CommandBuffer::submit(ende::Span<VkSemaphore> wait, VkFence fence) {
     PROFILE
-#ifndef NDEBUG
-    for (auto& label : _debugLabels)
-        popDebugLabel();
-#endif
+
     end();
 
     VkSubmitInfo submitInfo{};

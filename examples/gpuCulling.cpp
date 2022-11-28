@@ -237,9 +237,10 @@ int main() {
             cameraBuffer.data({&frustum, sizeof(frustum)}, sizeof(cameraData));
         }
 
-        driver.swapchain().wait();
+
+        Driver::FrameInfo frameInfo = driver.beginFrame();
+        driver.waitFrame(frameInfo.frame);
         auto frame = driver.swapchain().nextImage();
-        CommandBuffer* cmd = driver.beginFrame();
         CommandBuffer* computeCmd = computeList.get();
         {
             computeTimer.start(*computeCmd);
@@ -278,44 +279,46 @@ int main() {
             computeTimer.stop();
             computeCmd->submit();
 
-            cmd->clearDescriptors();
-            rasterTimer.start(*cmd);
-            cmd->begin(frame.framebuffer);
+            frameInfo.cmd->begin();
+            frameInfo.cmd->clearDescriptors();
+            rasterTimer.start(*frameInfo.cmd);
+            frameInfo.cmd->begin(frame.framebuffer);
 
-            cmd->bindBindings({binding, 1});
-            cmd->bindAttributes(attributes);
+            frameInfo.cmd->bindBindings({binding, 1});
+            frameInfo.cmd->bindAttributes(attributes);
 
-            brickwallMat.bind(*cmd);
-            cmd->bindBuffer(0, 0, cameraBuffer);
+            brickwallMat.bind(*frameInfo.cmd);
+            frameInfo.cmd->bindBuffer(0, 0, cameraBuffer);
 
-            cmd->bindBuffer(1, 0, modelBuffer);
-            cmd->bindBuffer(1, 1, renderBuffer);
+            frameInfo.cmd->bindBuffer(1, 0, modelBuffer);
+            frameInfo.cmd->bindBuffer(1, 1, renderBuffer);
 
-            cmd->bindPipeline();
-            cmd->bindDescriptors();
+            frameInfo.cmd->bindPipeline();
+            frameInfo.cmd->bindDescriptors();
 
-            cmd->bindVertexBuffer(0, vertexBuffer.buffer());
+            frameInfo.cmd->bindVertexBuffer(0, vertexBuffer.buffer());
             if (drawCount)
-                cmd->draw(36, drawCount, 0, 0);
+                frameInfo.cmd->draw(36, drawCount, 0, 0);
 
-            imGuiContext.render(*cmd);
+            imGuiContext.render(*frameInfo.cmd);
 
             rasterTimer.stop();
-            cmd->end(frame.framebuffer);
+            frameInfo.cmd->end(frame.framebuffer);
 
+            frameInfo.cmd->end();
             VkSemaphore wait[2] = { frame.imageAquired, computeCmd->signal() };
-            cmd->submit(wait, frame.fence);
+            frameInfo.cmd->submit(wait, frameInfo.fence);
 
             drawCount = *static_cast<u32*>(mappedOutput.address);
         }
         computeList.flush();
         driver.endFrame();
         dt = driver.milliseconds() / 1000.f;
-        driver.swapchain().present(frame, cmd->signal());
+        driver.swapchain().present(frame, frameInfo.cmd->signal());
 
         computeTime = computeTimer.result() ? computeTimer.result() : computeTime;
         rasterTime = rasterTimer.result() ? rasterTimer.result() : rasterTime;
     }
 
-    driver.swapchain().wait();
+    driver.wait();
 }

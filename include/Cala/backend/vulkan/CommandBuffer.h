@@ -28,6 +28,8 @@ namespace cala::backend::vulkan {
         CommandBuffer& operator=(const CommandBuffer& buf) = delete;
 
 
+        void setBuffer(VkCommandBuffer buffer) { _buffer = buffer; }
+
         VkCommandBuffer buffer() const { return _buffer; }
 
 
