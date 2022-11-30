@@ -82,7 +82,7 @@ int main() {
 
     Transform cameraTransform({0, 0, -10});
     Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
-    Buffer cameraBuffer(driver, sizeof(Camera::Data) + sizeof(std::array<std::pair<ende::math::Vec3f, f32>, 6>), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
+    Buffer cameraBuffer(driver, sizeof(Camera::Data) + 3 * 4 + sizeof(std::array<std::pair<ende::math::Vec3f, f32>, 6>), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
 
 
     i32 maxSize = 100 * 100 * 100;
@@ -234,7 +234,7 @@ int main() {
             if (!freezeFrustum)
                 viewProj = camera.viewProjection();
             ende::math::Frustum frustum(viewProj);
-            cameraBuffer.data({&frustum, sizeof(frustum)}, sizeof(cameraData));
+            cameraBuffer.data({&frustum, sizeof(frustum)}, sizeof(cameraData) + 4 * 3);
         }
 
 
