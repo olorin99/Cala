@@ -169,25 +169,25 @@ void cala::backend::vulkan::Image::unmap() {
 }
 
 void
-cala::backend::vulkan::Image::copy(cala::backend::vulkan::CommandBuffer &buffer, cala::backend::vulkan::Image &dst) {
+cala::backend::vulkan::Image::copy(cala::backend::vulkan::CommandBuffer &buffer, cala::backend::vulkan::Image &dst, u32 srcLayer, u32 dstLayer) {
     assert(_width == dst._width && _height == dst._height && _depth == dst._depth);
 
     VkImageCopy region{};
 
     region.srcSubresource.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     region.srcSubresource.mipLevel = 0;
-    region.srcSubresource.baseArrayLayer = 0;
-    region.srcSubresource.layerCount = VK_REMAINING_ARRAY_LAYERS;
+    region.srcSubresource.baseArrayLayer = srcLayer;
+    region.srcSubresource.layerCount = 1;
 
     region.dstSubresource.aspectMask = dst._format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     region.dstSubresource.mipLevel = 0;
-    region.dstSubresource.baseArrayLayer = 0;
-    region.dstSubresource.layerCount = VK_REMAINING_ARRAY_LAYERS;
+    region.dstSubresource.baseArrayLayer = dstLayer;
+    region.dstSubresource.layerCount = 1;
 
     region.srcOffset = { 0, 0, 0 };
     region.dstOffset = { 0, 0, 0 };
     region.extent = { _width, _height, _depth };
-    vkCmdCopyImage(buffer.buffer(), _image, getImageLayout(_layout), dst.image(), getImageLayout(dst._layout), 1, &region);
+    vkCmdCopyImage(buffer.buffer(), _image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst.image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
 
@@ -215,13 +215,13 @@ cala::backend::vulkan::Image::View cala::backend::vulkan::Image::getView(VkImage
     return v;
 }
 
-VkImageMemoryBarrier cala::backend::vulkan::Image::barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout) {
+VkImageMemoryBarrier cala::backend::vulkan::Image::barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer) {
     VkImageSubresourceRange range{};
     range.aspectMask = (_format == Format::D16_UNORM || _format == Format::D32_SFLOAT || _format == Format::D24_UNORM_S8_UINT) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     range.baseMipLevel = 0;
     range.levelCount = 1;
-    range.baseArrayLayer = 0;
-    range.layerCount = 1;
+    range.baseArrayLayer = layer;
+    range.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
     VkImageMemoryBarrier memoryBarrier{};
     memoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;

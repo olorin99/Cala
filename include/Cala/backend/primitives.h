@@ -149,6 +149,7 @@ namespace cala::backend {
     };
 
     enum class Access {
+        NONE = 0,
         INDIRECT_READ = 0x00000001,
         INDEX_READ = 0x00000002,
         VERTEX_READ = 0x00000004,

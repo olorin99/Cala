@@ -48,7 +48,7 @@ namespace cala::backend::vulkan {
 
         void unmap();
 
-        void copy(CommandBuffer& buffer, Image& dst);
+        void copy(CommandBuffer& buffer, Image& dst, u32 srcLayer = 0, u32 dstLayer = 0);
 
 
         struct View {
@@ -72,7 +72,7 @@ namespace cala::backend::vulkan {
 
         View getView(VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D, u32 mipLevel = 0, u32 levelCount = 1, u32 arrayLayer = 0, u32 layerCount = 1);
 
-        VkImageMemoryBarrier barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout);
+        VkImageMemoryBarrier barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer = 0);
 
         VkImage image() const { return _image; }
 
