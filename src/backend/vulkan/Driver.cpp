@@ -42,10 +42,10 @@ cala::backend::vulkan::Driver::Driver(cala::backend::Platform& platform)
 }
 
 cala::backend::vulkan::Driver::~Driver() {
-    for (u32 i = 0; i < FRAMES_IN_FLIGHT; i++) {
-        vkWaitForFences(_context.device(), 1, &_frameFences[i], true, 1000000000);
-        vkResetCommandBuffer(_frameCommands[i].buffer(), VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
-    }
+//    for (u32 i = 0; i < FRAMES_IN_FLIGHT; i++) {
+//        vkWaitForFences(_context.device(), 1, &_frameFences[i], true, 1000000000);
+//        vkResetCommandBuffer(_frameCommands[i].buffer(), VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+//    }
     vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS)); //ensures last frame finished before destroying stuff
 
     for (u32 i = 0; i < FRAMES_IN_FLIGHT; i++) {

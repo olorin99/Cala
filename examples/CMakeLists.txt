@@ -31,3 +31,6 @@ target_link_libraries(point_shadows Cala Ende stb_image)
 
 add_executable(direct_shadow direct_shadows.cpp)
 target_link_libraries(direct_shadow Cala Ende stb_image)
+
+add_executable(pbr pbr.cpp)
+target_link_libraries(pbr Cala Ende stb_image)
