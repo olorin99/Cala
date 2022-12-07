@@ -241,9 +241,9 @@ int main() {
         Driver::FrameInfo frameInfo = driver.beginFrame();
         driver.waitFrame(frameInfo.frame);
         auto frame = driver.swapchain().nextImage();
-        CommandBuffer* computeCmd = computeList.get();
         {
-            computeTimer.start(*computeCmd);
+            frameInfo.cmd->begin();
+            computeTimer.start(*frameInfo.cmd);
 
             VkBufferMemoryBarrier barrier{};
             barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -256,30 +256,29 @@ int main() {
             barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
 
 
-            computeCmd->pipelineBarrier(PipelineStage::VERTEX_SHADER, PipelineStage::COMPUTE_SHADER, 0, {&barrier, 1}, nullptr);
+            frameInfo.cmd->pipelineBarrier(PipelineStage::VERTEX_SHADER, PipelineStage::COMPUTE_SHADER, 0, {&barrier, 1}, nullptr);
 
-            computeCmd->clearDescriptors();
-            computeCmd->bindProgram(computeProgram);
-            computeCmd->bindBuffer(0, 0, cameraBuffer);
-            computeCmd->bindBuffer(1, 0, modelBuffer);
-            computeCmd->bindBuffer(1, 1, renderBuffer);
-            computeCmd->bindBuffer(1, 2, positionBuffer);
-            computeCmd->bindBuffer(2, 0, outputBuffer);
+            frameInfo.cmd->clearDescriptors();
+            frameInfo.cmd->bindProgram(computeProgram);
+            frameInfo.cmd->bindBuffer(0, 0, cameraBuffer);
+            frameInfo.cmd->bindBuffer(1, 0, modelBuffer);
+            frameInfo.cmd->bindBuffer(1, 1, renderBuffer);
+            frameInfo.cmd->bindBuffer(1, 2, positionBuffer);
+            frameInfo.cmd->bindBuffer(2, 0, outputBuffer);
 
-            computeCmd->bindPipeline();
-            computeCmd->bindDescriptors();
-            computeCmd->dispatchCompute(models.size() / 16, 1, 1);
+            frameInfo.cmd->bindPipeline();
+            frameInfo.cmd->bindDescriptors();
+            frameInfo.cmd->dispatchCompute(models.size() / 16, 1, 1);
 
             barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
             barrier.srcQueueFamilyIndex = driver.context().queueIndex(QueueType::COMPUTE);
             barrier.dstQueueFamilyIndex = driver.context().queueIndex(QueueType::GRAPHICS);
-            computeCmd->pipelineBarrier(PipelineStage::COMPUTE_SHADER, PipelineStage::VERTEX_SHADER, 0, {&barrier, 1}, nullptr);
+            frameInfo.cmd->pipelineBarrier(PipelineStage::COMPUTE_SHADER, PipelineStage::VERTEX_SHADER, 0, {&barrier, 1}, nullptr);
 
             computeTimer.stop();
-            computeCmd->submit();
 
-            frameInfo.cmd->begin();
+
             frameInfo.cmd->clearDescriptors();
             rasterTimer.start(*frameInfo.cmd);
             frameInfo.cmd->begin(frame.framebuffer);
@@ -306,12 +305,10 @@ int main() {
             frameInfo.cmd->end(frame.framebuffer);
 
             frameInfo.cmd->end();
-            VkSemaphore wait[2] = { frame.imageAquired, computeCmd->signal() };
-            frameInfo.cmd->submit(wait, frameInfo.fence);
+            frameInfo.cmd->submit({ &frame.imageAquired, 1 }, frameInfo.fence);
 
             drawCount = *static_cast<u32*>(mappedOutput.address);
         }
-        computeList.flush();
         driver.endFrame();
         dt = driver.milliseconds() / 1000.f;
         driver.swapchain().present(frame, frameInfo.cmd->signal());
