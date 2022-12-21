@@ -21,6 +21,7 @@ namespace cala {
             backend::Format targetFormat;
             backend::ImageUsage targetUsage;
             backend::vulkan::RenderPass* renderPass;
+            u32 mipLevels = 1;
         };
 
         Probe(backend::vulkan::Driver& driver, ProbeInfo info);

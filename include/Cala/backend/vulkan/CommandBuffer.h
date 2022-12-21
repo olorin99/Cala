@@ -177,6 +177,7 @@ namespace cala::backend::vulkan {
                 VkImageView view = VK_NULL_HANDLE;
                 VkSampler sampler = VK_NULL_HANDLE;
                 u32 flags = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                bool storage = false;
             } images[MAX_BINDING_PER_SET] {};
 
             bool operator==(const DescriptorKey& rhs) const {

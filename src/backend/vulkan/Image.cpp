@@ -6,7 +6,7 @@ cala::backend::vulkan::Image::Image(Driver& driver, CreateInfo info)
     : _driver(driver),
     _image(VK_NULL_HANDLE),
     _allocation(nullptr),
-    _layout(ImageLayout::UNDEFINED)
+    _layout(info.initialLayout)
 {
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -37,6 +37,11 @@ cala::backend::vulkan::Image::Image(Driver& driver, CreateInfo info)
     allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 
     vmaCreateImage(driver.context().allocator(), &imageInfo, &allocInfo, &_image, &_allocation, nullptr);
+
+//    driver.immediate([&](CommandBuffer& cmd) {
+//        auto b = barrier(Access::NONE, Access::NONE, ImageLayout::UNDEFINED, info.initialLayout);
+//        cmd.pipelineBarrier(PipelineStage::TOP, PipelineStage::TOP, 0, nullptr, { &b, 1 });
+//    });
 
     _width = info.width;
     _height = info.height;
@@ -169,18 +174,18 @@ void cala::backend::vulkan::Image::unmap() {
 }
 
 void
-cala::backend::vulkan::Image::copy(cala::backend::vulkan::CommandBuffer &buffer, cala::backend::vulkan::Image &dst, u32 srcLayer, u32 dstLayer) {
+cala::backend::vulkan::Image::copy(cala::backend::vulkan::CommandBuffer &buffer, cala::backend::vulkan::Image &dst, u32 srcLayer, u32 dstLayer, u32 srcMipLevel, u32 dstMipLevel) {
     assert(_width == dst._width && _height == dst._height && _depth == dst._depth);
 
     VkImageCopy region{};
 
     region.srcSubresource.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-    region.srcSubresource.mipLevel = 0;
+    region.srcSubresource.mipLevel = srcMipLevel;
     region.srcSubresource.baseArrayLayer = srcLayer;
     region.srcSubresource.layerCount = 1;
 
     region.dstSubresource.aspectMask = dst._format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-    region.dstSubresource.mipLevel = 0;
+    region.dstSubresource.mipLevel = dstMipLevel;
     region.dstSubresource.baseArrayLayer = dstLayer;
     region.dstSubresource.layerCount = 1;
 
@@ -219,7 +224,7 @@ VkImageMemoryBarrier cala::backend::vulkan::Image::barrier(Access srcAccess, Acc
     VkImageSubresourceRange range{};
     range.aspectMask = (_format == Format::D16_UNORM || _format == Format::D32_SFLOAT || _format == Format::D24_UNORM_S8_UINT) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     range.baseMipLevel = 0;
-    range.levelCount = 1;
+    range.levelCount = VK_REMAINING_MIP_LEVELS;
     range.baseArrayLayer = layer;
     range.layerCount = VK_REMAINING_ARRAY_LAYERS;
 

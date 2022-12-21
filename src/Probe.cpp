@@ -14,7 +14,7 @@ cala::Probe::Probe(cala::backend::vulkan::Driver& driver, ProbeInfo info) {
         info.height,
         1,
         info.targetFormat,
-        1,
+        info.mipLevels,
         1,
         info.targetUsage | backend::ImageUsage::TRANSFER_SRC
     });
@@ -24,7 +24,7 @@ cala::Probe::Probe(cala::backend::vulkan::Driver& driver, ProbeInfo info) {
         info.height,
         1,
         info.targetFormat,
-        1,
+        info.mipLevels,
         6,
         info.targetUsage | backend::ImageUsage::TRANSFER_DST
     });

@@ -50,9 +50,10 @@ namespace cala::backend {
         RGBA8_SINT = 42,
         RGBA8_SRGB = 43,
 
+        RG16_SFLOAT = 83,
 
 
-
+        RGB32_SFLOAT = 106,
         RGBA32_UINT = 107,
         RGBA32_SINT = 108,
         RGBA32_SFLOAT = 109,

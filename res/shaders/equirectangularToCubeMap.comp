@@ -1,0 +1,40 @@
+#version 450
+
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+
+layout (set = 1, binding = 0) uniform sampler2D equirectangularMap;
+layout (set = 1, binding = 1) uniform writeonly imageCube environmentMap;
+
+vec3 cubeToWorld(ivec3 coord, vec2 size) {
+    vec2 texCoords = vec2(coord.xy) / size;
+    texCoords = texCoords * 2.0 - 1.0;
+    switch (coord.z) {
+        case 0: return vec3(1.0, -texCoords.yx);
+        case 1: return vec3(-1.0, -texCoords.y, texCoords.x);
+        case 2: return vec3(texCoords.x, 1.0, texCoords.y);
+        case 3: return vec3(texCoords.x, -1.0, -texCoords.y);
+        case 4: return vec3(texCoords.x, -texCoords.y, 1.0);
+        case 5: return vec3(-texCoords.xy, -1.0);
+    }
+    return vec3(0.0);
+}
+
+const vec2 invAtan = vec2(0.1591, 0.3183);
+vec2 sampleSphericalMap(vec3 v) {
+    vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
+    uv *= invAtan;
+    uv += 0.5;
+    return uv;
+}
+
+void main() {
+
+    ivec3 cubeCoords = ivec3(gl_GlobalInvocationID);
+    vec3 N = normalize(cubeToWorld(cubeCoords, vec2(512.0, 512.0)));
+
+    vec2 uv = sampleSphericalMap(N);
+    vec3 colour = texture(equirectangularMap, uv).rgb;
+
+    imageStore(environmentMap, cubeCoords, vec4(colour, 1.0));
+}

@@ -23,6 +23,7 @@ namespace cala::backend::vulkan {
             u32 mipLevels = 1;
             u32 arrayLayers = 1;
             ImageUsage usage = ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST;
+            ImageLayout initialLayout = ImageLayout::GENERAL;
         };
 
         struct DataInfo {
@@ -48,7 +49,7 @@ namespace cala::backend::vulkan {
 
         void unmap();
 
-        void copy(CommandBuffer& buffer, Image& dst, u32 srcLayer = 0, u32 dstLayer = 0);
+        void copy(CommandBuffer& buffer, Image& dst, u32 srcLayer = 0, u32 dstLayer = 0, u32 srcMipLevel = 0, u32 dstMipLevel = 0);
 
 
         struct View {
