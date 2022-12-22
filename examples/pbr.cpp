@@ -237,9 +237,9 @@ int main() {
             512,
             1,
             Format::RGBA32_SFLOAT,
-            1,
+            4,
             6,
-            ImageUsage::STORAGE | ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
+            ImageUsage::STORAGE | ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST | backend::ImageUsage::TRANSFER_SRC
     });
     auto environmentView = environmentMap.getView(VK_IMAGE_VIEW_TYPE_CUBE);
 
@@ -261,10 +261,12 @@ int main() {
         cmd.dispatchCompute(512 / 32, 512 / 32, 6);
 
 
-        envBarrier = environmentMap.barrier(backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
+        envBarrier = environmentMap.barrier(backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::GENERAL, backend::ImageLayout::TRANSFER_DST);
         cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, 0, nullptr, { &envBarrier, 1 });
         toCubeTimer.stop();
     });
+
+    environmentMap.generateMips();
 
     Image irradianceMap(driver, {
             512,

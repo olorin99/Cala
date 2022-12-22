@@ -51,6 +51,8 @@ namespace cala::backend::vulkan {
 
         void copy(CommandBuffer& buffer, Image& dst, u32 srcLayer = 0, u32 dstLayer = 0, u32 srcMipLevel = 0, u32 dstMipLevel = 0);
 
+        void generateMips();
+
 
         struct View {
             VkImageView view;
@@ -98,6 +100,8 @@ namespace cala::backend::vulkan {
         u32 _width;
         u32 _height;
         u32 _depth;
+        u32 _layers;
+        u32 _mips;
         Format _format;
         ImageUsage _usage;
         ImageLayout _layout;
