@@ -237,11 +237,11 @@ int main() {
             512,
             1,
             Format::RGBA32_SFLOAT,
-            4,
+            10,
             6,
             ImageUsage::STORAGE | ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST | backend::ImageUsage::TRANSFER_SRC
     });
-    auto environmentView = environmentMap.getView(VK_IMAGE_VIEW_TYPE_CUBE);
+    auto environmentView = environmentMap.getView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 10);
 
     driver.immediate([&](CommandBuffer& cmd) {
         toCubeTimer.start(cmd);
@@ -305,26 +305,27 @@ int main() {
             512,
             1,
             Format::RGBA32_SFLOAT,
-            4,
+            5,
             6,
             ImageUsage::STORAGE | ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
     });
-    Image::View prefilterViews[4] = {
+    Image::View prefilterViews[5] = {
             prefilterMap.getView(VK_IMAGE_VIEW_TYPE_CUBE, 0),
             prefilterMap.getView(VK_IMAGE_VIEW_TYPE_CUBE, 1),
             prefilterMap.getView(VK_IMAGE_VIEW_TYPE_CUBE, 2),
-            prefilterMap.getView(VK_IMAGE_VIEW_TYPE_CUBE, 3)
+            prefilterMap.getView(VK_IMAGE_VIEW_TYPE_CUBE, 3),
+            prefilterMap.getView(VK_IMAGE_VIEW_TYPE_CUBE, 4)
     };
 
-    Buffer roughnessBuf(driver, sizeof(f32) * 4, BufferUsage::UNIFORM);
-    f32 roughnessData[] = { 0 / 4.f, 1 / 4.f, 2 / 4.f, 3 / 4.f };
-    roughnessBuf.data({ roughnessData, sizeof(f32) * 4 });
+    Buffer roughnessBuf(driver, sizeof(f32) * 6, BufferUsage::UNIFORM);
+    f32 roughnessData[] = { 0 / 4.f, 1 / 4.f, 2 / 4.f, 3 / 4.f, 4.f / 4.f };
+    roughnessBuf.data({ roughnessData, sizeof(f32) * 5 });
     driver.immediate([&](CommandBuffer& cmd) {
         prefilterTimer.start(cmd);
         auto prefilterBarrier = prefilterMap.barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::GENERAL);
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &prefilterBarrier, 1 });
 
-        for (u32 mip = 0; mip < 4; mip++) {
+        for (u32 mip = 0; mip < 5; mip++) {
 
             cmd.bindProgram(prefilterCompute);
             cmd.bindImage(1, 0, environmentView, sampler);
@@ -333,17 +334,16 @@ int main() {
 
             cmd.bindPipeline();
             cmd.bindDescriptors();
-
-            cmd.dispatchCompute(512 / 32, 512 / 32, 6);
+            cmd.dispatchCompute(512 * std::pow(0.5, mip) / 32, 512 * std::pow(0.5, mip) / 32, 6);
 
         }
 
-        prefilterBarrier = prefilterMap.barrier(backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
-        cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, 0, nullptr, { &prefilterBarrier, 1 });
+        prefilterBarrier = prefilterMap.barrier(backend::Access::SHADER_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
+        cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { &prefilterBarrier, 1 });
         prefilterTimer.stop();
     });
 
-    auto prefilterView = prefilterMap.getView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 4);
+    auto prefilterView = prefilterMap.getView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 5);
 
 
     Image brdfMap(driver, {
