@@ -31,6 +31,8 @@ namespace cala::backend::vulkan {
 
         bool resize(u32 width, u32 height);
 
+        void copyImageToFrame(u32 index, CommandBuffer& buffer, Image& src);
+
         void copyFrameToImage(u32 index, CommandBuffer& buffer, Image& dst);
 
         void copyFrameToImage(u32 index, Image& dst);

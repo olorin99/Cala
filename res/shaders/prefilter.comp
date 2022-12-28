@@ -70,8 +70,9 @@ vec3 importanceSampleGGX(vec2 xi, vec3 N, float roughness) {
 void main() {
     ivec3 cubeCoords = ivec3(gl_GlobalInvocationID);
 
-    float mip = roughness * 5;
-    vec2 size = vec2(512.0, 512.0) * pow(0.5, mip);
+//    float mip = roughness * 5;
+//    vec2 size = vec2(512.0, 512.0) * pow(0.5, mip);
+    vec2 size = imageSize(prefilterMap);
 
     vec3 N = normalize(cubeToWorld(cubeCoords, size));
     vec3 R = N;

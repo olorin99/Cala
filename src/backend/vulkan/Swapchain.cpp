@@ -74,7 +74,7 @@ cala::backend::vulkan::Swapchain::Swapchain(Driver &driver, Platform& platform)
             RenderPass::Attachment{
                     format(),
                     VK_SAMPLE_COUNT_1_BIT,
-                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                     VK_ATTACHMENT_STORE_OP_STORE,
                     VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                     VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -197,6 +197,56 @@ bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {
     return true;
 }
 
+void cala::backend::vulkan::Swapchain::copyImageToFrame(u32 index, CommandBuffer &buffer, Image &src) {
+    assert(_extent.width == src.width() && _extent.height == src.height() && 1 == src.depth());
+
+    VkImageMemoryBarrier barriers[] = { src.barrier(Access::SHADER_WRITE, Access::TRANSFER_WRITE, ImageLayout::COLOUR_ATTACHMENT, ImageLayout::TRANSFER_SRC) };
+    buffer.pipelineBarrier(PipelineStage::ALL_COMMANDS, PipelineStage::ALL_COMMANDS, 0, nullptr, barriers);
+
+
+    VkImageSubresourceRange range{};
+    range.aspectMask = (_format == Format::D16_UNORM || _format == Format::D32_SFLOAT || _format == Format::D24_UNORM_S8_UINT) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    range.baseMipLevel = 0;
+    range.levelCount = VK_REMAINING_MIP_LEVELS;
+    range.baseArrayLayer = 0;
+    range.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+    VkImageMemoryBarrier memoryBarrier{};
+    memoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    memoryBarrier.srcAccessMask = getAccessFlags(Access::MEMORY_READ);
+    memoryBarrier.dstAccessMask = getAccessFlags(Access::TRANSFER_WRITE);
+    memoryBarrier.oldLayout = getImageLayout(ImageLayout::UNDEFINED);
+    memoryBarrier.newLayout = getImageLayout(ImageLayout::TRANSFER_DST);
+    memoryBarrier.image = _images[index];
+    memoryBarrier.subresourceRange = range;
+
+    buffer.pipelineBarrier(PipelineStage::ALL_COMMANDS, PipelineStage::ALL_COMMANDS, 0, nullptr, { &memoryBarrier, 1});
+
+    VkImageCopy region{};
+
+    region.dstSubresource.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    region.dstSubresource.mipLevel = 0;
+    region.dstSubresource.baseArrayLayer = 0;
+    region.dstSubresource.layerCount = 1;
+
+    region.srcSubresource.aspectMask = src.format() == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    region.srcSubresource.mipLevel = 0;
+    region.srcSubresource.baseArrayLayer = 0;
+    region.srcSubresource.layerCount = 1;
+
+    region.srcOffset = { 0, 0, 0 };
+    region.dstOffset = { 0, 0, 0 };
+    region.extent = { _extent.width, _extent.height, 1 };
+    vkCmdCopyImage(buffer.buffer(), src.image(), getImageLayout(ImageLayout::TRANSFER_SRC), _images[index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+
+    memoryBarrier.srcAccessMask = getAccessFlags(Access::TRANSFER_WRITE);
+    memoryBarrier.dstAccessMask = getAccessFlags(Access::NONE);
+    memoryBarrier.oldLayout = getImageLayout(ImageLayout::TRANSFER_DST);
+    memoryBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    buffer.pipelineBarrier(PipelineStage::ALL_COMMANDS, PipelineStage::ALL_COMMANDS, 0, nullptr, { &memoryBarrier, 1});
+}
+
 void cala::backend::vulkan::Swapchain::copyFrameToImage(u32 index, cala::backend::vulkan::CommandBuffer &buffer, cala::backend::vulkan::Image &dst) {
     assert(_extent.width == dst.width() && _extent.height == dst.height() && 1 == dst.depth());
 
@@ -250,7 +300,7 @@ bool cala::backend::vulkan::Swapchain::createSwapchain() {
     createInfo.imageColorSpace = format.colorSpace;
     createInfo.imageExtent = extent;
     createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     createInfo.queueFamilyIndexCount = 0;

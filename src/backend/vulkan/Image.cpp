@@ -10,12 +10,16 @@ cala::backend::vulkan::Image::Image(Driver& driver, CreateInfo info)
 {
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    if (info.depth > 1)
-        imageInfo.imageType = VK_IMAGE_TYPE_3D;
-    else if (info.height > 1)
-        imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    else
-        imageInfo.imageType = VK_IMAGE_TYPE_1D;
+    if (info.type == ImageType::AUTO) {
+        if (info.depth > 1)
+            imageInfo.imageType = VK_IMAGE_TYPE_3D;
+        else if (info.height > 1)
+            imageInfo.imageType = VK_IMAGE_TYPE_2D;
+        else
+            imageInfo.imageType = VK_IMAGE_TYPE_1D;
+    } else {
+        imageInfo.imageType = getImageType(info.type);
+    }
     imageInfo.format = getFormat(info.format);
     imageInfo.extent.width = info.width;
     imageInfo.extent.height = info.height;

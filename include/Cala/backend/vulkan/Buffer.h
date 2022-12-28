@@ -56,7 +56,7 @@ namespace cala::backend::vulkan {
 
             Buffer& buffer() const { return *_parent; }
 
-            explicit operator bool() const { return _parent == nullptr; }
+            explicit operator bool() const { return _parent != nullptr; }
 
         private:
             Buffer* _parent;

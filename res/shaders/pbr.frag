@@ -5,9 +5,11 @@ layout (location = 0) in VsOut {
     vec2 TexCoords;
     mat3 TBN;
     vec3 ViewPos;
+    vec3 pos;
 } fsIn;
 
 layout (location = 0) out vec4 FragColour;
+layout (location = 1) out vec4 FragNormal;
 
 layout (set = 2, binding = 0) uniform sampler2D albedoMap;
 layout (set = 2, binding = 1) uniform sampler2D normalMap;
@@ -67,7 +69,7 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0) {
 }
 
 vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
-    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 void main() {
@@ -78,10 +80,14 @@ void main() {
     float roughness = texture(roughnessMap, fsIn.TexCoords).r;
     float ao = texture(aoMap, fsIn.TexCoords).r;
 
+//    vec3 normal = normalize(fsIn.pos);
+
     normal = normalize(normal * 2.0 - 1.0);
     normal = normalize(fsIn.TBN * normal);
 
-    vec3 V = normalize(fsIn.ViewPos - fsIn.FragPos);
+    vec3 viewPos = fsIn.ViewPos * vec3(-1, 1, -1);
+
+    vec3 V = normalize(viewPos - fsIn.FragPos);
     vec3 R = reflect(-V, normal);
 
     vec3 F0 = vec3(0.04);
@@ -110,37 +116,33 @@ void main() {
     vec3 Lo = (kD * albedo / PI + specular) * radiance * NdotL;
 
 
-    kS = fresnelSchlickRoughness(max(dot(normal, V), 0.0), F0, roughness);
-    kD = 1.0 - kS;
-    kD *= 1.0 - metallic;
+    vec3 iblF = fresnelSchlickRoughness(max(dot(normal, V), 0.0), F0, roughness);
+    vec3 iblkD = vec3(1.0) - iblF;
+    iblkD *= 1.0 - metallic;
 
     vec3 irradiance = texture(irradianceMap, normal).rgb;
     vec3 diffuse = irradiance * albedo;
 
-    const float MAX_REFLECTION_LOD = 5.0;
-    vec3 prefilteredColour = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOD).rgb;
-//    vec3 prefilteredColour = texture(prefilterMap, R).rgb;
-    vec2 brdf = texture(brdfLUT, vec2(max(dot(normal, V), 0.0), roughness)).rg;
-    specular = prefilteredColour * (kS * brdf.x + brdf.y);
+    const float MAX_REFLECTION_LOD = 4.0;
+    float lod = roughness * MAX_REFLECTION_LOD;
+    float lodf = floor(lod);
+    float lodc = clamp(ceil(lod), 0.0, MAX_REFLECTION_LOD);
+    vec3 a = textureLod(prefilterMap, R, lodf).rgb;
+    vec3 b = textureLod(prefilterMap, R, lodc).rgb;
+    vec3 prefilteredColour = mix(a, b, lod - lodf);
 
-    vec3 ambient = (kD * diffuse + specular) * ao;
-//    vec3 ambient = (kD * diffuse) * ao;
+
+//    vec3 prefilteredColour = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOD).rgb;
+    vec2 brdf = texture(brdfLUT, vec2(max(dot(normal, V), 0.0), roughness)).rg;
+    vec3 iblspecular = prefilteredColour * (iblF * brdf.x + brdf.y);
+
+    vec3 ambient = (iblkD * diffuse + iblspecular) * ao;
     vec3 colour = ambient + Lo;
 
     colour = colour / (colour + vec3(1.0));
     colour = pow(colour, vec3(1.0 / 2.2));
 
-//    FragColour = vec4(irradiance, 1.0);
-//    FragColour = vec4(diffuse, 1.0);
-//    FragColour = vec4(kD, 1.0);
-//    FragColour = vec4(kS, 1.0);
-//    FragColour = vec4(specular, 1.0);
-//    FragColour = vec4(brdf, 0.0, 1.0);
-//    FragColour = vec4(prefilteredColour, 1.0);
-//        FragColour = vec4(vec3(brdf.x), 1.0);
-//        FragColour = vec4(vec3(brdf.y), 1.0);
-//        FragColour = vec4((kS * brdf.x + brdf.y), 1.0);
-//        FragColour = vec4(ambient, 1.0);
-        FragColour = vec4(colour, 1.0);
+    FragColour = vec4(colour, 1.0);
+    FragNormal = vec4(normal, 1.0);
 
 }

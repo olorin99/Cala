@@ -12,9 +12,61 @@
 #include <Cala/Probe.h>
 #include <Cala/backend/vulkan/Timer.h>
 
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+#include <assimp/cimport.h>
+#include <assimp/scene.h>
+
 using namespace cala;
 using namespace cala::backend;
 using namespace cala::backend::vulkan;
+
+MeshData loadModel(const ende::fs::Path& path) {
+    MeshData data;
+
+    Assimp::Importer importer;
+    const aiScene* scene = importer.ReadFile(*path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+        return data;
+
+    for (u32 i = 0; i < scene->mNumMeshes; i++) {
+        const aiMesh* mesh = scene->mMeshes[i];
+//        if (mesh->mMaterialIndex >= 0) {
+//            aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+//            aiString name;
+//            material->Get(AI_MATKEY_NAME, name);
+//
+//        }
+
+        for (u32 j = 0; j < mesh->mNumVertices; j++) {
+            const aiVector3D pos = mesh->mVertices[j];
+            const aiVector3D normal = mesh->mNormals[j];
+            const aiVector3D texCoords = mesh->HasTextureCoords(0) ? mesh->mTextureCoords[0][j] : aiVector3D(0, 0, 0);
+
+            Vertex vertex{};
+            vertex.position = { pos.x, pos.y, pos.z };
+            vertex.normal = { normal.x, normal.y, normal.z };
+            vertex.texCoords = { texCoords.x, texCoords.y };
+
+            if (mesh->HasTangentsAndBitangents()) {
+                const aiVector3D tangent = mesh->mTangents[j];
+                const aiVector3D bitangent = mesh->mBitangents[j];
+                vertex.tangent = { tangent.x, tangent.y, tangent.z };
+                vertex.bitangent = { bitangent.x, bitangent.y, bitangent.z };
+            }
+
+            data.addVertex(vertex);
+        }
+
+        for (u32 j = 0; j < mesh->mNumFaces; j++) {
+            const aiFace& face = mesh->mFaces[j];
+            data.addTriangle(face.mIndices[0], face.mIndices[1], face.mIndices[2]);
+        }
+    }
+
+    return data;
+}
 
 ShaderProgram loadShader(Driver& driver, const ende::fs::Path& vertex, const ende::fs::Path& fragment) {
     ende::fs::File shaderFile;
@@ -102,15 +154,15 @@ int main() {
 
     auto matInstance = material.instance();
 
-    Image brickwall_albedo = loadImage(driver, "../../res/textures/pbr_gold/lightgold_albedo.png"_path);
-    Image brickwall_normal = loadImage(driver, "../../res/textures/pbr_gold/lightgold_normal-ogl.png"_path);
-    Image brickwall_metallic = loadImage(driver, "../../res/textures/pbr_gold/lightgold_metallic.png"_path);
-    Image brickwall_roughness = loadImage(driver, "../../res/textures/pbr_gold/lightgold_roughness.png"_path);
+//    Image brickwall_albedo = loadImage(driver, "../../res/textures/pbr_gold/lightgold_albedo.png"_path);
+//    Image brickwall_normal = loadImage(driver, "../../res/textures/pbr_gold/lightgold_normal-ogl.png"_path);
+//    Image brickwall_metallic = loadImage(driver, "../../res/textures/pbr_gold/lightgold_metallic.png"_path);
+//    Image brickwall_roughness = loadImage(driver, "../../res/textures/pbr_gold/lightgold_roughness.png"_path);
 
-//    Image brickwall_albedo = loadImage(driver, "../../res/textures/pbr_rusted_iron/rustediron2_basecolor.png"_path);
-//    Image brickwall_normal = loadImage(driver, "../../res/textures/pbr_rusted_iron/rustediron2_normal.png"_path);
-//    Image brickwall_metallic = loadImage(driver, "../../res/textures/pbr_rusted_iron/rustediron2_metallic.png"_path);
-//    Image brickwall_roughness = loadImage(driver, "../../res/textures/pbr_rusted_iron/rustediron2_roughness.png"_path);
+    Image brickwall_albedo = loadImage(driver, "../../res/textures/pbr_rusted_iron/rustediron2_basecolor.png"_path);
+    Image brickwall_normal = loadImage(driver, "../../res/textures/pbr_rusted_iron/rustediron2_normal.png"_path);
+    Image brickwall_metallic = loadImage(driver, "../../res/textures/pbr_rusted_iron/rustediron2_metallic.png"_path);
+    Image brickwall_roughness = loadImage(driver, "../../res/textures/pbr_rusted_iron/rustediron2_roughness.png"_path);
     Image brickwall_ao = loadImage(driver, "../../res/textures/pbr_rusted_iron/rustediron2_ao.png"_path);
     matInstance.setSampler("albedoMap", brickwall_albedo.getView(), Sampler(driver, {}));
     matInstance.setSampler("normalMap", brickwall_normal.getView(), Sampler(driver, {}));
@@ -167,24 +219,144 @@ int main() {
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
 
     Scene scene(driver, 10);
-    Mesh cube = shapes::cube().mesh(driver);
+//    Mesh cube = shapes::cube().mesh(driver);
+//    Mesh cube = shapes::sphereUV(1).mesh(driver);
+    Mesh cube = loadModel("../../res/models/sphere.obj"_path).mesh(driver);
+//    Mesh cube = shapes::sphereNormalized(1).mesh(driver);
+//    Mesh cube = shapes::sphereCube(1).mesh(driver);
 
-    ende::Vector<cala::Transform> transforms;
-    transforms.reserve(100);
-    for (int i = 0; i < 10; i++) {
-        transforms.push(Transform({
-            ende::math::rand(-5.f, 5.f), ende::math::rand(-5.f, 5.f), ende::math::rand(-5.f, 5.f)
-        }));
-        scene.addRenderable(cube, &matInstance, &transforms.back());
+    struct PBRMaterial {
+        Image* albedo;
+        Image* normal;
+        Image* metallic;
+        Image* roughness;
+    };
+
+    Image albedo(driver, {
+        1, 1, 1,
+        Format::RGBA32_SFLOAT,
+        1, 1,
+        ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST,
+        ImageLayout::GENERAL,
+        ImageType::IMAGE2D
+    });
+    f32 albedoData[] = { 0, 0, 0, 1 };
+    albedo.data(driver, {
+        0, 1, 1, 1, 4 * 4,
+        { albedoData, sizeof(f32) * 4 }
+    });
+
+    Image normal(driver, {
+            1, 1, 1,
+            Format::RGBA32_SFLOAT,
+            1, 1,
+            ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST,
+            ImageLayout::GENERAL,
+            ImageType::IMAGE2D
+    });
+    f32 normalData[] = { 0.52, 0.52, 1, 1 };
+    normal.data(driver, {
+            0, 1, 1, 1, 4 * 4,
+            { normalData, sizeof(f32) * 4 }
+    });
+
+    ende::Vector<PBRMaterial> materials;
+    materials.reserve(200);
+
+    for (f32 metallic = 0; metallic <= 1.01f; metallic += 0.1f) {
+        Image* metallicImage = new Image(driver, {
+            1, 1, 1,
+            Format::R32_SFLOAT,
+            1, 1,
+            ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST,
+            ImageLayout::GENERAL,
+            ImageType::IMAGE2D
+        });
+        metallicImage->data(driver, { 0, 1, 1, 1, 4, { &metallic, sizeof(f32) }});
+
+
+        for (f32 roughness = 0; roughness <= 1.01f; roughness += 0.1) {
+            Image* roughnessImage = new Image(driver, {
+                    1, 1, 1,
+                    Format::R32_SFLOAT,
+                    1, 1,
+                    ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST,
+                    ImageLayout::GENERAL,
+                    ImageType::IMAGE2D
+            });
+            roughnessImage->data(driver, { 0, 1, 1, 1, 4, { &roughness, sizeof(f32) }});
+
+            materials.push({
+                &albedo,
+                &normal,
+                metallicImage,
+                roughnessImage
+            });
+        }
     }
 
+    ende::Vector<MaterialInstance> instances;
+    instances.reserve(200);
+
+    ende::Vector<cala::Transform> transforms;
+    transforms.reserve(200);
+
+//    auto& mat = materials[0 * 11 + 10];
+//
+//    auto& instance = instances.push(material.instance());
+//    instance.setSampler("albedoMap", mat.albedo->getView(), Sampler(driver, {}));
+//    instance.setSampler("normalMap", mat.normal->getView(), Sampler(driver, {}));
+//    instance.setSampler("metallicMap", mat.metallic->getView(), Sampler(driver, {}));
+//    instance.setSampler("roughnessMap", mat.roughness->getView(), Sampler(driver, {}));
+//    instance.setSampler("aoMap", brickwall_ao.getView(), Sampler(driver, {}));
+//
+//    transforms.push(Transform({0, 0, 0}));
+//
+//    scene.addRenderable(cube, &instance, &transforms.back());
+    for (u32 x = 0; x <= 10; x++) {
+        for (u32 y = 0; y <= 10; y++) {
+
+            auto& mat = materials[y * 11 + x];
+
+            auto& instance = instances.push(material.instance());
+            instance.setSampler("albedoMap", mat.albedo->getView(), Sampler(driver, {}));
+            instance.setSampler("normalMap", mat.normal->getView(), Sampler(driver, {}));
+            instance.setSampler("metallicMap", mat.metallic->getView(), Sampler(driver, {}));
+            instance.setSampler("roughnessMap", mat.roughness->getView(), Sampler(driver, {}));
+            instance.setSampler("aoMap", brickwall_ao.getView(), Sampler(driver, {}));
+
+            transforms.push(Transform({(f32)x * 3, (f32)y * 3, 0}));
+
+            scene.addRenderable(cube, &instance, &transforms.back());
+
+        }
+    }
+
+//    scene.addRenderable(cube, &matInstance, &cameraTransform);
+
+
+//    for (int i = 0; i < 10; i++) {
+//        transforms.push(Transform({
+//            ende::math::rand(-5.f, 5.f), ende::math::rand(-5.f, 5.f), ende::math::rand(-5.f, 5.f)
+//        }));
+//        scene.addRenderable(cube, &matInstance, &transforms.back());
+//    }
+
+
+//    ende::Vector<ende::math::Vec3f> lightPositions = {
+//            {0, 0, 10},
+//            {10, 0, 0},
+//            {0, 0, -10},
+//            {-10, 0, 0},
+//            {0, 0, 10}
+//    };
 
     ende::Vector<ende::math::Vec3f> lightPositions = {
-            {0, 0, 10},
+            {0, 0, 0},
+            {0, 10, 0},
+            {10, 10, 0},
             {10, 0, 0},
-            {0, 0, -10},
-            {-10, 0, 0},
-            {0, 0, 10}
+            {0, 0, 0}
     };
 
     Transform lightTransform({ -3, 3, -1 });
@@ -192,9 +364,12 @@ int main() {
 
     scene.addLight(light);
 
-    scene.addRenderable(cube, &matInstance, &lightTransform);
+//    scene.addRenderable(cube, &matInstance, &lightTransform);
 
     Sampler sampler(driver, {});
+    Sampler prefilterSampler(driver, {
+        .maxLod = 10
+    });
 
     Buffer probeCameraBuffer(driver, sizeof(Camera::Data) * 6, BufferUsage::UNIFORM);
 
@@ -384,6 +559,76 @@ int main() {
     };
 
 
+    RenderPass::Attachment attachments[3] = {
+            {
+                    Format::RGBA8_SRGB,
+                    VK_SAMPLE_COUNT_1_BIT,
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_STORE,
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            },
+            {
+                    Format::RGBA32_SFLOAT,
+                    VK_SAMPLE_COUNT_1_BIT,
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_STORE,
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            },
+            {
+                    Format::D32_SFLOAT,
+                    VK_SAMPLE_COUNT_1_BIT,
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_STORE,
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+            }
+    };
+    RenderPass renderPass(driver, attachments);
+
+    Image colourBuffer(driver, {
+        800, 600, 1,
+        Format::RGBA8_SRGB,
+        1, 1,
+        ImageUsage::COLOUR_ATTACHMENT | ImageUsage::TRANSFER_SRC
+    });
+    Image normalBuffer(driver, {
+        800, 600, 1,
+        Format::RGBA32_SFLOAT,
+        1, 1,
+        ImageUsage::COLOUR_ATTACHMENT
+    });
+    Image depthBuffer(driver, {
+            800, 600, 1,
+            Format::D32_SFLOAT,
+            1, 1,
+            ImageUsage::DEPTH_STENCIL_ATTACHMENT
+    });
+    Image::View framebufferAttachments[3] = {
+            colourBuffer.getView(),
+            normalBuffer.getView(),
+            depthBuffer.getView()
+    };
+    VkImageView fbAttachments[3] = {
+            framebufferAttachments[0].view,
+            framebufferAttachments[1].view,
+            framebufferAttachments[2].view
+    };
+    Framebuffer framebuffer(driver.context().device(), renderPass, fbAttachments, 800, 600);
+
+
+
+
     auto systemTime = ende::time::SystemTime::now();
 
     f32 dt = 1.f / 60.f;
@@ -462,7 +707,8 @@ int main() {
         auto frame = driver.swapchain().nextImage();
         {
             frameInfo.cmd->begin();
-            frameInfo.cmd->begin(frame.framebuffer);
+//            frameInfo.cmd->begin(frame.framebuffer);
+            frameInfo.cmd->begin(framebuffer);
 
             frameInfo.cmd->clearDescriptors();
 
@@ -471,9 +717,6 @@ int main() {
             frameInfo.cmd->bindDepthState({ true, false, CompareOp::LESS });
             frameInfo.cmd->bindBuffer(0, 0, cameraBuffer);
             frameInfo.cmd->bindImage(2, 0, environmentView, sampler);
-//            frameInfo.cmd->bindImage(2, 0, irradianceView, sampler);
-//            frameInfo.cmd->bindImage(2, 0, prefilterView, sampler);
-//            frameInfo.cmd->bindImage(2, 0, prefilterViews[3], sampler);
 
             frameInfo.cmd->bindBindings({ &cube._binding, 1 });
             frameInfo.cmd->bindAttributes(cube._attributes);
@@ -492,15 +735,22 @@ int main() {
 
             frameInfo.cmd->bindBuffer(0, 0, cameraBuffer);
             frameInfo.cmd->bindImage(2, 5, irradianceView, sampler);
-            frameInfo.cmd->bindImage(2, 6, prefilterView, sampler);
+            frameInfo.cmd->bindImage(2, 6, prefilterView, prefilterSampler);
             frameInfo.cmd->bindImage(2, 7, brdfView, sampler);
             scene.render(*frameInfo.cmd);
 
 
 
-            imGuiContext.render(*frameInfo.cmd);
 
+            frameInfo.cmd->end(framebuffer);
+//            frameInfo.cmd->end(frame.framebuffer);
+
+            driver.swapchain().copyImageToFrame(frame.index, *frameInfo.cmd, colourBuffer);
+
+            frameInfo.cmd->begin(frame.framebuffer);
+            imGuiContext.render(*frameInfo.cmd);
             frameInfo.cmd->end(frame.framebuffer);
+
             frameInfo.cmd->end();
             frameInfo.cmd->submit({&frame.imageAquired, 1}, frameInfo.fence);
         }
@@ -511,4 +761,10 @@ int main() {
     }
 
     driver.wait();
+
+//    for (auto& mat : materials) {
+//        delete mat.metallic;
+//        delete mat.roughness;
+//    }
+
 }

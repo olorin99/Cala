@@ -52,7 +52,8 @@ namespace cala::backend {
 
         RG16_SFLOAT = 83,
 
-
+        R32_SFLOAT = 100,
+        RG32_SFLOAT = 103,
         RGB32_SFLOAT = 106,
         RGBA32_UINT = 107,
         RGBA32_SINT = 108,
@@ -107,6 +108,12 @@ namespace cala::backend {
         INPUT_ATTACHMENT = 0x00000080
     };
 
+    enum class ImageType {
+        AUTO = 4,
+        IMAGE1D = 0,
+        IMAGE2D = 1,
+        IMAGE3D = 2
+    };
 
     enum class PolygonMode {
         FILL = 0,

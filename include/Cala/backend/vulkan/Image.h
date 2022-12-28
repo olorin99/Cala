@@ -24,6 +24,7 @@ namespace cala::backend::vulkan {
             u32 arrayLayers = 1;
             ImageUsage usage = ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST;
             ImageLayout initialLayout = ImageLayout::GENERAL;
+            ImageType type = ImageType::AUTO;
         };
 
         struct DataInfo {

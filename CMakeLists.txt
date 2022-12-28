@@ -4,6 +4,7 @@ project(Cala)
 set(CMAKE_CXX_STANDARD 20)
 
 find_package(SDL2 REQUIRED)
+find_package(assimp)
 find_package(X11 REQUIRED)
 find_package(Vulkan REQUIRED)
 
@@ -22,4 +23,4 @@ target_include_directories(Cala
         libs
         third_party)
 
-target_link_libraries(Cala Ende ${Vulkan_LIBRARIES} ${SDL2_LIBRARIES} ${X11_LIBRARIES} imgui spirv-cross-cpp IMGUI)
+target_link_libraries(Cala Ende ${Vulkan_LIBRARIES} ${SDL2_LIBRARIES} ${X11_LIBRARIES} imgui spirv-cross-cpp IMGUI assimp)
