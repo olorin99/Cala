@@ -3,9 +3,9 @@
 
 
 
-cala::backend::vulkan::Driver::Driver(cala::backend::Platform& platform)
+cala::backend::vulkan::Driver::Driver(cala::backend::Platform& platform, bool clear)
     : _context(platform),
-      _swapchain(*this, platform),
+      _swapchain(*this, platform, clear),
       _commandPool(VK_NULL_HANDLE),
       _frameCommands{
           CommandBuffer(*this, _context.getQueue(QueueType::GRAPHICS), VK_NULL_HANDLE),

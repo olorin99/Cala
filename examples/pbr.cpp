@@ -135,7 +135,7 @@ ende::math::Vec3f lerpPositions(ende::Span<ende::math::Vec3f> inputs, f32 factor
 
 int main() {
     SDLPlatform platform("hello_triangle", 800, 600);
-    Driver driver(platform);
+    Driver driver(platform, false);
 
     ImGuiContext imGuiContext(driver, platform.window());
 
@@ -747,9 +747,9 @@ int main() {
 
             driver.swapchain().copyImageToFrame(frame.index, *frameInfo.cmd, colourBuffer);
 
-            frameInfo.cmd->begin(frame.framebuffer);
+            frameInfo.cmd->begin(*frame.framebuffer);
             imGuiContext.render(*frameInfo.cmd);
-            frameInfo.cmd->end(frame.framebuffer);
+            frameInfo.cmd->end(*frame.framebuffer);
 
             frameInfo.cmd->end();
             frameInfo.cmd->submit({&frame.imageAquired, 1}, frameInfo.fence);

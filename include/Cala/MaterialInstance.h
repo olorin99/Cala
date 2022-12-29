@@ -34,6 +34,10 @@ namespace cala {
             return setUniform(name, (u8*)&data, sizeof(data));
         }
 
+        bool setSampler(u32 set, const char* name, cala::backend::vulkan::Image& view, backend::vulkan::Sampler&& sampler);
+
+        bool setSampler(const char* name, cala::backend::vulkan::Image& view, backend::vulkan::Sampler&& sampler);
+
         bool setSampler(u32 set, const char* name, cala::backend::vulkan::Image::View&& view, backend::vulkan::Sampler&& sampler);
 
         bool setSampler(const char* name, cala::backend::vulkan::Image::View&& view, backend::vulkan::Sampler&& sampler);

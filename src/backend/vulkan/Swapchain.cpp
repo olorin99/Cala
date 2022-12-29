@@ -52,7 +52,7 @@ VkExtent2D getExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
     return extent;
 }
 
-cala::backend::vulkan::Swapchain::Swapchain(Driver &driver, Platform& platform)
+cala::backend::vulkan::Swapchain::Swapchain(Driver &driver, Platform& platform, bool clear)
     : _driver(driver),
     _swapchain(VK_NULL_HANDLE),
     _frame(0),
@@ -74,7 +74,7 @@ cala::backend::vulkan::Swapchain::Swapchain(Driver &driver, Platform& platform)
             RenderPass::Attachment{
                     format(),
                     VK_SAMPLE_COUNT_1_BIT,
-                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                     VK_ATTACHMENT_STORE_OP_STORE,
                     VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                     VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -85,7 +85,7 @@ cala::backend::vulkan::Swapchain::Swapchain(Driver &driver, Platform& platform)
             RenderPass::Attachment{
                     _driver.context().depthFormat(),
                     VK_SAMPLE_COUNT_1_BIT,
-                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                     VK_ATTACHMENT_STORE_OP_STORE,
                     VK_ATTACHMENT_LOAD_OP_CLEAR,
                     VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -126,7 +126,7 @@ cala::backend::vulkan::Swapchain::Frame cala::backend::vulkan::Swapchain::nextIm
         resize(_depthImage.width(), _depthImage.height());
     }
 
-    return { _frame++, index, image, _framebuffers[index] };
+    return { _frame++, index, image, &_framebuffers[index] };
 }
 
 bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFinish) {
@@ -151,7 +151,7 @@ bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFi
 }
 
 bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {
-    delete _renderPass;
+//    delete _renderPass;
     _framebuffers.clear();
     for (auto& view : _imageViews)
         vkDestroyImageView(_driver.context().device(), view, nullptr);
@@ -163,32 +163,32 @@ bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {
     createSwapchain();
     createImageViews();
 
-    std::array<RenderPass::Attachment, 2> attachments = {
-            RenderPass::Attachment{
-                    format(),
-                    VK_SAMPLE_COUNT_1_BIT,
-                    VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    VK_ATTACHMENT_STORE_OP_STORE,
-                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    VK_IMAGE_LAYOUT_UNDEFINED,
-                    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-            },
-            RenderPass::Attachment{
-                    _driver.context().depthFormat(),
-                    VK_SAMPLE_COUNT_1_BIT,
-                    VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    VK_ATTACHMENT_STORE_OP_STORE,
-                    VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    VK_IMAGE_LAYOUT_UNDEFINED,
-                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-            }
-    };
-
-    _renderPass = new RenderPass(_driver, attachments);
+//    std::array<RenderPass::Attachment, 2> attachments = {
+//            RenderPass::Attachment{
+//                    format(),
+//                    VK_SAMPLE_COUNT_1_BIT,
+//                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+//                    VK_ATTACHMENT_STORE_OP_STORE,
+//                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+//                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+//                    VK_IMAGE_LAYOUT_UNDEFINED,
+//                    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+//                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+//            },
+//            RenderPass::Attachment{
+//                    _driver.context().depthFormat(),
+//                    VK_SAMPLE_COUNT_1_BIT,
+//                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+//                    VK_ATTACHMENT_STORE_OP_STORE,
+//                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+//                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+//                    VK_IMAGE_LAYOUT_UNDEFINED,
+//                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+//                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+//            }
+//    };
+//
+//    _renderPass = new RenderPass(_driver, attachments);
 
     for (auto& view : _imageViews) {
         VkImageView framebufferAttachments[2] = { view, _depthView.view };

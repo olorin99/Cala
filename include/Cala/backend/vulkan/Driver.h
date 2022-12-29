@@ -16,7 +16,7 @@ namespace cala::backend::vulkan {
     class Driver {
     public:
 
-        Driver(Platform& platform);
+        Driver(Platform& platform, bool clear = true); // change clear to options struct
 
         ~Driver();
 

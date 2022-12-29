@@ -5,7 +5,6 @@ layout (location = 0) in VsOut {
     vec2 TexCoords;
     mat3 TBN;
     vec3 ViewPos;
-    vec3 pos;
 } fsIn;
 
 layout (location = 0) out vec4 FragColour;
@@ -79,8 +78,6 @@ void main() {
     float metallic = texture(metallicMap, fsIn.TexCoords).r;
     float roughness = texture(roughnessMap, fsIn.TexCoords).r;
     float ao = texture(aoMap, fsIn.TexCoords).r;
-
-//    vec3 normal = normalize(fsIn.pos);
 
     normal = normalize(normal * 2.0 - 1.0);
     normal = normalize(fsIn.TBN * normal);

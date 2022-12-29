@@ -14,7 +14,7 @@ namespace cala::backend::vulkan {
     class Swapchain {
     public:
 
-        Swapchain(Driver& driver, Platform& platform);
+        Swapchain(Driver& driver, Platform& platform, bool clear = true);
 
         ~Swapchain();
 
@@ -22,7 +22,7 @@ namespace cala::backend::vulkan {
             u64 id = 0;
             u32 index = 0;
             VkSemaphore imageAquired = VK_NULL_HANDLE;
-            Framebuffer& framebuffer;
+            Framebuffer* framebuffer;
         };
 
         Frame nextImage();

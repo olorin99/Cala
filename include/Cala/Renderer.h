@@ -1,6 +1,7 @@
 #ifndef CALA_RENDERER_H
 #define CALA_RENDERER_H
 
+#include <Cala/Engine.h>
 #include <Cala/Camera.h>
 #include <Cala/backend/vulkan/Buffer.h>
 
@@ -15,16 +16,24 @@ namespace cala {
     class Renderer {
     public:
 
-        Renderer(backend::vulkan::Driver& driver);
+        Renderer(Engine* engine);
+
+        bool beginFrame();
+
+        f64 endFrame();
 
         void render(Scene& scene, Camera& camera);
 
 
     private:
 
-        backend::vulkan::Driver& _driver;
+        Engine* _engine;
 
-        backend::vulkan::Buffer _cameraBuffer;
+        BufferHandle _cameraBuffer;
+
+
+        backend::vulkan::Driver::FrameInfo _frameInfo;
+        backend::vulkan::Swapchain::Frame _swapchainInfo;
 
 
 

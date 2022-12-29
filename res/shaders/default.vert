@@ -11,7 +11,6 @@ layout (location = 0) out VsOut {
     vec2 TexCoords;
     mat3 TBN;
     vec3 ViewPos;
-    vec3 pos;
 } vsOut;
 
 struct CameraData {
@@ -38,7 +37,6 @@ void main() {
     vsOut.TexCoords = inTexCoords;
     vsOut.TBN = mat3(T, B, N);
     vsOut.ViewPos = camera.position;
-    vsOut.pos = inPosition;
 
     gl_Position = camera.projection * camera.view * model * vec4(inPosition, 1.0);
 }
