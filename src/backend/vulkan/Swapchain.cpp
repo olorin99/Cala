@@ -74,11 +74,11 @@ cala::backend::vulkan::Swapchain::Swapchain(Driver &driver, Platform& platform, 
             RenderPass::Attachment{
                     format(),
                     VK_SAMPLE_COUNT_1_BIT,
-                    clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
                     VK_ATTACHMENT_STORE_OP_STORE,
                     VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                     VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                     VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
             },
@@ -241,10 +241,10 @@ void cala::backend::vulkan::Swapchain::copyImageToFrame(u32 index, CommandBuffer
 
 
     memoryBarrier.srcAccessMask = getAccessFlags(Access::TRANSFER_WRITE);
-    memoryBarrier.dstAccessMask = getAccessFlags(Access::NONE);
+    memoryBarrier.dstAccessMask = getAccessFlags(Access::MEMORY_READ);
     memoryBarrier.oldLayout = getImageLayout(ImageLayout::TRANSFER_DST);
     memoryBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    buffer.pipelineBarrier(PipelineStage::ALL_COMMANDS, PipelineStage::ALL_COMMANDS, 0, nullptr, { &memoryBarrier, 1});
+    buffer.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::BOTTOM, 0, nullptr, { &memoryBarrier, 1});
 }
 
 void cala::backend::vulkan::Swapchain::copyFrameToImage(u32 index, cala::backend::vulkan::CommandBuffer &buffer, cala::backend::vulkan::Image &dst) {

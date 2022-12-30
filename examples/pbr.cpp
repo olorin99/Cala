@@ -521,7 +521,7 @@ int main() {
 
     RenderPass::Attachment attachments[3] = {
             {
-                    Format::RGBA8_SRGB,
+                    driver.swapchain().format(),
                     VK_SAMPLE_COUNT_1_BIT,
                     VK_ATTACHMENT_LOAD_OP_CLEAR,
                     VK_ATTACHMENT_STORE_OP_STORE,
@@ -558,7 +558,7 @@ int main() {
 
     Image colourBuffer(driver, {
         800, 600, 1,
-        Format::RGBA8_SRGB,
+        driver.swapchain().format(),
         1, 1,
         ImageUsage::COLOUR_ATTACHMENT | ImageUsage::TRANSFER_SRC
     });
