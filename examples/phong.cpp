@@ -13,8 +13,8 @@
 #include "../../third_party/stb_image.h"
 #include "Ende/math/random.h"
 #include <Cala/Mesh.h>
-#include <Cala/Engine.h>
-#include <Cala/Renderer.h>
+
+#include <iostream>
 
 using namespace cala;
 using namespace cala::backend;
@@ -38,26 +38,21 @@ ShaderProgram loadShader(Driver& driver, const ende::fs::Path& vertex, const end
             .compile(driver);
 }
 
-ImageHandle loadImage(Engine& engine, const ende::fs::Path& path) {
+Image loadImage(Driver& driver, const ende::fs::Path& path) {
     i32 width, height, channels;
     u8* data = stbi_load((*path).c_str(), &width, &height, &channels, STBI_rgb_alpha);
     if (!data) throw "unable load image";
     u32 length = width * height * 4;
 
-    ImageHandle handle = engine.createImage({(u32)width, (u32)height, 1, backend::Format::RGBA8_SRGB});
-
-    handle->data(engine.driver(), {0, (u32)width, (u32)height, 1, 4, {data, length}});
+    Image image(driver, {(u32)width, (u32)height, 1, backend::Format::RGBA8_SRGB});
+    image.data(driver, {0, (u32)width, (u32)height, 1, 4, {data, length}});
     stbi_image_free(data);
-    return handle;
+    return image;
 }
 
 int main() {
     SDLPlatform platform("hello_triangle", 800, 600);
-
-    Engine engine(platform);
-    Renderer renderer(&engine);
-
-    Driver& driver = engine.driver();
+    Driver driver(platform);
 
     ImGuiContext imGuiContext(driver, platform.window());
 
@@ -71,34 +66,39 @@ int main() {
 
     Transform cameraTransform({0, 0, -10});
     Camera camera((f32)ende::math::rad(54.4), 800.f, 600.f, 0.1f, 1000.f, cameraTransform);
+    Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
+
 
     Transform lightTransform({-3, 3, -1});
     Light light(cala::Light::DIRECTIONAL, false, lightTransform);
 
+    Buffer lightBuffer(driver, sizeof(Light::Data), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
+    auto lightData = light.data();
+    lightBuffer.data({&lightData, sizeof(lightData)});
+
     Sampler sampler(driver, {});
 
-    ImageHandle brickwall = loadImage(engine, "../../res/textures/brickwall.jpg"_path);
-    ImageHandle brickwall_normal = loadImage(engine, "../../res/textures/brickwall_normal.jpg"_path);
-    ImageHandle brickwall_specular = loadImage(engine, "../../res/textures/brickwall_specular.jpg"_path);
+    Image brickwall = loadImage(driver, "../../res/textures/brickwall.jpg"_path);
+    Image brickwall_normal = loadImage(driver, "../../res/textures/brickwall_normal.jpg"_path);
+    Image brickwall_specular = loadImage(driver, "../../res/textures/brickwall_specular.jpg"_path);
 
 
     Material material(driver, std::move(program));
-    material._rasterState = { .cullMode = CullMode::FRONT };
     material._depthState = { true, true, CompareOp::LESS_EQUAL };
 
     auto matInstance = material.instance();
-    matInstance.setSampler("diffuseMap", *brickwall, Sampler(driver, {}));
-    matInstance.setSampler("normalMap", *brickwall_normal, Sampler(driver, {}));
-    matInstance.setSampler("specularMap", *brickwall_specular, Sampler(driver, {}));
+    matInstance.setSampler("diffuseMap", brickwall.getView(), Sampler(driver, {}));
+    matInstance.setSampler("normalMap", brickwall_normal.getView(), Sampler(driver, {}));
+    matInstance.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
 
 
     Scene scene(driver, 11);
-    scene.addLight(light);
-
     scene.addRenderable(mesh, &matInstance, &modelTransform);
+
 
     models.reserve(10);
     for (u32 i = 0; i < 10; i++) {
+
         models.push(Transform({ende::math::rand(-5.f, 5.f), ende::math::rand(-5.f, 5.f), ende::math::rand(-5.f, 5.f)}));
         scene.addRenderable(mesh, &matInstance, &models.back());
     }
@@ -106,6 +106,7 @@ int main() {
     f64 dt = 1.f / 60.f;
     bool running = true;
     SDL_Event event;
+    u32 fIndex = 0;
     while (running) {
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
@@ -136,19 +137,39 @@ int main() {
         }
 
         {
+            auto cameraData = camera.data();
+            cameraBuffer.data({&cameraData, sizeof(cameraData)});
+
             modelTransform.rotate(ende::math::Vec3f{0, 1, 0}, ende::math::rad(45) * dt);
+
             lightTransform.rotate(ende::math::Vec3f{0, 1, 1}, ende::math::rad(45) * dt);
+            lightData = light.data();
+            lightBuffer.data({&lightData, sizeof(lightData)});
 
             scene.prepare();
         }
 
-        renderer.beginFrame();
+        Driver::FrameInfo frameInfo = driver.beginFrame();
+        driver.waitFrame(frameInfo.frame);
+        auto frame = driver.swapchain().nextImage();
+        {
+            frameInfo.cmd->begin();
+            frameInfo.cmd->begin(*frame.framebuffer);
 
-        auto& cmd = renderer.render(scene, camera);
+            frameInfo.cmd->bindBuffer(0, 0, cameraBuffer);
+            frameInfo.cmd->bindBuffer(3, 0, lightBuffer);
+            scene.render(*frameInfo.cmd);
 
-        imGuiContext.render(cmd);
+            imGuiContext.render(*frameInfo.cmd);
 
-        dt = renderer.endFrame();
+            frameInfo.cmd->end(*frame.framebuffer);
+            frameInfo.cmd->end();
+            frameInfo.cmd->submit({&frame.imageAquired, 1}, frameInfo.fence);
+        }
+        driver.endFrame();
+        dt = driver.milliseconds() / (f64)1000;
+
+        driver.swapchain().present(frame, frameInfo.cmd->signal());
     }
 
     driver.wait();
