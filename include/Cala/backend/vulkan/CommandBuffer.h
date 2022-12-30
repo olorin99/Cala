@@ -64,7 +64,7 @@ namespace cala::backend::vulkan {
 
         struct RasterState {
             CullMode cullMode = CullMode::BACK;
-            FrontFace frontFace = FrontFace::CCW;
+            FrontFace frontFace = FrontFace::CW;
             PolygonMode polygonMode = PolygonMode::FILL;
             f32 lineWidth = 1.f;
             bool depthClamp = false;

@@ -62,7 +62,7 @@ int main() {
     ImGuiContext imGuiContext(driver, platform.window());
 
     //Shaders
-    ShaderProgram program = loadShader(driver, "../../res/shaders/default.vert.spv"_path, "../../res/shaders/phong_directional.frag.spv"_path);
+    ShaderProgram program = loadShader(driver, "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/point_shadow.frag.spv"_path);
 
     Mesh mesh = cala::shapes::cube().mesh(driver);
 
@@ -72,8 +72,9 @@ int main() {
     Transform cameraTransform({0, 0, -10});
     Camera camera((f32)ende::math::rad(54.4), 800.f, 600.f, 0.1f, 1000.f, cameraTransform);
 
-    Transform lightTransform({-3, 3, -1});
-    Light light(cala::Light::DIRECTIONAL, false, lightTransform);
+    Transform lightTransform({-3, 3, -1}, {0, 0, 0, 1}, {0.5, 0.5, 0.5});
+    Light light(cala::Light::POINT, true, lightTransform);
+//    Camera camera((f32)ende::math::rad(54.4), 800.f, 600.f, 0.1f, 1000.f, lightTransform);
 
     Sampler sampler(driver, {});
 
@@ -83,7 +84,6 @@ int main() {
 
 
     Material material(driver, std::move(program));
-    material._rasterState = { .cullMode = CullMode::FRONT };
     material._depthState = { true, true, CompareOp::LESS_EQUAL };
 
     auto matInstance = material.instance();
@@ -96,6 +96,7 @@ int main() {
     scene.addLight(light);
 
     scene.addRenderable(mesh, &matInstance, &modelTransform);
+//    scene.addRenderable(mesh, &matInstance, &lightTransform);
 
     models.reserve(10);
     for (u32 i = 0; i < 10; i++) {
@@ -122,6 +123,28 @@ int main() {
                     }
                     break;
             }
+        }
+        {
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_W])
+                cameraTransform.addPos(cameraTransform.rot().invertY().front() * dt * 10);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_S])
+                cameraTransform.addPos(cameraTransform.rot().invertY().back() * dt * 10);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_A])
+                cameraTransform.addPos(cameraTransform.rot().invertY().left() * dt * 10);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_D])
+                cameraTransform.addPos(cameraTransform.rot().invertY().right() * dt * 10);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LSHIFT])
+                cameraTransform.addPos(cameraTransform.rot().invertY().down() * dt * 10);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_SPACE])
+                cameraTransform.addPos(cameraTransform.rot().invertY().up() * dt * 10);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LEFT])
+                cameraTransform.rotate({0, 1, 0}, ende::math::rad(-45) * dt);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_RIGHT])
+                cameraTransform.rotate({0, 1, 0}, ende::math::rad(45) * dt);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_UP])
+                cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(45) * dt);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_DOWN])
+                cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(-45) * dt);
         }
 
         {

@@ -250,8 +250,6 @@ int main() {
             barrier.buffer = renderBuffer.buffer();
             barrier.offset = 0;
             barrier.size = renderBuffer.size();
-            barrier.srcQueueFamilyIndex = driver.context().queueIndex(QueueType::GRAPHICS);
-            barrier.dstQueueFamilyIndex = driver.context().queueIndex(QueueType::COMPUTE);
             barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
 
@@ -272,8 +270,6 @@ int main() {
 
             barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            barrier.srcQueueFamilyIndex = driver.context().queueIndex(QueueType::COMPUTE);
-            barrier.dstQueueFamilyIndex = driver.context().queueIndex(QueueType::GRAPHICS);
             frameInfo.cmd->pipelineBarrier(PipelineStage::COMPUTE_SHADER, PipelineStage::VERTEX_SHADER, 0, {&barrier, 1}, nullptr);
 
             computeTimer.stop();
@@ -281,7 +277,7 @@ int main() {
 
             frameInfo.cmd->clearDescriptors();
             rasterTimer.start(*frameInfo.cmd);
-            frameInfo.cmd->begin(frame.framebuffer);
+            frameInfo.cmd->begin(*frame.framebuffer);
 
             frameInfo.cmd->bindBindings({binding, 1});
             frameInfo.cmd->bindAttributes(attributes);
@@ -302,7 +298,7 @@ int main() {
             imGuiContext.render(*frameInfo.cmd);
 
             rasterTimer.stop();
-            frameInfo.cmd->end(frame.framebuffer);
+            frameInfo.cmd->end(*frame.framebuffer);
 
             frameInfo.cmd->end();
             frameInfo.cmd->submit({ &frame.imageAquired, 1 }, frameInfo.fence);

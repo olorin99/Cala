@@ -2,6 +2,7 @@
 #define CALA_ENGINE_H
 
 #include <Ende/Vector.h>
+#include <vector>
 #include <Ende/Shared.h>
 #include <Cala/backend/vulkan/Buffer.h>
 #include <Cala/backend/vulkan/Image.h>
@@ -11,10 +12,14 @@
 
 namespace cala {
 
+    class Probe;
+
     class Engine;
     template <typename T>
     class Handle {
     public:
+
+        Handle() = default;
 
         T& operator*() noexcept;
 
@@ -35,10 +40,14 @@ namespace cala {
     using BufferHandle = Handle<backend::vulkan::Buffer>;
     using ImageHandle = Handle<backend::vulkan::Image>;
 
+    class Renderer;
+
     class Engine {
     public:
 
         Engine(backend::Platform& platform);
+
+        ~Engine();
 
         backend::vulkan::Driver& driver() { return _driver; }
 
@@ -49,13 +58,22 @@ namespace cala {
         ImageHandle createImage(backend::vulkan::Image::CreateInfo info);
 
     private:
+        friend Renderer;
         friend BufferHandle;
         friend ImageHandle;
 
         backend::vulkan::Driver _driver;
 
+        backend::vulkan::Sampler _defaultSampler;
+
+        backend::vulkan::RenderPass _shadowPass;
+        backend::vulkan::ShaderProgram* _pointShadowProgram;
+
         ende::Vector<backend::vulkan::Buffer> _buffers;
         ende::Vector<backend::vulkan::Image> _images;
+        std::vector<Probe> _shadowProbes; //TODO: fix vectors in Ende, Optional implementation sucks
+
+        Probe& getShadowProbe(u32 index);
 
 
     };

@@ -145,11 +145,6 @@ int main() {
     ShaderProgram program = loadShader(driver, "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path);
 
     Material material(driver, std::move(program));
-    material._rasterState = {
-            CullMode::BACK,
-            FrontFace::CCW,
-            PolygonMode::FILL
-    };
     material._depthState = { true, true };
 
     auto matInstance = material.instance();
@@ -215,7 +210,7 @@ int main() {
     Image::View hdrView = hdr.getView();
 
     Transform cameraTransform({0, 0, -15});
-    Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
+    Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / 600.f, 0.1f, 1000.f), cameraTransform);
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
 
     Scene scene(driver, 10);
@@ -370,41 +365,6 @@ int main() {
     Sampler prefilterSampler(driver, {
         .maxLod = 10
     });
-
-    Buffer probeCameraBuffer(driver, sizeof(Camera::Data) * 6, BufferUsage::UNIFORM);
-
-    {
-        Transform probeCameraTransform;
-        Camera probeCamera(ende::math::perspective((f32)ende::math::rad(90.f), 512.f / 512.f, 0.1f, 100.f), probeCameraTransform);
-
-        Camera::Data camData[6];
-
-        for (u32 face = 0; face < 6; ++face){
-            switch (face) {
-                case 0:
-                    probeCameraTransform.rotate({0, 1, 0}, ende::math::rad(90));
-                    break;
-                case 1:
-                    probeCameraTransform.rotate({0, 1, 0}, ende::math::rad(180));
-                    break;
-                case 2:
-                    probeCameraTransform.rotate({0, 1, 0}, ende::math::rad(90));
-                    probeCameraTransform.rotate({1, 0, 0}, ende::math::rad(90));
-                    break;
-                case 3:
-                    probeCameraTransform.rotate({1, 0, 0}, ende::math::rad(180));
-                    break;
-                case 4:
-                    probeCameraTransform.rotate({1, 0, 0}, ende::math::rad(90));
-                    break;
-                case 5:
-                    probeCameraTransform.rotate({0, 1, 0}, ende::math::rad(180));
-                    break;
-            }
-            camData[face] = probeCamera.data();
-        }
-        probeCameraBuffer.data({ &camData[0], sizeof(camData)});
-    }
 
 
     Image environmentMap(driver, {
@@ -648,17 +608,17 @@ int main() {
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_S])
                 cameraTransform.addPos(cameraTransform.rot().invertY().back() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_A])
-                cameraTransform.addPos(cameraTransform.rot().invertY().left() * -dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().left() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_D])
-                cameraTransform.addPos(cameraTransform.rot().invertY().right() * -dt * 10);
+                cameraTransform.addPos(cameraTransform.rot().invertY().right() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LSHIFT])
                 cameraTransform.addPos(cameraTransform.rot().invertY().down() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_SPACE])
                 cameraTransform.addPos(cameraTransform.rot().invertY().up() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LEFT])
-                cameraTransform.rotate({0, 1, 0}, ende::math::rad(45) * dt);
-            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_RIGHT])
                 cameraTransform.rotate({0, 1, 0}, ende::math::rad(-45) * dt);
+            if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_RIGHT])
+                cameraTransform.rotate({0, 1, 0}, ende::math::rad(45) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_UP])
                 cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(45) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_DOWN])

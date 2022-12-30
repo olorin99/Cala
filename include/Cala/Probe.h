@@ -5,9 +5,9 @@
 #ifndef CALA_PROBE_H
 #define CALA_PROBE_H
 
+#include <Cala/Engine.h>
 #include <Cala/backend/vulkan/Framebuffer.h>
 #include <Cala/backend/vulkan/Image.h>
-
 #include <functional>
 
 namespace cala {
@@ -24,20 +24,25 @@ namespace cala {
             u32 mipLevels = 1;
         };
 
-        Probe(backend::vulkan::Driver& driver, ProbeInfo info);
+        Probe(Engine* engine, ProbeInfo info);
 
         ~Probe();
 
+        Probe(Probe&& rhs) noexcept;
+
         void draw(backend::vulkan::CommandBuffer& cmd, std::function<void(backend::vulkan::CommandBuffer& cmd, u32 face)> perFace);
 
-        backend::vulkan::Image& map() const { return *_cubeMap; }
+        ImageHandle map() const { return _cubeMap; }
+
+        backend::vulkan::Image::View& view() { return _cubeView; }
 
     private:
 
         backend::vulkan::Framebuffer* _drawBuffer;
-        backend::vulkan::Image* _renderTarget;
+        ImageHandle _renderTarget;
         backend::vulkan::Image::View _view;
-        backend::vulkan::Image* _cubeMap;
+        ImageHandle _cubeMap;
+        backend::vulkan::Image::View _cubeView;
 
 
     };

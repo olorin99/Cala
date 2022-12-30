@@ -1,6 +1,7 @@
 #include "Cala/Renderer.h"
 #include <Cala/Scene.h>
 #include <Cala/backend/vulkan/Driver.h>
+#include <Cala/Probe.h>
 
 cala::Renderer::Renderer(cala::Engine* engine)
     : _engine(engine),
@@ -11,10 +12,14 @@ bool cala::Renderer::beginFrame() {
     _frameInfo = _engine->driver().beginFrame();
     _engine->driver().waitFrame(_frameInfo.frame);
     _swapchainInfo = _engine->driver().swapchain().nextImage();
+    _frameInfo.cmd->begin();
     return true;
 }
 
 f64 cala::Renderer::endFrame() {
+
+    _frameInfo.cmd->end(*_swapchainInfo.framebuffer);
+    _frameInfo.cmd->end();
     _frameInfo.cmd->submit({ &_swapchainInfo.imageAquired, 1 }, _frameInfo.fence);
 
     _engine->driver().swapchain().present(_swapchainInfo, _frameInfo.cmd->signal());
@@ -23,21 +28,96 @@ f64 cala::Renderer::endFrame() {
     return static_cast<f64>(_engine->driver().milliseconds()) / 1000.f;
 }
 
-void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera) {
+cala::backend::vulkan::CommandBuffer& cala::Renderer::render(cala::Scene &scene, cala::Camera &camera) {
     auto cameraData = camera.data();
     _cameraBuffer->data({ &cameraData, sizeof(cameraData) });
 
     backend::vulkan::CommandBuffer& cmd = *_frameInfo.cmd;
 
+    // shadows
+    for (u32 light = 0; light < scene._lights.size(); ++light) {
+        if (scene._lights[light].shadowing()) {
+            // draw shadows
 
-    cmd.begin();
+            Transform shadowTransform(scene._lights[light].transform().pos());
+            Camera shadowCamera((f32)ende::math::rad(90.f), 1024.f, 1024.f, 0.1f, 100.f, shadowTransform);
+
+            auto& shadowProbe = _engine->getShadowProbe(light);
+            shadowProbe.draw(cmd, [&](backend::vulkan::CommandBuffer& cmd, u32 face) {
+                cmd.clearDescriptors();
+                cmd.bindRasterState({
+                    backend::CullMode::FRONT
+                });
+                cmd.bindDepthState({
+                    true, true,
+                    backend::CompareOp::LESS_EQUAL
+                });
+
+                cmd.bindProgram(*_engine->_pointShadowProgram);
+
+                cmd.bindBuffer(3, 0, scene._lightBuffer, light * sizeof(Light::Data), sizeof(Light::Data));
+
+                switch (face) {
+                    case 0:
+                        shadowTransform.rotate({0, 1, 0}, ende::math::rad(90));
+                        break;
+                    case 1:
+                        shadowTransform.rotate({0, 1, 0}, ende::math::rad(180));
+                        break;
+                    case 2:
+                        shadowTransform.rotate({0, 1, 0}, ende::math::rad(90));
+                        shadowTransform.rotate({1, 0, 0}, ende::math::rad(90));
+                        break;
+                    case 3:
+                        shadowTransform.rotate({1, 0, 0}, ende::math::rad(180));
+                        break;
+                    case 4:
+                        shadowTransform.rotate({1, 0, 0}, ende::math::rad(90));
+                        break;
+                    case 5:
+                        shadowTransform.rotate({0, 1, 0}, ende::math::rad(180));
+                        break;
+                }
+
+                auto shadowData = shadowCamera.data();
+                cmd.pushConstants({ &shadowData, sizeof(shadowData) });
+                shadowCamera.updateFrustum();
+
+                for (u32 i = 0; i < scene._renderables.size(); ++i) {
+                    auto& renderable = scene._renderables[i].second.first;
+                    auto& transform = scene._renderables[i].second.second;
+
+                    if (!shadowCamera.frustum().intersect(transform->pos(), 2))
+                        continue;
+
+                    cmd.bindBindings(renderable.bindings);
+                    cmd.bindAttributes(renderable.attributes);
+                    cmd.bindBuffer(1, 0, scene._modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+                    cmd.bindPipeline();
+                    cmd.bindDescriptors();
+                    cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
+                    if (renderable.index) {
+                        cmd.bindIndexBuffer(renderable.index.buffer());
+                        cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
+                    } else
+                        cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
+                }
+            });
+
+        }
+    }
+
+
+    cmd.clearDescriptors();
+
     cmd.begin(*_swapchainInfo.framebuffer);
 
     cmd.bindBuffer(0, 0, *_cameraBuffer);
 
     MaterialInstance* materialInstance = nullptr;
 
-    for (u32 light = 0; light < scene._lights.size(); ++light) {
+    u32 lightCount = scene._lightData.empty() ? 1 : scene._lightData.size(); // if no lights present draw scene once
+    for (u32 light = 0; light < lightCount; ++light) {
 
         if (!scene._lightData.empty())
             cmd.bindBuffer(3, 0, scene._lightBuffer, light * sizeof(Light::Data), sizeof(Light::Data));
@@ -56,6 +136,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera) {
 
             cmd.bindBuffer(1, 0, scene._modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
 
+            cmd.bindImage(2, 3, _engine->getShadowProbe(light).view(), _engine->_defaultSampler);
+
             cmd.bindPipeline();
             cmd.bindDescriptors();
 
@@ -69,23 +151,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera) {
 
     }
 
-    cmd.end(*_swapchainInfo.framebuffer);
-    cmd.end();
+//    cmd.end(*_swapchainInfo.framebuffer);
 
-
-
-//    auto frame = _driver.swapchain().nextImage();
-//    backend::vulkan::CommandBuffer* cmd = _driver.beginFrame();
-//
-//    cmd->begin(frame.framebuffer);
-//
-//    cmd->bindBuffer(0, 0, _cameraBuffer);
-//
-//    scene.render(*cmd);
-//
-//    cmd->end(frame.framebuffer);
-//
-//    cmd->submit({ &frame.imageAquired, 1 }, frame.fence);
-//    _driver.endFrame();
+    return *_frameInfo.cmd;
 
 }

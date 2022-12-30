@@ -22,7 +22,7 @@ namespace cala {
 
         f64 endFrame();
 
-        void render(Scene& scene, Camera& camera);
+        backend::vulkan::CommandBuffer& render(Scene& scene, Camera& camera);
 
 
     private:

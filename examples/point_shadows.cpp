@@ -79,7 +79,9 @@ ende::math::Vec3f lerpPositions(ende::Span<ende::math::Vec3f> inputs, f32 factor
 
 int main() {
     SDLPlatform platform("hello_triangle", 800, 600);
-    Driver driver(platform);
+
+    Engine engine(platform);
+    auto& driver = engine.driver();
 
     ImGuiContext imGuiContext(driver, platform.window());
 
@@ -197,8 +199,43 @@ int main() {
     };
     RenderPass shadowPass(driver, {&shadowPassAttachment, 1});
 
-    Probe shadowProbe(driver, { 1024, 1024, Format::D32_SFLOAT, ImageUsage::SAMPLED | ImageUsage::DEPTH_STENCIL_ATTACHMENT, &shadowPass });
-    auto shadowView = shadowProbe.map().getView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 1, 0, 1);
+
+//    Buffer shadowCameraBuffer(driver, sizeof(Camera::Data) * 6, BufferUsage::UNIFORM);
+//    {
+//        Transform shadowCameraTransform;
+//        Camera shadowCamera(ende::math::perspective((f32)ende::math::rad(90.f), 512.f / 512.f, 0.1f, 100.f), shadowCameraTransform);
+//
+//        Camera::Data camData[6];
+//
+//        for (u32 face = 0; face < 6; ++face){
+//            switch (face) {
+//                case 0:
+//                    shadowCameraTransform.rotate({0, 1, 0}, ende::math::rad(90));
+//                    break;
+//                case 1:
+//                    shadowCameraTransform.rotate({0, 1, 0}, ende::math::rad(180));
+//                    break;
+//                case 2:
+//                    shadowCameraTransform.rotate({0, 1, 0}, ende::math::rad(90));
+//                    shadowCameraTransform.rotate({1, 0, 0}, ende::math::rad(90));
+//                    break;
+//                case 3:
+//                    shadowCameraTransform.rotate({1, 0, 0}, ende::math::rad(180));
+//                    break;
+//                case 4:
+//                    shadowCameraTransform.rotate({1, 0, 0}, ende::math::rad(90));
+//                    break;
+//                case 5:
+//                    shadowCameraTransform.rotate({0, 1, 0}, ende::math::rad(180));
+//                    break;
+//            }
+//            camData[face] = shadowCamera.data();
+//        }
+//        shadowCameraBuffer.data({ &camData[0], sizeof(camData)});
+//    }
+    Probe shadowProbe(&engine, { 1024, 1024, Format::D32_SFLOAT, ImageUsage::SAMPLED | ImageUsage::DEPTH_STENCIL_ATTACHMENT, &shadowPass });
+//    auto shadowView = shadowProbe.map().getView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 1, 0, 1);
+    auto& shadowView = shadowProbe.view();
 
     Sampler sampler(driver, {
             .filter = VK_FILTER_NEAREST,
@@ -359,17 +396,17 @@ int main() {
             frameInfo.cmd->clearDescriptors();
 
             lightPassTimer.start(*frameInfo.cmd);
-            frameInfo.cmd->begin(frame.framebuffer);
+            frameInfo.cmd->begin(*frame.framebuffer);
 
             frameInfo.cmd->bindBuffer(0, 0, cameraBuffer);
-            frameInfo.cmd->bindBuffer(0, 1, lightCamBuf);
+//            frameInfo.cmd->bindBuffer(0, 1, lightCamBuf);
             frameInfo.cmd->bindImage(2, 3, shadowView, sampler);
             scene.render(*frameInfo.cmd);
 
 
             imGuiContext.render(*frameInfo.cmd);
 
-            frameInfo.cmd->end(frame.framebuffer);
+            frameInfo.cmd->end(*frame.framebuffer);
             lightPassTimer.stop();
             frameInfo.cmd->submit({&frame.imageAquired, 1}, frameInfo.fence);
         }

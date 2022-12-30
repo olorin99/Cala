@@ -6,7 +6,6 @@ layout (location = 0) in VsOut {
     mat3 TBN;
     vec3 Normal;
     vec3 ViewPos;
-    vec4 FragPosLightSpace;
 } fsIn;
 
 layout (location = 0) out vec4 FragColour;

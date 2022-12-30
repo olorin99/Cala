@@ -6,10 +6,11 @@
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include <Cala/backend/vulkan/Driver.h>
 
-cala::Probe::Probe(cala::backend::vulkan::Driver& driver, ProbeInfo info) {
+cala::Probe::Probe(cala::Engine* engine, ProbeInfo info) {
     //TODO: ownership belongs to engine object
 
-    _renderTarget = new backend::vulkan::Image(driver, {
+//    _renderTarget = new backend::vulkan::Image(driver, {
+    _renderTarget = engine->createImage({
         info.width,
         info.height,
         1,
@@ -19,7 +20,7 @@ cala::Probe::Probe(cala::backend::vulkan::Driver& driver, ProbeInfo info) {
         info.targetUsage | backend::ImageUsage::TRANSFER_SRC
     });
 
-    _cubeMap = new backend::vulkan::Image(driver, {
+    _cubeMap = engine->createImage({
         info.width,
         info.height,
         1,
@@ -29,7 +30,7 @@ cala::Probe::Probe(cala::backend::vulkan::Driver& driver, ProbeInfo info) {
         info.targetUsage | backend::ImageUsage::TRANSFER_DST
     });
 
-    driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
+    engine->driver().immediate([&](backend::vulkan::CommandBuffer& cmd) {
         auto targetBarrier = _renderTarget->barrier(backend::Access::NONE, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
         auto cubeBarrier = _cubeMap->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
 
@@ -39,13 +40,21 @@ cala::Probe::Probe(cala::backend::vulkan::Driver& driver, ProbeInfo info) {
 
     _view = _renderTarget->getView();
     auto imageView = _view.view;
-    _drawBuffer = new backend::vulkan::Framebuffer(driver.context().device(), *info.renderPass, { &imageView, 1 }, info.width, info.height);
+    _drawBuffer = new backend::vulkan::Framebuffer(engine->driver().context().device(), *info.renderPass, { &imageView, 1 }, info.width, info.height);
+    _cubeView = _cubeMap->getView(VK_IMAGE_VIEW_TYPE_CUBE, 0, info.mipLevels);
 }
 
 cala::Probe::~Probe() {
     delete _drawBuffer;
-    delete _cubeMap;
-    delete _renderTarget;
+//    delete _cubeMap;
+//    delete _renderTarget;
+}
+
+cala::Probe::Probe(Probe &&rhs) noexcept {
+    std::swap(_renderTarget, rhs._renderTarget);
+    std::swap(_cubeMap, rhs._cubeMap);
+    std::swap(_drawBuffer, rhs._drawBuffer);
+    std::swap(_view, rhs._view);
 }
 
 void cala::Probe::draw(backend::vulkan::CommandBuffer &cmd, std::function<void(backend::vulkan::CommandBuffer&, u32)> perFace) {
