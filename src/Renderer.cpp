@@ -2,11 +2,15 @@
 #include <Cala/Scene.h>
 #include <Cala/backend/vulkan/Driver.h>
 #include <Cala/Probe.h>
+#include <Cala/ImGuiContext.h>
 
 cala::Renderer::Renderer(cala::Engine* engine)
     : _engine(engine),
       _cameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT))
-{}
+{
+    _passTimers.emplace("shadowsPass", backend::vulkan::Timer{_engine->driver(), 0});
+    _passTimers.emplace("lightingPass", backend::vulkan::Timer{_engine->driver(), 1});
+}
 
 bool cala::Renderer::beginFrame() {
     _frameInfo = _engine->driver().beginFrame();
@@ -18,7 +22,7 @@ bool cala::Renderer::beginFrame() {
 
 f64 cala::Renderer::endFrame() {
 
-    _frameInfo.cmd->end(*_swapchainInfo.framebuffer);
+//    _frameInfo.cmd->end(*_swapchainInfo.framebuffer);
     _frameInfo.cmd->end();
     _frameInfo.cmd->submit({ &_swapchainInfo.imageAquired, 1 }, _frameInfo.fence);
 
@@ -28,13 +32,15 @@ f64 cala::Renderer::endFrame() {
     return static_cast<f64>(_engine->driver().milliseconds()) / 1000.f;
 }
 
-cala::backend::vulkan::CommandBuffer& cala::Renderer::render(cala::Scene &scene, cala::Camera &camera) {
+void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiContext* imGui) {
+    camera.updateFrustum();
     auto cameraData = camera.data();
     _cameraBuffer->data({ &cameraData, sizeof(cameraData) });
 
     backend::vulkan::CommandBuffer& cmd = *_frameInfo.cmd;
 
     // shadows
+    _passTimers[0].second.start(cmd);
     for (u32 light = 0; light < scene._lights.size(); ++light) {
         if (scene._lights[light].shadowing()) {
             // draw shadows
@@ -106,10 +112,11 @@ cala::backend::vulkan::CommandBuffer& cala::Renderer::render(cala::Scene &scene,
 
         }
     }
-
+    _passTimers[0].second.stop();
 
     cmd.clearDescriptors();
 
+    _passTimers[1].second.start(cmd);
     cmd.begin(*_swapchainInfo.framebuffer);
 
     cmd.bindBuffer(0, 0, *_cameraBuffer);
@@ -124,6 +131,10 @@ cala::backend::vulkan::CommandBuffer& cala::Renderer::render(cala::Scene &scene,
 
         for (u32 i = 0; i < scene._renderables.size(); ++i) {
             auto& renderable = scene._renderables[i].second.first;
+            auto& transform = scene._renderables[i].second.second;
+
+            if (!camera.frustum().intersect(transform->pos(), transform->scale().x()))
+                continue;
 
             cmd.bindBindings(renderable.bindings);
             cmd.bindAttributes(renderable.attributes);
@@ -150,9 +161,11 @@ cala::backend::vulkan::CommandBuffer& cala::Renderer::render(cala::Scene &scene,
         }
 
     }
+    _passTimers[1].second.stop();
 
-//    cmd.end(*_swapchainInfo.framebuffer);
+    if (imGui)
+        imGui->render(cmd);
 
-    return *_frameInfo.cmd;
+    cmd.end(*_swapchainInfo.framebuffer);
 
 }

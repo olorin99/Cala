@@ -4,6 +4,9 @@
 #include <Cala/Engine.h>
 #include <Cala/Camera.h>
 #include <Cala/backend/vulkan/Buffer.h>
+#include <Cala/backend/vulkan/Timer.h>
+
+class ImGuiContext;
 
 namespace cala {
 
@@ -22,7 +25,9 @@ namespace cala {
 
         f64 endFrame();
 
-        backend::vulkan::CommandBuffer& render(Scene& scene, Camera& camera);
+        void render(Scene& scene, Camera& camera, ImGuiContext* imGui = nullptr);
+
+        ende::Span<std::pair<const char*, backend::vulkan::Timer>> timers() { return _passTimers; }
 
 
     private:
@@ -34,6 +39,8 @@ namespace cala {
 
         backend::vulkan::Driver::FrameInfo _frameInfo;
         backend::vulkan::Swapchain::Frame _swapchainInfo;
+
+        ende::Vector<std::pair<const char*, backend::vulkan::Timer>> _passTimers;
 
 
 

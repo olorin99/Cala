@@ -64,7 +64,8 @@ int main() {
     //Shaders
     ShaderProgram program = loadShader(driver, "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/point_shadow.frag.spv"_path);
 
-    Mesh mesh = cala::shapes::cube().mesh(driver);
+    Mesh cube = cala::shapes::cube().mesh(driver);
+    Mesh sphere = cala::shapes::sphereNormalized(1).mesh(driver);
 
     Transform modelTransform({0, 0, 0});
     ende::Vector<Transform> models;
@@ -95,13 +96,18 @@ int main() {
     Scene scene(driver, 11);
     scene.addLight(light);
 
-    scene.addRenderable(mesh, &matInstance, &modelTransform);
+    scene.addRenderable(cube, &matInstance, &modelTransform);
 //    scene.addRenderable(mesh, &matInstance, &lightTransform);
+
+    f32 sceneSize = 10;
+
+    Transform floorTransform({0, -sceneSize * 1.5f, 0}, {0, 0, 0, 1}, {sceneSize * 2, 1, sceneSize * 2});
+    scene.addRenderable(cube, &matInstance, &floorTransform);
 
     models.reserve(10);
     for (u32 i = 0; i < 10; i++) {
-        models.push(Transform({ende::math::rand(-5.f, 5.f), ende::math::rand(-5.f, 5.f), ende::math::rand(-5.f, 5.f)}));
-        scene.addRenderable(mesh, &matInstance, &models.back());
+        models.push(Transform({ende::math::rand(-sceneSize, sceneSize), ende::math::rand(-sceneSize, sceneSize), ende::math::rand(-sceneSize, sceneSize)}));
+        scene.addRenderable(i % 2 == 0 ? cube : sphere, &matInstance, &models.back());
     }
 
     f64 dt = 1.f / 60.f;
@@ -154,6 +160,20 @@ int main() {
             ImGui::Text("FPS: %f", driver.fps());
             ImGui::Text("Milliseconds: %f", driver.milliseconds());
             ImGui::Text("DT: %f", dt);
+
+            auto passTimers = renderer.timers();
+            for (auto& timer : passTimers) {
+                ImGui::Text("%s ms: %f", timer.first, timer.second.result() / 1e6);
+            }
+
+            ende::math::Vec3f colour = scene._lights.front().getColour();
+            f32 intensity = scene._lights.front().getIntensity();
+            if (ImGui::ColorEdit3("Colour", &colour[0]) ||
+                ImGui::SliderFloat("Intensity", &intensity, 1, 50)) {
+                scene._lights.front().setColour(colour);
+                scene._lights.front().setIntensity(intensity);
+            }
+
             ImGui::End();
             ImGui::Render();
         }
@@ -167,9 +187,7 @@ int main() {
 
         renderer.beginFrame();
 
-        auto& cmd = renderer.render(scene, camera);
-
-        imGuiContext.render(cmd);
+        renderer.render(scene, camera, &imGuiContext);
 
         dt = renderer.endFrame();
     }
