@@ -68,6 +68,7 @@ namespace cala {
 
         backend::vulkan::RenderPass _shadowPass;
         backend::vulkan::ShaderProgram* _pointShadowProgram;
+        backend::vulkan::ShaderProgram* _directShadowProgram;
 
         ende::Vector<backend::vulkan::Buffer> _buffers;
         ende::Vector<backend::vulkan::Image> _images;

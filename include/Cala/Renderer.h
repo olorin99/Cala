@@ -35,6 +35,7 @@ namespace cala {
         Engine* _engine;
 
         BufferHandle _cameraBuffer;
+        BufferHandle _lightCameraBuffer;
 
 
         backend::vulkan::Driver::FrameInfo _frameInfo;

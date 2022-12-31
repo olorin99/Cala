@@ -6,7 +6,8 @@
 
 cala::Renderer::Renderer(cala::Engine* engine)
     : _engine(engine),
-      _cameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT))
+      _cameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
+      _lightCameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT))
 {
     _passTimers.emplace("shadowsPass", backend::vulkan::Timer{_engine->driver(), 0});
     _passTimers.emplace("lightingPass", backend::vulkan::Timer{_engine->driver(), 1});
@@ -44,71 +45,76 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     for (u32 light = 0; light < scene._lights.size(); ++light) {
         if (scene._lights[light].shadowing()) {
             // draw shadows
+            auto& lightObj = scene._lights[light];
 
-            Transform shadowTransform(scene._lights[light].transform().pos());
+            Transform shadowTransform(lightObj.transform().pos());
             Camera shadowCamera((f32)ende::math::rad(90.f), 1024.f, 1024.f, 0.1f, 100.f, shadowTransform);
 
-            auto& shadowProbe = _engine->getShadowProbe(light);
-            shadowProbe.draw(cmd, [&](backend::vulkan::CommandBuffer& cmd, u32 face) {
-                cmd.clearDescriptors();
-                cmd.bindRasterState({
-                    backend::CullMode::FRONT
+            if (lightObj.type() == Light::POINT) { // point shadows
+                auto& shadowProbe = _engine->getShadowProbe(light);
+                shadowProbe.draw(cmd, [&](backend::vulkan::CommandBuffer& cmd, u32 face) {
+                    cmd.clearDescriptors();
+                    cmd.bindRasterState({
+                        backend::CullMode::FRONT
+                    });
+                    cmd.bindDepthState({
+                        true, true,
+                        backend::CompareOp::LESS_EQUAL
+                    });
+
+                    cmd.bindProgram(*_engine->_pointShadowProgram);
+
+                    cmd.bindBuffer(3, 0, scene._lightBuffer, light * sizeof(Light::Data), sizeof(Light::Data));
+
+                    switch (face) {
+                        case 0:
+                            shadowTransform.rotate({0, 1, 0}, ende::math::rad(90));
+                            break;
+                        case 1:
+                            shadowTransform.rotate({0, 1, 0}, ende::math::rad(180));
+                            break;
+                        case 2:
+                            shadowTransform.rotate({0, 1, 0}, ende::math::rad(90));
+                            shadowTransform.rotate({1, 0, 0}, ende::math::rad(90));
+                            break;
+                        case 3:
+                            shadowTransform.rotate({1, 0, 0}, ende::math::rad(180));
+                            break;
+                        case 4:
+                            shadowTransform.rotate({1, 0, 0}, ende::math::rad(90));
+                            break;
+                        case 5:
+                            shadowTransform.rotate({0, 1, 0}, ende::math::rad(180));
+                            break;
+                    }
+
+                    auto shadowData = shadowCamera.data();
+                    cmd.pushConstants({ &shadowData, sizeof(shadowData) });
+                    shadowCamera.updateFrustum();
+
+                    for (u32 i = 0; i < scene._renderables.size(); ++i) {
+                        auto& renderable = scene._renderables[i].second.first;
+                        auto& transform = scene._renderables[i].second.second;
+
+                        if (!shadowCamera.frustum().intersect(transform->pos(), 2))
+                            continue;
+
+                        cmd.bindBindings(renderable.bindings);
+                        cmd.bindAttributes(renderable.attributes);
+                        cmd.bindBuffer(1, 0, scene._modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+                        cmd.bindPipeline();
+                        cmd.bindDescriptors();
+                        cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
+                        if (renderable.index) {
+                            cmd.bindIndexBuffer(renderable.index.buffer());
+                            cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
+                        } else
+                            cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
+                    }
                 });
-                cmd.bindDepthState({
-                    true, true,
-                    backend::CompareOp::LESS_EQUAL
-                });
+            } else { // directional shadows
 
-                cmd.bindProgram(*_engine->_pointShadowProgram);
-
-                cmd.bindBuffer(3, 0, scene._lightBuffer, light * sizeof(Light::Data), sizeof(Light::Data));
-
-                switch (face) {
-                    case 0:
-                        shadowTransform.rotate({0, 1, 0}, ende::math::rad(90));
-                        break;
-                    case 1:
-                        shadowTransform.rotate({0, 1, 0}, ende::math::rad(180));
-                        break;
-                    case 2:
-                        shadowTransform.rotate({0, 1, 0}, ende::math::rad(90));
-                        shadowTransform.rotate({1, 0, 0}, ende::math::rad(90));
-                        break;
-                    case 3:
-                        shadowTransform.rotate({1, 0, 0}, ende::math::rad(180));
-                        break;
-                    case 4:
-                        shadowTransform.rotate({1, 0, 0}, ende::math::rad(90));
-                        break;
-                    case 5:
-                        shadowTransform.rotate({0, 1, 0}, ende::math::rad(180));
-                        break;
-                }
-
-                auto shadowData = shadowCamera.data();
-                cmd.pushConstants({ &shadowData, sizeof(shadowData) });
-                shadowCamera.updateFrustum();
-
-                for (u32 i = 0; i < scene._renderables.size(); ++i) {
-                    auto& renderable = scene._renderables[i].second.first;
-                    auto& transform = scene._renderables[i].second.second;
-
-                    if (!shadowCamera.frustum().intersect(transform->pos(), 2))
-                        continue;
-
-                    cmd.bindBindings(renderable.bindings);
-                    cmd.bindAttributes(renderable.attributes);
-                    cmd.bindBuffer(1, 0, scene._modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
-                    cmd.bindPipeline();
-                    cmd.bindDescriptors();
-                    cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
-                    if (renderable.index) {
-                        cmd.bindIndexBuffer(renderable.index.buffer());
-                        cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
-                    } else
-                        cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
-                }
-            });
+            }
 
         }
     }
@@ -126,8 +132,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     u32 lightCount = scene._lightData.empty() ? 1 : scene._lightData.size(); // if no lights present draw scene once
     for (u32 light = 0; light < lightCount; ++light) {
 
-        if (!scene._lightData.empty())
+        if (!scene._lightData.empty()) {
             cmd.bindBuffer(3, 0, scene._lightBuffer, light * sizeof(Light::Data), sizeof(Light::Data));
+            auto lightCamData = scene._lights[light].camera().data();
+            _lightCameraBuffer->data({ &lightCamData, sizeof(lightCamData) });
+            cmd.bindBuffer(0, 1, *_lightCameraBuffer);
+        }
 
         for (u32 i = 0; i < scene._renderables.size(); ++i) {
             auto& renderable = scene._renderables[i].second.first;

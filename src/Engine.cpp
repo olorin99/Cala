@@ -22,23 +22,35 @@ cala::Engine::Engine(backend::Platform &platform)
       _defaultSampler(_driver, {})
 {
     ende::fs::File file;
-    file.open("../../res/shaders/shadow_point.vert.spv"_path, ende::fs::in | ende::fs::binary);
-    ende::Vector<u32> vertexData(file.size() / sizeof(u32));
-    file.read({ reinterpret_cast<char*>(vertexData.data()), static_cast<u32>(vertexData.size() * sizeof(u32)) });
+    {
+        file.open("../../res/shaders/shadow_point.vert.spv"_path, ende::fs::in | ende::fs::binary);
+        ende::Vector<u32> vertexData(file.size() / sizeof(u32));
+        file.read({ reinterpret_cast<char*>(vertexData.data()), static_cast<u32>(vertexData.size() * sizeof(u32)) });
 
-    file.open("../../res/shaders/shadow_point.frag.spv"_path, ende::fs::in | ende::fs::binary);
-    ende::Vector<u32> fragmentData(file.size() / sizeof(u32));
-    file.read({ reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32)) });
+        file.open("../../res/shaders/shadow_point.frag.spv"_path, ende::fs::in | ende::fs::binary);
+        ende::Vector<u32> fragmentData(file.size() / sizeof(u32));
+        file.read({ reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32)) });
 
-    _pointShadowProgram = new backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-            .addStage(vertexData, backend::ShaderStage::VERTEX)
-            .addStage(fragmentData, backend::ShaderStage::FRAGMENT)
-            .compile(_driver));
+        _pointShadowProgram = new backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
+                .addStage(vertexData, backend::ShaderStage::VERTEX)
+                .addStage(fragmentData, backend::ShaderStage::FRAGMENT)
+                .compile(_driver));
+    }
+    {
+        file.open("../../res/shaders/shadow.vert.spv"_path, ende::fs::in | ende::fs::binary);
+        ende::Vector<u32> vertexData(file.size() / sizeof(u32));
+        file.read({ reinterpret_cast<char*>(vertexData.data()), static_cast<u32>(vertexData.size() * sizeof(u32)) });
+
+        _directShadowProgram = new backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
+                .addStage(vertexData, backend::ShaderStage::VERTEX)
+                .compile(_driver));
+    }
 
 }
 
 cala::Engine::~Engine() {
     delete _pointShadowProgram;
+    delete _directShadowProgram;
 }
 
 

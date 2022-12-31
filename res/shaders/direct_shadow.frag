@@ -6,7 +6,7 @@ layout (location = 0) in VsOut {
     mat3 TBN;
     vec3 Normal;
     vec3 ViewPos;
-    vec4 FragPosLightSpace;
+    vec4 WorldPosLightSpace;
 } fsIn;
 
 layout (location = 0) out vec4 FragColour;
@@ -89,7 +89,7 @@ void main() {
 //    float bias = 0.005*tan(acos(dot(normal, lightDir))); // cosTheta is dot( n,l ), clamped between 0 and 1
 //    bias = clamp(bias, 0,0.01);
 //    float shadow = calcShadows(fsIn.FragPosLightSpace, vec2(0), bias);
-    float shadow = filterPCF(vec3(fsIn.FragPosLightSpace / fsIn.FragPosLightSpace.w), bias);
+    float shadow = filterPCF(fsIn.WorldPosLightSpace.xyz / fsIn.WorldPosLightSpace.w, bias);
 
     vec3 colour = (diffuse + specular) * light.colour * (shadow);
     FragColour = vec4(colour, 1.0f);

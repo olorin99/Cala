@@ -138,10 +138,10 @@ int main() {
     auto shadowMatInstance = shadowMaterial.instance();
 
 
-//    Transform cameraTransform({0, 0, 10});
-    Transform cameraTransform({-2, 20, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-90)));
-//    Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
-    Camera camera(ende::math::orthographic<f32>(-10, 10, -10, 10, 1, 100), cameraTransform);
+    Transform cameraTransform({0, 0, 10});
+//    Transform cameraTransform({-2, 20, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-90)));
+    Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
+//    Camera camera(ende::math::orthographic<f32>(-10, 10, -10, 10, 1, 100), cameraTransform);
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
 
     Scene scene(driver, 10);
@@ -219,7 +219,7 @@ int main() {
 
     auto systemTime = ende::time::SystemTime::now();
 
-    f32 dt = 1.f / 60.f;
+    f64 dt = 1.f / 60.f;
     bool running = true;
     SDL_Event event;
     while (running) {
@@ -276,11 +276,11 @@ int main() {
         }
 
         {
-            lightTransform.rotate({1, 0, 0}, std::sin(systemTime.elapsed().milliseconds() / 1000.f) * dt);
-            auto lightPos = lightTransform.rot().front() * 20;
+//            lightTransform.rotate({1, 0, 0}, std::sin(systemTime.elapsed().milliseconds() / 1000.f) * dt);
+//            auto lightPos = lightTransform.rot().front() * 20;
 //            lightPos = lightPos * -1;
 //            lightPos[1] *= -1;
-            lightTransform.setPos(lightPos);
+//            lightTransform.setPos(lightPos);
 //            cameraTransform.rotate({1, 0, 0}, std::sin(systemTime.elapsed().milliseconds() / 1000.f) * dt);
 //            cameraTransform.setPos(cameraTransform.rot().front() * 20);
 //            f32 factor = (std::sin(systemTime.elapsed().milliseconds() / 1000.f) + 1) / 2.f;
@@ -312,7 +312,7 @@ int main() {
 
             //cmd->bindBuffer(0, 0, cameraBuffer);
 //            cmd->bindBuffer(0, 0, lightCamBuf);
-            frameInfo.cmd->bindBuffer(3, 0, lightBuffer);
+//            frameInfo.cmd->bindBuffer(3, 0, lightBuffer);
 
             shadowMatInstance.bind(*frameInfo.cmd);
 
@@ -347,21 +347,22 @@ int main() {
             //cmd->end(frame.framebuffer);
 
 
-            frameInfo.cmd->begin(frame.framebuffer);
+            frameInfo.cmd->begin(*frame.framebuffer);
 
             frameInfo.cmd->bindBuffer(0, 0, cameraBuffer);
             frameInfo.cmd->bindBuffer(3, 0, lightBuffer);
             frameInfo.cmd->bindBuffer(0, 1, lightCamBuf);
             frameInfo.cmd->bindImage(2, 3, shadowView, sampler);
+
             scene.render(*frameInfo.cmd);
 
             imGuiContext.render(*frameInfo.cmd);
 
-            frameInfo.cmd->end(frame.framebuffer);
+            frameInfo.cmd->end(*frame.framebuffer);
             frameInfo.cmd->submit({&frame.imageAquired, 1}, frameInfo.fence);
         }
-        auto frameTime = driver.endFrame();
-        dt = static_cast<f32>(frameTime.milliseconds()) / 1000.f;
+        driver.endFrame();
+        dt = driver.milliseconds() / (f64)1000;
 
         driver.swapchain().present(frame, frameInfo.cmd->signal());
     }

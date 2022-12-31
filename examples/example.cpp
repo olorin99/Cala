@@ -101,7 +101,7 @@ int main() {
 
     f32 sceneSize = 10;
 
-    Transform floorTransform({0, -sceneSize * 1.5f, 0}, {0, 0, 0, 1}, {sceneSize * 2, 1, sceneSize * 2});
+    Transform floorTransform({0, -sceneSize * 1.5f, 0}, {0, 0, 0, 1}, {sceneSize * 3, 1, sceneSize * 3});
     scene.addRenderable(cube, &matInstance, &floorTransform);
 
     models.reserve(10);

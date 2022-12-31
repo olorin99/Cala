@@ -399,7 +399,7 @@ int main() {
             frameInfo.cmd->begin(*frame.framebuffer);
 
             frameInfo.cmd->bindBuffer(0, 0, cameraBuffer);
-//            frameInfo.cmd->bindBuffer(0, 1, lightCamBuf);
+            frameInfo.cmd->bindBuffer(0, 1, lightCamBuf);
             frameInfo.cmd->bindImage(2, 3, shadowView, sampler);
             scene.render(*frameInfo.cmd);
 
