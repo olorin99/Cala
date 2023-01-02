@@ -3,6 +3,24 @@
 
 #include <Cala/Probe.h>
 
+template <>
+cala::backend::vulkan::Buffer &cala::BufferHandle::operator*() noexcept {
+    return _engine->_buffers[_index];
+}
+template <>
+cala::backend::vulkan::Buffer *cala::BufferHandle::operator->() noexcept {
+    return &_engine->_buffers[_index];
+}
+
+template <>
+cala::backend::vulkan::Image &cala::ImageHandle::operator*() noexcept {
+    return _engine->_images[_index];
+}
+template <>
+cala::backend::vulkan::Image *cala::ImageHandle::operator->() noexcept {
+    return &_engine->_images[_index];
+}
+
 cala::backend::vulkan::RenderPass::Attachment shadowPassAttachment {
         cala::backend::Format::D32_SFLOAT,
         VK_SAMPLE_COUNT_1_BIT,
@@ -46,34 +64,36 @@ cala::Engine::Engine(backend::Platform &platform)
                 .compile(_driver));
     }
 
+
+    _defaultPointShadow = createImage({
+        1,
+        1,
+        1,
+        backend::Format::D32_SFLOAT,
+        1,
+        6,
+        backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST,
+        backend::ImageLayout::UNDEFINED,
+        backend::ImageType::IMAGE2D
+    });
+
+    f32 data = 1;
+    _defaultPointShadow->data(_driver, {
+        0, 1, 1, 1, 4, { &data, sizeof(data) }
+    });
+    _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
+        auto cubeBarrier = _defaultPointShadow->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, 0, nullptr, { &cubeBarrier, 1 });
+    });
+
+    _defaultPointShadowView = _defaultPointShadow->getView(VK_IMAGE_VIEW_TYPE_CUBE);
+
 }
 
 cala::Engine::~Engine() {
     delete _pointShadowProgram;
     delete _directShadowProgram;
 }
-
-
-template <>
-cala::backend::vulkan::Buffer &cala::BufferHandle::operator*() noexcept {
-    return _engine->_buffers[_index];
-}
-template <>
-cala::backend::vulkan::Buffer *cala::BufferHandle::operator->() noexcept {
-    return &_engine->_buffers[_index];
-}
-
-template <>
-cala::backend::vulkan::Image &cala::ImageHandle::operator*() noexcept {
-    return _engine->_images[_index];
-}
-template <>
-cala::backend::vulkan::Image *cala::ImageHandle::operator->() noexcept {
-    return &_engine->_images[_index];
-}
-
-
-
 
 cala::BufferHandle cala::Engine::createBuffer(u32 size, backend::BufferUsage usage, backend::MemoryProperties flags) {
     _buffers.emplace(_driver, size, usage, flags);

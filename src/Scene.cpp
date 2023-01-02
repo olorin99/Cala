@@ -38,7 +38,7 @@ void cala::Scene::addLight(cala::Light &light) {
 }
 
 
-void cala::Scene::prepare() {
+void cala::Scene::prepare(cala::Camera& camera) {
 //    std::sort(_lights.begin(), _lights.end(), [](const Light& lhs, const Light& rhs) {
 //        return !lhs.shadowing() and rhs.shadowing();
 //    });
@@ -46,6 +46,20 @@ void cala::Scene::prepare() {
 //    std::sort(_renderables.begin(), _renderables.end(), [](const std::pair<u32, std::pair<Renderable, Transform*>>& lhs, const std::pair<u32, std::pair<Renderable, Transform*>>& rhs) {
 //        return lhs.first < rhs.first;
 //    });
+
+    camera.updateFrustum();
+
+    _renderList.clear();
+    for (auto& item : _renderables) {
+        auto viewDir = camera.transform().pos() - item.second.second->pos();
+        f32 depth = viewDir.length();
+        item.first = *reinterpret_cast<u32*>(&depth);
+        _renderList.push(item);
+    }
+    std::sort(_renderables.begin(), _renderables.end(), [](const std::pair<u32, std::pair<Renderable, Transform*>>& lhs, const std::pair<u32, std::pair<Renderable, Transform*>>& rhs) {
+        return lhs.first < rhs.first;
+    });
+
 
     _lightData.clear();
     for (auto& light : _lights) {
@@ -55,13 +69,13 @@ void cala::Scene::prepare() {
 
     _modelTransforms.clear();
 
-    for (auto& renderablePair : _renderables) {
+    for (auto& renderablePair : _renderList) {
         auto& transform = renderablePair.second.second;
         _modelTransforms.push(transform->toMat());
     }
 
 
-    if (_modelTransforms.size() * sizeof(ende::math::Mat4f) > _modelBuffer.size())
+    if (_modelTransforms.size() * sizeof(ende::math::Mat4f) >= _modelBuffer.size())
         _modelBuffer.resize(_modelTransforms.size() * sizeof(ende::math::Mat4f) * 2);
     _modelBuffer.data({_modelTransforms.data(), static_cast<u32>(_modelTransforms.size() * sizeof(ende::math::Mat4f))});
 }

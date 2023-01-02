@@ -30,7 +30,7 @@ namespace cala {
 
         void addLight(Light& light);
 
-        void prepare();
+        void prepare(Camera& camera);
 
         void render(backend::vulkan::CommandBuffer& cmd);
 
@@ -43,6 +43,7 @@ namespace cala {
         ende::Vector<ende::math::Mat4f> _modelTransforms;
         backend::vulkan::Buffer _lightBuffer;
         ende::Vector<Light::Data> _lightData;
+        ende::Vector<std::pair<u32, std::pair<Renderable, Transform*>>> _renderList;
 
     };
 

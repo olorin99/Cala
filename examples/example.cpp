@@ -75,6 +75,8 @@ int main() {
 
     Transform lightTransform({-3, 3, -1}, {0, 0, 0, 1}, {0.5, 0.5, 0.5});
     Light light(cala::Light::POINT, true, lightTransform);
+    Transform light2Transform({10, 2, 4});
+    Light light1(cala::Light::POINT, false, light2Transform);
 //    Camera camera((f32)ende::math::rad(54.4), 800.f, 600.f, 0.1f, 1000.f, lightTransform);
 
     Sampler sampler(driver, {});
@@ -95,6 +97,7 @@ int main() {
 
     Scene scene(driver, 11);
     scene.addLight(light);
+    scene.addLight(light1);
 
     scene.addRenderable(cube, &matInstance, &modelTransform);
 //    scene.addRenderable(mesh, &matInstance, &lightTransform);
@@ -182,7 +185,7 @@ int main() {
             modelTransform.rotate(ende::math::Vec3f{0, 1, 0}, ende::math::rad(45) * dt);
             lightTransform.rotate(ende::math::Vec3f{0, 1, 1}, ende::math::rad(45) * dt);
 
-            scene.prepare();
+            scene.prepare(camera);
         }
 
         renderer.beginFrame();

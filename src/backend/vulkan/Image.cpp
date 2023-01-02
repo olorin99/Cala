@@ -125,7 +125,7 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Driver& driver, D
     staging.data(info.data);
     driver.immediate([&](CommandBuffer& buffer) {
         VkImageSubresourceRange range;
-        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        range.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
         range.baseMipLevel = 0;
         range.levelCount = 1;
         range.baseArrayLayer = 0;
@@ -146,7 +146,7 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Driver& driver, D
         copyRegion.bufferRowLength = 0;
         copyRegion.bufferImageHeight = 0;
 
-        copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        copyRegion.imageSubresource.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
         copyRegion.imageSubresource.mipLevel = info.mipLevel;
         copyRegion.imageSubresource.baseArrayLayer = 0;
         copyRegion.imageSubresource.layerCount = 1;

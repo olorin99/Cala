@@ -70,6 +70,9 @@ namespace cala {
         backend::vulkan::ShaderProgram* _pointShadowProgram;
         backend::vulkan::ShaderProgram* _directShadowProgram;
 
+        ImageHandle _defaultPointShadow;
+        backend::vulkan::Image::View _defaultPointShadowView;
+
         ende::Vector<backend::vulkan::Buffer> _buffers;
         ende::Vector<backend::vulkan::Image> _images;
         std::vector<Probe> _shadowProbes; //TODO: fix vectors in Ende, Optional implementation sucks

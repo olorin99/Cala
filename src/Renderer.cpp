@@ -139,9 +139,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindBuffer(0, 1, *_lightCameraBuffer);
         }
 
-        for (u32 i = 0; i < scene._renderables.size(); ++i) {
-            auto& renderable = scene._renderables[i].second.first;
-            auto& transform = scene._renderables[i].second.second;
+        for (u32 i = 0; i < scene._renderList.size(); ++i) {
+            auto& renderable = scene._renderList[i].second.first;
+            auto& transform = scene._renderList[i].second.second;
 
             if (!camera.frustum().intersect(transform->pos(), transform->scale().x()))
                 continue;
@@ -157,7 +157,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
             cmd.bindBuffer(1, 0, scene._modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
 
-            cmd.bindImage(2, 3, _engine->getShadowProbe(light).view(), _engine->_defaultSampler);
+            if (scene._lights[light].shadowing())
+                cmd.bindImage(2, 3, _engine->getShadowProbe(light).view(), _engine->_defaultSampler);
+            else
+                cmd.bindImage(2, 3, _engine->_defaultPointShadowView, _engine->_defaultSampler);
 
             cmd.bindPipeline();
             cmd.bindDescriptors();
