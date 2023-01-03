@@ -8,6 +8,7 @@
 #include <Cala/MaterialInstance.h>
 #include <Cala/Mesh.h>
 #include <Cala/Light.h>
+#include <Cala/Engine.h>
 
 namespace cala {
 
@@ -22,7 +23,7 @@ namespace cala {
             ende::Span<backend::Attribute> attributes = nullptr;
         };
 
-        Scene(backend::vulkan::Driver& driver, u32 count, u32 lightCount = 10);
+        Scene(Engine* engine, u32 count, u32 lightCount = 10);
 
         void addRenderable(Renderable&& renderable, Transform* transform);
 
@@ -36,11 +37,13 @@ namespace cala {
 
 //    private:
 
+        Engine* _engine;
+
         ende::Vector<std::pair<Renderable, Transform*>> _renderables;
         ende::Vector<Light> _lights;
 
-        backend::vulkan::Buffer _modelBuffer[2];
-        backend::vulkan::Buffer _lightBuffer[2];
+        BufferHandle _modelBuffer[2];
+        BufferHandle _lightBuffer[2];
 
         ende::Vector<ende::math::Mat4f> _modelTransforms;
         ende::Vector<Light::Data> _lightData;

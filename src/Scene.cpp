@@ -2,11 +2,12 @@
 #include <algorithm>
 #include <Ende/thread/thread.h>
 
-cala::Scene::Scene(backend::vulkan::Driver &driver, u32 count, u32 lightCount)
-    : _modelBuffer{backend::vulkan::Buffer(driver, count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM),
-                   backend::vulkan::Buffer(driver, count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM)},
-      _lightBuffer{backend::vulkan::Buffer(driver, lightCount * sizeof(Light::Data), backend::BufferUsage::UNIFORM),
-                   backend::vulkan::Buffer(driver, lightCount * sizeof(Light::Data), backend::BufferUsage::UNIFORM)}
+cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
+    : _engine(engine),
+    _modelBuffer{engine->createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM),
+                 engine->createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM)},
+    _lightBuffer{engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::UNIFORM),
+                 engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::UNIFORM)}
 {}
 
 
@@ -71,18 +72,18 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
     for (auto& light : _lights) {
         _lightData.push(light.data());
     }
-    if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame].size())
-        _lightBuffer[frame].resize(_lightData.size() * sizeof(Light::Data) * 2);
-    _lightBuffer[frame].data({_lightData.data(), static_cast<u32>(_lightData.size() * sizeof(Light::Data))});
+    if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame]->size())
+        _lightBuffer[frame]->resize(_lightData.size() * sizeof(Light::Data) * 2);
+    _lightBuffer[frame]->data({_lightData.data(), static_cast<u32>(_lightData.size() * sizeof(Light::Data))});
 
     _modelTransforms.clear();
     for (auto& renderablePair : _renderList) {
         auto& transform = renderablePair.second.second;
         _modelTransforms.push(transform->toMat());
     }
-    if (_modelTransforms.size() * sizeof(ende::math::Mat4f) >= _modelBuffer[frame].size())
-        _modelBuffer[frame].resize(_modelTransforms.size() * sizeof(ende::math::Mat4f) * 2);
-    _modelBuffer[frame].data({_modelTransforms.data(), static_cast<u32>(_modelTransforms.size() * sizeof(ende::math::Mat4f))});
+    if (_modelTransforms.size() * sizeof(ende::math::Mat4f) >= _modelBuffer[frame]->size())
+        _modelBuffer[frame]->resize(_modelTransforms.size() * sizeof(ende::math::Mat4f) * 2);
+    _modelBuffer[frame]->data({_modelTransforms.data(), static_cast<u32>(_modelTransforms.size() * sizeof(ende::math::Mat4f))});
 }
 
 void cala::Scene::render(backend::vulkan::CommandBuffer& cmd) {
@@ -93,7 +94,7 @@ void cala::Scene::render(backend::vulkan::CommandBuffer& cmd) {
 
     for (u32 light = 0; light < lightCount; light++) {
         if (!_lightData.empty())
-            cmd.bindBuffer(3, 0, _lightBuffer[1], light * sizeof(Light::Data), sizeof(Light::Data));
+            cmd.bindBuffer(3, 0, *_lightBuffer[1], light * sizeof(Light::Data), sizeof(Light::Data));
 
         for (u32 i = 0; i < _renderList.size(); i++) {
             auto& renderable = _renderList[i].second.first;
@@ -107,7 +108,7 @@ void cala::Scene::render(backend::vulkan::CommandBuffer& cmd) {
                 renderable.materialInstance->bind(cmd);
             }
 
-            cmd.bindBuffer(1, 0, _modelBuffer[1], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+            cmd.bindBuffer(1, 0, *_modelBuffer[1], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
 
             cmd.bindPipeline();
             cmd.bindDescriptors();

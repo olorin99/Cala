@@ -57,15 +57,13 @@ int main() {
     Engine engine(platform);
     Renderer renderer(&engine);
 
-    Driver& driver = engine.driver();
-
-    ImGuiContext imGuiContext(driver, platform.window());
+    ImGuiContext imGuiContext(engine.driver(), platform.window());
 
     //Shaders
-    ShaderProgram program = loadShader(driver, "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/point_shadow.frag.spv"_path);
+    ShaderProgram program = loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/point_shadow.frag.spv"_path);
 
-    Mesh cube = cala::shapes::cube().mesh(driver);
-    Mesh sphere = cala::shapes::sphereNormalized(1).mesh(driver);
+    Mesh cube = cala::shapes::cube().mesh(engine.driver());
+    Mesh sphere = cala::shapes::sphereNormalized(1).mesh(engine.driver());
 
     Transform modelTransform({0, 0, 0});
     ende::Vector<Transform> models;
@@ -79,25 +77,25 @@ int main() {
     Light light1(cala::Light::POINT, false, light2Transform);
 //    Camera camera((f32)ende::math::rad(54.4), 800.f, 600.f, 0.1f, 1000.f, lightTransform);
 
-    Sampler sampler(driver, {});
+    Sampler sampler(engine.driver(), {});
 
     ImageHandle brickwall = loadImage(engine, "../../res/textures/brickwall.jpg"_path);
     ImageHandle brickwall_normal = loadImage(engine, "../../res/textures/brickwall_normal.jpg"_path);
     ImageHandle brickwall_specular = loadImage(engine, "../../res/textures/brickwall_specular.jpg"_path);
 
 
-    Material material(driver, std::move(program));
+    Material material(engine.driver(), std::move(program));
     material._depthState = { true, true, CompareOp::LESS_EQUAL };
 
     auto matInstance = material.instance();
-    matInstance.setSampler("diffuseMap", *brickwall, Sampler(driver, {}));
-    matInstance.setSampler("normalMap", *brickwall_normal, Sampler(driver, {}));
-    matInstance.setSampler("specularMap", *brickwall_specular, Sampler(driver, {}));
+    matInstance.setSampler("diffuseMap", *brickwall, Sampler(engine.driver(), {}));
+    matInstance.setSampler("normalMap", *brickwall_normal, Sampler(engine.driver(), {}));
+    matInstance.setSampler("specularMap", *brickwall_specular, Sampler(engine.driver(), {}));
 
-    u32 objectCount = 500;
-    Scene scene(driver, objectCount);
+    u32 objectCount = 100;
+    Scene scene(&engine, objectCount);
     scene.addLight(light);
-    scene.addLight(light1);
+//    scene.addLight(light1);
 
     scene.addRenderable(cube, &matInstance, &modelTransform);
 //    scene.addRenderable(mesh, &matInstance, &lightTransform);
@@ -126,8 +124,8 @@ int main() {
                 case SDL_WINDOWEVENT:
                     switch (event.window.event) {
                         case SDL_WINDOWEVENT_RESIZED:
-                            driver.wait();
-                            driver.swapchain().resize(event.window.data1, event.window.data2);
+                            engine.driver().wait();
+                            engine.driver().swapchain().resize(event.window.data1, event.window.data2);
                             camera.resize(event.window.data1, event.window.data2);
                             break;
                     }
@@ -161,8 +159,8 @@ int main() {
             imGuiContext.newFrame();
 
             ImGui::Begin("Stats");
-            ImGui::Text("FPS: %f", driver.fps());
-            ImGui::Text("Milliseconds: %f", driver.milliseconds());
+            ImGui::Text("FPS: %f", engine.driver().fps());
+            ImGui::Text("Milliseconds: %f", engine.driver().milliseconds());
             ImGui::Text("Delta Time: %f", dt);
 
             auto passTimers = renderer.timers();
@@ -199,5 +197,5 @@ int main() {
         dt = renderer.endFrame();
     }
 
-    driver.wait();
+    engine.driver().wait();
 }
