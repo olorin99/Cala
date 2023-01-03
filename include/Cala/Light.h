@@ -72,6 +72,8 @@ namespace cala {
             return _intensity;
         }
 
+        f32 getRadius() const { return _radius; }
+
         Transform& transform() const { return _transform; }
 
         Camera& camera() { return _camera; }

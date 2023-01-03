@@ -29,6 +29,14 @@ namespace cala {
 
         ende::Span<std::pair<const char*, backend::vulkan::Timer>> timers() { return _passTimers; }
 
+        u32 frameIndex() const { return _frameInfo.frame % backend::vulkan::FRAMES_IN_FLIGHT; }
+
+        struct Stats {
+            u32 pipelineCount = 0;
+            u32 descriptorCount = 0;
+        };
+
+        Stats stats() const { return _stats; }
 
     private:
 
@@ -42,6 +50,8 @@ namespace cala {
         backend::vulkan::Swapchain::Frame _swapchainInfo;
 
         ende::Vector<std::pair<const char*, backend::vulkan::Timer>> _passTimers;
+
+        Stats _stats;
 
 
 

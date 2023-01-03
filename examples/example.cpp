@@ -94,8 +94,8 @@ int main() {
     matInstance.setSampler("normalMap", *brickwall_normal, Sampler(driver, {}));
     matInstance.setSampler("specularMap", *brickwall_specular, Sampler(driver, {}));
 
-
-    Scene scene(driver, 11);
+    u32 objectCount = 100;
+    Scene scene(driver, objectCount);
     scene.addLight(light);
     scene.addLight(light1);
 
@@ -107,10 +107,11 @@ int main() {
     Transform floorTransform({0, -sceneSize * 1.5f, 0}, {0, 0, 0, 1}, {sceneSize * 3, 1, sceneSize * 3});
     scene.addRenderable(cube, &matInstance, &floorTransform);
 
-    models.reserve(10);
-    for (u32 i = 0; i < 10; i++) {
+    models.reserve(objectCount);
+    for (u32 i = 0; i < objectCount; i++) {
         models.push(Transform({ende::math::rand(-sceneSize, sceneSize), ende::math::rand(-sceneSize, sceneSize), ende::math::rand(-sceneSize, sceneSize)}));
         scene.addRenderable(i % 2 == 0 ? cube : sphere, &matInstance, &models.back());
+//        scene.addRenderable(cube, &matInstance, &models.back());
     }
 
     f64 dt = 1.f / 60.f;
@@ -162,12 +163,16 @@ int main() {
             ImGui::Begin("Stats");
             ImGui::Text("FPS: %f", driver.fps());
             ImGui::Text("Milliseconds: %f", driver.milliseconds());
-            ImGui::Text("DT: %f", dt);
+            ImGui::Text("Delta Time: %f", dt);
 
             auto passTimers = renderer.timers();
             for (auto& timer : passTimers) {
                 ImGui::Text("%s ms: %f", timer.first, timer.second.result() / 1e6);
             }
+
+            Renderer::Stats rendererStats = renderer.stats();
+            ImGui::Text("Descriptors: %d", rendererStats.descriptorCount);
+            ImGui::Text("Pipelines: %d", rendererStats.pipelineCount);
 
             ende::math::Vec3f colour = scene._lights.front().getColour();
             f32 intensity = scene._lights.front().getIntensity();
@@ -184,11 +189,10 @@ int main() {
         {
             modelTransform.rotate(ende::math::Vec3f{0, 1, 0}, ende::math::rad(45) * dt);
             lightTransform.rotate(ende::math::Vec3f{0, 1, 1}, ende::math::rad(45) * dt);
-
-            scene.prepare(camera);
         }
-
         renderer.beginFrame();
+
+        scene.prepare(renderer.frameIndex(), camera);
 
         renderer.render(scene, camera, &imGuiContext);
 

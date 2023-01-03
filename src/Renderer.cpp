@@ -9,8 +9,9 @@ cala::Renderer::Renderer(cala::Engine* engine)
       _cameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _lightCameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT))
 {
-    _passTimers.emplace("shadowsPass", backend::vulkan::Timer{_engine->driver(), 0});
-    _passTimers.emplace("lightingPass", backend::vulkan::Timer{_engine->driver(), 1});
+    _passTimers.emplace("totalGPU", backend::vulkan::Timer{_engine->driver(), 0});
+    _passTimers.emplace("shadowsPass", backend::vulkan::Timer{_engine->driver(), 1});
+    _passTimers.emplace("lightingPass", backend::vulkan::Timer{_engine->driver(), 2});
 }
 
 bool cala::Renderer::beginFrame() {
@@ -30,18 +31,22 @@ f64 cala::Renderer::endFrame() {
     _engine->driver().swapchain().present(_swapchainInfo, _frameInfo.cmd->signal());
     _engine->driver().endFrame();
 
+    _stats.pipelineCount = _frameInfo.cmd->pipelineCount();
+    _stats.descriptorCount = _frameInfo.cmd->descriptorCount();
+
     return static_cast<f64>(_engine->driver().milliseconds()) / 1000.f;
 }
 
 void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiContext* imGui) {
-    camera.updateFrustum();
+//    camera.updateFrustum();
     auto cameraData = camera.data();
     _cameraBuffer->data({ &cameraData, sizeof(cameraData) });
 
     backend::vulkan::CommandBuffer& cmd = *_frameInfo.cmd;
+    _passTimers[0].second.start(cmd);
 
     // shadows
-    _passTimers[0].second.start(cmd);
+    _passTimers[1].second.start(cmd);
     for (u32 light = 0; light < scene._lights.size(); ++light) {
         if (scene._lights[light].shadowing()) {
             // draw shadows
@@ -64,7 +69,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                     cmd.bindProgram(*_engine->_pointShadowProgram);
 
-                    cmd.bindBuffer(3, 0, scene._lightBuffer, light * sizeof(Light::Data), sizeof(Light::Data));
+                    cmd.bindBuffer(3, 0, scene._lightBuffer[frameIndex()], light * sizeof(Light::Data), sizeof(Light::Data));
 
                     switch (face) {
                         case 0:
@@ -92,16 +97,19 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd.pushConstants({ &shadowData, sizeof(shadowData) });
                     shadowCamera.updateFrustum();
 
-                    for (u32 i = 0; i < scene._renderables.size(); ++i) {
-                        auto& renderable = scene._renderables[i].second.first;
-                        auto& transform = scene._renderables[i].second.second;
+                    for (u32 i = 0; i < scene._renderList.size(); ++i) {
+                        auto& renderable = scene._renderList[i].second.first;
+                        auto& transform = scene._renderList[i].second.second;
+
+                        if ((lightObj.transform().pos() - transform->pos()).length() > lightObj.getRadius())
+                            continue;
 
                         if (!shadowCamera.frustum().intersect(transform->pos(), 2))
                             continue;
 
                         cmd.bindBindings(renderable.bindings);
                         cmd.bindAttributes(renderable.attributes);
-                        cmd.bindBuffer(1, 0, scene._modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+                        cmd.bindBuffer(1, 0, scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
                         cmd.bindPipeline();
                         cmd.bindDescriptors();
                         cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
@@ -118,11 +126,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
         }
     }
-    _passTimers[0].second.stop();
+    _passTimers[1].second.stop();
 
     cmd.clearDescriptors();
 
-    _passTimers[1].second.start(cmd);
+    _passTimers[2].second.start(cmd);
     cmd.begin(*_swapchainInfo.framebuffer);
 
     cmd.bindBuffer(0, 0, *_cameraBuffer);
@@ -133,7 +141,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     for (u32 light = 0; light < lightCount; ++light) {
 
         if (!scene._lightData.empty()) {
-            cmd.bindBuffer(3, 0, scene._lightBuffer, light * sizeof(Light::Data), sizeof(Light::Data));
+            cmd.bindBuffer(3, 0, scene._lightBuffer[frameIndex()], light * sizeof(Light::Data), sizeof(Light::Data));
             auto lightCamData = scene._lights[light].camera().data();
             _lightCameraBuffer->data({ &lightCamData, sizeof(lightCamData) });
             cmd.bindBuffer(0, 1, *_lightCameraBuffer);
@@ -155,7 +163,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     materialInstance->bind(cmd);
             }
 
-            cmd.bindBuffer(1, 0, scene._modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+            cmd.bindBuffer(1, 0, scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
 
             if (scene._lights[light].shadowing())
                 cmd.bindImage(2, 3, _engine->getShadowProbe(light).view(), _engine->_defaultSampler);
@@ -174,11 +182,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         }
 
     }
-    _passTimers[1].second.stop();
+    _passTimers[2].second.stop();
 
     if (imGui)
         imGui->render(cmd);
 
     cmd.end(*_swapchainInfo.framebuffer);
+    _passTimers[0].second.stop();
 
 }

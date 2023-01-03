@@ -323,7 +323,7 @@ int main() {
             auto cameraData = camera.data();
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
 
-            scene.prepare();
+            scene.prepare(0, camera);
         }
 
         Driver::FrameInfo frameInfo = driver.beginFrame();
@@ -366,9 +366,9 @@ int main() {
 
                     lightCamera.updateFrustum();
 
-                    for (u32 i = 0; i < scene._renderables.size(); i++) {
-                        auto& renderable = scene._renderables[i].second.first;
-                        auto& transform = scene._renderables[i].second.second;
+                    for (u32 i = 0; i < scene._renderList.size(); i++) {
+                        auto& renderable = scene._renderList[i].second.first;
+                        auto& transform = scene._renderList[i].second.second;
 
                         if (!lightCamera.frustum().intersect(transform->pos(), 2)) //if radius is too small clips edges
                             continue;
@@ -376,7 +376,7 @@ int main() {
                         frameInfo.cmd->bindBindings(renderable.bindings);
                         frameInfo.cmd->bindAttributes(renderable.attributes);
 
-                        frameInfo.cmd->bindBuffer(1, 0, scene._modelBuffer, i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+                        frameInfo.cmd->bindBuffer(1, 0, scene._modelBuffer[0], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
 
                         frameInfo.cmd->bindPipeline();
                         frameInfo.cmd->bindDescriptors();
