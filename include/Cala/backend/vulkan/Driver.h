@@ -90,6 +90,8 @@ namespace cala::backend::vulkan {
             }
         };
         std::unordered_map<SetLayoutKey, VkDescriptorSetLayout, ende::util::MurmurHash<SetLayoutKey>> _setLayouts;
+        VkDescriptorSetLayout _emptySetLayout;
+        VkDescriptorSet _emptySet;
 
     };
 

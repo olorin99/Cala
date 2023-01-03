@@ -38,7 +38,6 @@ f64 cala::Renderer::endFrame() {
 }
 
 void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiContext* imGui) {
-//    camera.updateFrustum();
     auto cameraData = camera.data();
     _cameraBuffer->data({ &cameraData, sizeof(cameraData) });
 

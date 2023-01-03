@@ -29,6 +29,10 @@ namespace cala::backend {
             return sets[set].byteSize;
         }
 
+        bool setPresent(u32 set) const {
+            return sets[set].byteSize > 0;
+        }
+
     private:
         friend cala::backend::vulkan::ShaderProgram;
 
@@ -61,6 +65,8 @@ namespace cala::backend {
                 std::string name;
             } bindings[MAX_BINDING_PER_SET];
         } sets[MAX_SET_COUNT];
+
+        u32 setCount = 0;
 
     };
 

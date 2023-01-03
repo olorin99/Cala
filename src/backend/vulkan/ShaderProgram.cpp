@@ -21,6 +21,8 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
     bool hasPushConstant = false;
     VkPushConstantRange pushConstant{};
 
+    u32 setCount = 0;
+
     for (auto& stage : _stages) {
         // reflection
         spirv_cross::Compiler comp(stage.first.data(), stage.first.size());
@@ -45,7 +47,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
             program._interface.sets[set].bindings[binding].byteSize = size;
 
             for (u32 i = 0; i < memberCount; i++) {
-                const std::string name = comp.get_member_name(type.self, i);
+                const std::string& name = comp.get_member_name(type.self, i);
                 u32 offset = comp.type_struct_member_offset(type, i);
                 u32 memberSize = comp.get_declared_struct_member_size(type, i);
                 program._interface.getMemberList(set, binding)[name] = {offset, memberSize};

@@ -10,9 +10,9 @@
 #include <Cala/backend/vulkan/Image.h>
 #include <Cala/backend/vulkan/Sampler.h>
 
-#include <unordered_map>
 #include <cstring>
 #include <Ende/util/hash.h>
+#include "../third_party/tsl/robin_map.h"
 
 namespace cala::backend::vulkan {
 
@@ -162,7 +162,7 @@ namespace cala::backend::vulkan {
         } _pipelineKey;
 
         VkPipeline _currentPipeline;
-        std::unordered_map<PipelineKey, VkPipeline, ende::util::MurmurHash<PipelineKey>> _pipelines;
+        tsl::robin_map<PipelineKey, VkPipeline, ende::util::MurmurHash<PipelineKey>> _pipelines;
 
         struct DescriptorKey {
             VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
@@ -187,7 +187,8 @@ namespace cala::backend::vulkan {
 
         //TODO: cull descriptors every now and again
         VkDescriptorSet _currentSets[MAX_SET_COUNT];
-        std::unordered_map<DescriptorKey, VkDescriptorSet, ende::util::MurmurHash<DescriptorKey>> _descriptorSets;
+        tsl::robin_map<DescriptorKey, VkDescriptorSet, ende::util::MurmurHash<DescriptorKey>> _descriptorSets;
+//        robin_hood::unordered_map<DescriptorKey, VkDescriptorSet> _descriptorSets;
 
         VkDescriptorPool _descriptorPool;
 

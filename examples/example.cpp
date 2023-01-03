@@ -94,7 +94,7 @@ int main() {
     matInstance.setSampler("normalMap", *brickwall_normal, Sampler(driver, {}));
     matInstance.setSampler("specularMap", *brickwall_specular, Sampler(driver, {}));
 
-    u32 objectCount = 100;
+    u32 objectCount = 500;
     Scene scene(driver, objectCount);
     scene.addLight(light);
     scene.addLight(light1);
@@ -102,7 +102,7 @@ int main() {
     scene.addRenderable(cube, &matInstance, &modelTransform);
 //    scene.addRenderable(mesh, &matInstance, &lightTransform);
 
-    f32 sceneSize = 10;
+    f32 sceneSize = objectCount / 10;
 
     Transform floorTransform({0, -sceneSize * 1.5f, 0}, {0, 0, 0, 1}, {sceneSize * 3, 1, sceneSize * 3});
     scene.addRenderable(cube, &matInstance, &floorTransform);

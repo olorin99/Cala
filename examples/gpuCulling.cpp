@@ -134,7 +134,7 @@ int main() {
     brickwallMat.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
 
 
-    CommandBufferList computeList(driver, QueueType::COMPUTE);
+//    CommandBufferList computeList(driver, QueueType::COMPUTE);
 
     Timer computeTimer(driver);
     Timer rasterTimer(driver, 1);
