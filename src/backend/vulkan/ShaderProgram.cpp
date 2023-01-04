@@ -256,6 +256,17 @@ cala::backend::vulkan::ShaderProgram::ShaderProgram(ShaderProgram &&rhs)
     std::swap(_stageFlags, rhs._stageFlags);
 }
 
+cala::backend::vulkan::ShaderProgram &cala::backend::vulkan::ShaderProgram::operator=(ShaderProgram &&rhs) noexcept {
+    std::swap(_device, rhs._device);
+    std::swap(_device, rhs._device);
+    std::swap(_stages, rhs._stages);
+    for (u32 i = 0; i < MAX_SET_COUNT; i++)
+        _setLayout[i] = rhs._setLayout[i];
+    std::swap(_layout, rhs._layout);
+    std::swap(_interface, rhs._interface);
+    std::swap(_stageFlags, rhs._stageFlags);
+    return *this;
+}
 
 VkPipelineLayout cala::backend::vulkan::ShaderProgram::layout() {
     if (_layout != VK_NULL_HANDLE)

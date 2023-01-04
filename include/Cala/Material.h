@@ -5,8 +5,9 @@
 #include <Cala/backend/vulkan/ShaderProgram.h>
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include <Ende/Vector.h>
-
+#include "../third_party/tsl/robin_map.h"
 #include <Cala/MaterialInstance.h>
+#include <Cala/Engine.h>
 
 /*
  * Material
@@ -22,14 +23,23 @@ namespace cala {
     class Material {
     public:
 
-        Material(backend::vulkan::Driver& driver, backend::vulkan::ShaderProgram&& program);
+        enum class Variants {
+            POINT,
+            DIRECTIONAL
+        };
+
+        Material(Engine* engine);
 
         MaterialInstance instance();
+
+        void setProgram(Variants variant, ProgramHandle program);
+
+        ProgramHandle getProgram(Variants variant);
 //    private:
 
-        backend::vulkan::Driver& _driver;
+        Engine* _engine;
 
-        backend::vulkan::ShaderProgram _program;
+        ende::Vector<ProgramHandle> _programs;
         backend::vulkan::CommandBuffer::RasterState _rasterState;
         backend::vulkan::CommandBuffer::DepthState _depthState;
 

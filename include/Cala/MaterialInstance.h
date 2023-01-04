@@ -42,6 +42,8 @@ namespace cala {
 
         bool setSampler(const char* name, cala::backend::vulkan::Image::View&& view, backend::vulkan::Sampler&& sampler);
 
+        Material* getMaterial() const { return _material; }
+
         void bind(backend::vulkan::CommandBuffer& cmd, u32 set = 2, u32 first = 0);
 
         const backend::vulkan::SamplerArray& samplers() const { return _samplers; }

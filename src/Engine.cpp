@@ -1,6 +1,6 @@
 #include "Cala/Engine.h"
 #include <Ende/filesystem/File.h>
-
+#include <Cala/backend/vulkan/ShaderProgram.h>
 #include <Cala/Probe.h>
 
 template <>
@@ -19,6 +19,15 @@ cala::backend::vulkan::Image &cala::ImageHandle::operator*() noexcept {
 template <>
 cala::backend::vulkan::Image *cala::ImageHandle::operator->() noexcept {
     return &_engine->_images[_index];
+}
+
+template <>
+cala::backend::vulkan::ShaderProgram &cala::ProgramHandle::operator*() noexcept {
+    return _engine->_programs[_index];
+}
+template <>
+cala::backend::vulkan::ShaderProgram *cala::ProgramHandle::operator->() noexcept {
+    return &_engine->_programs[_index];
 }
 
 cala::backend::vulkan::RenderPass::Attachment shadowPassAttachment {
@@ -81,12 +90,34 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
     _defaultPointShadow->data(_driver, {
         0, 1, 1, 1, 4, { &data, sizeof(data) }
     });
+
+    _defaultDirectionalShadow = createImage({
+        1,
+        1,
+        1,
+        backend::Format::D32_SFLOAT,
+        1,
+        1,
+        backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST,
+        backend::ImageLayout::UNDEFINED,
+        backend::ImageType::IMAGE2D
+    });
+
+    _defaultDirectionalShadow->data(_driver, {
+            0, 1, 1, 1, 4, { &data, sizeof(data) }
+    });
+
+
+
     _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
         auto cubeBarrier = _defaultPointShadow->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
+        auto flatBarrier = _defaultDirectionalShadow->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, 0, nullptr, { &cubeBarrier, 1 });
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, 0, nullptr, { &flatBarrier, 1 });
     });
 
     _defaultPointShadowView = _defaultPointShadow->getView(VK_IMAGE_VIEW_TYPE_CUBE);
+    _defaultDirectionalShadowView = _defaultDirectionalShadow->getView();
 
 }
 
@@ -105,6 +136,12 @@ cala::BufferHandle cala::Engine::createBuffer(u32 size, backend::BufferUsage usa
 cala::ImageHandle cala::Engine::createImage(backend::vulkan::Image::CreateInfo info) {
     _images.emplace(_driver, info);
     u32 index = _images.size() - 1;
+    return { this, index };
+}
+
+cala::ProgramHandle cala::Engine::createProgram(backend::vulkan::ShaderProgram &&program) {
+    u32 index = _programs.size();
+    _programs.push(std::move(program));
     return { this, index };
 }
 

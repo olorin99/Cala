@@ -5,18 +5,18 @@
 cala::MaterialInstance::MaterialInstance(Material &material, u32 offset)
     : _material(&material),
       _offset(offset),
-      _samplers(material._driver)
+      _samplers(material._engine->driver())
 {}
 
 cala::MaterialInstance::MaterialInstance(MaterialInstance &&rhs) noexcept
-    : _samplers(rhs._material->_driver)
+    : _samplers(rhs._material->_engine->driver())
 {
     std::swap(_material, rhs._material);
     std::swap(_samplers, rhs._samplers);
 }
 
 bool cala::MaterialInstance::setUniform(u32 set, const char *name, u8 *data, u32 size) {
-    i32 offset = _material->_program.interface().getUniformOffset(set, name);
+    i32 offset = _material->getProgram(Material::Variants::POINT)->interface().getUniformOffset(set, name);
     if (offset < 0)
         return false;
     if (material()->_uniformData.size() < offset + size)
@@ -39,7 +39,7 @@ bool cala::MaterialInstance::setSampler(const char *name, cala::backend::vulkan:
 }
 
 bool cala::MaterialInstance::setSampler(u32 set, const char *name, backend::vulkan::Image::View &&view, backend::vulkan::Sampler&& sampler) {
-    i32 binding = material()->_program.interface().getSamplerBinding(set, name);
+    i32 binding = material()->getProgram(Material::Variants::POINT)->interface().getSamplerBinding(set, name);
     if (binding < 0)
         return false;
     _samplers.set(binding, std::forward<backend::vulkan::Image::View>(view), std::forward<backend::vulkan::Sampler>(sampler));
@@ -51,10 +51,6 @@ bool cala::MaterialInstance::setSampler(const char *name, backend::vulkan::Image
 }
 
 void cala::MaterialInstance::bind(backend::vulkan::CommandBuffer &cmd, u32 set, u32 first) {
-    cmd.bindProgram(_material->_program);
-    cmd.bindRasterState(_material->_rasterState);
-    cmd.bindDepthState(_material->_depthState);
-
     for (u32 i = 0; i < _samplers.size(); i++) {
         auto viewPair = _samplers.get(i);
         cmd.bindImage(set, first + i, viewPair.first, viewPair.second);

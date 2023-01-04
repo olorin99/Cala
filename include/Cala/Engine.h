@@ -39,6 +39,7 @@ namespace cala {
     };
     using BufferHandle = Handle<backend::vulkan::Buffer>;
     using ImageHandle = Handle<backend::vulkan::Image>;
+    using ProgramHandle = Handle<backend::vulkan::ShaderProgram>;
 
     class Renderer;
 
@@ -57,10 +58,13 @@ namespace cala {
 
         ImageHandle createImage(backend::vulkan::Image::CreateInfo info);
 
+        ProgramHandle createProgram(backend::vulkan::ShaderProgram&& program);
+
     private:
         friend Renderer;
         friend BufferHandle;
         friend ImageHandle;
+        friend ProgramHandle;
 
         backend::vulkan::Driver _driver;
 
@@ -72,9 +76,12 @@ namespace cala {
 
         ImageHandle _defaultPointShadow;
         backend::vulkan::Image::View _defaultPointShadowView;
+        ImageHandle _defaultDirectionalShadow;
+        backend::vulkan::Image::View _defaultDirectionalShadowView;
 
         ende::Vector<backend::vulkan::Buffer> _buffers;
         ende::Vector<backend::vulkan::Image> _images;
+        ende::Vector<backend::vulkan::ShaderProgram> _programs;
         std::vector<Probe> _shadowProbes; //TODO: fix vectors in Ende, Optional implementation sucks
 
         Probe& getShadowProbe(u32 index);

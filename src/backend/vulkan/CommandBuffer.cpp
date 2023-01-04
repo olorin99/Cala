@@ -110,7 +110,7 @@ void cala::backend::vulkan::CommandBuffer::end(Framebuffer &framebuffer) {
 }
 
 
-void cala::backend::vulkan::CommandBuffer::bindProgram(ShaderProgram &program) {
+void cala::backend::vulkan::CommandBuffer::bindProgram(const ShaderProgram &program) {
     if (_pipelineKey.layout != program._layout)
         _pipelineKey.layout = program._layout;
 

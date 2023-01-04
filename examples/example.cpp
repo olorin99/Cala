@@ -60,7 +60,8 @@ int main() {
     ImGuiContext imGuiContext(engine.driver(), platform.window());
 
     //Shaders
-    ShaderProgram program = loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/point_shadow.frag.spv"_path);
+    ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/point_shadow.frag.spv"_path));
+    ProgramHandle directionalLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/direct_shadow.frag.spv"_path));
 
     Mesh cube = cala::shapes::cube().mesh(engine.driver());
     Mesh sphere = cala::shapes::sphereNormalized(1).mesh(engine.driver());
@@ -73,8 +74,12 @@ int main() {
 
     Transform lightTransform({-3, 3, -1}, {0, 0, 0, 1}, {0.5, 0.5, 0.5});
     Light light(cala::Light::POINT, true, lightTransform);
-    Transform light2Transform({10, 2, 4});
-    Light light1(cala::Light::POINT, false, light2Transform);
+    Transform light1Transform({10, 2, 4});
+    Light light1(cala::Light::POINT, false, light1Transform);
+    Transform light2Transform({0, 0, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(45)));
+    Light light2(cala::Light::DIRECTIONAL, false, light2Transform);
+
+
 //    Camera camera((f32)ende::math::rad(54.4), 800.f, 600.f, 0.1f, 1000.f, lightTransform);
 
     Sampler sampler(engine.driver(), {});
@@ -84,7 +89,9 @@ int main() {
     ImageHandle brickwall_specular = loadImage(engine, "../../res/textures/brickwall_specular.jpg"_path);
 
 
-    Material material(engine.driver(), std::move(program));
+    Material material(&engine);
+    material.setProgram(Material::Variants::POINT, pointLightProgram);
+    material.setProgram(Material::Variants::DIRECTIONAL, directionalLightProgram);
     material._depthState = { true, true, CompareOp::LESS_EQUAL };
 
     auto matInstance = material.instance();
@@ -96,6 +103,7 @@ int main() {
     Scene scene(&engine, objectCount);
     scene.addLight(light);
 //    scene.addLight(light1);
+    scene.addLight(light2);
 
     scene.addRenderable(cube, &matInstance, &modelTransform);
 //    scene.addRenderable(mesh, &matInstance, &lightTransform);
@@ -178,6 +186,11 @@ int main() {
                 ImGui::SliderFloat("Intensity", &intensity, 1, 50)) {
                 scene._lights.front().setColour(colour);
                 scene._lights.front().setIntensity(intensity);
+            }
+
+            ende::math::Quaternion direction = scene._lights.back().transform().rot();
+            if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1)) {
+                light2.setDirection(direction);
             }
 
             ImGui::End();

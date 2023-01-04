@@ -40,6 +40,8 @@ namespace cala::backend::vulkan {
 
         ShaderProgram& operator=(const ShaderProgram& rhs) = delete;
 
+        ShaderProgram& operator=(ShaderProgram&& rhs) noexcept;
+
 
         VkPipelineLayout layout();
 
