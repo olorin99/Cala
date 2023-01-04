@@ -42,11 +42,11 @@ VkPresentModeKHR getPresentMode(VkPhysicalDevice device, VkSurfaceKHR surface) {
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D getExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
+VkExtent2D getExtent(const VkSurfaceCapabilitiesKHR& capabilities, u32 width, u32 height) {
     if (capabilities.currentExtent.width != std::numeric_limits<u32>::max())
         return capabilities.currentExtent;
 
-    VkExtent2D extent = {800, 600};
+    VkExtent2D extent = {width, height};
     extent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, extent.width));
     extent.height = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.height, extent.height));
     return extent;
@@ -56,19 +56,24 @@ cala::backend::vulkan::Swapchain::Swapchain(Driver &driver, Platform& platform, 
     : _driver(driver),
     _swapchain(VK_NULL_HANDLE),
     _frame(0),
-    _depthImage(driver, {
-        800, 600, 1, driver.context().depthFormat(), 1, 1, backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT
-    }),
-    _depthView(_depthImage.getView())
+    _depthImage(nullptr),
+    _depthView()
 {
     _surface = platform.surface(_driver.context().instance());
     VkBool32 supported = VK_FALSE;
     vkGetPhysicalDeviceSurfaceSupportKHR(_driver.context().physicalDevice(), _driver.context().queueIndex(QueueType::GRAPHICS), _surface, &supported);
+    auto windowSize = platform.windowSize();
+    _extent = { windowSize.first, windowSize.second };
 
     //TODO: get better error handling
     if (!createSwapchain()) throw std::runtime_error("Unable to create swapchain");
     if (!createImageViews()) throw std::runtime_error("Unable to create swapchains image views");
     if (!createSemaphores()) throw std::runtime_error("Unable to create swapchains semaphores");
+
+    _depthImage = new Image(driver, {
+            _extent.width, _extent.height, 1, driver.context().depthFormat(), 1, 1, backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT
+    });
+    _depthView = _depthImage->getView();
 
     std::array<RenderPass::Attachment, 2> attachments = {
             RenderPass::Attachment{
@@ -99,11 +104,12 @@ cala::backend::vulkan::Swapchain::Swapchain(Driver &driver, Platform& platform, 
 
     for (auto& view : _imageViews) {
         VkImageView framebufferAttachments[2] = { view, _depthView.view };
-        _framebuffers.emplace(_driver.context().device(), *_renderPass, framebufferAttachments, 800, 600);
+        _framebuffers.emplace(_driver.context().device(), *_renderPass, framebufferAttachments, _extent.width, _extent.height);
     }
 }
 
 cala::backend::vulkan::Swapchain::~Swapchain() {
+    delete _depthImage;
     delete _renderPass;
 
     for (auto& semaphore : _semaphores) {
@@ -123,7 +129,7 @@ cala::backend::vulkan::Swapchain::Frame cala::backend::vulkan::Swapchain::nextIm
     u32 index = 0;
     VkResult result = vkAcquireNextImageKHR(_driver.context().device(), _swapchain, std::numeric_limits<u64>::max(), image, VK_NULL_HANDLE, &index);
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        resize(_depthImage.width(), _depthImage.height());
+        resize(_depthImage->width(), _depthImage->height());
     }
 
     return { _frame++, index, image, &_framebuffers[index] };
@@ -151,48 +157,22 @@ bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFi
 }
 
 bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {
-//    delete _renderPass;
     _framebuffers.clear();
     for (auto& view : _imageViews)
         vkDestroyImageView(_driver.context().device(), view, nullptr);
-    //vkDestroySwapchainKHR(_driver.context().device(), _swapchain, nullptr);
 
-    _depthImage = Image(_driver, { width, height, 1, _driver.context().depthFormat(), 1, 1, ImageUsage::DEPTH_STENCIL_ATTACHMENT });
-    _depthView = _depthImage.getView();
+    _extent = { width, height };
 
     createSwapchain();
     createImageViews();
 
-//    std::array<RenderPass::Attachment, 2> attachments = {
-//            RenderPass::Attachment{
-//                    format(),
-//                    VK_SAMPLE_COUNT_1_BIT,
-//                    VK_ATTACHMENT_LOAD_OP_CLEAR,
-//                    VK_ATTACHMENT_STORE_OP_STORE,
-//                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-//                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
-//                    VK_IMAGE_LAYOUT_UNDEFINED,
-//                    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-//                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-//            },
-//            RenderPass::Attachment{
-//                    _driver.context().depthFormat(),
-//                    VK_SAMPLE_COUNT_1_BIT,
-//                    VK_ATTACHMENT_LOAD_OP_CLEAR,
-//                    VK_ATTACHMENT_STORE_OP_STORE,
-//                    VK_ATTACHMENT_LOAD_OP_CLEAR,
-//                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
-//                    VK_IMAGE_LAYOUT_UNDEFINED,
-//                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-//                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-//            }
-//    };
-//
-//    _renderPass = new RenderPass(_driver, attachments);
+    delete _depthImage;
+    _depthImage = new Image(_driver, { _extent.width, _extent.height, 1, _driver.context().depthFormat(), 1, 1, ImageUsage::DEPTH_STENCIL_ATTACHMENT });
+    _depthView = _depthImage->getView();
 
     for (auto& view : _imageViews) {
         VkImageView framebufferAttachments[2] = { view, _depthView.view };
-        _framebuffers.emplace(_driver.context().device(), *_renderPass, framebufferAttachments, width, height);
+        _framebuffers.emplace(_driver.context().device(), *_renderPass, framebufferAttachments, _extent.width, _extent.height);
     }
     return true;
 }
@@ -285,7 +265,7 @@ bool cala::backend::vulkan::Swapchain::createSwapchain() {
     VkSurfaceCapabilitiesKHR capabilities = getCapabilities(_driver.context().physicalDevice(), _surface);
     VkSurfaceFormatKHR format = getSurfaceFormat(_driver.context().physicalDevice(), _surface);
     VkPresentModeKHR mode = getPresentMode(_driver.context().physicalDevice(), _surface);
-    VkExtent2D extent = getExtent(capabilities);
+    VkExtent2D extent = getExtent(capabilities, _extent.width, _extent.height);
 
     u32 imageCount = capabilities.minImageCount + 1;
     if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount)
@@ -319,8 +299,8 @@ bool cala::backend::vulkan::Swapchain::createSwapchain() {
     _images.resize(count);
     vkGetSwapchainImagesKHR(_driver.context().device(), _swapchain, &count, _images.data());
 
-    _format = static_cast<Format>(format.format);
     _extent = extent;
+    _format = static_cast<Format>(format.format);
     return result == VK_SUCCESS;
 }
 

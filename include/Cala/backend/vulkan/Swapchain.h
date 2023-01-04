@@ -70,7 +70,7 @@ namespace cala::backend::vulkan {
         ende::Vector<VkImageView> _imageViews;
         ende::Vector<VkSemaphore> _semaphores;
 
-        Image _depthImage;
+        Image* _depthImage;
         Image::View _depthView;
 
         RenderPass* _renderPass;

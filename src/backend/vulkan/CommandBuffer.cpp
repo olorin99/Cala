@@ -229,6 +229,12 @@ void cala::backend::vulkan::CommandBuffer::bindDepthState(DepthState state) {
     }
 }
 
+void cala::backend::vulkan::CommandBuffer::bindBlendState(BlendState state) {
+    if (ende::util::MurmurHash<BlendState>()(_pipelineKey.blend) != ende::util::MurmurHash<BlendState>()(state)) {
+        _pipelineKey.blend = state;
+    }
+}
+
 void cala::backend::vulkan::CommandBuffer::bindPipeline() {
     //TODO: add dirty check so dont have to search to check if bound
     if (auto pipeline = getPipeline(); pipeline != _currentPipeline && pipeline != VK_NULL_HANDLE) {
@@ -490,10 +496,10 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
         //TODO: set up so can be configured by user
         VkPipelineColorBlendAttachmentState colorBlendAttachment{};
         colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        colorBlendAttachment.blendEnable = VK_TRUE;
+        colorBlendAttachment.blendEnable = _pipelineKey.blend.blend;
         colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-        colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-        colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment.srcColorBlendFactor = getBlendFactor(_pipelineKey.blend.srcFactor);
+        colorBlendAttachment.dstColorBlendFactor = getBlendFactor(_pipelineKey.blend.dstFactor);
         colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
         colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
         colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;

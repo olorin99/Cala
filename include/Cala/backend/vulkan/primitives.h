@@ -46,6 +46,10 @@ namespace cala::backend::vulkan {
         return static_cast<VkCompareOp>(op);
     }
 
+    constexpr inline VkBlendFactor getBlendFactor(BlendFactor factor) {
+        return static_cast<VkBlendFactor>(factor);
+    }
+
     constexpr inline VkShaderStageFlagBits getShaderStage(ShaderStage stage) {
         return static_cast<VkShaderStageFlagBits>(stage);
     }

@@ -94,7 +94,7 @@ void cala::Scene::render(backend::vulkan::CommandBuffer& cmd) {
 
     for (u32 light = 0; light < lightCount; light++) {
         if (!_lightData.empty())
-            cmd.bindBuffer(3, 0, *_lightBuffer[1], light * sizeof(Light::Data), sizeof(Light::Data));
+            cmd.bindBuffer(3, 0, *_lightBuffer[0], light * sizeof(Light::Data), sizeof(Light::Data));
 
         for (u32 i = 0; i < _renderList.size(); i++) {
             auto& renderable = _renderList[i].second.first;
@@ -108,7 +108,7 @@ void cala::Scene::render(backend::vulkan::CommandBuffer& cmd) {
                 renderable.materialInstance->bind(cmd);
             }
 
-            cmd.bindBuffer(1, 0, *_modelBuffer[1], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+            cmd.bindBuffer(1, 0, *_modelBuffer[0], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
 
             cmd.bindPipeline();
             cmd.bindDescriptors();

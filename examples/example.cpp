@@ -52,7 +52,7 @@ ImageHandle loadImage(Engine& engine, const ende::fs::Path& path) {
 }
 
 int main() {
-    SDLPlatform platform("hello_triangle", 800, 600);
+    SDLPlatform platform("hello_triangle", 800, 600, SDL_WINDOW_RESIZABLE);
 
     Engine engine(platform);
     Renderer renderer(&engine);

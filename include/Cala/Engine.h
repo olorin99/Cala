@@ -45,7 +45,7 @@ namespace cala {
     class Engine {
     public:
 
-        Engine(backend::Platform& platform);
+        Engine(backend::Platform& platform, bool clear = true);
 
         ~Engine();
 

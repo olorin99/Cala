@@ -34,8 +34,8 @@ cala::backend::vulkan::RenderPass::Attachment shadowPassAttachment {
 };
 
 
-cala::Engine::Engine(backend::Platform &platform)
-    : _driver(platform),
+cala::Engine::Engine(backend::Platform &platform, bool clear)
+    : _driver(platform, clear),
       _shadowPass(_driver, { &shadowPassAttachment, 1 }),
       _defaultSampler(_driver, {})
 {

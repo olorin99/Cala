@@ -80,6 +80,13 @@ namespace cala::backend::vulkan {
         };
         void bindDepthState(DepthState state);
 
+        struct BlendState {
+            bool blend = false;
+            BlendFactor srcFactor = BlendFactor::ONE;
+            BlendFactor dstFactor = BlendFactor::ONE;
+        };
+        void bindBlendState(BlendState state);
+
 
         void bindPipeline();
 
@@ -154,6 +161,7 @@ namespace cala::backend::vulkan {
             ViewPort viewPort = {};
             RasterState raster = {};
             DepthState depth = {};
+            BlendState blend = {};
             //TODO: add rest of pipeline state to key
 
             bool operator==(const PipelineKey& rhs) const {

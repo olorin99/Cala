@@ -11,7 +11,7 @@
 #include "Cala/Material.h"
 #include <Cala/Probe.h>
 #include <Cala/backend/vulkan/Timer.h>
-
+#include <Cala/Engine.h>
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/cimport.h>
@@ -135,7 +135,8 @@ ende::math::Vec3f lerpPositions(ende::Span<ende::math::Vec3f> inputs, f32 factor
 
 int main() {
     SDLPlatform platform("hello_triangle", 800, 600);
-    Driver driver(platform, false);
+    Engine engine(platform, false);
+    auto& driver = engine.driver();
 
     ImGuiContext imGuiContext(driver, platform.window());
 
@@ -213,7 +214,7 @@ int main() {
     Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / 600.f, 0.1f, 1000.f), cameraTransform);
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
 
-    Scene scene(driver, 10);
+    Scene scene(&engine, 10);
 //    Mesh cube = shapes::cube().mesh(driver);
 //    Mesh cube = shapes::sphereUV(1).mesh(driver);
     Mesh cube = loadModel("../../res/models/sphere.obj"_path).mesh(driver);
@@ -255,39 +256,29 @@ int main() {
             { normalData, sizeof(f32) * 4 }
     });
 
-    ende::Vector<PBRMaterial> materials;
-    materials.reserve(200);
+
+    ende::Vector<Image> images;
+    images.reserve(20);
 
     for (f32 metallic = 0; metallic <= 1.01f; metallic += 0.1f) {
-        Image* metallicImage = new Image(driver, {
+        images.emplace(Image{driver, {
             1, 1, 1,
             Format::R32_SFLOAT,
             1, 1,
             ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST,
             ImageLayout::GENERAL,
             ImageType::IMAGE2D
-        });
-        metallicImage->data(driver, { 0, 1, 1, 1, 4, { &metallic, sizeof(f32) }});
-
-
-        for (f32 roughness = 0; roughness <= 1.01f; roughness += 0.1) {
-            Image* roughnessImage = new Image(driver, {
-                    1, 1, 1,
-                    Format::R32_SFLOAT,
-                    1, 1,
-                    ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST,
-                    ImageLayout::GENERAL,
-                    ImageType::IMAGE2D
-            });
-            roughnessImage->data(driver, { 0, 1, 1, 1, 4, { &roughness, sizeof(f32) }});
-
-            materials.push({
-                &albedo,
-                &normal,
-                metallicImage,
-                roughnessImage
-            });
-        }
+        }}).data(driver, { 0, 1, 1, 1, 4, { &metallic, sizeof(f32) }});
+    }
+    for (f32 roughness = 0; roughness <= 1.01f; roughness += 0.1) {
+        images.emplace(Image{driver, {
+                1, 1, 1,
+                Format::R32_SFLOAT,
+                1, 1,
+                ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST,
+                ImageLayout::GENERAL,
+                ImageType::IMAGE2D
+        }}).data(driver, { 0, 1, 1, 1, 4, { &roughness, sizeof(f32) }});
     }
 
     ende::Vector<MaterialInstance> instances;
@@ -296,28 +287,17 @@ int main() {
     ende::Vector<cala::Transform> transforms;
     transforms.reserve(200);
 
-//    auto& mat = materials[0 * 11 + 10];
-//
-//    auto& instance = instances.push(material.instance());
-//    instance.setSampler("albedoMap", mat.albedo->getView(), Sampler(driver, {}));
-//    instance.setSampler("normalMap", mat.normal->getView(), Sampler(driver, {}));
-//    instance.setSampler("metallicMap", mat.metallic->getView(), Sampler(driver, {}));
-//    instance.setSampler("roughnessMap", mat.roughness->getView(), Sampler(driver, {}));
-//    instance.setSampler("aoMap", brickwall_ao.getView(), Sampler(driver, {}));
-//
-//    transforms.push(Transform({0, 0, 0}));
-//
-//    scene.addRenderable(cube, &instance, &transforms.back());
     for (u32 x = 0; x <= 10; x++) {
         for (u32 y = 0; y <= 10; y++) {
 
-            auto& mat = materials[y * 11 + x];
+            auto& metallic = images[x];
+            auto& roughness = images[y];
 
             auto& instance = instances.push(material.instance());
-            instance.setSampler("albedoMap", mat.albedo->getView(), Sampler(driver, {}));
-            instance.setSampler("normalMap", mat.normal->getView(), Sampler(driver, {}));
-            instance.setSampler("metallicMap", mat.metallic->getView(), Sampler(driver, {}));
-            instance.setSampler("roughnessMap", mat.roughness->getView(), Sampler(driver, {}));
+            instance.setSampler("albedoMap", albedo.getView(), Sampler(driver, {}));
+            instance.setSampler("normalMap", normal.getView(), Sampler(driver, {}));
+            instance.setSampler("metallicMap", metallic.getView(), Sampler(driver, {}));
+            instance.setSampler("roughnessMap", roughness.getView(), Sampler(driver, {}));
             instance.setSampler("aoMap", brickwall_ao.getView(), Sampler(driver, {}));
 
             transforms.push(Transform({(f32)x * 3, (f32)y * 3, 0}));
@@ -326,25 +306,6 @@ int main() {
 
         }
     }
-
-//    scene.addRenderable(cube, &matInstance, &cameraTransform);
-
-
-//    for (int i = 0; i < 10; i++) {
-//        transforms.push(Transform({
-//            ende::math::rand(-5.f, 5.f), ende::math::rand(-5.f, 5.f), ende::math::rand(-5.f, 5.f)
-//        }));
-//        scene.addRenderable(cube, &matInstance, &transforms.back());
-//    }
-
-
-//    ende::Vector<ende::math::Vec3f> lightPositions = {
-//            {0, 0, 10},
-//            {10, 0, 0},
-//            {0, 0, -10},
-//            {-10, 0, 0},
-//            {0, 0, 10}
-//    };
 
     ende::Vector<ende::math::Vec3f> lightPositions = {
             {0, 0, 0},
@@ -358,7 +319,6 @@ int main() {
     Light light(Light::POINT, false, lightTransform);
 
     scene.addLight(light);
-
 //    scene.addRenderable(cube, &matInstance, &lightTransform);
 
     Sampler sampler(driver, {});
@@ -586,9 +546,6 @@ int main() {
     };
     Framebuffer framebuffer(driver.context().device(), renderPass, fbAttachments, 800, 600);
 
-
-
-
     auto systemTime = ende::time::SystemTime::now();
 
     f32 dt = 1.f / 60.f;
@@ -657,7 +614,7 @@ int main() {
             auto cameraData = camera.data();
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
 
-            scene.prepare();
+            scene.prepare(0, camera);
 
         }
 
@@ -721,10 +678,5 @@ int main() {
     }
 
     driver.wait();
-
-//    for (auto& mat : materials) {
-//        delete mat.metallic;
-//        delete mat.roughness;
-//    }
 
 }

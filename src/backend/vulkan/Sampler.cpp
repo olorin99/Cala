@@ -27,7 +27,8 @@ cala::backend::vulkan::Sampler::Sampler(Driver& driver, CreateInfo info)
 }
 
 cala::backend::vulkan::Sampler::~Sampler() {
-    vkDestroySampler(_driver.context().device(), _sampler, nullptr);
+    if (_sampler != VK_NULL_HANDLE)
+        vkDestroySampler(_driver.context().device(), _sampler, nullptr);
 }
 
 cala::backend::vulkan::Sampler::Sampler(Sampler &&rhs) noexcept

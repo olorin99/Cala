@@ -21,6 +21,8 @@ namespace cala::backend::vulkan {
 
         SDL_Window* window() const { return _window; }
 
+        std::pair<u32, u32> windowSize() const override;
+
     private:
 
         SDL_Window* _window;

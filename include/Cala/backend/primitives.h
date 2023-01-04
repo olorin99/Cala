@@ -144,6 +144,28 @@ namespace cala::backend {
         ALWAYS = 7
     };
 
+    enum class BlendFactor {
+        ZERO = 0,
+        ONE = 1,
+        SRC_COLOUR = 2,
+        ONE_MINUS_SRC_COLOUR = 3,
+        DST_COLOUR = 4,
+        ONE_MINUS_DST_COLOUR = 5,
+        SRC_ALPHA = 6,
+        ONE_MINUS_SRC_ALPHA = 7,
+        DST_ALPHA = 8,
+        ONE_MINUS_DST_ALPHA = 9,
+        CONSTANT_COLOUR = 10,
+        ONE_MINUS_CONSTANT_COLOUR = 11,
+        CONSTANT_ALPHA = 12,
+        ONE_MINUS_CONSTANT_ALPHA = 13,
+        SRC_ALPHA_SATURATE = 14,
+        SRC1_COLOUR = 15,
+        ONE_MINUS_SRC1_COLOUR = 16,
+        SRC1_ALPHA = 17,
+        ONE_MINUS_SRC1_ALPHA = 18
+    };
+
     enum class ShaderStage {
         NONE = 0,
         VERTEX = 0x00000001,

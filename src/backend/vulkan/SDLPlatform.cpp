@@ -34,3 +34,9 @@ VkSurfaceKHR cala::backend::vulkan::SDLPlatform::surface(VkInstance instance) {
         throw std::runtime_error("Unable to create surface");
     return _surface;
 }
+
+std::pair<u32, u32> cala::backend::vulkan::SDLPlatform::windowSize() const {
+    i32 width, height;
+    SDL_GetWindowSize(_window, &width, &height);
+    return { width, height };
+}
