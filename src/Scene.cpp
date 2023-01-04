@@ -1,6 +1,7 @@
 #include <Cala/Scene.h>
 #include <algorithm>
 #include <Ende/thread/thread.h>
+#include <Cala/Material.h>
 
 cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     : _engine(engine),
@@ -41,6 +42,14 @@ void cala::Scene::addLight(cala::Light &light) {
     _lights.push(std::move(light));
 }
 
+void cala::Scene::addSkyLightMap(ImageHandle skyLightMap, bool equirectangular) {
+    if (equirectangular) {
+        _skyLightMap = _engine->convertToCubeMap(skyLightMap);
+    } else
+        _skyLightMap = skyLightMap;
+
+    _skyLightMapView = _skyLightMap->getView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 10);
+}
 
 void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
 //    std::sort(_lights.begin(), _lights.end(), [](const Light& lhs, const Light& rhs) {
@@ -88,6 +97,7 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
 
 void cala::Scene::render(backend::vulkan::CommandBuffer& cmd) {
 
+    Material* material = nullptr;
     MaterialInstance* materialInstance = nullptr;
 
     u32 lightCount = _lightData.empty() ? 1 : _lightData.size();
@@ -105,7 +115,17 @@ void cala::Scene::render(backend::vulkan::CommandBuffer& cmd) {
 
             if (materialInstance != renderable.materialInstance) {
                 materialInstance = renderable.materialInstance;
-                renderable.materialInstance->bind(cmd);
+                if (materialInstance) {
+                    if (materialInstance->getMaterial() != material) {
+                        material = materialInstance->getMaterial();
+                    }
+                    materialInstance->bind(cmd);
+                }
+            }
+            if (material) {
+                cmd.bindProgram(*material->getProgram(Material::Variants::POINT));
+                cmd.bindRasterState(material->_rasterState);
+                cmd.bindDepthState(material->_depthState);
             }
 
             cmd.bindBuffer(1, 0, *_modelBuffer[0], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));

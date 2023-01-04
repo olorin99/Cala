@@ -54,6 +54,8 @@ namespace cala::backend::vulkan {
 
         void generateMips();
 
+        void generateMips(CommandBuffer& cmd);
+
 
         struct View {
             VkImageView view;

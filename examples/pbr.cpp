@@ -143,9 +143,10 @@ int main() {
     ShaderProgram skybox = loadShader(driver, "../../res/shaders/skybox.vert.spv"_path, "../../res/shaders/skybox.frag.spv"_path);
 
     //Shaders
-    ShaderProgram program = loadShader(driver, "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path);
+    ProgramHandle program = engine.createProgram(loadShader(driver, "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
 
-    Material material(driver, std::move(program));
+    Material material(&engine);
+    material.setProgram(cala::Material::Variants::POINT, program);
     material._depthState = { true, true };
 
     auto matInstance = material.instance();

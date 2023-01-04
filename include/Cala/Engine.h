@@ -9,6 +9,7 @@
 
 #include <Cala/backend/vulkan/Platform.h>
 #include <Cala/backend/vulkan/Driver.h>
+#include <Cala/Mesh.h>
 
 namespace cala {
 
@@ -60,6 +61,8 @@ namespace cala {
 
         ProgramHandle createProgram(backend::vulkan::ShaderProgram&& program);
 
+        ImageHandle convertToCubeMap(ImageHandle equirectangular);
+
     private:
         friend Renderer;
         friend BufferHandle;
@@ -71,13 +74,18 @@ namespace cala {
         backend::vulkan::Sampler _defaultSampler;
 
         backend::vulkan::RenderPass _shadowPass;
-        backend::vulkan::ShaderProgram* _pointShadowProgram;
-        backend::vulkan::ShaderProgram* _directShadowProgram;
+        ProgramHandle _pointShadowProgram;
+        ProgramHandle _directShadowProgram;
+
+        ProgramHandle _equirectangularToCubeMap;
+        ProgramHandle _skyboxProgram;
 
         ImageHandle _defaultPointShadow;
         backend::vulkan::Image::View _defaultPointShadowView;
         ImageHandle _defaultDirectionalShadow;
         backend::vulkan::Image::View _defaultDirectionalShadowView;
+
+        Mesh _cube;
 
         ende::Vector<backend::vulkan::Buffer> _buffers;
         ende::Vector<backend::vulkan::Image> _images;

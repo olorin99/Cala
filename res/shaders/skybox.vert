@@ -23,5 +23,5 @@ layout (set = 0, binding = 0) uniform FrameData {
 void main() {
     vsOut.TexCoords = inPosition;
 
-    gl_Position = camera.projection * mat4(mat3(camera.view)) * vec4(inPosition, 1.0);
+    gl_Position = (camera.projection * mat4(mat3(camera.view)) * vec4(inPosition, 1.0)).xyww;
 }

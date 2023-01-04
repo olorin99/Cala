@@ -204,6 +204,20 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         }
         cmd.popDebugLabel();
     }
+    cmd.clearDescriptors();
+    cmd.bindProgram(*_engine->_skyboxProgram);
+    cmd.bindRasterState({ backend::CullMode::NONE });
+    cmd.bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
+    cmd.bindBindings({ &_engine->_cube._binding, 1 });
+    cmd.bindAttributes(_engine->_cube._attributes);
+    cmd.bindBuffer(0, 0, *_cameraBuffer);
+    cmd.bindImage(2, 0, scene._skyLightMapView, _engine->_defaultSampler);
+    cmd.bindPipeline();
+    cmd.bindDescriptors();
+    cmd.bindVertexBuffer(0, _engine->_cube._vertex.buffer());
+    cmd.bindIndexBuffer(*_engine->_cube._index);
+    cmd.draw(_engine->_cube._index->size() / sizeof(u32), 1, 0, 0);
+
     cmd.popDebugLabel();
     _passTimers[2].second.stop();
 

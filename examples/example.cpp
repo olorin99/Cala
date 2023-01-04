@@ -51,6 +51,19 @@ ImageHandle loadImage(Engine& engine, const ende::fs::Path& path) {
     return handle;
 }
 
+ImageHandle loadImageHDR(Engine& engine, const ende::fs::Path& path) {
+    stbi_set_flip_vertically_on_load(true);
+    i32 width, height, channels;
+    f32* data = stbi_loadf((*path).c_str(), &width, &height, &channels, STBI_rgb_alpha);
+    if (!data) throw "unable load image";
+    u32 length = width * height * 4 * 4;
+
+    ImageHandle handle = engine.createImage({(u32)width, (u32)height, 1, backend::Format::RGBA32_SFLOAT});
+    handle->data(engine.driver(), {0, (u32)width, (u32)height, 1, (u32)4 * 4, {data, length}});
+    stbi_image_free(data);
+    return handle;
+}
+
 int main() {
     SDLPlatform platform("hello_triangle", 800, 600, SDL_WINDOW_RESIZABLE);
 
@@ -76,7 +89,7 @@ int main() {
     Light light(cala::Light::POINT, true, lightTransform);
     Transform light1Transform({10, 2, 4});
     Light light1(cala::Light::POINT, false, light1Transform);
-    Transform light2Transform({0, 0, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(45)));
+    Transform light2Transform({0, 0, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-45)));
     Light light2(cala::Light::DIRECTIONAL, false, light2Transform);
 
 
@@ -104,6 +117,9 @@ int main() {
     scene.addLight(light);
 //    scene.addLight(light1);
     scene.addLight(light2);
+
+    ImageHandle background = loadImageHDR(engine, "../../res/textures/TropicalRuins_3k.hdr"_path);
+    scene.addSkyLightMap(background, true);
 
     scene.addRenderable(cube, &matInstance, &modelTransform);
 //    scene.addRenderable(mesh, &matInstance, &lightTransform);
@@ -190,8 +206,9 @@ int main() {
 
             ende::math::Quaternion direction = scene._lights.back().transform().rot();
             if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1)) {
-                light2.setDirection(direction);
+                scene._lights.back().setDirection(direction);
             }
+
 
             ImGui::End();
             ImGui::Render();
