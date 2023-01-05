@@ -43,6 +43,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _cameraBuffer->data({ &cameraData, sizeof(cameraData) });
 
     backend::vulkan::CommandBuffer& cmd = *_frameInfo.cmd;
+    cmd.startPipelineStatistics();
     _passTimers[0].second.start(cmd);
     cmd.pushDebugLabel("shadow pass");
 
@@ -220,6 +221,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     cmd.popDebugLabel();
     _passTimers[2].second.stop();
+    cmd.stopPipelineStatistics();
 
     cmd.pushDebugLabel("gui pass");
     if (imGui)

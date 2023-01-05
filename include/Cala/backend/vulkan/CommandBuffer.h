@@ -122,6 +122,10 @@ namespace cala::backend::vulkan {
 
         void popDebugLabel();
 
+        void startPipelineStatistics();
+
+        void stopPipelineStatistics();
+
 
         bool submit(ende::Span<VkSemaphore> wait = nullptr, VkFence fence = VK_NULL_HANDLE);
 

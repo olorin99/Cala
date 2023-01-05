@@ -11,18 +11,18 @@ cala::backend::vulkan::Timer::Timer(Driver &driver, u32 index)
 void cala::backend::vulkan::Timer::start(CommandBuffer &cmd) {
     _cmdBuffer = &cmd;
     _result = 0;
-    vkCmdResetQueryPool(cmd.buffer(), _driver->context().queryPool(), _index * 2, 2);
-    vkCmdWriteTimestamp(cmd.buffer(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, _driver->context().queryPool(), _index * 2);
+    vkCmdResetQueryPool(cmd.buffer(), _driver->context().timestampPool(), _index * 2, 2);
+    vkCmdWriteTimestamp(cmd.buffer(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, _driver->context().timestampPool(), _index * 2);
 }
 
 void cala::backend::vulkan::Timer::stop() {
-    vkCmdWriteTimestamp(_cmdBuffer->buffer(), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, _driver->context().queryPool(), _index * 2 + 1);
+    vkCmdWriteTimestamp(_cmdBuffer->buffer(), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, _driver->context().timestampPool(), _index * 2 + 1);
 }
 
 u64 cala::backend::vulkan::Timer::result() {
     if (_result) return _result;
     u64 buffer[2];
-    VkResult res = vkGetQueryPoolResults(_driver->context().device(), _driver->context().queryPool(), _index * 2, 2, sizeof(u64) * 2, buffer, sizeof(u64), VK_QUERY_RESULT_64_BIT);
+    VkResult res = vkGetQueryPoolResults(_driver->context().device(), _driver->context().timestampPool(), _index * 2, 2, sizeof(u64) * 2, buffer, sizeof(u64), VK_QUERY_RESULT_64_BIT);
     if (res == VK_NOT_READY)
         return 0;
     else if (res == VK_SUCCESS) {
@@ -31,6 +31,6 @@ u64 cala::backend::vulkan::Timer::result() {
         throw "query fail";
     }
 
-    //vkResetQueryPool(_driver.context().device(), _driver.context().queryPool(), _index * 2, 2);
+    //vkResetQueryPool(_driver.context().device(), _driver.context().timestampPool(), _index * 2, 2);
     return _result;
 }

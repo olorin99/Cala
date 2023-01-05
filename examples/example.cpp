@@ -196,6 +196,14 @@ int main() {
             ImGui::Text("Descriptors: %d", rendererStats.descriptorCount);
             ImGui::Text("Pipelines: %d", rendererStats.pipelineCount);
 
+            auto pipelineStats = engine.driver().context().getPipelineStatistics();
+            ImGui::Text("Input Assembly Vertices: %lu", pipelineStats.inputAssemblyVertices);
+            ImGui::Text("Input Assembly Primitives: %lu", pipelineStats.inputAssemblyPrimitives);
+            ImGui::Text("Vertex Shader Invocations: %lu", pipelineStats.vertexShaderInvocations);
+            ImGui::Text("Clipping Invocations: %lu", pipelineStats.clippingInvocations);
+            ImGui::Text("Clipping Primitives: %lu", pipelineStats.clippingPrimitives);
+            ImGui::Text("Fragment Shader Invocations: %lu", pipelineStats.fragmentShaderInvocations);
+
             ende::math::Vec3f colour = scene._lights.front().getColour();
             f32 intensity = scene._lights.front().getIntensity();
             if (ImGui::ColorEdit3("Colour", &colour[0]) ||

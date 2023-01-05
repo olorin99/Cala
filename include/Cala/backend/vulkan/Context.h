@@ -42,7 +42,9 @@ namespace cala::backend::vulkan {
 
         Format depthFormat() const { return _depthFormat; }
 
-        VkQueryPool queryPool() const { return _queryPool; }
+        VkQueryPool timestampPool() const { return _timestampQueryPool; }
+
+        VkQueryPool pipelineStatisticsPool() const { return _pipelineStatistics; }
 
 
         //query info
@@ -59,6 +61,17 @@ namespace cala::backend::vulkan {
         ende::Span<const char> deviceName() const { return _deviceName; }
 
         f32 timestampPeriod() const { return _timestampPeriod; }
+
+        struct PipelineStatistics {
+            u64 inputAssemblyVertices;
+            u64 inputAssemblyPrimitives;
+            u64 vertexShaderInvocations;
+            u64 clippingInvocations;
+            u64 clippingPrimitives;
+            u64 fragmentShaderInvocations;
+        };
+
+        PipelineStatistics getPipelineStatistics() const;
 
 
 
@@ -93,7 +106,9 @@ namespace cala::backend::vulkan {
         VkQueue _graphicsQueue;
         VkQueue _computeQueue;
 
-        VkQueryPool _queryPool;
+        VkQueryPool _timestampQueryPool;
+        VkQueryPool _pipelineStatistics;
+        u64 _pipelineStats[6];
 
         // context info
         u32 _apiVersion;

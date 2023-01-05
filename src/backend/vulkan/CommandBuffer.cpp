@@ -345,6 +345,15 @@ void cala::backend::vulkan::CommandBuffer::popDebugLabel() {
 #endif
 }
 
+void cala::backend::vulkan::CommandBuffer::startPipelineStatistics() {
+    vkCmdResetQueryPool(_buffer, _driver.context().pipelineStatisticsPool(),0, 6);
+    vkCmdBeginQuery(_buffer, _driver.context().pipelineStatisticsPool(), 0, 0);
+}
+
+void cala::backend::vulkan::CommandBuffer::stopPipelineStatistics() {
+    vkCmdEndQuery(_buffer, _driver.context().pipelineStatisticsPool(), 0);
+}
+
 
 
 

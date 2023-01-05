@@ -237,16 +237,40 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     queryPoolCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
     queryPoolCreateInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
     queryPoolCreateInfo.queryCount = 10;
-    _queryPool = VK_NULL_HANDLE;
-    VkResult res = vkCreateQueryPool(_device, &queryPoolCreateInfo, nullptr, &_queryPool);
+    _timestampQueryPool = VK_NULL_HANDLE;
+    VkResult res = vkCreateQueryPool(_device, &queryPoolCreateInfo, nullptr, &_timestampQueryPool);
     if (res != VK_SUCCESS)
         throw "Unable to create query pool";
 
-    vkResetQueryPool(_device, _queryPool, 0, 10);
+
+    const char* pipelineStatNames[] = {
+            "Input Assembly vertex count",
+            "Input Assembly primitives count",
+            "Vertex Shader invocations",
+            "Clipping stage primitives processed",
+            "Clipping stage primitives output",
+            "Fragment Shader invocations"
+    };
+
+    VkQueryPoolCreateInfo pipelineStatisticsCreate{};
+    pipelineStatisticsCreate.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+    pipelineStatisticsCreate.queryType = VK_QUERY_TYPE_PIPELINE_STATISTICS;
+    pipelineStatisticsCreate.pipelineStatistics =
+            VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_VERTICES_BIT |
+            VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_PRIMITIVES_BIT |
+            VK_QUERY_PIPELINE_STATISTIC_VERTEX_SHADER_INVOCATIONS_BIT |
+            VK_QUERY_PIPELINE_STATISTIC_CLIPPING_INVOCATIONS_BIT |
+            VK_QUERY_PIPELINE_STATISTIC_CLIPPING_PRIMITIVES_BIT |
+            VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT;
+    pipelineStatisticsCreate.queryCount = 6;
+    vkCreateQueryPool(_device, &pipelineStatisticsCreate, nullptr, &_pipelineStatistics);
+
+    vkResetQueryPool(_device, _timestampQueryPool, 0, 10);
 }
 
 cala::backend::vulkan::Context::~Context() {
-    vkDestroyQueryPool(_device, _queryPool, nullptr);
+    vkDestroyQueryPool(_device, _pipelineStatistics, nullptr);
+    vkDestroyQueryPool(_device, _timestampQueryPool, nullptr);
     vmaDestroyAllocator(_allocator);
     vkDestroyDevice(_device, nullptr);
 
@@ -399,4 +423,16 @@ const char *cala::backend::vulkan::Context::deviceTypeString() const {
             return "CPU";
     }
     return "OTHER";
+}
+
+cala::backend::vulkan::Context::PipelineStatistics cala::backend::vulkan::Context::getPipelineStatistics() const {
+    vkGetQueryPoolResults(_device, _pipelineStatistics, 0, 1, 6 * sizeof(u64), (void*)_pipelineStats, sizeof(u64), VK_QUERY_RESULT_64_BIT);
+    return {
+        _pipelineStats[0],
+        _pipelineStats[1],
+        _pipelineStats[2],
+        _pipelineStats[3],
+        _pipelineStats[4],
+        _pipelineStats[5]
+    };
 }
