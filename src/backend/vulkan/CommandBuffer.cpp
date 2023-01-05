@@ -32,7 +32,8 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(Driver& driver, VkQueue queu
 
     VkDescriptorPoolCreateInfo descriptorPoolCreateInfo{};
     descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    descriptorPoolCreateInfo.poolSizeCount = 3;
+    descriptorPoolCreateInfo.flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
+    descriptorPoolCreateInfo.poolSizeCount = 4;
     descriptorPoolCreateInfo.pPoolSizes = poolSizes;
     descriptorPoolCreateInfo.maxSets = 1000;
     vkCreateDescriptorPool(_driver.context().device(), &descriptorPoolCreateInfo, nullptr, &_descriptorPool);

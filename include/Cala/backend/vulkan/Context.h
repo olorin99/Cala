@@ -63,12 +63,12 @@ namespace cala::backend::vulkan {
         f32 timestampPeriod() const { return _timestampPeriod; }
 
         struct PipelineStatistics {
-            u64 inputAssemblyVertices;
-            u64 inputAssemblyPrimitives;
-            u64 vertexShaderInvocations;
-            u64 clippingInvocations;
-            u64 clippingPrimitives;
-            u64 fragmentShaderInvocations;
+            u64 inputAssemblyVertices = 0;
+            u64 inputAssemblyPrimitives = 0;
+            u64 vertexShaderInvocations = 0;
+            u64 clippingInvocations = 0;
+            u64 clippingPrimitives = 0;
+            u64 fragmentShaderInvocations = 0;
         };
 
         PipelineStatistics getPipelineStatistics() const;

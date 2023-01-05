@@ -74,12 +74,12 @@ namespace cala {
 
         f32 getRadius() const { return _radius; }
 
-        Transform& transform() const { return _transform; }
+        Transform& transform() const { return *_transform; }
 
         Camera& camera() { return _camera; }
 
     private:
-        Transform& _transform;
+        Transform* _transform;
         Camera _camera;
         LightType _type;
         bool _shadowing;

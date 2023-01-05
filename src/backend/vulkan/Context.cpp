@@ -198,6 +198,11 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     createInfo.enabledLayerCount = 1;
     createInfo.ppEnabledLayerNames = validationLayers;
 
+    VkPhysicalDeviceDescriptorIndexingFeatures bindlessFeatures;
+    bindlessFeatures.descriptorBindingPartiallyBound = VK_TRUE;
+    bindlessFeatures.runtimeDescriptorArray = VK_TRUE;
+    createInfo.pNext = &bindlessFeatures;
+
     VkPhysicalDeviceHostQueryResetFeatures resetFeatures{};
     resetFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES;
     resetFeatures.hostQueryReset = VK_TRUE;

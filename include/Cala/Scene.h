@@ -43,9 +43,11 @@ namespace cala {
 
         ende::Vector<std::pair<Renderable, Transform*>> _renderables;
         ende::Vector<Light> _lights;
+        u32 _directionalLightCount;
 
         BufferHandle _modelBuffer[2];
         BufferHandle _lightBuffer[2];
+        BufferHandle _lightCountBuffer[2];
         ImageHandle _skyLightMap;
         backend::vulkan::Image::View _skyLightMapView;
         u32 _skyLight;

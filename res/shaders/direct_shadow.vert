@@ -10,7 +10,6 @@ layout (location = 0) out VsOut {
     vec3 FragPos;
     vec2 TexCoords;
     mat3 TBN;
-    vec3 Normal;
     vec3 ViewPos;
     vec4 WorldPosLightSpace;
 } vsOut;
@@ -48,7 +47,6 @@ void main() {
     vsOut.FragPos = (model * vec4(inPosition, 1.0)).xyz;
     vsOut.TexCoords = inTexCoords;
     vsOut.TBN = mat3(T, B, N);
-    vsOut.Normal = inNormal;
     vsOut.ViewPos = camera.position;
     vsOut.WorldPosLightSpace = bias * lightCam.projection * lightCam.view * model * vec4(inPosition, 1.0);
 

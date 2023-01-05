@@ -4,7 +4,6 @@ layout (location = 0) in VsOut {
     vec3 FragPos;
     vec2 TexCoords;
     mat3 TBN;
-    vec3 Normal;
     vec3 ViewPos;
     vec4 WorldPosLightSpace;
 } fsIn;
@@ -36,9 +35,6 @@ float calcShadows(vec3 fragPosLight, vec3 offset, float bias) {
     if(texture(shadowMap, fragPosLight + offset).r < length(fragPosLight) / 100.f - bias) {
         shadow = 0.0;
     }
-//    if (fragPosLight.z > 1.0) {
-//        shadow = 1.0;
-//    }
     return shadow;
 }
 
@@ -59,27 +55,7 @@ float filterPCF(vec3 fragPosLight, float bias) {
 	for (int i = 0; i < samples; i++) {
 		shadow += calcShadows(fragPosLight, sampleOffsetDirections[i] * diskRadius, bias);	
 	}
-	
 	return shadow / samples;
-	
-    //ivec2 texDim = textureSize(shadowMap, 0);
-    //float scale = 1.5;
-    //float dx = scale * 1.0 / float(texDim.x);
-    //float dy = scale * 1.0 / float(texDim.y);
-
-    //float shadowFactor = 0.0;
-    //int count = 0;
-    //int range = 1;
-
-    //for (int x = -range; x <= range; x++)
-    //{
-    //    for (int y = -range; y <= range; y++)
-    //    {
-    //        shadowFactor += calcShadows(fragPosLight, vec3(dx*x, dy*y, 0), bias);
-    //        count++;
-    //    }
-    //}
-    //return shadowFactor / count;
 }
 
 void main() {
@@ -106,7 +82,7 @@ void main() {
     float distance = length(light.position - fsIn.FragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * distance * distance);
 
-    float bias = max(0.01 * (1.0 - dot(fsIn.Normal, lightDir)), 0.00001);
+    float bias = max(0.01 * (1.0 - dot(normal, lightDir)), 0.00001);
 //    float bias = 0.005*tan(acos(dot(normal, lightDir))); // cosTheta is dot( n,l ), clamped between 0 and 1
 //    bias = clamp(bias, 0,0.01);
 //    float shadow = calcShadows(fsIn.FragPos - light.position, vec3(0), bias);

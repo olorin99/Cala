@@ -26,6 +26,10 @@ namespace cala {
 
         T* operator->() noexcept;
 
+        operator bool() const noexcept {
+            return _engine && _index != -1;
+        }
+
     private:
         friend Engine;
 
@@ -34,8 +38,8 @@ namespace cala {
                   _index(index)
         {}
 
-        Engine* _engine;
-        u32 _index;
+        Engine* _engine = nullptr;
+        i32 _index = -1;
 
     };
     using BufferHandle = Handle<backend::vulkan::Buffer>;

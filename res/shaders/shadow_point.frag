@@ -14,7 +14,7 @@ struct PointLight {
     float radius;
 };
 
-layout (set = 3, binding = 0) uniform LightData {
+layout (set = 3, binding = 0) readonly buffer LightData {
     PointLight light;
 };
 

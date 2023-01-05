@@ -7,8 +7,11 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     : _engine(engine),
     _modelBuffer{engine->createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM),
                  engine->createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM)},
-    _lightBuffer{engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::UNIFORM),
-                 engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::UNIFORM)}
+    _lightBuffer{engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE),
+                 engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE)},
+    _lightCountBuffer{engine->createBuffer(sizeof(u32), backend::BufferUsage::STORAGE),
+                 engine->createBuffer(sizeof(u32), backend::BufferUsage::STORAGE)},
+    _directionalLightCount(0)
 {}
 
 
@@ -39,6 +42,8 @@ void cala::Scene::addRenderable(cala::Mesh &mesh, cala::MaterialInstance *materi
 }
 
 void cala::Scene::addLight(cala::Light &light) {
+    if (light.type() == Light::DIRECTIONAL)
+        ++_directionalLightCount;
     _lights.push(std::move(light));
 }
 
@@ -77,12 +82,17 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
         return lhs.first < rhs.first;
     });
 
+    std::sort(_lights.begin(), _lights.end(), [](const Light& lhs, const Light& rhs) {
+        return lhs.type() == Light::DIRECTIONAL && rhs.type() != Light::DIRECTIONAL;
+    });
     _lightData.clear();
     for (auto& light : _lights) {
         _lightData.push(light.data());
     }
     if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame]->size())
         _lightBuffer[frame]->resize(_lightData.size() * sizeof(Light::Data) * 2);
+    u32 lightCount = _lights.size();
+    _lightCountBuffer[frame]->data({ &lightCount, sizeof(lightCount) });
     _lightBuffer[frame]->data({_lightData.data(), static_cast<u32>(_lightData.size() * sizeof(Light::Data))});
 
     _modelTransforms.clear();

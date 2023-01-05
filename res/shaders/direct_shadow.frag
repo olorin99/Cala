@@ -4,7 +4,6 @@ layout (location = 0) in VsOut {
     vec3 FragPos;
     vec2 TexCoords;
     mat3 TBN;
-    vec3 Normal;
     vec3 ViewPos;
     vec4 WorldPosLightSpace;
 } fsIn;
@@ -27,7 +26,7 @@ struct PointLight {
     float radius;
 };
 
-layout (set = 3, binding = 0) uniform LightData {
+layout (set = 3, binding = 0) readonly buffer LightData {
     PointLight light;
 };
 
@@ -85,7 +84,7 @@ void main() {
     float spec = pow(max(dot(normal, halfWayDir), 0.0), 32.0);
     vec3 specular = vec3(0.3) * spec * specularColour;
 
-    float bias = max(0.01 * (1.0 - dot(fsIn.Normal, lightDir)), 0.00001);
+    float bias = max(0.01 * (1.0 - dot(normal, lightDir)), 0.00001);
 //    float bias = 0.005*tan(acos(dot(normal, lightDir))); // cosTheta is dot( n,l ), clamped between 0 and 1
 //    bias = clamp(bias, 0,0.01);
 //    float shadow = calcShadows(fsIn.FragPosLightSpace, vec2(0), bias);

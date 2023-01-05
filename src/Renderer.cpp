@@ -71,7 +71,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                     cmd.bindProgram(*_engine->_pointShadowProgram);
 
-                    cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()], light * sizeof(Light::Data), sizeof(Light::Data));
+                    cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()], sizeof(u32) + light * sizeof(Light::Data), sizeof(Light::Data));
 
                     switch (face) {
                         case 0:
@@ -143,81 +143,79 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     Material* material = nullptr;
     MaterialInstance* materialInstance = nullptr;
 
-    u32 lightCount = scene._lightData.empty() ? 1 : scene._lightData.size(); // if no lights present draw scene once
-    for (u32 light = 0; light < lightCount; ++light) {
-        cmd.pushDebugLabel("light_" + std::to_string(light), {0, 0, 1, 1});
-        Material::Variants variant = Material::Variants::POINT;
+    cmd.pushDebugLabel("light", {0, 0, 1, 1});
+    Material::Variants variant = Material::Variants::POINT;
 
-        if (!scene._lightData.empty()) {
-            cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()], light * sizeof(Light::Data), sizeof(Light::Data));
-            auto lightCamData = scene._lights[light].camera().data();
-            _lightCameraBuffer->data({ &lightCamData, sizeof(lightCamData) });
-            cmd.bindBuffer(0, 1, *_lightCameraBuffer);
+    if (!scene._lightData.empty()) {
+        cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()]);
+        cmd.bindBuffer(3, 1, *scene._lightCountBuffer[frameIndex()]);
+        auto lightCamData = scene._lights[0].camera().data();
+        _lightCameraBuffer->data({ &lightCamData, sizeof(lightCamData) });
+        cmd.bindBuffer(0, 1, *_lightCameraBuffer);
 
-            if (scene._lights[light].type() == Light::DIRECTIONAL)
-                variant = Material::Variants::DIRECTIONAL;
-        }
-
-        for (u32 i = 0; i < scene._renderList.size(); ++i) {
-            auto& renderable = scene._renderList[i].second.first;
-            auto& transform = scene._renderList[i].second.second;
-
-            if (!camera.frustum().intersect(transform->pos(), transform->scale().x()))
-                continue;
-
-            cmd.bindBindings(renderable.bindings);
-            cmd.bindAttributes(renderable.attributes);
-
-            if (materialInstance != renderable.materialInstance) {
-                materialInstance = renderable.materialInstance;
-                if (materialInstance) {
-                    if (materialInstance->getMaterial() != material) {
-                        material = materialInstance->getMaterial();
-                    }
-                    materialInstance->bind(cmd);
-                }
-            }
-            if (material) {
-                cmd.bindProgram(*material->getProgram(variant));
-                cmd.bindRasterState(material->_rasterState);
-                cmd.bindDepthState(material->_depthState);
-                cmd.bindBlendState({
-                    true
-                });
-            }
-
-            cmd.bindBuffer(1, 0, *scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
-
-            if (scene._lights[light].shadowing())
-                cmd.bindImage(2, 3, _engine->getShadowProbe(light).view(), _engine->_defaultSampler);
-            else
-                cmd.bindImage(2, 3, variant == Material::Variants::POINT ? _engine->_defaultPointShadowView : _engine->_defaultDirectionalShadowView, _engine->_defaultSampler);
-
-            cmd.bindPipeline();
-            cmd.bindDescriptors();
-
-            cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
-            if (renderable.index) {
-                cmd.bindIndexBuffer(renderable.index.buffer());
-                cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
-            } else
-                cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
-        }
-        cmd.popDebugLabel();
+//            if (scene._lights[light].type() == Light::DIRECTIONAL)
+//                variant = Material::Variants::DIRECTIONAL;
     }
-    cmd.clearDescriptors();
-    cmd.bindProgram(*_engine->_skyboxProgram);
-    cmd.bindRasterState({ backend::CullMode::NONE });
-    cmd.bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
-    cmd.bindBindings({ &_engine->_cube._binding, 1 });
-    cmd.bindAttributes(_engine->_cube._attributes);
-    cmd.bindBuffer(0, 0, *_cameraBuffer);
-    cmd.bindImage(2, 0, scene._skyLightMapView, _engine->_defaultSampler);
-    cmd.bindPipeline();
-    cmd.bindDescriptors();
-    cmd.bindVertexBuffer(0, _engine->_cube._vertex.buffer());
-    cmd.bindIndexBuffer(*_engine->_cube._index);
-    cmd.draw(_engine->_cube._index->size() / sizeof(u32), 1, 0, 0);
+
+    for (u32 i = 0; i < scene._renderList.size(); ++i) {
+        auto& renderable = scene._renderList[i].second.first;
+        auto& transform = scene._renderList[i].second.second;
+
+        if (!camera.frustum().intersect(transform->pos(), transform->scale().x()))
+            continue;
+
+        cmd.bindBindings(renderable.bindings);
+        cmd.bindAttributes(renderable.attributes);
+
+        if (materialInstance != renderable.materialInstance) {
+            materialInstance = renderable.materialInstance;
+            if (materialInstance) {
+                if (materialInstance->getMaterial() != material) {
+                    material = materialInstance->getMaterial();
+                }
+                materialInstance->bind(cmd);
+            }
+        }
+        if (material) {
+            cmd.bindProgram(*material->getProgram(variant));
+            cmd.bindRasterState(material->_rasterState);
+            cmd.bindDepthState(material->_depthState);
+        }
+
+        cmd.bindBuffer(1, 0, *scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+
+        if (scene._lights[0].shadowing())
+            cmd.bindImage(2, 5, _engine->getShadowProbe(0).view(), _engine->_defaultSampler);
+        else
+            cmd.bindImage(2, 5, variant == Material::Variants::POINT ? _engine->_defaultPointShadowView : _engine->_defaultDirectionalShadowView, _engine->_defaultSampler);
+
+        cmd.bindPipeline();
+        cmd.bindDescriptors();
+
+        cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
+        if (renderable.index) {
+            cmd.bindIndexBuffer(renderable.index.buffer());
+            cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
+        } else
+            cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
+    }
+    cmd.popDebugLabel();
+
+    if (scene._skyLightMap) {
+        cmd.clearDescriptors();
+        cmd.bindProgram(*_engine->_skyboxProgram);
+        cmd.bindRasterState({ backend::CullMode::NONE });
+        cmd.bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
+        cmd.bindBindings({ &_engine->_cube._binding, 1 });
+        cmd.bindAttributes(_engine->_cube._attributes);
+        cmd.bindBuffer(0, 0, *_cameraBuffer);
+        cmd.bindImage(2, 0, scene._skyLightMapView, _engine->_defaultSampler);
+        cmd.bindPipeline();
+        cmd.bindDescriptors();
+        cmd.bindVertexBuffer(0, _engine->_cube._vertex.buffer());
+        cmd.bindIndexBuffer(*_engine->_cube._index);
+        cmd.draw(_engine->_cube._index->size() / sizeof(u32), 1, 0, 0);
+    }
 
     cmd.popDebugLabel();
     _passTimers[2].second.stop();

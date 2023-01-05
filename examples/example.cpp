@@ -73,7 +73,8 @@ int main() {
     ImGuiContext imGuiContext(engine.driver(), platform.window());
 
     //Shaders
-    ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/point_shadow.frag.spv"_path));
+//    ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/point_shadow.frag.spv"_path));
+    ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/point_pbr.frag.spv"_path));
     ProgramHandle directionalLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/direct_shadow.frag.spv"_path));
 
     Mesh cube = cala::shapes::cube().mesh(engine.driver());
@@ -85,21 +86,21 @@ int main() {
     Transform cameraTransform({0, 0, -10});
     Camera camera((f32)ende::math::rad(54.4), 800.f, 600.f, 0.1f, 1000.f, cameraTransform);
 
-    Transform lightTransform({-3, 3, -1}, {0, 0, 0, 1}, {0.5, 0.5, 0.5});
-    Light light(cala::Light::POINT, true, lightTransform);
-    Transform light1Transform({10, 2, 4});
-    Light light1(cala::Light::POINT, false, light1Transform);
-    Transform light2Transform({0, 0, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-45)));
-    Light light2(cala::Light::DIRECTIONAL, false, light2Transform);
-
 
 //    Camera camera((f32)ende::math::rad(54.4), 800.f, 600.f, 0.1f, 1000.f, lightTransform);
 
     Sampler sampler(engine.driver(), {});
 
-    ImageHandle brickwall = loadImage(engine, "../../res/textures/brickwall.jpg"_path);
-    ImageHandle brickwall_normal = loadImage(engine, "../../res/textures/brickwall_normal.jpg"_path);
-    ImageHandle brickwall_specular = loadImage(engine, "../../res/textures/brickwall_specular.jpg"_path);
+//    ImageHandle brickwall = loadImage(engine, "../../res/textures/brickwall.jpg"_path);
+//    ImageHandle brickwall_normal = loadImage(engine, "../../res/textures/brickwall_normal.jpg"_path);
+//    ImageHandle brickwall_specular = loadImage(engine, "../../res/textures/brickwall_specular.jpg"_path);
+
+    ImageHandle brickwall_albedo = loadImage(engine, "../../res/textures/pbr_rusted_iron/rustediron2_basecolor.png"_path);
+    ImageHandle brickwall_normal = loadImage(engine, "../../res/textures/pbr_rusted_iron/rustediron2_normal.png"_path);
+    ImageHandle brickwall_metallic = loadImage(engine, "../../res/textures/pbr_rusted_iron/rustediron2_metallic.png"_path);
+    ImageHandle brickwall_roughness = loadImage(engine, "../../res/textures/pbr_rusted_iron/rustediron2_roughness.png"_path);
+    ImageHandle brickwall_ao = loadImage(engine, "../../res/textures/pbr_rusted_iron/rustediron2_ao.png"_path);
+
 
 
     Material material(&engine);
@@ -108,15 +109,32 @@ int main() {
     material._depthState = { true, true, CompareOp::LESS_EQUAL };
 
     auto matInstance = material.instance();
-    matInstance.setSampler("diffuseMap", *brickwall, Sampler(engine.driver(), {}));
-    matInstance.setSampler("normalMap", *brickwall_normal, Sampler(engine.driver(), {}));
-    matInstance.setSampler("specularMap", *brickwall_specular, Sampler(engine.driver(), {}));
+//    matInstance.setSampler("diffuseMap", *brickwall, Sampler(engine.driver(), {}));
+//    matInstance.setSampler("normalMap", *brickwall_normal, Sampler(engine.driver(), {}));
+//    matInstance.setSampler("specularMap", *brickwall_specular, Sampler(engine.driver(), {}));
+
+    matInstance.setSampler("albedoMap", brickwall_albedo->getView(), Sampler(engine.driver(), {}));
+    matInstance.setSampler("normalMap", brickwall_normal->getView(), Sampler(engine.driver(), {}));
+    matInstance.setSampler("metallicMap", brickwall_metallic->getView(), Sampler(engine.driver(), {}));
+    matInstance.setSampler("roughnessMap", brickwall_roughness->getView(), Sampler(engine.driver(), {}));
+    matInstance.setSampler("aoMap", brickwall_ao->getView(), Sampler(engine.driver(), {}));
 
     u32 objectCount = 100;
     Scene scene(&engine, objectCount);
+
+    Transform lightTransform({-3, 3, -1}, {0, 0, 0, 1}, {0.5, 0.5, 0.5});
+    Light light(cala::Light::POINT, false, lightTransform);
+    Transform light1Transform({10, 2, 4});
+    Light light1(cala::Light::POINT, false, light1Transform);
+    Transform light2Transform({0, 0, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-45)));
+    Light light2(cala::Light::DIRECTIONAL, false, light2Transform);
+    Transform light3Transform({-10, 2, 4});
+    Light light3(cala::Light::POINT, false, light3Transform);
+
     scene.addLight(light);
-//    scene.addLight(light1);
-    scene.addLight(light2);
+    scene.addLight(light1);
+    scene.addLight(light3);
+//    scene.addLight(light2);
 
     ImageHandle background = loadImageHDR(engine, "../../res/textures/TropicalRuins_3k.hdr"_path);
     scene.addSkyLightMap(background, true);
@@ -134,6 +152,16 @@ int main() {
         models.push(Transform({ende::math::rand(-sceneSize, sceneSize), ende::math::rand(-sceneSize, sceneSize), ende::math::rand(-sceneSize, sceneSize)}));
         scene.addRenderable(i % 2 == 0 ? cube : sphere, &matInstance, &models.back());
 //        scene.addRenderable(cube, &matInstance, &models.back());
+    }
+
+    ende::Vector<Transform> lightTransforms;
+    lightTransforms.reserve(100);
+    for (u32 i = 0; i < 50; i++) {
+        lightTransforms.push(Transform({ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f)}));
+        Light l(cala::Light::POINT, false, lightTransforms.back());
+        l.setIntensity(ende::math::rand(10.f, 1000.f));
+        l.setColour({ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f)});
+        scene.addLight(l);
     }
 
     f64 dt = 1.f / 60.f;
