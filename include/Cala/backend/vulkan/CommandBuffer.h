@@ -138,6 +138,8 @@ namespace cala::backend::vulkan {
 
         u32 descriptorCount() const { return _descriptorSets.size(); }
 
+        u32 drawCalls() const { return _drawCallCount; }
+
     private:
 
         VkPipeline getPipeline();
@@ -203,6 +205,7 @@ namespace cala::backend::vulkan {
 //        robin_hood::unordered_map<DescriptorKey, VkDescriptorSet> _descriptorSets;
 
         VkDescriptorPool _descriptorPool;
+        u32 _drawCallCount;
 
 #ifndef NDEBUG
         ende::Vector<std::string_view> _debugLabels;

@@ -34,6 +34,7 @@ namespace cala {
         struct Stats {
             u32 pipelineCount = 0;
             u32 descriptorCount = 0;
+            u32 drawCallCount = 0;
         };
 
         Stats stats() const { return _stats; }

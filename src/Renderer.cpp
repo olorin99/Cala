@@ -34,6 +34,7 @@ f64 cala::Renderer::endFrame() {
 
     _stats.pipelineCount = _frameInfo.cmd->pipelineCount();
     _stats.descriptorCount = _frameInfo.cmd->descriptorCount();
+    _stats.drawCallCount = _frameInfo.cmd->drawCalls();
 
     return static_cast<f64>(_engine->driver().milliseconds()) / 1000.f;
 }

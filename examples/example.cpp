@@ -223,6 +223,7 @@ int main() {
             Renderer::Stats rendererStats = renderer.stats();
             ImGui::Text("Descriptors: %d", rendererStats.descriptorCount);
             ImGui::Text("Pipelines: %d", rendererStats.pipelineCount);
+            ImGui::Text("Draw Calls: %d", rendererStats.drawCallCount);
 
             auto pipelineStats = engine.driver().context().getPipelineStatistics();
             ImGui::Text("Input Assembly Vertices: %lu", pipelineStats.inputAssemblyVertices);
@@ -232,18 +233,20 @@ int main() {
             ImGui::Text("Clipping Primitives: %lu", pipelineStats.clippingPrimitives);
             ImGui::Text("Fragment Shader Invocations: %lu", pipelineStats.fragmentShaderInvocations);
 
-            ende::math::Vec3f colour = scene._lights.front().getColour();
-            f32 intensity = scene._lights.front().getIntensity();
-            if (ImGui::ColorEdit3("Colour", &colour[0]) ||
-                ImGui::SliderFloat("Intensity", &intensity, 1, 50)) {
-                scene._lights.front().setColour(colour);
-                scene._lights.front().setIntensity(intensity);
-            }
+//            ende::math::Vec3f colour = scene._lights.front().getColour();
+//            f32 intensity = scene._lights.front().getIntensity();
+//            if (ImGui::ColorEdit3("Colour", &colour[0]) ||
+//                ImGui::SliderFloat("Intensity", &intensity, 1, 50)) {
+//                scene._lights.front().setColour(colour);
+//                scene._lights.front().setIntensity(intensity);
+//            }
+//
+//            ende::math::Quaternion direction = scene._lights.back().transform().rot();
+//            if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1)) {
+//                scene._lights.back().setDirection(direction);
+//            }
 
-            ende::math::Quaternion direction = scene._lights.back().transform().rot();
-            if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1)) {
-                scene._lights.back().setDirection(direction);
-            }
+            ImGui::Text("Lights: %lu", scene._lights.size());
 
 
             ImGui::End();

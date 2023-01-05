@@ -17,7 +17,8 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(Driver& driver, VkQueue queu
     _computeBound(false),
     _currentPipeline(VK_NULL_HANDLE),
     _currentSets{VK_NULL_HANDLE},
-    _descriptorPool(VK_NULL_HANDLE)
+    _descriptorPool(VK_NULL_HANDLE),
+    _drawCallCount(0)
 {
     VkSemaphoreCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -55,6 +56,7 @@ bool cala::backend::vulkan::CommandBuffer::begin() {
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     _active = vkBeginCommandBuffer(_buffer, &beginInfo) == VK_SUCCESS;
+    _drawCallCount = 0;
     return _active;
 }
 
@@ -313,6 +315,7 @@ void cala::backend::vulkan::CommandBuffer::draw(u32 count, u32 instanceCount, u3
         vkCmdDrawIndexed(_buffer, count, instanceCount, first, 0, firstInstance);
     else
         vkCmdDraw(_buffer, count, instanceCount, first, firstInstance);
+    ++_drawCallCount;
 }
 
 void cala::backend::vulkan::CommandBuffer::drawIndirect(Buffer &buffer, u32 offset, u32 drawCount, u32 stride) {
@@ -321,6 +324,7 @@ void cala::backend::vulkan::CommandBuffer::drawIndirect(Buffer &buffer, u32 offs
     if (stride == 0)
         stride = sizeof(u32) * 4;
     vkCmdDrawIndirect(_buffer, buffer.buffer(), offset, drawCount, stride);
+    ++_drawCallCount;
 }
 
 void cala::backend::vulkan::CommandBuffer::dispatchCompute(u32 x, u32 y, u32 z) {
