@@ -29,7 +29,7 @@ namespace cala {
 
         void addRenderable(Mesh& mesh, MaterialInstance* materialInstance, Transform* transform, bool castShadow = false);
 
-        void addLight(Light& light);
+        u32 addLight(Light& light);
 
         void addSkyLightMap(ImageHandle skyLightMap, bool equirectangular = false);
 

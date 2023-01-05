@@ -75,7 +75,8 @@ int main() {
     //Shaders
 //    ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/point_shadow.frag.spv"_path));
     ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/point_pbr.frag.spv"_path));
-    ProgramHandle directionalLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/direct_shadow.frag.spv"_path));
+//    ProgramHandle directionalLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/direct_shadow.frag.spv"_path));
+    ProgramHandle directionalLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/direct_pbr.frag.spv"_path));
 
     Mesh cube = cala::shapes::cube().mesh(engine.driver());
     Mesh sphere = cala::shapes::sphereNormalized(1).mesh(engine.driver());
@@ -124,17 +125,21 @@ int main() {
 
     Transform lightTransform({-3, 3, -1}, {0, 0, 0, 1}, {0.5, 0.5, 0.5});
     Light light(cala::Light::POINT, false, lightTransform);
+    light.setColour({1, 0, 0});
     Transform light1Transform({10, 2, 4});
     Light light1(cala::Light::POINT, false, light1Transform);
+    light1.setColour({0, 1, 0});
     Transform light2Transform({0, 0, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-45)));
     Light light2(cala::Light::DIRECTIONAL, false, light2Transform);
+    light2.setColour({0, 0, 1});
+    light2.setIntensity(400);
     Transform light3Transform({-10, 2, 4});
     Light light3(cala::Light::POINT, false, light3Transform);
 
-    scene.addLight(light);
-    scene.addLight(light1);
-    scene.addLight(light3);
-//    scene.addLight(light2);
+    u32 l0 = scene.addLight(light);
+    u32 l1 = scene.addLight(light1);
+    u32 l2 = scene.addLight(light2);
+    u32 l3 = scene.addLight(light3);
 
     ImageHandle background = loadImageHDR(engine, "../../res/textures/TropicalRuins_3k.hdr"_path);
     scene.addSkyLightMap(background, true);
@@ -233,18 +238,18 @@ int main() {
             ImGui::Text("Clipping Primitives: %lu", pipelineStats.clippingPrimitives);
             ImGui::Text("Fragment Shader Invocations: %lu", pipelineStats.fragmentShaderInvocations);
 
-//            ende::math::Vec3f colour = scene._lights.front().getColour();
-//            f32 intensity = scene._lights.front().getIntensity();
-//            if (ImGui::ColorEdit3("Colour", &colour[0]) ||
-//                ImGui::SliderFloat("Intensity", &intensity, 1, 50)) {
-//                scene._lights.front().setColour(colour);
-//                scene._lights.front().setIntensity(intensity);
-//            }
-//
-//            ende::math::Quaternion direction = scene._lights.back().transform().rot();
-//            if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1)) {
-//                scene._lights.back().setDirection(direction);
-//            }
+            ende::math::Vec3f colour = scene._lights[l0].getColour();
+            f32 intensity = scene._lights[l0].getIntensity();
+            if (ImGui::ColorEdit3("Colour", &colour[0]) ||
+                ImGui::SliderFloat("Intensity", &intensity, 1, 1000)) {
+                scene._lights[l0].setColour(colour);
+                scene._lights[l0].setIntensity(intensity);
+            }
+
+            ende::math::Quaternion direction = scene._lights[l2].transform().rot();
+            if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1)) {
+                scene._lights[l2].setDirection(direction);
+            }
 
             ImGui::Text("Lights: %lu", scene._lights.size());
 

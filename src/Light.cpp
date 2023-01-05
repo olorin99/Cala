@@ -40,7 +40,7 @@ cala::Light &cala::Light::operator=(const cala::Light &rhs) {
 cala::Light::Data cala::Light::data() const {
     Data data {
         {0, 0, 0},
-        0,
+        static_cast<f32>(_type),
         _colour,
         _intensity,
         _constant,

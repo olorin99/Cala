@@ -9,8 +9,8 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
                  engine->createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM)},
     _lightBuffer{engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE),
                  engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE)},
-    _lightCountBuffer{engine->createBuffer(sizeof(u32), backend::BufferUsage::STORAGE),
-                 engine->createBuffer(sizeof(u32), backend::BufferUsage::STORAGE)},
+    _lightCountBuffer{engine->createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE),
+                 engine->createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE)},
     _directionalLightCount(0)
 {}
 
@@ -41,10 +41,11 @@ void cala::Scene::addRenderable(cala::Mesh &mesh, cala::MaterialInstance *materi
     }
 }
 
-void cala::Scene::addLight(cala::Light &light) {
+u32 cala::Scene::addLight(cala::Light &light) {
     if (light.type() == Light::DIRECTIONAL)
         ++_directionalLightCount;
     _lights.push(std::move(light));
+    return _lights.size() - 1;
 }
 
 void cala::Scene::addSkyLightMap(ImageHandle skyLightMap, bool equirectangular) {
@@ -82,8 +83,8 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
         return lhs.first < rhs.first;
     });
 
-    std::sort(_lights.begin(), _lights.end(), [](const Light& lhs, const Light& rhs) {
-        return lhs.type() == Light::DIRECTIONAL && rhs.type() != Light::DIRECTIONAL;
+    std::sort(_lightData.begin(), _lightData.end(), [](const Light::Data& lhs, const Light::Data& rhs) {
+        return lhs.padding < rhs.padding;
     });
     _lightData.clear();
     for (auto& light : _lights) {
@@ -91,8 +92,8 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
     }
     if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame]->size())
         _lightBuffer[frame]->resize(_lightData.size() * sizeof(Light::Data) * 2);
-    u32 lightCount = _lights.size();
-    _lightCountBuffer[frame]->data({ &lightCount, sizeof(lightCount) });
+    u32 lightCount[2] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount) };
+    _lightCountBuffer[frame]->data({ lightCount, sizeof(u32) * 2 });
     _lightBuffer[frame]->data({_lightData.data(), static_cast<u32>(_lightData.size() * sizeof(Light::Data))});
 
     _modelTransforms.clear();

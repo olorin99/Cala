@@ -29,9 +29,9 @@ namespace cala {
     public:
 
         enum LightType {
-            DIRECTIONAL,
-            POINT,
-            SPOT
+            DIRECTIONAL = 0,
+            POINT = 1,
+            SPOT = 2
         };
 
         Light(LightType type, bool shadows, Transform& transform);
