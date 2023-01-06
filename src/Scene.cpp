@@ -84,7 +84,7 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
     });
 
     std::sort(_lightData.begin(), _lightData.end(), [](const Light::Data& lhs, const Light::Data& rhs) {
-        return lhs.padding < rhs.padding;
+        return lhs.type < rhs.type;
     });
     _lightData.clear();
     for (auto& light : _lights) {

@@ -40,7 +40,7 @@ namespace cala {
 
         struct Data {
             ende::math::Vec3f position;
-            f32 padding;
+            f32 type;
             ende::math::Vec3f colour;
             f32 intensity;
             f32 constant;

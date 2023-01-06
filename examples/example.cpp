@@ -74,7 +74,7 @@ int main() {
 
     //Shaders
 //    ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/point_shadow.frag.spv"_path));
-    ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/point_pbr.frag.spv"_path));
+    ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
 //    ProgramHandle directionalLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/direct_shadow.frag.spv"_path));
     ProgramHandle directionalLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/direct_pbr.frag.spv"_path));
 
@@ -120,7 +120,7 @@ int main() {
     matInstance.setSampler("roughnessMap", brickwall_roughness->getView(), Sampler(engine.driver(), {}));
     matInstance.setSampler("aoMap", brickwall_ao->getView(), Sampler(engine.driver(), {}));
 
-    u32 objectCount = 100;
+    u32 objectCount = 1000;
     Scene scene(&engine, objectCount);
 
     Transform lightTransform({-3, 3, -1}, {0, 0, 0, 1}, {0.5, 0.5, 0.5});
@@ -132,7 +132,7 @@ int main() {
     Transform light2Transform({0, 0, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-45)));
     Light light2(cala::Light::DIRECTIONAL, false, light2Transform);
     light2.setColour({0, 0, 1});
-    light2.setIntensity(400);
+    light2.setIntensity(2000);
     Transform light3Transform({-10, 2, 4});
     Light light3(cala::Light::POINT, false, light3Transform);
 
@@ -149,7 +149,7 @@ int main() {
 
     f32 sceneSize = objectCount / 10;
 
-    Transform floorTransform({0, -sceneSize * 1.5f, 0}, {0, 0, 0, 1}, {sceneSize * 3, 1, sceneSize * 3});
+    Transform floorTransform({0, -sceneSize * 1.5f, 0}, {0, 0, 0, 1}, {sceneSize * 1.5f, 1, sceneSize * 1.5f});
     scene.addRenderable(cube, &matInstance, &floorTransform);
 
     models.reserve(objectCount);

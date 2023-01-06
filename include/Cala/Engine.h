@@ -30,6 +30,8 @@ namespace cala {
             return _engine && _index != -1;
         }
 
+        i32 index() const { return _index; }
+
     private:
         friend Engine;
 

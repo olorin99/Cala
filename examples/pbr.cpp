@@ -143,7 +143,7 @@ int main() {
     ShaderProgram skybox = loadShader(driver, "../../res/shaders/skybox.vert.spv"_path, "../../res/shaders/skybox.frag.spv"_path);
 
     //Shaders
-    ProgramHandle program = engine.createProgram(loadShader(driver, "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
+    ProgramHandle program = engine.createProgram(loadShader(driver, "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr_example.frag.spv"_path));
 
     Material material(&engine);
     material.setProgram(cala::Material::Variants::POINT, program);

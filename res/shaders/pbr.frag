@@ -5,10 +5,10 @@ layout (location = 0) in VsOut {
     vec2 TexCoords;
     mat3 TBN;
     vec3 ViewPos;
+    vec4 WorldPosLightSpace;
 } fsIn;
 
 layout (location = 0) out vec4 FragColour;
-layout (location = 1) out vec4 FragNormal;
 
 layout (set = 2, binding = 0) uniform sampler2D albedoMap;
 layout (set = 2, binding = 1) uniform sampler2D normalMap;
@@ -16,12 +16,14 @@ layout (set = 2, binding = 2) uniform sampler2D metallicMap;
 layout (set = 2, binding = 3) uniform sampler2D roughnessMap;
 layout (set = 2, binding = 4) uniform sampler2D aoMap;
 
-layout (set = 2, binding = 5) uniform samplerCube irradianceMap;
-layout (set = 2, binding = 6) uniform samplerCube prefilterMap;
-layout (set = 2, binding = 7) uniform sampler2D brdfLUT;
+layout (set = 2, binding = 5) uniform samplerCube shadowMap;
 
-struct PointLight {
-    vec3 position;
+//layout (set = 2, binding = 5) uniform samplerCube irradianceMap;
+//layout (set = 2, binding = 6) uniform samplerCube prefilterMap;
+//layout (set = 2, binding = 7) uniform sampler2D brdfLUT;
+
+struct Light {
+    vec4 position;
     vec3 colour;
     float intensity;
     float constant;
@@ -30,8 +32,13 @@ struct PointLight {
     float radius;
 };
 
-layout (set = 3, binding = 0) uniform LightData {
-    PointLight light;
+layout (set = 3, binding = 0) readonly buffer LightData {
+    Light lights[];
+};
+
+layout (set = 3, binding = 1) readonly buffer LightCount {
+    uint directLightCount;
+    uint pointLightCount;
 };
 
 const float PI = 3.1415926559;
@@ -71,6 +78,34 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
     return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
+float calcShadows(vec3 fragPosLight, vec3 offset, float bias) {
+    float shadow = 1.0;
+    if(texture(shadowMap, fragPosLight + offset).r < length(fragPosLight) / 100.f - bias) {
+        shadow = 0.0;
+    }
+    return shadow;
+}
+
+vec3 sampleOffsetDirections[20] = vec3[](
+vec3(1, 1, 1), vec3(1, -1, 1), vec3(-1, -1, 1), vec3(-1, 1, 1),
+vec3(1, 1, -1), vec3(1, -1, -1), vec3(-1, -1, -1), vec3(-1, 1, -1),
+vec3(1, 1, 0), vec3(1, -1, 0), vec3(-1, -1, 0), vec3(-1, 1, 0),
+vec3(1, 0, 1), vec3(-1, 0, 1), vec3(1, 0, -1), vec3(-1, 0, -1),
+vec3(0, 1, 1), vec3(0, -1, 1), vec3(0, -1, -1), vec3(0, 1, -1)
+);
+
+float filterPCF(vec3 fragPosLight, float bias) {
+    float shadow = 0;
+    int samples = 20;
+    float viewDistance = length(fragPosLight);
+    float diskRadius = (1.0 + (viewDistance / 100.f)) / 25.0;
+
+    for (int i = 0; i < samples; i++) {
+        shadow += calcShadows(fragPosLight, sampleOffsetDirections[i] * diskRadius, bias);
+    }
+    return shadow / samples;
+}
+
 void main() {
 
     vec3 albedo = texture(albedoMap, fsIn.TexCoords).rgb;
@@ -90,56 +125,47 @@ void main() {
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, albedo, metallic);
 
-    vec3 L = normalize(light.position - fsIn.FragPos);
-    vec3 H = normalize(V + L);
-    float distance = length(light.position - fsIn.FragPos);
-    float attenuation = 1.0 / (distance * distance);
-    vec3 radiance = light.colour * light.intensity * attenuation;
+    vec3 Lo = vec3(0.0);
+    float shadow = 1.0;
 
-    float NDF = distributionGGX(normal, H, roughness);
-    float G = geometrySmith(normal, V, L, roughness);
-    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+    uint lightNum = min(directLightCount + pointLightCount, 1000);
+    for (uint i = 0; i < lightNum; i++) {
+        Light light = lights[i];
+        vec3 L = vec3(0.0);
+        if (light.position.w > 0)
+            L = normalize(light.position.xyz - fsIn.FragPos);
+        else
+            L = normalize(-light.position.xyz);
+        vec3 H = normalize(V + L);
+        float distance = length(light.position.xyz - fsIn.FragPos);
+        float attenuation = 1.0 / (distance * distance);
+        vec3 radiance = light.colour * light.intensity * attenuation;
 
-    vec3 nominator = NDF * G * F;
-    float denominator = 4.0 * max(dot(normal, V), 0.0) * max(dot(normal, L), 0.0) + 0.0001;
-    vec3 specular = nominator / denominator;
+        float NDF = distributionGGX(normal, H, roughness);
+        float G = geometrySmith(normal, V, L, roughness);
+        vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
 
-    vec3 kS = F;
-    vec3 kD = vec3(1.0) - kS;
+        vec3 nominator = NDF * G * F;
+        float denominator = 4.0 * max(dot(normal, V), 0.0) * max(dot(normal, L), 0.0) + 0.0001;
+        vec3 specular = nominator / denominator;
 
-    kD *= 1.0 - metallic;
+        vec3 kS = F;
+        vec3 kD = vec3(1.0) - kS;
 
-    float NdotL = max(dot(normal, L), 0.0);
-    vec3 Lo = (kD * albedo / PI + specular) * radiance * NdotL;
+        kD *= 1.0 - metallic;
 
+        float NdotL = max(dot(normal, L), 0.0);
+        Lo += (kD * albedo / PI + specular) * radiance * NdotL;
 
-    vec3 iblF = fresnelSchlickRoughness(max(dot(normal, V), 0.0), F0, roughness);
-    vec3 iblkD = vec3(1.0) - iblF;
-    iblkD *= 1.0 - metallic;
+//        float bias = max(0.01 * (1.0 - dot(normal, L)), 0.00001);
+//        shadow = filterPCF(fsIn.FragPos - light.position, bias);
+    }
 
-    vec3 irradiance = texture(irradianceMap, normal).rgb;
-    vec3 diffuse = irradiance * albedo;
-
-    const float MAX_REFLECTION_LOD = 4.0;
-    float lod = roughness * MAX_REFLECTION_LOD;
-    float lodf = floor(lod);
-    float lodc = clamp(ceil(lod), 0.0, MAX_REFLECTION_LOD);
-    vec3 a = textureLod(prefilterMap, R, lodf).rgb;
-    vec3 b = textureLod(prefilterMap, R, lodc).rgb;
-    vec3 prefilteredColour = mix(a, b, lod - lodf);
-
-
-//    vec3 prefilteredColour = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOD).rgb;
-    vec2 brdf = texture(brdfLUT, vec2(max(dot(normal, V), 0.0), roughness)).rg;
-    vec3 iblspecular = prefilteredColour * (iblF * brdf.x + brdf.y);
-
-    vec3 ambient = (iblkD * diffuse + iblspecular) * ao;
-    vec3 colour = ambient + Lo;
+    vec3 ambient = vec3(0.03) * albedo * ao;
+    vec3 colour = (ambient + Lo) * shadow;
 
     colour = colour / (colour + vec3(1.0));
     colour = pow(colour, vec3(1.0 / 2.2));
 
     FragColour = vec4(colour, 1.0);
-    FragNormal = vec4(normal, 1.0);
-
 }
