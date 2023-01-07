@@ -133,7 +133,7 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Driver& driver, D
     staging.data(info.data);
     driver.immediate([&](CommandBuffer& buffer) {
         VkImageSubresourceRange range;
-        range.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+        range.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
         range.baseMipLevel = 0;
         range.levelCount = 1;
         range.baseArrayLayer = 0;
@@ -154,7 +154,7 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Driver& driver, D
         copyRegion.bufferRowLength = 0;
         copyRegion.bufferImageHeight = 0;
 
-        copyRegion.imageSubresource.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+        copyRegion.imageSubresource.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
         copyRegion.imageSubresource.mipLevel = info.mipLevel;
         copyRegion.imageSubresource.baseArrayLayer = 0;
         copyRegion.imageSubresource.layerCount = 1;
@@ -193,12 +193,12 @@ cala::backend::vulkan::Image::copy(cala::backend::vulkan::CommandBuffer &buffer,
 
     VkImageCopy region{};
 
-    region.srcSubresource.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    region.srcSubresource.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     region.srcSubresource.mipLevel = srcMipLevel;
     region.srcSubresource.baseArrayLayer = srcLayer;
     region.srcSubresource.layerCount = 1;
 
-    region.dstSubresource.aspectMask = dst._format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    region.dstSubresource.aspectMask = isDepthFormat(dst._format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     region.dstSubresource.mipLevel = dstMipLevel;
     region.dstSubresource.baseArrayLayer = dstLayer;
     region.dstSubresource.layerCount = 1;
@@ -224,7 +224,7 @@ void cala::backend::vulkan::Image::generateMips(CommandBuffer &cmd) {
     barrier.image = _image;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.subresourceRange.aspectMask = (_format == Format::D16_UNORM || _format == Format::D32_SFLOAT || _format == Format::D24_UNORM_S8_UINT) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.layerCount = 1;
     barrier.subresourceRange.levelCount = 1;
 
@@ -243,7 +243,7 @@ void cala::backend::vulkan::Image::generateMips(CommandBuffer &cmd) {
             VkImageBlit blit{};
             blit.srcOffsets[0] = {0, 0, 0};
             blit.srcOffsets[1] = {mipWidth, mipHeight, 1};
-            blit.srcSubresource.aspectMask = (_format == Format::D16_UNORM || _format == Format::D32_SFLOAT || _format == Format::D24_UNORM_S8_UINT) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+            blit.srcSubresource.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
             blit.srcSubresource.mipLevel = mip - 1;
             blit.srcSubresource.baseArrayLayer = layer;
             blit.srcSubresource.layerCount = 1;
@@ -253,7 +253,7 @@ void cala::backend::vulkan::Image::generateMips(CommandBuffer &cmd) {
 
             blit.dstOffsets[0] = {0, 0, 0};
             blit.dstOffsets[1] = {mipWidth, mipHeight, 1};
-            blit.dstSubresource.aspectMask = (_format == Format::D16_UNORM || _format == Format::D32_SFLOAT || _format == Format::D24_UNORM_S8_UINT) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+            blit.dstSubresource.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
             blit.dstSubresource.mipLevel = mip;
             blit.dstSubresource.baseArrayLayer = layer;
             blit.dstSubresource.layerCount = 1;
@@ -307,7 +307,7 @@ cala::backend::vulkan::Image::View cala::backend::vulkan::Image::newView(VkImage
     viewCreateInfo.viewType = viewType;
     viewCreateInfo.format = getFormat(_format);
 
-    viewCreateInfo.subresourceRange.aspectMask = (_format == Format::D16_UNORM || _format == Format::D32_SFLOAT || _format == Format::D24_UNORM_S8_UINT) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    viewCreateInfo.subresourceRange.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
 //    viewCreateInfo.subresourceRange.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     viewCreateInfo.subresourceRange.baseMipLevel = mipLevel;
     viewCreateInfo.subresourceRange.levelCount = levelCount;
@@ -325,7 +325,7 @@ cala::backend::vulkan::Image::View cala::backend::vulkan::Image::newView(VkImage
 
 VkImageMemoryBarrier cala::backend::vulkan::Image::barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer) {
     VkImageSubresourceRange range{};
-    range.aspectMask = (_format == Format::D16_UNORM || _format == Format::D32_SFLOAT || _format == Format::D24_UNORM_S8_UINT) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    range.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     range.baseMipLevel = 0;
     range.levelCount = VK_REMAINING_MIP_LEVELS;
     range.baseArrayLayer = layer;

@@ -4,18 +4,19 @@ layout (location = 0) in VsOut {
     vec3 FragPos;
 } fsIn;
 
-struct PointLight {
-    vec3 position;
+struct Light {
+    vec4 position;
     vec3 colour;
     float intensity;
     float constant;
     float linear;
     float quadratic;
-    float radius;
+    //    float radius;
+    uint shadowIndex;
 };
 
 layout (set = 3, binding = 0) readonly buffer LightData {
-    PointLight light;
+    Light light;
 };
 
 struct CameraData {
@@ -31,6 +32,6 @@ layout (push_constant) uniform PushConstants {
 };
 
 void main() {
-    vec3 lightVec = fsIn.FragPos - light.position;
+    vec3 lightVec = fsIn.FragPos - light.position.xyz;
     gl_FragDepth = length(lightVec) / (camera.far - camera.near);
 }

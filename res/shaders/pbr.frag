@@ -86,7 +86,8 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
 
 float calcShadows(uint index, vec3 fragPosLight, vec3 offset, float bias) {
     float shadow = 1.0;
-    if(texture(pointShadows[index], fragPosLight + offset).r < length(fragPosLight) / 1000.f - bias) {
+//    return texture(pointShadows[index], fragPosLight + offset).r + bias;
+    if(texture(pointShadows[index], fragPosLight + offset).r < length(fragPosLight) / (100.f - 0.1f) - bias) {
         shadow = 0.0;
     }
     return shadow;
@@ -104,7 +105,7 @@ float filterPCF(uint index, vec3 fragPosLight, float bias) {
     float shadow = 0;
     int samples = 20;
     float viewDistance = length(fragPosLight - fsIn.FragPos);
-    float diskRadius = (1.0 + (viewDistance / 1000.f)) / 25.0;
+    float diskRadius = (1.0 + (viewDistance / 100.f)) / 25.0;
 
     for (int i = 0; i < samples; i++) {
         shadow += calcShadows(index, fsIn.FragPos - fragPosLight, sampleOffsetDirections[i] * diskRadius, bias);
@@ -142,15 +143,17 @@ void main() {
         vec3 L = vec3(0.0);
         if (light.position.w > 0) {
             L = normalize(light.position.xyz - fsIn.FragPos);
-            float bias = max(shadowBias * (1.0 - dot(normal, L)), shadowBias);
+            float bias = max(shadowBias * (1.0 - dot(normal, L)), 0.0001);
 //            float bias = shadowBias;
 //            float bias = clamp(shadowBias * tan(acos(clamp(dot(normal, L), 0.0, 1.0))), 0, 0.01);
 //            shadow = filterPCF(light.shadowIndex, light.position.xyz, bias);
-            shadow = calcShadows(light.shadowIndex, fsIn.FragPos - light.position.xyz, vec3(0.0), bias);
+            shadow += calcShadows(light.shadowIndex, fsIn.FragPos - light.position.xyz, vec3(0.0), bias);
 //            shadow = bias;
-        }
-        else
+//            shadow = length(fsIn.FragPos - light.position.xyz) / (100.f - 0.1f);
+        } else {
             L = normalize(-light.position.xyz);
+            shadow += 1;
+        }
         vec3 H = normalize(V + L);
         float distance = length(light.position.xyz - fsIn.FragPos);
         float attenuation = 1.0 / (distance * distance);
@@ -173,6 +176,8 @@ void main() {
         Lo += (kD * albedo / PI + specular) * radiance * NdotL;
 
     }
+
+    shadow /= float(lightNum);
 
     vec3 ambient = vec3(0.03) * albedo * ao;
     vec3 colour = (ambient + Lo) * shadow;

@@ -56,14 +56,14 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto& lightObj = scene._lights[light];
 
             Transform shadowTransform(lightObj.transform().pos());
-            Camera shadowCamera((f32)ende::math::rad(90.f), 1024.f, 1024.f, 0.1f, 1000.f, shadowTransform);
+            Camera shadowCamera((f32)ende::math::rad(90.f), 1024.f, 1024.f, 0.1f, 100.f, shadowTransform);
 
             if (lightObj.type() == Light::POINT) { // point shadows
                 auto& shadowProbe = _engine->getShadowProbe(light);
                 shadowProbe.draw(cmd, [&](backend::vulkan::CommandBuffer& cmd, u32 face) {
                     cmd.clearDescriptors();
                     cmd.bindRasterState({
-                        backend::CullMode::FRONT
+                        backend::CullMode::FRONT,
                     });
                     cmd.bindDepthState({
                         true, true,
@@ -72,7 +72,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                     cmd.bindProgram(*_engine->_pointShadowProgram);
 
-                    cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()], sizeof(u32) + light * sizeof(Light::Data), sizeof(Light::Data));
+                    cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()], light * sizeof(Light::Data), sizeof(Light::Data));
 
                     switch (face) {
                         case 0:

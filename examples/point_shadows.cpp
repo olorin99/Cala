@@ -128,8 +128,8 @@ int main() {
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
 
     Scene scene(&engine, 10);
-    Mesh cube = shapes::sphereUV(1).mesh(driver);
-//    Mesh cube = shapes::cube().mesh(driver);
+    Mesh sphere = shapes::sphereUV(1).mesh(driver);
+    Mesh cube = shapes::cube().mesh(driver);
 
     ende::Vector<cala::Transform> transforms;
     transforms.reserve(100);
@@ -141,7 +141,7 @@ int main() {
         transforms.push(Transform({
             ende::math::rand(-volume, volume), ende::math::rand(-volume, volume), ende::math::rand(-volume, volume)
         }));
-        scene.addRenderable(cube, &matInstance, &transforms.back());
+        scene.addRenderable(sphere, &matInstance, &transforms.back());
     }
 
     f32 width = volume * 2;

@@ -173,7 +173,7 @@ int main() {
     matInstance.setSampler("roughnessMap", brickwall_roughness->newView(), Sampler(engine.driver(), {}));
     matInstance.setSampler("aoMap", brickwall_ao->newView(), Sampler(engine.driver(), {}));
 
-    u32 objectCount = 10;
+    u32 objectCount = 100;
     Scene scene(&engine, objectCount);
 
 //    ende::Vector<cala::Transform> transforms;
@@ -210,7 +210,7 @@ int main() {
 //
 //    u32 l0 = scene.addLight(light);
 
-    Transform lightTransform({-3, 3, -1}, {0, 0, 0, 1}, {0.5, 0.5, 0.5});
+    Transform lightTransform({-10, 0, 0}, {0, 0, 0, 1}, {0.5, 0.5, 0.5});
     Light light(cala::Light::POINT, true, lightTransform);
     light.setColour({1, 0, 0});
     Transform light1Transform({10, 2, 4});
@@ -243,7 +243,7 @@ int main() {
     for (u32 i = 0; i < objectCount; i++) {
         models.push(Transform({ende::math::rand(-sceneSize, sceneSize), ende::math::rand(-sceneSize, sceneSize), ende::math::rand(-sceneSize, sceneSize)}));
         scene.addRenderable(i % 2 == 0 ? cube : sphere, &matInstance, &models.back());
-//        scene.addRenderable(cube, &matInstance, &models.back());
+        scene.addRenderable(cube, &matInstance, &models.back());
     }
 
     ende::Vector<Transform> lightTransforms;
@@ -336,7 +336,7 @@ int main() {
                 scene._lights[l0].setIntensity(intensity);
             }
 
-            ImGui::DragFloat("Shadow Bias", &scene.shadowBias, 0.001, 0, 1);
+            ImGui::DragFloat("Shadow Bias", &scene.shadowBias, 0.001, -1, 1);
 
 //            ende::math::Quaternion direction = scene._lights[l2].transform().rot();
 //            if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1)) {

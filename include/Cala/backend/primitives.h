@@ -65,6 +65,10 @@ namespace cala::backend {
         D24_UNORM_S8_UINT = 129
     };
 
+    constexpr inline bool isDepthFormat(backend::Format format) {
+        return format == Format::D16_UNORM || format == Format::D32_SFLOAT || format == Format::D24_UNORM_S8_UINT;
+    }
+
     enum class MemoryProperties {
         DEVICE_LOCAL = 0x00000001,
         HOST_VISIBLE = 0x00000002,
