@@ -270,11 +270,13 @@ void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
 
     u32 setCount = 0;
     // find descriptors with key
-    for (u32 i = 0; i < MAX_SET_COUNT; i++) {
+    for (u32 i = 0; i < MAX_SET_COUNT - 1; i++) {
         auto descriptor = getDescriptorSet(i);
         _currentSets[i] = descriptor;
         setCount++;
     }
+    _currentSets[MAX_SET_COUNT - 1] = _driver.bindlessSet();
+    setCount++;
 
     // bind descriptor
     vkCmdBindDescriptorSets(_buffer, _computeBound ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineKey.layout, 0, setCount, _currentSets, 0, nullptr);

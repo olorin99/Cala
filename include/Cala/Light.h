@@ -46,7 +46,8 @@ namespace cala {
             f32 constant;
             f32 linear;
             f32 quadratic;
-            f32 radius;
+//            f32 radius;
+            u32 shadowIndex = 0;
         };
 
         Data data() const;

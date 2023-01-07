@@ -60,6 +60,11 @@ namespace cala::backend::vulkan {
 
         VkDescriptorSetLayout getSetLayout(ende::Span<VkDescriptorSetLayoutBinding> bindings);
 
+        void updateBindlessImage(u32 index, Image::View& image, Sampler& sampler);
+
+        VkDescriptorSetLayout bindlessLayout() const { return _bindlessLayout; }
+        VkDescriptorSet bindlessSet() const { return _bindlessSet; }
+
 
         const Context& context() const { return _context; }
 
@@ -92,6 +97,10 @@ namespace cala::backend::vulkan {
         std::unordered_map<SetLayoutKey, VkDescriptorSetLayout, ende::util::MurmurHash<SetLayoutKey>> _setLayouts;
         VkDescriptorSetLayout _emptySetLayout;
         VkDescriptorSet _emptySet;
+
+        VkDescriptorSetLayout _bindlessLayout;
+        VkDescriptorSet _bindlessSet;
+        VkDescriptorPool _bindlessPool;
 
     };
 

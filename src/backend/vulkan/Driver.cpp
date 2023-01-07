@@ -39,14 +39,64 @@ cala::backend::vulkan::Driver::Driver(cala::backend::Platform& platform, bool cl
         vkCreateFence(_context.device(), &fenceCreateInfo, nullptr, &_frameFences[i]);
     }
 
+    constexpr u32 maxBindless = 1000;
+
+    VkDescriptorPoolSize poolSizes[] = {
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxBindless }
+    };
+
+    VkDescriptorPoolCreateInfo poolCreateInfo{};
+    poolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+    poolCreateInfo.maxSets = maxBindless;
+    poolCreateInfo.poolSizeCount = 1;
+    poolCreateInfo.pPoolSizes = poolSizes;
+    vkCreateDescriptorPool(_context.device(), &poolCreateInfo, nullptr, &_bindlessPool);
+
+    VkDescriptorSetLayoutBinding bindlessLayoutBinding{};
+    bindlessLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    bindlessLayoutBinding.descriptorCount = maxBindless;
+    bindlessLayoutBinding.binding = 0;
+    bindlessLayoutBinding.stageFlags = VK_SHADER_STAGE_ALL;
+    bindlessLayoutBinding.pImmutableSamplers = nullptr;
+
+    VkDescriptorSetLayoutCreateInfo bindlessLayoutCreateInfo{};
+    bindlessLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    bindlessLayoutCreateInfo.bindingCount = 1;
+    bindlessLayoutCreateInfo.pBindings = &bindlessLayoutBinding;
+    bindlessLayoutCreateInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+
+    VkDescriptorBindingFlags bindingFlags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
+    VkDescriptorSetLayoutBindingFlagsCreateInfo extendedInfo;
+    extendedInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+    extendedInfo.bindingCount = 1;
+    extendedInfo.pBindingFlags = &bindingFlags;
+    bindlessLayoutCreateInfo.pNext = &extendedInfo;
+
+    vkCreateDescriptorSetLayout(_context.device(), &bindlessLayoutCreateInfo, nullptr, &_bindlessLayout);
+
+    VkDescriptorSetAllocateInfo bindlessAllocate{};
+    bindlessAllocate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    bindlessAllocate.descriptorSetCount = 1;
+    bindlessAllocate.pSetLayouts = &_bindlessLayout;
+    bindlessAllocate.descriptorPool = _bindlessPool;
+
+    VkDescriptorSetVariableDescriptorCountAllocateInfo countInfo{};
+    countInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
+    countInfo.descriptorSetCount = 1;
+    u32 maxBinding = maxBindless - 1;
+    countInfo.pDescriptorCounts = &maxBinding;
+    bindlessAllocate.pNext = &countInfo;
+
+    vkAllocateDescriptorSets(_context.device(), &bindlessAllocate, &_bindlessSet);
 }
 
 cala::backend::vulkan::Driver::~Driver() {
-//    for (u32 i = 0; i < FRAMES_IN_FLIGHT; i++) {
-//        vkWaitForFences(_context.device(), 1, &_frameFences[i], true, 1000000000);
-//        vkResetCommandBuffer(_frameCommands[i].buffer(), VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
-//    }
     vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS)); //ensures last frame finished before destroying stuff
+
+    vkDestroyDescriptorSetLayout(_context.device(), _bindlessLayout, nullptr);
+
+    vkDestroyDescriptorPool(_context.device(), _bindlessPool, nullptr);
 
     for (u32 i = 0; i < FRAMES_IN_FLIGHT; i++) {
         vkDestroyFence(_context.device(), _frameFences[i], nullptr);
@@ -177,4 +227,23 @@ VkDescriptorSetLayout cala::backend::vulkan::Driver::getSetLayout(ende::Span <Vk
 
     _setLayouts.emplace(std::make_pair(key, setLayout));
     return setLayout;
+}
+
+void cala::backend::vulkan::Driver::updateBindlessImage(u32 index, Image::View &image, Sampler& sampler) {
+    VkWriteDescriptorSet descriptorWrite{};
+    VkDescriptorImageInfo imageInfo{};
+
+    imageInfo.imageView = image.view;
+    imageInfo.sampler = sampler.sampler();
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrite.descriptorCount = 1;
+    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptorWrite.dstArrayElement = index;
+    descriptorWrite.dstSet = _bindlessSet;
+    descriptorWrite.dstBinding = 0;
+    descriptorWrite.pImageInfo = &imageInfo;
+
+    vkUpdateDescriptorSets(_context.device(), 01, &descriptorWrite, 0, nullptr);
 }

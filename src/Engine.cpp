@@ -48,7 +48,12 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
     : _driver(platform, clear),
       _shadowPass(_driver, { &shadowPassAttachment, 1 }),
       _defaultSampler(_driver, {}),
-      _cube(shapes::cube().mesh(_driver))
+      _cube(shapes::cube().mesh(_driver)),
+      _shadowSampler(_driver, {
+          .filter = VK_FILTER_NEAREST,
+          .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+          .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
+      })
 {
     ende::fs::File file;
     {
@@ -141,8 +146,8 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, 0, nullptr, { &flatBarrier, 1 });
     });
 
-    _defaultPointShadowView = _defaultPointShadow->getView(VK_IMAGE_VIEW_TYPE_CUBE);
-    _defaultDirectionalShadowView = _defaultDirectionalShadow->getView();
+    _defaultPointShadowView = _defaultPointShadow->newView(VK_IMAGE_VIEW_TYPE_CUBE);
+    _defaultDirectionalShadowView = _defaultDirectionalShadow->newView();
 
 }
 
@@ -159,8 +164,11 @@ cala::BufferHandle cala::Engine::createBuffer(u32 size, backend::BufferUsage usa
 
 
 cala::ImageHandle cala::Engine::createImage(backend::vulkan::Image::CreateInfo info) {
+    u32 index = _images.size();
     _images.emplace(_driver, info);
-    u32 index = _images.size() - 1;
+    _imageViews.emplace(_images.back().newView());
+    assert(_images.size() == _imageViews.size());
+    _driver.updateBindlessImage(index, _imageViews.back(), info.format == driver().context().depthFormat() ? _shadowSampler : _defaultSampler);
     return { this, index };
 }
 
@@ -177,8 +185,8 @@ cala::ImageHandle cala::Engine::convertToCubeMap(ImageHandle equirectangular) {
         10, 6,
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST
     });
-    auto equirectangularView = equirectangular->getView();
-    auto cubeView = cubeMap->getView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 10);
+    auto equirectangularView = equirectangular->newView();
+    auto cubeView = cubeMap->newView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 10);
     _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
         auto envBarrier = cubeMap->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::GENERAL);
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &envBarrier, 1 });

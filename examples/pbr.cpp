@@ -161,11 +161,11 @@ int main() {
     Image brickwall_metallic = loadImage(driver, "../../res/textures/pbr_rusted_iron/rustediron2_metallic.png"_path);
     Image brickwall_roughness = loadImage(driver, "../../res/textures/pbr_rusted_iron/rustediron2_roughness.png"_path);
     Image brickwall_ao = loadImage(driver, "../../res/textures/pbr_rusted_iron/rustediron2_ao.png"_path);
-    matInstance.setSampler("albedoMap", brickwall_albedo.getView(), Sampler(driver, {}));
-    matInstance.setSampler("normalMap", brickwall_normal.getView(), Sampler(driver, {}));
-    matInstance.setSampler("metallicMap", brickwall_metallic.getView(), Sampler(driver, {}));
-    matInstance.setSampler("roughnessMap", brickwall_roughness.getView(), Sampler(driver, {}));
-    matInstance.setSampler("aoMap", brickwall_ao.getView(), Sampler(driver, {}));
+    matInstance.setSampler("albedoMap", brickwall_albedo.newView(), Sampler(driver, {}));
+    matInstance.setSampler("normalMap", brickwall_normal.newView(), Sampler(driver, {}));
+    matInstance.setSampler("metallicMap", brickwall_metallic.newView(), Sampler(driver, {}));
+    matInstance.setSampler("roughnessMap", brickwall_roughness.newView(), Sampler(driver, {}));
+    matInstance.setSampler("aoMap", brickwall_ao.newView(), Sampler(driver, {}));
 
 //    Image hdr = loadImageHDR(driver, "../../res/textures/Tropical_Beach_3k.hdr"_path);
     Image hdr = loadImageHDR(driver, "../../res/textures/TropicalRuins_3k.hdr"_path);
@@ -209,7 +209,7 @@ int main() {
 
 
     Sampler s1(driver, {});
-    Image::View hdrView = hdr.getView();
+    Image::View hdrView = hdr.newView();
 
     Transform cameraTransform({0, 0, -15});
     Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / 600.f, 0.1f, 1000.f), cameraTransform);
@@ -295,11 +295,11 @@ int main() {
             auto& roughness = images[y];
 
             auto& instance = instances.push(material.instance());
-            instance.setSampler("albedoMap", albedo.getView(), Sampler(driver, {}));
-            instance.setSampler("normalMap", normal.getView(), Sampler(driver, {}));
-            instance.setSampler("metallicMap", metallic.getView(), Sampler(driver, {}));
-            instance.setSampler("roughnessMap", roughness.getView(), Sampler(driver, {}));
-            instance.setSampler("aoMap", brickwall_ao.getView(), Sampler(driver, {}));
+            instance.setSampler("albedoMap", albedo.newView(), Sampler(driver, {}));
+            instance.setSampler("normalMap", normal.newView(), Sampler(driver, {}));
+            instance.setSampler("metallicMap", metallic.newView(), Sampler(driver, {}));
+            instance.setSampler("roughnessMap", roughness.newView(), Sampler(driver, {}));
+            instance.setSampler("aoMap", brickwall_ao.newView(), Sampler(driver, {}));
 
             transforms.push(Transform({(f32)x * 3, (f32)y * 3, 0}));
 
@@ -337,7 +337,7 @@ int main() {
             6,
             ImageUsage::STORAGE | ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST | backend::ImageUsage::TRANSFER_SRC
     });
-    auto environmentView = environmentMap.getView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 10);
+    auto environmentView = environmentMap.newView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 10);
 
     driver.immediate([&](CommandBuffer& cmd) {
         toCubeTimer.start(cmd);
@@ -373,7 +373,7 @@ int main() {
             6,
             ImageUsage::STORAGE | ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
     });
-    auto irradianceView = irradianceMap.getView(VK_IMAGE_VIEW_TYPE_CUBE);
+    auto irradianceView = irradianceMap.newView(VK_IMAGE_VIEW_TYPE_CUBE);
 
 
     driver.immediate([&](CommandBuffer& cmd) {
@@ -406,11 +406,11 @@ int main() {
             ImageUsage::STORAGE | ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
     });
     Image::View prefilterViews[5] = {
-            prefilterMap.getView(VK_IMAGE_VIEW_TYPE_CUBE, 0),
-            prefilterMap.getView(VK_IMAGE_VIEW_TYPE_CUBE, 1),
-            prefilterMap.getView(VK_IMAGE_VIEW_TYPE_CUBE, 2),
-            prefilterMap.getView(VK_IMAGE_VIEW_TYPE_CUBE, 3),
-            prefilterMap.getView(VK_IMAGE_VIEW_TYPE_CUBE, 4)
+            prefilterMap.newView(VK_IMAGE_VIEW_TYPE_CUBE, 0),
+            prefilterMap.newView(VK_IMAGE_VIEW_TYPE_CUBE, 1),
+            prefilterMap.newView(VK_IMAGE_VIEW_TYPE_CUBE, 2),
+            prefilterMap.newView(VK_IMAGE_VIEW_TYPE_CUBE, 3),
+            prefilterMap.newView(VK_IMAGE_VIEW_TYPE_CUBE, 4)
     };
 
     Buffer roughnessBuf(driver, sizeof(f32) * 6, BufferUsage::UNIFORM);
@@ -439,7 +439,7 @@ int main() {
         prefilterTimer.stop();
     });
 
-    auto prefilterView = prefilterMap.getView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 5);
+    auto prefilterView = prefilterMap.newView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 5);
 
 
     Image brdfMap(driver, {
@@ -451,7 +451,7 @@ int main() {
         1,
         ImageUsage::SAMPLED | ImageUsage::STORAGE
     });
-    auto brdfView = brdfMap.getView();
+    auto brdfView = brdfMap.newView();
 
     driver.immediate([&](CommandBuffer& cmd) {
         brdfTimer.start(cmd);
@@ -536,9 +536,9 @@ int main() {
             ImageUsage::DEPTH_STENCIL_ATTACHMENT
     });
     Image::View framebufferAttachments[3] = {
-            colourBuffer.getView(),
-            normalBuffer.getView(),
-            depthBuffer.getView()
+            colourBuffer.newView(),
+            normalBuffer.newView(),
+            depthBuffer.newView()
     };
     VkImageView fbAttachments[3] = {
             framebufferAttachments[0].view,

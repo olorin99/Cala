@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <Ende/thread/thread.h>
 #include <Cala/Material.h>
+#include <Cala/Probe.h>
 
 cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     : _engine(engine),
@@ -9,8 +10,8 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
                  engine->createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM)},
     _lightBuffer{engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE),
                  engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE)},
-    _lightCountBuffer{engine->createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE),
-                 engine->createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE)},
+    _lightCountBuffer{engine->createBuffer(sizeof(u32) * 2 + sizeof(f32), backend::BufferUsage::STORAGE),
+                 engine->createBuffer(sizeof(u32) * 2 + sizeof(f32), backend::BufferUsage::STORAGE)},
     _directionalLightCount(0)
 {}
 
@@ -28,7 +29,8 @@ void cala::Scene::addRenderable(cala::Mesh &mesh, cala::MaterialInstance *materi
             (*mesh._index),
             materialInstance,
             {&mesh._binding, 1},
-            mesh._attributes
+            mesh._attributes,
+            castShadow
         }, transform);
     } else {
         addRenderable(Renderable{
@@ -36,7 +38,8 @@ void cala::Scene::addRenderable(cala::Mesh &mesh, cala::MaterialInstance *materi
             {},
             materialInstance,
             {&mesh._binding, 1},
-            mesh._attributes
+            mesh._attributes,
+            castShadow
         }, transform);
     }
 }
@@ -54,7 +57,7 @@ void cala::Scene::addSkyLightMap(ImageHandle skyLightMap, bool equirectangular) 
     } else
         _skyLightMap = skyLightMap;
 
-    _skyLightMapView = _skyLightMap->getView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 10);
+    _skyLightMapView = _skyLightMap->newView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 10);
 }
 
 void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
@@ -87,13 +90,20 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
         return lhs.type < rhs.type;
     });
     _lightData.clear();
-    for (auto& light : _lights) {
-        _lightData.push(light.data());
+    for (u32 i = 0; i < _lights.size(); i++) {
+        auto& light = _lights[i];
+        auto data = light.data();
+        if (light.shadowing())
+            data.shadowIndex = _engine->getShadowProbe(i).map().index();
+        else
+            data.shadowIndex = _engine->_defaultPointShadow.index();
+
+        _lightData.push(data);
     }
     if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame]->size())
         _lightBuffer[frame]->resize(_lightData.size() * sizeof(Light::Data) * 2);
-    u32 lightCount[2] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount) };
-    _lightCountBuffer[frame]->data({ lightCount, sizeof(u32) * 2 });
+    u32 lightCount[3] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount), *reinterpret_cast<u32*>(&shadowBias) };
+    _lightCountBuffer[frame]->data({ lightCount, sizeof(u32) * 3 });
     _lightBuffer[frame]->data({_lightData.data(), static_cast<u32>(_lightData.size() * sizeof(Light::Data))});
 
     _modelTransforms.clear();

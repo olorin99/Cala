@@ -88,9 +88,9 @@ int main() {
     Image brickwall = loadImage(driver, "../../res/textures/brickwall.jpg"_path);
     Image brickwall_normal = loadImage(driver, "../../res/textures/brickwall_normal.jpg"_path);
     Image brickwall_specular = loadImage(driver, "../../res/textures/brickwall_specular.jpg"_path);
-    matInstance.setSampler("diffuseMap", brickwall.getView(), Sampler(driver, {}));
-    matInstance.setSampler("normalMap", brickwall_normal.getView(), Sampler(driver, {}));
-    matInstance.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
+    matInstance.setSampler("diffuseMap", brickwall.newView(), Sampler(driver, {}));
+    matInstance.setSampler("normalMap", brickwall_normal.newView(), Sampler(driver, {}));
+    matInstance.setSampler("specularMap", brickwall_specular.newView(), Sampler(driver, {}));
 
 
     Transform cameraTransform({0, 0, -15});

@@ -73,7 +73,7 @@ cala::backend::vulkan::Swapchain::Swapchain(Driver &driver, Platform& platform, 
     _depthImage = new Image(driver, {
             _extent.width, _extent.height, 1, driver.context().depthFormat(), 1, 1, backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT
     });
-    _depthView = _depthImage->getView();
+    _depthView = _depthImage->newView();
 
     std::array<RenderPass::Attachment, 2> attachments = {
             RenderPass::Attachment{
@@ -125,7 +125,7 @@ cala::backend::vulkan::Swapchain::~Swapchain() {
 
 
 cala::backend::vulkan::Swapchain::Frame cala::backend::vulkan::Swapchain::nextImage() {
-    auto image = _semaphores.pop().unwrap();
+    auto image = _semaphores.pop().value();
     u32 index = 0;
     VkResult result = vkAcquireNextImageKHR(_driver.context().device(), _swapchain, std::numeric_limits<u64>::max(), image, VK_NULL_HANDLE, &index);
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
@@ -168,7 +168,7 @@ bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {
 
     delete _depthImage;
     _depthImage = new Image(_driver, { _extent.width, _extent.height, 1, _driver.context().depthFormat(), 1, 1, ImageUsage::DEPTH_STENCIL_ATTACHMENT });
-    _depthView = _depthImage->getView();
+    _depthView = _depthImage->newView();
 
     for (auto& view : _imageViews) {
         VkImageView framebufferAttachments[2] = { view, _depthView.view };

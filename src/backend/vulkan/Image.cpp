@@ -10,13 +10,21 @@ cala::backend::vulkan::Image::Image(Driver& driver, CreateInfo info)
 {
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+
+    _type = info.type;
     if (info.type == ImageType::AUTO) {
-        if (info.depth > 1)
+        if (info.depth > 1) {
             imageInfo.imageType = VK_IMAGE_TYPE_3D;
-        else if (info.height > 1)
+            _type = ImageType::IMAGE3D;
+        }
+        else if (info.height > 1) {
             imageInfo.imageType = VK_IMAGE_TYPE_2D;
-        else
+            _type = ImageType::IMAGE2D;
+        }
+        else {
             imageInfo.imageType = VK_IMAGE_TYPE_1D;
+            _type = ImageType::IMAGE1D;
+        }
     } else {
         imageInfo.imageType = getImageType(info.type);
     }
@@ -98,7 +106,7 @@ cala::backend::vulkan::Image::View::View()
 {}
 
 cala::backend::vulkan::Image::View::~View() {
-    if (_device == VK_NULL_HANDLE) return;
+    if (_device == VK_NULL_HANDLE || view == VK_NULL_HANDLE || _image == nullptr) return;
     vkDestroyImageView(_device, view, nullptr);
 }
 
@@ -269,9 +277,31 @@ void cala::backend::vulkan::Image::generateMips(CommandBuffer &cmd) {
 }
 
 
-cala::backend::vulkan::Image::View cala::backend::vulkan::Image::getView(VkImageViewType viewType, u32 mipLevel, u32 levelCount, u32 arrayLayer, u32 layerCount) {
+cala::backend::vulkan::Image::View cala::backend::vulkan::Image::newView(VkImageViewType viewType, u32 mipLevel, u32 levelCount, u32 arrayLayer, u32 layerCount) {
     VkImageViewCreateInfo viewCreateInfo{};
     viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+
+    switch (_type) {
+        case ImageType::IMAGE1D:
+            if (_layers > 1)
+                viewType = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
+            else
+                viewType = VK_IMAGE_VIEW_TYPE_1D;
+            break;
+        case ImageType::IMAGE2D:
+            if (_layers == 6)
+                viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+            else if (_layers > 1)
+                viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+            else
+                viewType = VK_IMAGE_VIEW_TYPE_2D;
+            break;
+        case ImageType::IMAGE3D:
+            viewType = VK_IMAGE_VIEW_TYPE_3D;
+            break;
+        default:
+            break;
+    }
 
     viewCreateInfo.image = _image;
     viewCreateInfo.viewType = viewType;

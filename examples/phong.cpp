@@ -87,9 +87,9 @@ int main() {
     material._depthState = { true, true, CompareOp::LESS_EQUAL };
 
     auto matInstance = material.instance();
-    matInstance.setSampler("diffuseMap", brickwall.getView(), Sampler(driver, {}));
-    matInstance.setSampler("normalMap", brickwall_normal.getView(), Sampler(driver, {}));
-    matInstance.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
+    matInstance.setSampler("diffuseMap", brickwall.newView(), Sampler(driver, {}));
+    matInstance.setSampler("normalMap", brickwall_normal.newView(), Sampler(driver, {}));
+    matInstance.setSampler("specularMap", brickwall_specular.newView(), Sampler(driver, {}));
 
 
     Scene scene(driver, 11);

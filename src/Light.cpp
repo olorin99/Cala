@@ -46,7 +46,7 @@ cala::Light::Data cala::Light::data() const {
         _constant,
         _linear,
         _quadratic,
-        _radius
+        0
     };
 
     if (_type == POINT)

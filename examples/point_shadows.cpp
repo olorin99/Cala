@@ -86,9 +86,10 @@ int main() {
     ImGuiContext imGuiContext(driver, platform.window());
 
     //Shaders
-    ShaderProgram program = loadShader(driver, "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/point_shadow.frag.spv"_path);
+    ProgramHandle program = engine.createProgram(loadShader(driver, "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/point_shadow.frag.spv"_path));
 
-    Material material(driver, std::move(program));
+    Material material(&engine);
+    material.setProgram(cala::Material::Variants::POINT, program);
     material._rasterState = {
             CullMode::BACK,
             FrontFace::CCW,
@@ -101,15 +102,16 @@ int main() {
     Image brickwall = loadImage(driver, "../../res/textures/brickwall.jpg"_path);
     Image brickwall_normal = loadImage(driver, "../../res/textures/brickwall_normal.jpg"_path);
     Image brickwall_specular = loadImage(driver, "../../res/textures/brickwall_specular.jpg"_path);
-    matInstance.setSampler("diffuseMap", brickwall.getView(), Sampler(driver, {}));
-    matInstance.setSampler("normalMap", brickwall_normal.getView(), Sampler(driver, {}));
-    matInstance.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
+    matInstance.setSampler("diffuseMap", brickwall.newView(), Sampler(driver, {}));
+    matInstance.setSampler("normalMap", brickwall_normal.newView(), Sampler(driver, {}));
+    matInstance.setSampler("specularMap", brickwall_specular.newView(), Sampler(driver, {}));
 
 
-    ShaderProgram shadowProgram = loadShader(driver, "../../res/shaders/shadow_point.vert.spv"_path, "../../res/shaders/shadow_point.frag.spv"_path);
+    ProgramHandle shadowProgram = engine.createProgram(loadShader(driver, "../../res/shaders/shadow_point.vert.spv"_path, "../../res/shaders/shadow_point.frag.spv"_path));
 //    ShaderProgram shadowProgram = loadShader(driver, "../../res/shaders/shadow.vert.spv"_path);
 
-    Material shadowMaterial(driver, std::move(shadowProgram));
+    Material shadowMaterial(&engine);
+    shadowMaterial.setProgram(cala::Material::Variants::POINT, shadowProgram);
     shadowMaterial._rasterState = {
             .cullMode = CullMode::FRONT,
             .frontFace = FrontFace::CCW,
@@ -125,8 +127,9 @@ int main() {
     Camera camera(ende::math::perspective((f32)ende::math::rad(90), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
 
-    Scene scene(driver, 10);
-    Mesh cube = shapes::cube().mesh(driver);
+    Scene scene(&engine, 10);
+    Mesh cube = shapes::sphereUV(1).mesh(driver);
+//    Mesh cube = shapes::cube().mesh(driver);
 
     ende::Vector<cala::Transform> transforms;
     transforms.reserve(100);
@@ -140,24 +143,20 @@ int main() {
         }));
         scene.addRenderable(cube, &matInstance, &transforms.back());
     }
-//    Transform centrePos({0, 0, 0}, {0, 0, 0, 1}, {0.2, 0.2, 0.2});
-//    scene.addRenderable(cube, &matInstance, &centrePos);
-//    Transform lightPos({1, -1, 1}, {0, 0, 0, 1}, {0.5, 0.5, 0.5});
-//    scene.addRenderable(cube, &matInstance, &lightPos);
 
     f32 width = volume * 2;
     Transform floorPos({0, -width, 0}, {0, 0, 0, 1}, {width, 1, width});
-    scene.addRenderable(cube, &matInstance, &floorPos);
+    scene.addRenderable(cube, &matInstance, &floorPos, false);
     Transform roofPos({0, width, 0}, {0, 0, 0, 1}, {width, 1, width});
-    scene.addRenderable(cube, &matInstance, &roofPos);
+    scene.addRenderable(cube, &matInstance, &roofPos, false);
     Transform leftPos({-width, 0, 0}, {0, 0, 0, 1}, {1, width, width});
-    scene.addRenderable(cube, &matInstance, &leftPos);
+    scene.addRenderable(cube, &matInstance, &leftPos, false);
     Transform rightPos({width, 0, 0}, {0, 0, 0, 1}, {1, width, width});
-    scene.addRenderable(cube, &matInstance, &rightPos);
+    scene.addRenderable(cube, &matInstance, &rightPos, false);
     Transform frontPos({0, 0, -width}, {0, 0, 0, 1}, {width, width, 1});
-    scene.addRenderable(cube, &matInstance, &frontPos);
+    scene.addRenderable(cube, &matInstance, &frontPos, false);
     Transform backPos({0, 0, width}, {0, 0, 0, 1}, {width, width, 1});
-    scene.addRenderable(cube, &matInstance, &backPos);
+    scene.addRenderable(cube, &matInstance, &backPos, false);
 
 
     f32 lightVolume = 1;
@@ -234,7 +233,7 @@ int main() {
 //        shadowCameraBuffer.data({ &camData[0], sizeof(camData)});
 //    }
     Probe shadowProbe(&engine, { 1024, 1024, Format::D32_SFLOAT, ImageUsage::SAMPLED | ImageUsage::DEPTH_STENCIL_ATTACHMENT, &shadowPass });
-//    auto shadowView = shadowProbe.map().getView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 1, 0, 1);
+//    auto shadowView = shadowProbe.map().newView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 1, 0, 1);
     auto& shadowView = shadowProbe.view();
 
     Sampler sampler(driver, {
@@ -338,6 +337,9 @@ int main() {
             shadowProbe.draw(*frameInfo.cmd, [&](CommandBuffer& cmd, u32 face) {
                 cmd.clearDescriptors();
                 cmd.bindBuffer(3, 0, lightBuffer);
+                cmd.bindProgram(*shadowMatInstance.getMaterial()->getProgram(Material::Variants::POINT));
+                cmd.bindRasterState(shadowMatInstance.getMaterial()->_rasterState);
+                cmd.bindDepthState(shadowMatInstance.getMaterial()->_depthState);
                 shadowMatInstance.bind(cmd);
                 switch (face) {
                         case 0:
@@ -376,7 +378,7 @@ int main() {
                         frameInfo.cmd->bindBindings(renderable.bindings);
                         frameInfo.cmd->bindAttributes(renderable.attributes);
 
-                        frameInfo.cmd->bindBuffer(1, 0, scene._modelBuffer[0], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+                        frameInfo.cmd->bindBuffer(1, 0, *scene._modelBuffer[0], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
 
                         frameInfo.cmd->bindPipeline();
                         frameInfo.cmd->bindDescriptors();

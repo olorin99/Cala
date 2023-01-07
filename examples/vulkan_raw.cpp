@@ -193,7 +193,7 @@ int main() {
     Image brickwall_specular = loadImage(driver, "../../res/textures/brickwall_specular.jpg"_path);
 
     Image brickwall_copy(driver, {1024, 1024, 1, Format::RGBA8_UNORM, 1, 1, ImageUsage::STORAGE});
-    auto brickwall_copy_view = brickwall_copy.getView();
+    auto brickwall_copy_view = brickwall_copy.newView();
 
     Material material(driver, std::move(program));
     material._rasterState = {
@@ -205,9 +205,9 @@ int main() {
 
     auto matInstance = material.instance();
 
-    matInstance.setSampler("diffuseMap", brickwall.getView(), Sampler(driver, {}));
-    matInstance.setSampler("normalMap", brickwall_normal.getView(), Sampler(driver, {}));
-    matInstance.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
+    matInstance.setSampler("diffuseMap", brickwall.newView(), Sampler(driver, {}));
+    matInstance.setSampler("normalMap", brickwall_normal.newView(), Sampler(driver, {}));
+    matInstance.setSampler("specularMap", brickwall_specular.newView(), Sampler(driver, {}));
     matInstance.setUniform("mixColour", ende::math::Vec3f{0.5, 1, 1.5});
 
     scene.addRenderable(sphereUV, &matInstance, &model);

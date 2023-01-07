@@ -15,10 +15,61 @@
 #include <Cala/Mesh.h>
 #include <Cala/Engine.h>
 #include <Cala/Renderer.h>
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+#include <assimp/cimport.h>
+#include <assimp/scene.h>
 
 using namespace cala;
 using namespace cala::backend;
 using namespace cala::backend::vulkan;
+
+MeshData loadModel(const ende::fs::Path& path) {
+    MeshData data;
+
+    Assimp::Importer importer;
+    const aiScene* scene = importer.ReadFile(*path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+        return data;
+
+    for (u32 i = 0; i < scene->mNumMeshes; i++) {
+        const aiMesh* mesh = scene->mMeshes[i];
+//        if (mesh->mMaterialIndex >= 0) {
+//            aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+//            aiString name;
+//            material->Get(AI_MATKEY_NAME, name);
+//
+//        }
+
+        for (u32 j = 0; j < mesh->mNumVertices; j++) {
+            const aiVector3D pos = mesh->mVertices[j];
+            const aiVector3D normal = mesh->mNormals[j];
+            const aiVector3D texCoords = mesh->HasTextureCoords(0) ? mesh->mTextureCoords[0][j] : aiVector3D(0, 0, 0);
+
+            Vertex vertex{};
+            vertex.position = { pos.x, pos.y, pos.z };
+            vertex.normal = { normal.x, normal.y, normal.z };
+            vertex.texCoords = { texCoords.x, texCoords.y };
+
+            if (mesh->HasTangentsAndBitangents()) {
+                const aiVector3D tangent = mesh->mTangents[j];
+                const aiVector3D bitangent = mesh->mBitangents[j];
+                vertex.tangent = { tangent.x, tangent.y, tangent.z };
+                vertex.bitangent = { bitangent.x, bitangent.y, bitangent.z };
+            }
+
+            data.addVertex(vertex);
+        }
+
+        for (u32 j = 0; j < mesh->mNumFaces; j++) {
+            const aiFace& face = mesh->mFaces[j];
+            data.addTriangle(face.mIndices[0], face.mIndices[1], face.mIndices[2]);
+        }
+    }
+
+    return data;
+}
 
 ShaderProgram loadShader(Driver& driver, const ende::fs::Path& vertex, const ende::fs::Path& fragment) {
     ende::fs::File shaderFile;
@@ -79,12 +130,14 @@ int main() {
     ProgramHandle directionalLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/direct_pbr.frag.spv"_path));
 
     Mesh cube = cala::shapes::cube().mesh(engine.driver());
-    Mesh sphere = cala::shapes::sphereNormalized(1).mesh(engine.driver());
+//    Mesh sphere = cala::shapes::sphereUV(1).mesh(engine.driver());
+    Mesh sphere = loadModel("../../res/models/sphere.obj"_path).mesh(engine.driver());
 
     Transform modelTransform({0, 0, 0});
     ende::Vector<Transform> models;
 
-    Transform cameraTransform({0, 0, -10});
+//    Transform cameraTransform({0, 0, -10});
+    Transform cameraTransform({-3, 3, -1});
     Camera camera((f32)ende::math::rad(54.4), 800.f, 600.f, 0.1f, 1000.f, cameraTransform);
 
 
@@ -114,17 +167,51 @@ int main() {
 //    matInstance.setSampler("normalMap", *brickwall_normal, Sampler(engine.driver(), {}));
 //    matInstance.setSampler("specularMap", *brickwall_specular, Sampler(engine.driver(), {}));
 
-    matInstance.setSampler("albedoMap", brickwall_albedo->getView(), Sampler(engine.driver(), {}));
-    matInstance.setSampler("normalMap", brickwall_normal->getView(), Sampler(engine.driver(), {}));
-    matInstance.setSampler("metallicMap", brickwall_metallic->getView(), Sampler(engine.driver(), {}));
-    matInstance.setSampler("roughnessMap", brickwall_roughness->getView(), Sampler(engine.driver(), {}));
-    matInstance.setSampler("aoMap", brickwall_ao->getView(), Sampler(engine.driver(), {}));
+    matInstance.setSampler("albedoMap", brickwall_albedo->newView(), Sampler(engine.driver(), {}));
+    matInstance.setSampler("normalMap", brickwall_normal->newView(), Sampler(engine.driver(), {}));
+    matInstance.setSampler("metallicMap", brickwall_metallic->newView(), Sampler(engine.driver(), {}));
+    matInstance.setSampler("roughnessMap", brickwall_roughness->newView(), Sampler(engine.driver(), {}));
+    matInstance.setSampler("aoMap", brickwall_ao->newView(), Sampler(engine.driver(), {}));
 
-    u32 objectCount = 1000;
+    u32 objectCount = 10;
     Scene scene(&engine, objectCount);
 
+//    ende::Vector<cala::Transform> transforms;
+//    transforms.reserve(100);
+//
+//    f32 volume = 20;
+//    u32 count = 20;
+//
+//    for (int i = 0; i < count; i++) {
+//        transforms.push(Transform({
+//                                          ende::math::rand(-volume, volume), ende::math::rand(-volume, volume), ende::math::rand(-volume, volume)
+//                                  }));
+//        scene.addRenderable(cube, &matInstance, &transforms.back());
+//    }
+//
+//    f32 width = volume * 2;
+//    Transform floorPos({0, -width, 0}, {0, 0, 0, 1}, {width, 1, width});
+//    scene.addRenderable(cube, &matInstance, &floorPos);
+//    Transform roofPos({0, width, 0}, {0, 0, 0, 1}, {width, 1, width});
+//    scene.addRenderable(cube, &matInstance, &roofPos);
+//    Transform leftPos({-width, 0, 0}, {0, 0, 0, 1}, {1, width, width});
+//    scene.addRenderable(cube, &matInstance, &leftPos);
+//    Transform rightPos({width, 0, 0}, {0, 0, 0, 1}, {1, width, width});
+//    scene.addRenderable(cube, &matInstance, &rightPos);
+//    Transform frontPos({0, 0, -width}, {0, 0, 0, 1}, {width, width, 1});
+//    scene.addRenderable(cube, &matInstance, &frontPos);
+//    Transform backPos({0, 0, width}, {0, 0, 0, 1}, {width, width, 1});
+//    scene.addRenderable(cube, &matInstance, &backPos);
+//
+//    Transform lightTransform({0, 0, 0});
+//
+////    scene.addRenderable(cube, &matInstance, &lightTransform);
+//    Light light(Light::POINT, true, lightTransform);
+//
+//    u32 l0 = scene.addLight(light);
+
     Transform lightTransform({-3, 3, -1}, {0, 0, 0, 1}, {0.5, 0.5, 0.5});
-    Light light(cala::Light::POINT, false, lightTransform);
+    Light light(cala::Light::POINT, true, lightTransform);
     light.setColour({1, 0, 0});
     Transform light1Transform({10, 2, 4});
     Light light1(cala::Light::POINT, false, light1Transform);
@@ -137,20 +224,20 @@ int main() {
     Light light3(cala::Light::POINT, false, light3Transform);
 
     u32 l0 = scene.addLight(light);
-    u32 l1 = scene.addLight(light1);
-    u32 l2 = scene.addLight(light2);
-    u32 l3 = scene.addLight(light3);
+//    u32 l1 = scene.addLight(light1);
+//    u32 l2 = scene.addLight(light2);
+//    u32 l3 = scene.addLight(light3);
 
     ImageHandle background = loadImageHDR(engine, "../../res/textures/TropicalRuins_3k.hdr"_path);
     scene.addSkyLightMap(background, true);
 
-    scene.addRenderable(cube, &matInstance, &modelTransform);
-//    scene.addRenderable(mesh, &matInstance, &lightTransform);
+//    scene.addRenderable(cube, &matInstance, &modelTransform);
+    scene.addRenderable(cube, &matInstance, &lightTransform, false);
 
-    f32 sceneSize = objectCount / 10;
+    f32 sceneSize = std::max(objectCount / 10, 20u);
 
     Transform floorTransform({0, -sceneSize * 1.5f, 0}, {0, 0, 0, 1}, {sceneSize * 1.5f, 1, sceneSize * 1.5f});
-    scene.addRenderable(cube, &matInstance, &floorTransform);
+    scene.addRenderable(cube, &matInstance, &floorTransform, false);
 
     models.reserve(objectCount);
     for (u32 i = 0; i < objectCount; i++) {
@@ -161,7 +248,7 @@ int main() {
 
     ende::Vector<Transform> lightTransforms;
     lightTransforms.reserve(100);
-    for (u32 i = 0; i < 50; i++) {
+    for (u32 i = 0; i < 0; i++) {
         lightTransforms.push(Transform({ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f)}));
         Light l(cala::Light::POINT, false, lightTransforms.back());
         l.setIntensity(ende::math::rand(10.f, 1000.f));
@@ -238,18 +325,23 @@ int main() {
             ImGui::Text("Clipping Primitives: %lu", pipelineStats.clippingPrimitives);
             ImGui::Text("Fragment Shader Invocations: %lu", pipelineStats.fragmentShaderInvocations);
 
+            ende::math::Vec3f position = scene._lights[l0].transform().pos();
             ende::math::Vec3f colour = scene._lights[l0].getColour();
             f32 intensity = scene._lights[l0].getIntensity();
-            if (ImGui::ColorEdit3("Colour", &colour[0]) ||
+            if (ImGui::DragFloat3("Position", &position[0], 0.1, -sceneSize, sceneSize) ||
+                ImGui::ColorEdit3("Colour", &colour[0]) ||
                 ImGui::SliderFloat("Intensity", &intensity, 1, 1000)) {
+                scene._lights[l0].setPosition(position);
                 scene._lights[l0].setColour(colour);
                 scene._lights[l0].setIntensity(intensity);
             }
 
-            ende::math::Quaternion direction = scene._lights[l2].transform().rot();
-            if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1)) {
-                scene._lights[l2].setDirection(direction);
-            }
+            ImGui::DragFloat("Shadow Bias", &scene.shadowBias, 0.001, 0, 1);
+
+//            ende::math::Quaternion direction = scene._lights[l2].transform().rot();
+//            if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1)) {
+//                scene._lights[l2].setDirection(direction);
+//            }
 
             ImGui::Text("Lights: %lu", scene._lights.size());
 

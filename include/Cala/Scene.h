@@ -21,13 +21,14 @@ namespace cala {
             MaterialInstance* materialInstance = nullptr;
             ende::Span<VkVertexInputBindingDescription> bindings = nullptr;
             ende::Span<backend::Attribute> attributes = nullptr;
+            bool castShadows = true;
         };
 
         Scene(Engine* engine, u32 count, u32 lightCount = 10);
 
         void addRenderable(Renderable&& renderable, Transform* transform);
 
-        void addRenderable(Mesh& mesh, MaterialInstance* materialInstance, Transform* transform, bool castShadow = false);
+        void addRenderable(Mesh& mesh, MaterialInstance* materialInstance, Transform* transform, bool castShadow = true);
 
         u32 addLight(Light& light);
 
@@ -55,6 +56,8 @@ namespace cala {
         ende::Vector<ende::math::Mat4f> _modelTransforms;
         ende::Vector<Light::Data> _lightData;
         ende::Vector<std::pair<u32, std::pair<Renderable, Transform*>>> _renderList;
+
+        f32 shadowBias = 0.01;
 
     };
 

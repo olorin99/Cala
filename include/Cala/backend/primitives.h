@@ -6,7 +6,7 @@
 
 namespace cala::backend {
 
-    constexpr u32 MAX_SET_COUNT = 4;
+    constexpr u32 MAX_SET_COUNT = 5;
 
     constexpr u32 MAX_BINDING_PER_SET = 8;
 

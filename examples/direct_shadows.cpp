@@ -119,9 +119,9 @@ int main() {
     Image brickwall = loadImage(driver, "../../res/textures/brickwall.jpg"_path);
     Image brickwall_normal = loadImage(driver, "../../res/textures/brickwall_normal.jpg"_path);
     Image brickwall_specular = loadImage(driver, "../../res/textures/brickwall_specular.jpg"_path);
-    matInstance.setSampler("diffuseMap", brickwall.getView(), Sampler(driver, {}));
-    matInstance.setSampler("normalMap", brickwall_normal.getView(), Sampler(driver, {}));
-    matInstance.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
+    matInstance.setSampler("diffuseMap", brickwall.newView(), Sampler(driver, {}));
+    matInstance.setSampler("normalMap", brickwall_normal.newView(), Sampler(driver, {}));
+    matInstance.setSampler("specularMap", brickwall_specular.newView(), Sampler(driver, {}));
 
 
     ShaderProgram shadowProgram = loadShader(driver, "../../res/shaders/shadow.vert.spv"_path);
@@ -205,7 +205,7 @@ int main() {
 
     RenderPass shadowPass(driver, { &shadowAttachment, 1});
 
-    Image::View shadowView = shadowMap.getView();
+    Image::View shadowView = shadowMap.newView();
     Framebuffer shadowFramebuffer(driver.context().device(), shadowPass, { &shadowView.view, 1 }, 1024, 1024);
 
 

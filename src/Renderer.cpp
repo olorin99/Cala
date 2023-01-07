@@ -56,7 +56,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto& lightObj = scene._lights[light];
 
             Transform shadowTransform(lightObj.transform().pos());
-            Camera shadowCamera((f32)ende::math::rad(90.f), 1024.f, 1024.f, 0.1f, 100.f, shadowTransform);
+            Camera shadowCamera((f32)ende::math::rad(90.f), 1024.f, 1024.f, 0.1f, 1000.f, shadowTransform);
 
             if (lightObj.type() == Light::POINT) { // point shadows
                 auto& shadowProbe = _engine->getShadowProbe(light);
@@ -104,7 +104,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         auto& renderable = scene._renderList[i].second.first;
                         auto& transform = scene._renderList[i].second.second;
 
-                        if ((lightObj.transform().pos() - transform->pos()).length() > lightObj.getRadius())
+                        if (!renderable.castShadows)
                             continue;
 
                         if (!shadowCamera.frustum().intersect(transform->pos(), 2))
@@ -144,7 +144,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     Material* material = nullptr;
     MaterialInstance* materialInstance = nullptr;
 
-    cmd.pushDebugLabel("direction_lights", {0, 0, 1, 1});
+//    cmd.pushDebugLabel("direction_lights", {0, 0, 1, 1});
 
     if (!scene._lightData.empty()) {
 //        cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()], 0, sizeof(Light::Data) * scene._directionalLightCount);
@@ -188,9 +188,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd.bindBuffer(1, 0, *scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
 
         if (scene._lights[0].shadowing())
-            cmd.bindImage(2, 5, _engine->_defaultDirectionalShadowView, _engine->_defaultSampler); // TODO: directional shadows
+            cmd.bindImage(2, 5, _engine->getShadowProbe(0).view(), _engine->_shadowSampler); // TODO: directional shadows
         else
-            cmd.bindImage(2, 5, _engine->_defaultDirectionalShadowView, _engine->_defaultSampler);
+            cmd.bindImage(2, 5, _engine->_defaultPointShadowView, _engine->_shadowSampler);
 
         cmd.bindPipeline();
         cmd.bindDescriptors();
@@ -203,7 +203,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
     }
 
-    cmd.popDebugLabel();
+//    cmd.popDebugLabel();
 //    cmd.pushDebugLabel("point_light", {0, 0, 1, 1});
 
 //    if (!scene._lightData.empty()) {

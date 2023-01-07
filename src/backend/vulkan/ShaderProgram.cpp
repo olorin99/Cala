@@ -15,8 +15,8 @@ cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProg
 cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Builder::compile(Driver& driver) {
     ShaderProgram program(driver.context().device());
 
-    u32 bindingCount[4] = {0};
-    VkDescriptorSetLayoutBinding bindings[4][8]; // 4 sets 4 buffers each stage TODO: find proper value
+    u32 bindingCount[MAX_SET_COUNT] = {0};
+    VkDescriptorSetLayoutBinding bindings[MAX_SET_COUNT][MAX_BINDING_PER_SET]; // 4 sets 4 buffers each stage TODO: find proper value
 
     bool hasPushConstant = false;
     VkPushConstantRange pushConstant{};
@@ -198,11 +198,15 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
 
 //    u32 setCount = 0;
 
-    VkDescriptorSetLayout setLayouts[4] = {};
-
-    for (u32 i = 0; i < MAX_SET_COUNT; i++) {
+    VkDescriptorSetLayout setLayouts[MAX_SET_COUNT] = {};
+    for (u32 i = 0; i < MAX_SET_COUNT - 1; i++) {
         setLayouts[i] = driver.getSetLayout({bindings[i], bindingCount[i]});
     }
+    setLayouts[MAX_SET_COUNT - 1] = driver.bindlessLayout();
+//    if (program.interface().setPresent(MAX_SET_COUNT - 1))
+//        setLayouts[MAX_SET_COUNT - 1] = driver.bindlessLayout();
+//    else
+//        setLayouts[MAX_SET_COUNT - 1] = driver.getSetLayout({bindings[MAX_SET_COUNT - 1], bindingCount[MAX_SET_COUNT - 1]});
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

@@ -38,10 +38,10 @@ cala::Probe::Probe(cala::Engine* engine, ProbeInfo info) {
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, 0, nullptr, { &cubeBarrier, 1 });
     });
 
-    _view = _renderTarget->getView();
+    _view = _renderTarget->newView();
     auto imageView = _view.view;
     _drawBuffer = new backend::vulkan::Framebuffer(engine->driver().context().device(), *info.renderPass, { &imageView, 1 }, info.width, info.height);
-    _cubeView = _cubeMap->getView(VK_IMAGE_VIEW_TYPE_CUBE, 0, info.mipLevels);
+    _cubeView = _cubeMap->newView(VK_IMAGE_VIEW_TYPE_CUBE, 0, info.mipLevels);
 }
 
 cala::Probe::~Probe() {

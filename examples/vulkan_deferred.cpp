@@ -83,7 +83,7 @@ int main() {
 
     //Image
     Image image = loadImage(driver, "../../res/textures/metal-sheet.jpg"_path);
-//    Image::View view = image.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT);
+//    Image::View view = image.newView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT);
 
     //Material
     Material gbufferMaterial(driver, std::move(gbufferProgram));
@@ -112,12 +112,12 @@ int main() {
     Image gDepth(driver, {800, 600, 1, Format::D32_SFLOAT, 1, 1, ImageUsage::DEPTH_STENCIL_ATTACHMENT | ImageUsage::SAMPLED});
 
     auto metalMatInstance = gbufferMaterial.instance();
-    metalMatInstance.setSampler("metalMap", image.getView(), Sampler(driver, {}));
+    metalMatInstance.setSampler("metalMap", image.newView(), Sampler(driver, {}));
 
     auto deferredInstance = deferredMaterial.instance();
-    deferredInstance.setSampler(0, "gAlbedoMap", gAlbedo.getView(), Sampler(driver, {}));
-    deferredInstance.setSampler(0, "gNormalMap", gNormal.getView(), Sampler(driver, {}));
-    deferredInstance.setSampler(0, "gDepthMap", gDepth.getView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT), Sampler(driver, {}));
+    deferredInstance.setSampler(0, "gAlbedoMap", gAlbedo.newView(), Sampler(driver, {}));
+    deferredInstance.setSampler(0, "gNormalMap", gNormal.newView(), Sampler(driver, {}));
+    deferredInstance.setSampler(0, "gDepthMap", gDepth.newView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT), Sampler(driver, {}));
 
     std::array<RenderPass::Attachment, 3> attachments = {
             RenderPass::Attachment{

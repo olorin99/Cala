@@ -106,9 +106,9 @@ int main() {
     instancedMaterial._depthState = {true, true, CompareOp::LESS_EQUAL};
 
     auto brickwallMat = instancedMaterial.instance();
-    brickwallMat.setSampler("diffuseMap", brickwall.getView(), Sampler(driver, {}));
-    brickwallMat.setSampler("normalMap", brickwall_normal.getView(), Sampler(driver, {}));
-    brickwallMat.setSampler("specularMap", brickwall_specular.getView(), Sampler(driver, {}));
+    brickwallMat.setSampler("diffuseMap", brickwall.newView(), Sampler(driver, {}));
+    brickwallMat.setSampler("normalMap", brickwall_normal.newView(), Sampler(driver, {}));
+    brickwallMat.setSampler("specularMap", brickwall_specular.newView(), Sampler(driver, {}));
 
     bool running = true;
     SDL_Event event;

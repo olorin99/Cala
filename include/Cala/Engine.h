@@ -14,6 +14,7 @@
 namespace cala {
 
     class Probe;
+    class Scene;
 
     class Engine;
     template <typename T>
@@ -71,6 +72,7 @@ namespace cala {
 
     private:
         friend Renderer;
+        friend Scene;
         friend BufferHandle;
         friend ImageHandle;
         friend ProgramHandle;
@@ -90,11 +92,13 @@ namespace cala {
         backend::vulkan::Image::View _defaultPointShadowView;
         ImageHandle _defaultDirectionalShadow;
         backend::vulkan::Image::View _defaultDirectionalShadowView;
+        backend::vulkan::Sampler _shadowSampler;
 
         Mesh _cube;
 
         ende::Vector<backend::vulkan::Buffer> _buffers;
         ende::Vector<backend::vulkan::Image> _images;
+        ende::Vector<backend::vulkan::Image::View> _imageViews;
         ende::Vector<backend::vulkan::ShaderProgram> _programs;
         std::vector<Probe> _shadowProbes; //TODO: fix vectors in Ende, Optional implementation sucks
 

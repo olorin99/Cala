@@ -31,11 +31,11 @@ bool cala::MaterialInstance::setUniform(const char *name, u8 *data, u32 size) {
 }
 
 bool cala::MaterialInstance::setSampler(u32 set, const char *name, cala::backend::vulkan::Image &view, backend::vulkan::Sampler &&sampler) {
-    return setSampler(set, name, view.getView(), std::forward<backend::vulkan::Sampler>(sampler));
+    return setSampler(set, name, view.newView(), std::forward<backend::vulkan::Sampler>(sampler));
 }
 
 bool cala::MaterialInstance::setSampler(const char *name, cala::backend::vulkan::Image &view, backend::vulkan::Sampler &&sampler) {
-    return setSampler(name, view.getView(), std::forward<backend::vulkan::Sampler>(sampler));
+    return setSampler(name, view.newView(), std::forward<backend::vulkan::Sampler>(sampler));
 }
 
 bool cala::MaterialInstance::setSampler(u32 set, const char *name, backend::vulkan::Image::View &&view, backend::vulkan::Sampler&& sampler) {

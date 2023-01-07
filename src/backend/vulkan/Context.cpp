@@ -199,14 +199,18 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     createInfo.ppEnabledLayerNames = validationLayers;
 
     VkPhysicalDeviceDescriptorIndexingFeatures bindlessFeatures;
+    bindlessFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
     bindlessFeatures.descriptorBindingPartiallyBound = VK_TRUE;
     bindlessFeatures.runtimeDescriptorArray = VK_TRUE;
+    bindlessFeatures.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+    bindlessFeatures.descriptorBindingVariableDescriptorCount = VK_TRUE;
     createInfo.pNext = &bindlessFeatures;
 
     VkPhysicalDeviceHostQueryResetFeatures resetFeatures{};
     resetFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES;
     resetFeatures.hostQueryReset = VK_TRUE;
-    createInfo.pNext = &resetFeatures;
+    bindlessFeatures.pNext = &resetFeatures;
+//    createInfo.pNext = &resetFeatures;
 
     if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device) != VK_SUCCESS)
         throw VulkanContextException("Failed to create logical device");
