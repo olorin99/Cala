@@ -116,10 +116,12 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
         backend::ImageType::IMAGE2D
     });
 
-    f32 data = 1;
-    _defaultPointShadow->data(_driver, {
-        0, 1, 1, 1, 4, { &data, sizeof(data) }
-    });
+    f32 data = 1.f;
+    for (u32 i = 0; i < 6; i++) {
+        _defaultPointShadow->data(_driver, {
+                0, 1, 1, 1, 4, { &data, sizeof(data) }, i
+        });
+    }
 
     _defaultDirectionalShadow = createImage({
         1,

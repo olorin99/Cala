@@ -7,24 +7,6 @@
 
 namespace cala {
 
-    struct BaseLight {
-        ende::math::Vec3f position = { 0, 0, 0 };
-        f32 padding = 0;
-        ende::math::Vec3f colour = { 1, 1, 1 };
-        f32 intensity = 1;
-    };
-
-    struct DirectionalLight : public BaseLight {
-        ende::math::Vec3f direction = {0, 1, 0};
-    };
-
-    struct PointLight : public BaseLight {
-        f32 constant = 1.f;
-        f32 linear = 0.045;
-        f32 quadratic = 0.0075;
-        f32 radius = 80;
-    };
-
     class Light {
     public:
 
@@ -40,13 +22,12 @@ namespace cala {
 
         struct Data {
             ende::math::Vec3f position;
-            f32 type;
+            u32 type;
             ende::math::Vec3f colour;
             f32 intensity;
-            f32 constant;
+            f32 range;
             f32 linear;
             f32 quadratic;
-//            f32 radius;
             u32 shadowIndex = 0;
         };
 
@@ -75,6 +56,14 @@ namespace cala {
 
         f32 getRadius() const { return _radius; }
 
+        void setNear(f32 near);
+
+        f32 getNear() const { return _near; }
+
+        void setFar(f32 far);
+
+        f32 getFar() const { return _far; }
+
         Transform& transform() const { return *_transform; }
 
         Camera& camera() { return _camera; }
@@ -91,6 +80,8 @@ namespace cala {
         f32 _linear;
         f32 _quadratic;
         f32 _radius;
+        f32 _near;
+        f32 _far;
     };
 
 }

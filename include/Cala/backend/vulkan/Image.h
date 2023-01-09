@@ -34,6 +34,7 @@ namespace cala::backend::vulkan {
             u32 depth = 1;
             u32 format = 4; //byte size of values per pixel TODO: change to enum
             ende::Span<void> data = nullptr;
+            u32 layer = 0; // move up in struct just here for backward compat
         };
 
         Image(Driver& driver, CreateInfo info);

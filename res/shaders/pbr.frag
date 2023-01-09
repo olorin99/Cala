@@ -27,10 +27,11 @@ layout (set = 4, binding = 0) uniform sampler2D directShadows[];
 //layout (set = 2, binding = 7) uniform sampler2D brdfLUT;
 
 struct Light {
-    vec4 position;
+    vec3 position;
+    uint type;
     vec3 colour;
     float intensity;
-    float constant;
+    float range;
     float linear;
     float quadratic;
 //    float radius;
@@ -84,10 +85,9 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
     return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
-float calcShadows(uint index, vec3 fragPosLight, vec3 offset, float bias) {
+float calcShadows(uint index, vec3 viewDir, vec3 offset, float bias, float range) {
     float shadow = 1.0;
-//    return texture(pointShadows[index], fragPosLight + offset).r + bias;
-    if(texture(pointShadows[index], fragPosLight + offset).r < length(fragPosLight) / (100.f - 0.1f) - bias) {
+    if(texture(pointShadows[index], viewDir + offset).r < length(viewDir) / range - bias) {
         shadow = 0.0;
     }
     return shadow;
@@ -101,14 +101,15 @@ vec3(1, 0, 1), vec3(-1, 0, 1), vec3(1, 0, -1), vec3(-1, 0, -1),
 vec3(0, 1, 1), vec3(0, -1, 1), vec3(0, -1, -1), vec3(0, 1, -1)
 );
 
-float filterPCF(uint index, vec3 fragPosLight, float bias) {
+float filterPCF(uint index, vec3 lightPos, float bias, float range) {
     float shadow = 0;
     int samples = 20;
-    float viewDistance = length(fragPosLight - fsIn.FragPos);
+    vec3 viewDir = fsIn.FragPos - lightPos;
+    float viewDistance = length(viewDir);
     float diskRadius = (1.0 + (viewDistance / 100.f)) / 25.0;
 
     for (int i = 0; i < samples; i++) {
-        shadow += calcShadows(index, fsIn.FragPos - fragPosLight, sampleOffsetDirections[i] * diskRadius, bias);
+        shadow += calcShadows(index, viewDir, sampleOffsetDirections[i] * diskRadius, bias, range);
     }
     return shadow / samples;
 }
@@ -135,24 +136,19 @@ void main() {
     F0 = mix(F0, albedo, metallic);
 
     vec3 Lo = vec3(0.0);
-    float shadow = 1.0;
 
     uint lightNum = min(directLightCount + pointLightCount, 1000);
     for (uint i = 0; i < lightNum; i++) {
         Light light = lights[i];
+        float shadow = 0.0;
         vec3 L = vec3(0.0);
-        if (light.position.w > 0) {
-            L = normalize(light.position.xyz - fsIn.FragPos);
+        if (light.type > 0) {
+            L = normalize(light.position - fsIn.FragPos);
             float bias = max(shadowBias * (1.0 - dot(normal, L)), 0.0001);
-//            float bias = shadowBias;
-//            float bias = clamp(shadowBias * tan(acos(clamp(dot(normal, L), 0.0, 1.0))), 0, 0.01);
-//            shadow = filterPCF(light.shadowIndex, light.position.xyz, bias);
-            shadow += calcShadows(light.shadowIndex, fsIn.FragPos - light.position.xyz, vec3(0.0), bias);
-//            shadow = bias;
-//            shadow = length(fsIn.FragPos - light.position.xyz) / (100.f - 0.1f);
+            shadow = filterPCF(light.shadowIndex, light.position, bias, light.range);
         } else {
-            L = normalize(-light.position.xyz);
-            shadow += 1;
+            L = normalize(-light.position);
+            shadow = 1;
         }
         vec3 H = normalize(V + L);
         float distance = length(light.position.xyz - fsIn.FragPos);
@@ -173,18 +169,15 @@ void main() {
         kD *= 1.0 - metallic;
 
         float NdotL = max(dot(normal, L), 0.0);
-        Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+        Lo += (kD * albedo / PI + specular) * radiance * NdotL * shadow;
 
     }
 
-    shadow /= float(lightNum);
-
     vec3 ambient = vec3(0.03) * albedo * ao;
-    vec3 colour = (ambient + Lo) * shadow;
+    vec3 colour = (ambient + Lo);
 
     colour = colour / (colour + vec3(1.0));
     colour = pow(colour, vec3(1.0 / 2.2));
 
     FragColour = vec4(colour, 1.0);
-//    FragColour = vec4(shadow, shadow, shadow, 1.0);
 }

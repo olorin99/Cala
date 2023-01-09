@@ -216,17 +216,20 @@ int main() {
     Transform light1Transform({10, 2, 4});
     Light light1(cala::Light::POINT, false, light1Transform);
     light1.setColour({0, 1, 0});
+    light1.setIntensity(100);
     Transform light2Transform({0, 0, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-45)));
     Light light2(cala::Light::DIRECTIONAL, false, light2Transform);
     light2.setColour({0, 0, 1});
     light2.setIntensity(2000);
     Transform light3Transform({-10, 2, 4});
     Light light3(cala::Light::POINT, false, light3Transform);
+    light3.setIntensity(120);
+    light3.setColour({0.23, 0.46, 0.10});
 
     u32 l0 = scene.addLight(light);
-//    u32 l1 = scene.addLight(light1);
-//    u32 l2 = scene.addLight(light2);
-//    u32 l3 = scene.addLight(light3);
+    u32 l1 = scene.addLight(light1);
+    u32 l2 = scene.addLight(light2);
+    u32 l3 = scene.addLight(light3);
 
     ImageHandle background = loadImageHDR(engine, "../../res/textures/TropicalRuins_3k.hdr"_path);
     scene.addSkyLightMap(background, true);
@@ -243,7 +246,7 @@ int main() {
     for (u32 i = 0; i < objectCount; i++) {
         models.push(Transform({ende::math::rand(-sceneSize, sceneSize), ende::math::rand(-sceneSize, sceneSize), ende::math::rand(-sceneSize, sceneSize)}));
         scene.addRenderable(i % 2 == 0 ? cube : sphere, &matInstance, &models.back());
-        scene.addRenderable(cube, &matInstance, &models.back());
+//        scene.addRenderable(cube, &matInstance, &models.back());
     }
 
     ende::Vector<Transform> lightTransforms;
@@ -328,20 +331,26 @@ int main() {
             ende::math::Vec3f position = scene._lights[l0].transform().pos();
             ende::math::Vec3f colour = scene._lights[l0].getColour();
             f32 intensity = scene._lights[l0].getIntensity();
+            f32 near = scene._lights[l0].getNear();
+            f32 far = scene._lights[l0].getFar();
             if (ImGui::DragFloat3("Position", &position[0], 0.1, -sceneSize, sceneSize) ||
                 ImGui::ColorEdit3("Colour", &colour[0]) ||
-                ImGui::SliderFloat("Intensity", &intensity, 1, 1000)) {
+                ImGui::SliderFloat("Intensity", &intensity, 1, 1000) ||
+                ImGui::SliderFloat("Near", &near, 0, 5) ||
+                ImGui::SliderFloat("Far", &far, 1, 200)) {
                 scene._lights[l0].setPosition(position);
                 scene._lights[l0].setColour(colour);
                 scene._lights[l0].setIntensity(intensity);
+                scene._lights[l0].setNear(near);
+                scene._lights[l0].setFar(far);
             }
 
             ImGui::DragFloat("Shadow Bias", &scene.shadowBias, 0.001, -1, 1);
 
-//            ende::math::Quaternion direction = scene._lights[l2].transform().rot();
-//            if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1)) {
-//                scene._lights[l2].setDirection(direction);
-//            }
+            ende::math::Quaternion direction = scene._lights[l2].transform().rot();
+            if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1)) {
+                scene._lights[l2].setDirection(direction);
+            }
 
             ImGui::Text("Lights: %lu", scene._lights.size());
 

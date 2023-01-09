@@ -11,7 +11,9 @@ cala::Light::Light(LightType type, bool shadows, Transform &transform)
       _constant(1),
       _linear(0.045),
       _quadratic(0.0075),
-      _radius(80)
+      _radius(80),
+      _near(0.1),
+      _far(100)
 {
     switch (_type) {
         case DIRECTIONAL:
@@ -32,6 +34,8 @@ cala::Light &cala::Light::operator=(const cala::Light &rhs) {
     _linear = rhs._linear;
     _quadratic = rhs._quadratic;
     _radius = rhs._radius;
+    _near = rhs._near;
+    _far = rhs._far;
     return *this;
 }
 
@@ -40,10 +44,10 @@ cala::Light &cala::Light::operator=(const cala::Light &rhs) {
 cala::Light::Data cala::Light::data() const {
     Data data {
         {0, 0, 0},
-        static_cast<f32>(_type),
+        _type,
         _colour,
         _intensity,
-        _constant,
+        _far - _near,
         _linear,
         _quadratic,
         0
@@ -73,4 +77,12 @@ void cala::Light::setColour(const ende::math::Vec3f &colour) {
 
 void cala::Light::setIntensity(f32 intensity) {
     _intensity = intensity;
+}
+
+void cala::Light::setNear(f32 near) {
+    _near = near;
+}
+
+void cala::Light::setFar(f32 far) {
+    _far = far;
 }

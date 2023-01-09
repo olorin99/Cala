@@ -136,7 +136,7 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Driver& driver, D
         range.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
         range.baseMipLevel = 0;
         range.levelCount = 1;
-        range.baseArrayLayer = 0;
+        range.baseArrayLayer = info.layer;
         range.layerCount = 1;
 
         VkImageMemoryBarrier imageBarrier{};
@@ -156,7 +156,7 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Driver& driver, D
 
         copyRegion.imageSubresource.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
         copyRegion.imageSubresource.mipLevel = info.mipLevel;
-        copyRegion.imageSubresource.baseArrayLayer = 0;
+        copyRegion.imageSubresource.baseArrayLayer = info.layer;
         copyRegion.imageSubresource.layerCount = 1;
         copyRegion.imageExtent.width = info.width;
         copyRegion.imageExtent.height = info.height;

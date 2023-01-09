@@ -56,7 +56,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto& lightObj = scene._lights[light];
 
             Transform shadowTransform(lightObj.transform().pos());
-            Camera shadowCamera((f32)ende::math::rad(90.f), 1024.f, 1024.f, 0.1f, 100.f, shadowTransform);
+            Camera shadowCamera((f32)ende::math::rad(90.f), 1024.f, 1024.f, lightObj.getNear(), lightObj.getFar(), shadowTransform);
 
             if (lightObj.type() == Light::POINT) { // point shadows
                 auto& shadowProbe = _engine->getShadowProbe(light);
