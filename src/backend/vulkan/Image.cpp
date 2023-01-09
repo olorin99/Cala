@@ -277,34 +277,37 @@ void cala::backend::vulkan::Image::generateMips(CommandBuffer &cmd) {
 }
 
 
-cala::backend::vulkan::Image::View cala::backend::vulkan::Image::newView(VkImageViewType viewType, u32 mipLevel, u32 levelCount, u32 arrayLayer, u32 layerCount) {
+cala::backend::vulkan::Image::View cala::backend::vulkan::Image::newView(u32 mipLevel, u32 levelCount, u32 arrayLayer, u32 layerCount, cala::backend::ImageViewType viewType) {
     VkImageViewCreateInfo viewCreateInfo{};
     viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 
-    switch (_type) {
-        case ImageType::IMAGE1D:
-            if (_layers > 1)
-                viewType = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
-            else
-                viewType = VK_IMAGE_VIEW_TYPE_1D;
-            break;
-        case ImageType::IMAGE2D:
-            if (_layers == 6)
-                viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-            else if (_layers > 1)
-                viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-            else
-                viewType = VK_IMAGE_VIEW_TYPE_2D;
-            break;
-        case ImageType::IMAGE3D:
-            viewType = VK_IMAGE_VIEW_TYPE_3D;
-            break;
-        default:
-            break;
+    if (viewType == ImageViewType::AUTO) {
+        switch (_type) {
+            case ImageType::IMAGE1D:
+                if (_layers > 1)
+                    viewType = ImageViewType::VIEW1D_ARRAY;
+                else
+                    viewType = ImageViewType::VIEW1D;
+                break;
+            case ImageType::IMAGE2D:
+                if (_layers == 6)
+                    viewType = ImageViewType::CUBE;
+                else if (_layers > 1)
+                    viewType = ImageViewType::VIEW2D_ARRAY;
+                else
+                    viewType = ImageViewType::VIEW2D;
+                break;
+            case ImageType::IMAGE3D:
+                viewType = ImageViewType::VIEW3D;
+                break;
+            default:
+                break;
+        }
+
     }
 
     viewCreateInfo.image = _image;
-    viewCreateInfo.viewType = viewType;
+    viewCreateInfo.viewType = getImageViewType(viewType);
     viewCreateInfo.format = getFormat(_format);
 
     viewCreateInfo.subresourceRange.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;

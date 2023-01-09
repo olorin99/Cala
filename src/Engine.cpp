@@ -148,7 +148,7 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, 0, nullptr, { &flatBarrier, 1 });
     });
 
-    _defaultPointShadowView = _defaultPointShadow->newView(VK_IMAGE_VIEW_TYPE_CUBE);
+    _defaultPointShadowView = _defaultPointShadow->newView();
     _defaultDirectionalShadowView = _defaultDirectionalShadow->newView();
 
 }
@@ -188,7 +188,7 @@ cala::ImageHandle cala::Engine::convertToCubeMap(ImageHandle equirectangular) {
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST
     });
     auto equirectangularView = equirectangular->newView();
-    auto cubeView = cubeMap->newView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 10);
+    auto cubeView = cubeMap->newView(0, 10);
     _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
         auto envBarrier = cubeMap->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::GENERAL);
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &envBarrier, 1 });

@@ -77,7 +77,7 @@ namespace cala::backend::vulkan {
             Image* _image;
         };
 
-        View newView(VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D, u32 mipLevel = 0, u32 levelCount = 1, u32 arrayLayer = 0, u32 layerCount = 1);
+        View newView(u32 mipLevel = 0, u32 levelCount = 1, u32 arrayLayer = 0, u32 layerCount = 1, ImageViewType viewType = ImageViewType::AUTO);
 
         VkImageMemoryBarrier barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer = 0);
 

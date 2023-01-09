@@ -30,6 +30,10 @@ namespace cala::backend::vulkan {
         return static_cast<VkImageType>(type);
     }
 
+    constexpr inline VkImageViewType getImageViewType(ImageViewType type) {
+        return static_cast<VkImageViewType>(type);
+    }
+
     constexpr inline VkPolygonMode getPolygonMode(PolygonMode mode) {
         return static_cast<VkPolygonMode>(mode);
     }

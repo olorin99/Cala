@@ -57,7 +57,7 @@ void cala::Scene::addSkyLightMap(ImageHandle skyLightMap, bool equirectangular) 
     } else
         _skyLightMap = skyLightMap;
 
-    _skyLightMapView = _skyLightMap->newView(VK_IMAGE_VIEW_TYPE_CUBE, 0, 10);
+    _skyLightMapView = _skyLightMap->newView(0, 10);
 }
 
 void cala::Scene::prepare(u32 frame, cala::Camera& camera) {

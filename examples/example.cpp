@@ -124,9 +124,7 @@ int main() {
     ImGuiContext imGuiContext(engine.driver(), platform.window());
 
     //Shaders
-//    ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/point_shadow.frag.spv"_path));
     ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
-//    ProgramHandle directionalLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/direct_shadow.frag.spv"_path));
     ProgramHandle directionalLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/direct_pbr.frag.spv"_path));
 
     Mesh cube = cala::shapes::cube().mesh(engine.driver());
@@ -136,18 +134,10 @@ int main() {
     Transform modelTransform({0, 0, 0});
     ende::Vector<Transform> models;
 
-//    Transform cameraTransform({0, 0, -10});
-    Transform cameraTransform({-3, 3, -1});
+    Transform cameraTransform({0, 0, -20});
     Camera camera((f32)ende::math::rad(54.4), 800.f, 600.f, 0.1f, 1000.f, cameraTransform);
 
-
-//    Camera camera((f32)ende::math::rad(54.4), 800.f, 600.f, 0.1f, 1000.f, lightTransform);
-
     Sampler sampler(engine.driver(), {});
-
-//    ImageHandle brickwall = loadImage(engine, "../../res/textures/brickwall.jpg"_path);
-//    ImageHandle brickwall_normal = loadImage(engine, "../../res/textures/brickwall_normal.jpg"_path);
-//    ImageHandle brickwall_specular = loadImage(engine, "../../res/textures/brickwall_specular.jpg"_path);
 
     ImageHandle brickwall_albedo = loadImage(engine, "../../res/textures/pbr_rusted_iron/rustediron2_basecolor.png"_path);
     ImageHandle brickwall_normal = loadImage(engine, "../../res/textures/pbr_rusted_iron/rustediron2_normal.png"_path);
@@ -163,9 +153,6 @@ int main() {
     material._depthState = { true, true, CompareOp::LESS_EQUAL };
 
     auto matInstance = material.instance();
-//    matInstance.setSampler("diffuseMap", *brickwall, Sampler(engine.driver(), {}));
-//    matInstance.setSampler("normalMap", *brickwall_normal, Sampler(engine.driver(), {}));
-//    matInstance.setSampler("specularMap", *brickwall_specular, Sampler(engine.driver(), {}));
 
     matInstance.setSampler("albedoMap", brickwall_albedo->newView(), Sampler(engine.driver(), {}));
     matInstance.setSampler("normalMap", brickwall_normal->newView(), Sampler(engine.driver(), {}));
@@ -176,43 +163,10 @@ int main() {
     u32 objectCount = 100;
     Scene scene(&engine, objectCount);
 
-//    ende::Vector<cala::Transform> transforms;
-//    transforms.reserve(100);
-//
-//    f32 volume = 20;
-//    u32 count = 20;
-//
-//    for (int i = 0; i < count; i++) {
-//        transforms.push(Transform({
-//                                          ende::math::rand(-volume, volume), ende::math::rand(-volume, volume), ende::math::rand(-volume, volume)
-//                                  }));
-//        scene.addRenderable(cube, &matInstance, &transforms.back());
-//    }
-//
-//    f32 width = volume * 2;
-//    Transform floorPos({0, -width, 0}, {0, 0, 0, 1}, {width, 1, width});
-//    scene.addRenderable(cube, &matInstance, &floorPos);
-//    Transform roofPos({0, width, 0}, {0, 0, 0, 1}, {width, 1, width});
-//    scene.addRenderable(cube, &matInstance, &roofPos);
-//    Transform leftPos({-width, 0, 0}, {0, 0, 0, 1}, {1, width, width});
-//    scene.addRenderable(cube, &matInstance, &leftPos);
-//    Transform rightPos({width, 0, 0}, {0, 0, 0, 1}, {1, width, width});
-//    scene.addRenderable(cube, &matInstance, &rightPos);
-//    Transform frontPos({0, 0, -width}, {0, 0, 0, 1}, {width, width, 1});
-//    scene.addRenderable(cube, &matInstance, &frontPos);
-//    Transform backPos({0, 0, width}, {0, 0, 0, 1}, {width, width, 1});
-//    scene.addRenderable(cube, &matInstance, &backPos);
-//
-//    Transform lightTransform({0, 0, 0});
-//
-////    scene.addRenderable(cube, &matInstance, &lightTransform);
-//    Light light(Light::POINT, true, lightTransform);
-//
-//    u32 l0 = scene.addLight(light);
-
     Transform lightTransform({-10, 0, 0}, {0, 0, 0, 1}, {0.5, 0.5, 0.5});
     Light light(cala::Light::POINT, true, lightTransform);
     light.setColour({1, 0, 0});
+    light.setIntensity(300);
     Transform light1Transform({10, 2, 4});
     Light light1(cala::Light::POINT, false, light1Transform);
     light1.setColour({0, 1, 0});
@@ -246,7 +200,6 @@ int main() {
     for (u32 i = 0; i < objectCount; i++) {
         models.push(Transform({ende::math::rand(-sceneSize, sceneSize), ende::math::rand(-sceneSize, sceneSize), ende::math::rand(-sceneSize, sceneSize)}));
         scene.addRenderable(i % 2 == 0 ? cube : sphere, &matInstance, &models.back());
-//        scene.addRenderable(cube, &matInstance, &models.back());
     }
 
     ende::Vector<Transform> lightTransforms;

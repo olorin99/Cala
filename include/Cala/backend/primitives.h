@@ -119,6 +119,17 @@ namespace cala::backend {
         IMAGE3D = 2
     };
 
+    enum class ImageViewType {
+        AUTO = 7,
+        VIEW1D = 0,
+        VIEW2D = 1,
+        VIEW3D = 2,
+        CUBE = 3,
+        VIEW1D_ARRAY = 4,
+        VIEW2D_ARRAY = 5,
+        CUBE_ARRAY = 6,
+    };
+
     enum class PolygonMode {
         FILL = 0,
         LINE = 1,
