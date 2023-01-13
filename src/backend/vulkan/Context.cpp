@@ -245,7 +245,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     VkQueryPoolCreateInfo queryPoolCreateInfo{};
     queryPoolCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
     queryPoolCreateInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
-    queryPoolCreateInfo.queryCount = 10;
+    queryPoolCreateInfo.queryCount = 10 * 2;
     _timestampQueryPool = VK_NULL_HANDLE;
     VkResult res = vkCreateQueryPool(_device, &queryPoolCreateInfo, nullptr, &_timestampQueryPool);
     if (res != VK_SUCCESS)

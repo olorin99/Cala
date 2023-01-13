@@ -182,7 +182,6 @@ namespace cala::backend::vulkan {
             VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
             struct {
                 Buffer* buffer = nullptr;
-//                VkBuffer buffer = VK_NULL_HANDLE;
                 u32 offset = 0;
                 u32 range = 0;
             } buffers[MAX_BINDING_PER_SET] {};
@@ -190,7 +189,6 @@ namespace cala::backend::vulkan {
                 Image* image = nullptr;
                 VkImageView view = VK_NULL_HANDLE;
                 VkSampler sampler = VK_NULL_HANDLE;
-                u32 flags = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 bool storage = false;
             } images[MAX_BINDING_PER_SET] {};
 

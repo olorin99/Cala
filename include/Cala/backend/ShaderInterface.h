@@ -61,10 +61,17 @@ namespace cala::backend {
                 BindingType type = BindingType::UNIFORM;
                 u32 byteSize = 0;
                 std::unordered_map<std::string, BindingMember> members;
-                u32 dimensions;
+                u32 dimensions = 0;
                 std::string name;
+                ShaderStage stage;
             } bindings[MAX_BINDING_PER_SET];
         } sets[MAX_SET_COUNT];
+
+        struct {
+            u32 byteSize = 0;
+            ShaderStage stage;
+            std::unordered_map<std::string, BindingMember> members;
+        } pushConstants;
 
         u32 setCount = 0;
 

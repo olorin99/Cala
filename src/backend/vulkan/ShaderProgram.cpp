@@ -15,13 +15,8 @@ cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProg
 cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Builder::compile(Driver& driver) {
     ShaderProgram program(driver.context().device());
 
-    u32 bindingCount[MAX_SET_COUNT] = {0};
-    VkDescriptorSetLayoutBinding bindings[MAX_SET_COUNT][MAX_BINDING_PER_SET]; // 4 sets 4 buffers each stage TODO: find proper value
-
     bool hasPushConstant = false;
     VkPushConstantRange pushConstant{};
-
-    u32 setCount = 0;
 
     for (auto& stage : _stages) {
         // reflection
@@ -29,28 +24,18 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
         spirv_cross::ShaderResources resources = comp.get_shader_resources();
 
         for (auto& resource : resources.push_constant_buffers) {
-            u32 set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
-            u32 binding = comp.get_decoration(resource.id, spv::DecorationBinding);
-            assert(set < MAX_SET_COUNT && "supplied set count is greater than valid set count per shader program");
-            assert(set < MAX_BINDING_PER_SET && "supplied binding count is greater than valid binding count per shader program");
-
             const spirv_cross::SPIRType &type = comp.get_type(resource.base_type_id);
             u32 size = comp.get_declared_struct_size(type);
             u32 memberCount = type.member_types.size();
 
-
-            program._interface.sets[set].id = set;
-            program._interface.sets[set].byteSize = size;
-
-            program._interface.sets[set].bindings[binding].id = binding;
-            program._interface.sets[set].bindings[binding].type = ShaderInterface::BindingType::PUSH_CONSTANT;
-            program._interface.sets[set].bindings[binding].byteSize = size;
+            program._interface.pushConstants.byteSize = size;
+            program._interface.pushConstants.stage |= stage.second;
 
             for (u32 i = 0; i < memberCount; i++) {
                 const std::string& name = comp.get_member_name(type.self, i);
                 u32 offset = comp.type_struct_member_offset(type, i);
                 u32 memberSize = comp.get_declared_struct_member_size(type, i);
-                program._interface.getMemberList(set, binding)[name] = {offset, memberSize};
+                program._interface.pushConstants.members[name] = {offset, memberSize};
             }
             pushConstant.offset = 0;
             pushConstant.size = size;
@@ -71,25 +56,19 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
 
 
             program._interface.sets[set].id = set;
-            program._interface.sets[set].byteSize = size;
+            program._interface.sets[set].byteSize = std::max(size, program._interface.sets[set].byteSize);
 
             program._interface.sets[set].bindings[binding].id = binding;
             program._interface.sets[set].bindings[binding].type = ShaderInterface::BindingType::UNIFORM;
-            program._interface.sets[set].bindings[binding].byteSize = size;
+            program._interface.sets[set].bindings[binding].byteSize = std::max(size, program._interface.sets[set].bindings[binding].byteSize);
+            program._interface.sets[set].bindings[binding].stage |= stage.second;
 
             for (u32 i = 0; i < memberCount; i++) {
-                const std::string name = comp.get_member_name(type.self, i);
+                const std::string& name = comp.get_member_name(type.self, i);
                 u32 offset = comp.type_struct_member_offset(type, i);
                 u32 memberSize = comp.get_declared_struct_member_size(type, i);
                 program._interface.getMemberList(set, binding)[name] = {offset, memberSize};
             }
-
-            bindings[set][bindingCount[set]].binding = binding;
-            bindings[set][bindingCount[set]].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            bindings[set][bindingCount[set]].descriptorCount = 1;
-            bindings[set][bindingCount[set]].stageFlags = getShaderStage(stage.second);
-            bindings[set][bindingCount[set]].pImmutableSamplers = nullptr;
-            bindingCount[set]++;
         }
         for (auto& resource : resources.storage_buffers) {
             u32 set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
@@ -108,6 +87,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
             program._interface.sets[set].bindings[binding].id = binding;
             program._interface.sets[set].bindings[binding].type = ShaderInterface::BindingType::STORAGE_BUFFER;
             program._interface.sets[set].bindings[binding].byteSize = size;
+            program._interface.sets[set].bindings[binding].stage |= stage.second;
 
             for (u32 i = 0; i < memberCount; i++) {
                 const std::string name = comp.get_member_name(type.self, i);
@@ -115,13 +95,6 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
                 u32 memberSize = comp.get_declared_struct_member_size(type, i);
                 program._interface.getMemberList(set, binding)[name] = {offset, memberSize};
             }
-
-            bindings[set][bindingCount[set]].binding = binding;
-            bindings[set][bindingCount[set]].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            bindings[set][bindingCount[set]].descriptorCount = 1;
-            bindings[set][bindingCount[set]].stageFlags = getShaderStage(stage.second);
-            bindings[set][bindingCount[set]].pImmutableSamplers = nullptr;
-            bindingCount[set]++;
         }
         for (auto& resource : resources.sampled_images) {
             u32 set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
@@ -136,13 +109,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
             program._interface.sets[set].bindings[binding].type = ShaderInterface::BindingType::SAMPLER;
             program._interface.sets[set].bindings[binding].dimensions = 2;
             program._interface.sets[set].bindings[binding].name = comp.get_name(resource.id);
-
-            bindings[set][bindingCount[set]].binding = binding;
-            bindings[set][bindingCount[set]].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            bindings[set][bindingCount[set]].descriptorCount = 1;
-            bindings[set][bindingCount[set]].stageFlags = getShaderStage(stage.second);
-            bindings[set][bindingCount[set]].pImmutableSamplers = nullptr;
-            bindingCount[set]++;
+            program._interface.sets[set].bindings[binding].stage |= stage.second;
         }
         for (auto& resource : resources.storage_images) {
             u32 set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
@@ -157,23 +124,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
             program._interface.sets[set].bindings[binding].type = ShaderInterface::BindingType::STORAGE_IMAGE;
             program._interface.sets[set].bindings[binding].dimensions = 2;
             program._interface.sets[set].bindings[binding].name = comp.get_name(resource.id);
-
-            bindings[set][bindingCount[set]].binding = binding;
-            bindings[set][bindingCount[set]].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-            bindings[set][bindingCount[set]].descriptorCount = 1;
-            bindings[set][bindingCount[set]].stageFlags = getShaderStage(stage.second);
-            bindings[set][bindingCount[set]].pImmutableSamplers = nullptr;
-            bindingCount[set]++;
-        }
-
-        for (u32 i = 0; i < MAX_SET_COUNT; i++) {
-            program._interface.sets[i].id = i;
-            u32 size = 0;
-            for (u32 j = 0; j < MAX_BINDING_PER_SET; j++) {
-                if (program._interface.sets[i].bindings[j].type == ShaderInterface::BindingType::UNIFORM)
-                    size += program._interface.sets[i].bindings[j].byteSize;
-            }
-            program._interface.sets[i].byteSize = size;
+            program._interface.sets[set].bindings[binding].stage |= stage.second;
         }
 
         VkShaderModule shader;
@@ -195,12 +146,45 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
         program._stageFlags |= stage.second;
     }
 
-
-//    u32 setCount = 0;
-
     VkDescriptorSetLayout setLayouts[MAX_SET_COUNT] = {};
     for (u32 i = 0; i < MAX_SET_COUNT - 1; i++) {
-        setLayouts[i] = driver.getSetLayout({bindings[i], bindingCount[i]});
+        VkDescriptorSetLayoutBinding layoutBinding[MAX_BINDING_PER_SET];
+        u32 layoutBindingCount = 0;
+        auto& set = program._interface.sets[i];
+        for (u32 j = 0; j < MAX_BINDING_PER_SET; j++) {
+            auto& binding = set.bindings[j];
+
+            if (binding.type == ShaderInterface::BindingType::UNIFORM || binding.type == ShaderInterface::BindingType::SAMPLER) {
+                if (binding.byteSize == 0 && binding.dimensions == 0)
+                    break;
+            }
+
+            layoutBinding[j].binding = j;
+            VkDescriptorType type;
+            switch (binding.type) {
+                case ShaderInterface::BindingType::UNIFORM:
+                    type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                    break;
+                case ShaderInterface::BindingType::SAMPLER:
+                    type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                    break;
+                case ShaderInterface::BindingType::STORAGE_IMAGE:
+                    type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+                    break;
+                case ShaderInterface::BindingType::STORAGE_BUFFER:
+                    type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+                    break;
+                default:
+                    type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            }
+            layoutBinding[j].descriptorType = type;
+            layoutBinding[j].descriptorCount = 1;
+            layoutBinding[j].stageFlags = getShaderStage(binding.stage);
+            layoutBinding[j].pImmutableSamplers = nullptr;
+            layoutBindingCount++;
+        }
+
+        setLayouts[i] = driver.getSetLayout({layoutBinding, layoutBindingCount});
     }
     setLayouts[MAX_SET_COUNT - 1] = driver.bindlessLayout();
 //    if (program.interface().setPresent(MAX_SET_COUNT - 1))
@@ -213,17 +197,14 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
     pipelineLayoutInfo.setLayoutCount = MAX_SET_COUNT;
     pipelineLayoutInfo.pSetLayouts = setLayouts;
 
-
-
     pipelineLayoutInfo.pushConstantRangeCount = hasPushConstant ? 1 : 0;
     pipelineLayoutInfo.pPushConstantRanges = &pushConstant;
 
     VkPipelineLayout  pipelineLayout;
     vkCreatePipelineLayout(driver.context().device(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
 
-
     program._layout = pipelineLayout;
-    for (u32 i = 0; i < 4; i++)
+    for (u32 i = 0; i < MAX_SET_COUNT; i++)
         program._setLayout[i] = setLayouts[i];
 
     return program;
