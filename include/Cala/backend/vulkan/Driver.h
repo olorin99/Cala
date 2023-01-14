@@ -65,6 +65,13 @@ namespace cala::backend::vulkan {
         VkDescriptorSetLayout bindlessLayout() const { return _bindlessLayout; }
         VkDescriptorSet bindlessSet() const { return _bindlessSet; }
 
+        void setBindlessSetIndex(u32 index);
+
+        i32 getBindlessIndex() const { return _bindlessIndex; }
+
+        VkDescriptorSetLayout emptyLayout() const { return _emptySetLayout; }
+        VkDescriptorSet emptySet() const { return _emptySet; }
+
 
         const Context& context() const { return _context; }
 
@@ -101,6 +108,7 @@ namespace cala::backend::vulkan {
         VkDescriptorSetLayout _bindlessLayout;
         VkDescriptorSet _bindlessSet;
         VkDescriptorPool _bindlessPool;
+        i32 _bindlessIndex;
 
     };
 

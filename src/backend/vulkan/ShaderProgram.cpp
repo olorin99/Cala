@@ -57,6 +57,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
 
             program._interface.sets[set].id = set;
             program._interface.sets[set].byteSize = std::max(size, program._interface.sets[set].byteSize);
+            program._interface.sets[set].bindingCount++;
 
             program._interface.sets[set].bindings[binding].id = binding;
             program._interface.sets[set].bindings[binding].type = ShaderInterface::BindingType::UNIFORM;
@@ -83,6 +84,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
 
             program._interface.sets[set].id = set;
             program._interface.sets[set].byteSize = size;
+            program._interface.sets[set].bindingCount++;
 
             program._interface.sets[set].bindings[binding].id = binding;
             program._interface.sets[set].bindings[binding].type = ShaderInterface::BindingType::STORAGE_BUFFER;
@@ -104,6 +106,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
 
             const spirv_cross::SPIRType &type = comp.get_type(resource.base_type_id);
             program._interface.sets[set].id = set;
+            program._interface.sets[set].bindingCount++;
 
             program._interface.sets[set].bindings[binding].id = binding;
             program._interface.sets[set].bindings[binding].type = ShaderInterface::BindingType::SAMPLER;
@@ -119,6 +122,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
 
             const spirv_cross::SPIRType &type = comp.get_type(resource.base_type_id);
             program._interface.sets[set].id = set;
+            program._interface.sets[set].bindingCount++;
 
             program._interface.sets[set].bindings[binding].id = binding;
             program._interface.sets[set].bindings[binding].type = ShaderInterface::BindingType::STORAGE_IMAGE;
@@ -147,11 +151,18 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
     }
 
     VkDescriptorSetLayout setLayouts[MAX_SET_COUNT] = {};
-    for (u32 i = 0; i < MAX_SET_COUNT - 1; i++) {
+    u32 setCount = 0;
+    for (u32 i = 0; i < MAX_SET_COUNT; i++) {
+        if (driver.getBindlessIndex() == i) {
+            setLayouts[i] = driver.bindlessLayout();
+            break;
+        }
         VkDescriptorSetLayoutBinding layoutBinding[MAX_BINDING_PER_SET];
         u32 layoutBindingCount = 0;
         auto& set = program._interface.sets[i];
-        for (u32 j = 0; j < MAX_BINDING_PER_SET; j++) {
+        if (set.bindingCount > 0)
+            setCount = i;
+        for (u32 j = 0; set.bindingCount > 0 && j < MAX_BINDING_PER_SET; j++) {
             auto& binding = set.bindings[j];
 
             if (binding.type == ShaderInterface::BindingType::UNIFORM || binding.type == ShaderInterface::BindingType::SAMPLER) {
@@ -186,11 +197,8 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
 
         setLayouts[i] = driver.getSetLayout({layoutBinding, layoutBindingCount});
     }
-    setLayouts[MAX_SET_COUNT - 1] = driver.bindlessLayout();
-//    if (program.interface().setPresent(MAX_SET_COUNT - 1))
-//        setLayouts[MAX_SET_COUNT - 1] = driver.bindlessLayout();
-//    else
-//        setLayouts[MAX_SET_COUNT - 1] = driver.getSetLayout({bindings[MAX_SET_COUNT - 1], bindingCount[MAX_SET_COUNT - 1]});
+
+    program._interface._setCount = setCount + 1;
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -232,6 +240,8 @@ cala::backend::vulkan::ShaderProgram::ShaderProgram(ShaderProgram &&rhs)
     : _device(VK_NULL_HANDLE),
     _layout(VK_NULL_HANDLE)
 {
+    if (this == &rhs)
+        return;
     std::swap(_device, rhs._device);
     std::swap(_stages, rhs._stages);
     for (u32 i = 0; i < MAX_SET_COUNT; i++)
@@ -242,6 +252,8 @@ cala::backend::vulkan::ShaderProgram::ShaderProgram(ShaderProgram &&rhs)
 }
 
 cala::backend::vulkan::ShaderProgram &cala::backend::vulkan::ShaderProgram::operator=(ShaderProgram &&rhs) noexcept {
+    if (this == &rhs)
+        return *this;
     std::swap(_device, rhs._device);
     std::swap(_device, rhs._device);
     std::swap(_stages, rhs._stages);

@@ -89,6 +89,22 @@ cala::backend::vulkan::Driver::Driver(cala::backend::Platform& platform, bool cl
     bindlessAllocate.pNext = &countInfo;
 
     vkAllocateDescriptorSets(_context.device(), &bindlessAllocate, &_bindlessSet);
+
+//    VkDescriptorSetLayoutCreateInfo emptyLayoutInfo{};
+//    emptyLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+//    emptyLayoutInfo.bindingCount = 0;
+//    emptyLayoutInfo.pBindings = nullptr;
+//    emptyLayoutInfo.flags = 0;
+//
+//    vkCreateDescriptorSetLayout(_context.device(), &emptyLayoutInfo, nullptr, &_emptySetLayout);
+//
+//    VkDescriptorSetAllocateInfo emptyAllocate{};
+//    emptyAllocate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+//    emptyAllocate.descriptorSetCount = 1;
+//    emptyAllocate.pSetLayouts = &_emptySetLayout;
+//    emptyAllocate.descriptorPool = _bindlessPool;
+//
+//    vkAllocateDescriptorSets(_context.device(), &emptyAllocate, &_emptySet);
 }
 
 cala::backend::vulkan::Driver::~Driver() {
@@ -246,4 +262,10 @@ void cala::backend::vulkan::Driver::updateBindlessImage(u32 index, Image::View &
     descriptorWrite.pImageInfo = &imageInfo;
 
     vkUpdateDescriptorSets(_context.device(), 01, &descriptorWrite, 0, nullptr);
+}
+
+void cala::backend::vulkan::Driver::setBindlessSetIndex(u32 index) {
+    for (auto& cmd : _frameCommands)
+        cmd.setBindlessIndex(index);
+    _bindlessIndex = index;
 }

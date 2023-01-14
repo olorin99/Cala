@@ -98,6 +98,8 @@ namespace cala::backend::vulkan {
 
         void pushConstants(ende::Span<const void> data, u32 offset = 0);
 
+        void setBindlessIndex(u32 index);
+
         void bindDescriptors();
         void clearDescriptors();
 
@@ -155,6 +157,7 @@ namespace cala::backend::vulkan {
         RenderPass* _renderPass;
         Framebuffer* _framebuffer;
         Buffer* _indexBuffer;
+        const ShaderInterface* _boundInterface;
         bool _computeBound;
 
         struct PipelineKey {
@@ -196,6 +199,7 @@ namespace cala::backend::vulkan {
                 return memcmp(this, &rhs, sizeof(DescriptorKey)) == 0;
             }
         } _descriptorKey[MAX_SET_COUNT] {};
+        i32 _bindlessIndex;
 
         //TODO: cull descriptors every now and again
         VkDescriptorSet _currentSets[MAX_SET_COUNT];

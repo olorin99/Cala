@@ -18,7 +18,8 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(Driver& driver, VkQueue queu
     _currentPipeline(VK_NULL_HANDLE),
     _currentSets{VK_NULL_HANDLE},
     _descriptorPool(VK_NULL_HANDLE),
-    _drawCallCount(0)
+    _drawCallCount(0),
+    _bindlessIndex(-1)
 {
     VkSemaphoreCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -125,6 +126,7 @@ void cala::backend::vulkan::CommandBuffer::bindProgram(const ShaderProgram &prog
             _pipelineKey.shaders[i] = program._stages[i];
     }
     _pipelineKey.shaderCount = program._stages.size();
+    _boundInterface = &program._interface;
     _computeBound = program.stagePresent(ShaderStage::COMPUTE);
 }
 
@@ -261,20 +263,23 @@ void cala::backend::vulkan::CommandBuffer::pushConstants(ende::Span<const void> 
     vkCmdPushConstants(_buffer, _pipelineKey.layout, _pipelineKey.shaderCount > 1 ? VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT : VK_SHADER_STAGE_VERTEX_BIT, offset, data.size(), data.data());
 }
 
+void cala::backend::vulkan::CommandBuffer::setBindlessIndex(u32 index) {
+    _bindlessIndex = index;
+}
+
 void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
 
-    u32 setCount = 0;
     // find descriptors with key
-    for (u32 i = 0; i < MAX_SET_COUNT - 1; i++) {
-        auto descriptor = getDescriptorSet(i);
-        _currentSets[i] = descriptor;
-        setCount++;
+    for (u32 i = 0; i < MAX_SET_COUNT; i++) {
+        if (_bindlessIndex == i)
+            _currentSets[i] = _driver.bindlessSet();
+        else {
+            auto descriptor = getDescriptorSet(i);
+            _currentSets[i] = descriptor;
+        }
     }
-    _currentSets[MAX_SET_COUNT - 1] = _driver.bindlessSet();
-    setCount++;
-
     // bind descriptor
-    vkCmdBindDescriptorSets(_buffer, _computeBound ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineKey.layout, 0, setCount, _currentSets, 0, nullptr);
+    vkCmdBindDescriptorSets(_buffer, _computeBound ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineKey.layout, 0, MAX_SET_COUNT, _currentSets, 0, nullptr);
 
 }
 
@@ -566,6 +571,9 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
     PROFILE
     assert(set < MAX_SET_COUNT && "set is greater than allowed descriptor count");
     auto key = _descriptorKey[set];
+
+//    if (!_boundInterface.setPresent(set))
+//        return _driver.emptySet();
 
     if (key.setLayout == VK_NULL_HANDLE)
         return VK_NULL_HANDLE;

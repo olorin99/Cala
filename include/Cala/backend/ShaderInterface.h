@@ -30,8 +30,10 @@ namespace cala::backend {
         }
 
         bool setPresent(u32 set) const {
-            return sets[set].byteSize > 0;
+            return sets[set].bindingCount > 0;
         }
+
+        u32 setCount() const { return _setCount; }
 
     private:
         friend cala::backend::vulkan::ShaderProgram;
@@ -66,14 +68,14 @@ namespace cala::backend {
                 ShaderStage stage;
             } bindings[MAX_BINDING_PER_SET];
         } sets[MAX_SET_COUNT];
+        u32 _setCount = 0;
+        u32 _bindlessIndex = 0;
 
         struct {
             u32 byteSize = 0;
             ShaderStage stage;
             std::unordered_map<std::string, BindingMember> members;
         } pushConstants;
-
-        u32 setCount = 0;
 
     };
 

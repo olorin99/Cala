@@ -13,6 +13,8 @@ cala::Renderer::Renderer(cala::Engine* engine)
     _passTimers.emplace("totalGPU", backend::vulkan::Timer{_engine->driver(), 0});
     _passTimers.emplace("shadowsPass", backend::vulkan::Timer{_engine->driver(), 1});
     _passTimers.emplace("lightingPass", backend::vulkan::Timer{_engine->driver(), 2});
+
+    _engine->driver().setBindlessSetIndex(4);
 }
 
 bool cala::Renderer::beginFrame() {
