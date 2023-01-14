@@ -50,6 +50,8 @@ namespace cala {
     using ProgramHandle = Handle<backend::vulkan::ShaderProgram>;
 
     class Renderer;
+    class Material;
+    class MaterialInstance;
 
     class Engine {
     public:
@@ -73,6 +75,8 @@ namespace cala {
     private:
         friend Renderer;
         friend Scene;
+        friend Material;
+        friend MaterialInstance;
         friend BufferHandle;
         friend ImageHandle;
         friend ProgramHandle;
@@ -104,6 +108,11 @@ namespace cala {
 
         Probe& getShadowProbe(u32 index);
 
+        bool _materialDataDirty;
+        ende::Vector<u8> _materialData;
+        BufferHandle _materialBuffer;
+
+        void updateMaterialdata();
 
     };
 

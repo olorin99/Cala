@@ -23,28 +23,22 @@ namespace cala {
     class Material {
     public:
 
-        enum class Variants {
-            POINT,
-            DIRECTIONAL
-        };
-
-        Material(Engine* engine);
+        Material(Engine* engine, ProgramHandle program);
 
         MaterialInstance instance();
 
-        void setProgram(Variants variant, ProgramHandle program);
+        ProgramHandle getProgram() const { return _program; };
 
-        ProgramHandle getProgram(Variants variant);
+        u32 shaderDataSize() { return _program->interface().setSize(2); }
+
 //    private:
 
         Engine* _engine;
 
-        ende::Vector<ProgramHandle> _programs;
+        ProgramHandle _program;
         backend::vulkan::CommandBuffer::RasterState _rasterState;
         backend::vulkan::CommandBuffer::DepthState _depthState;
 
-        backend::vulkan::Buffer _uniformBuffer;
-        ende::Vector<u8> _uniformData;
         u32 _setSize;
 
     };

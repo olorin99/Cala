@@ -11,7 +11,8 @@ cala::backend::vulkan::Driver::Driver(cala::backend::Platform& platform, bool cl
           CommandBuffer(*this, _context.getQueue(QueueType::GRAPHICS), VK_NULL_HANDLE),
           CommandBuffer(*this, _context.getQueue(QueueType::GRAPHICS), VK_NULL_HANDLE)
       },
-      _frameCount(0)
+      _frameCount(0),
+      _bindlessIndex(-1)
 {
     VkCommandPoolCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;

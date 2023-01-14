@@ -53,7 +53,8 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
           .filter = VK_FILTER_NEAREST,
           .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
           .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
-      })
+      }),
+      _materialDataDirty(true)
 {
     ende::fs::File file;
     {
@@ -151,6 +152,8 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
     _defaultPointShadowView = _defaultPointShadow->newView();
     _defaultDirectionalShadowView = _defaultDirectionalShadow->newView();
 
+    _materialBuffer = createBuffer(256, backend::BufferUsage::UNIFORM);
+
 }
 
 cala::Engine::~Engine() {
@@ -225,4 +228,10 @@ cala::Probe &cala::Engine::getShadowProbe(u32 index) {
     });
 
     return _shadowProbes[std::min((u64)index, _shadowProbes.size() - 1)];
+}
+
+void cala::Engine::updateMaterialdata() {
+    if (_materialDataDirty)
+        _materialBuffer->data(_materialData);
+    _materialDataDirty = false;
 }

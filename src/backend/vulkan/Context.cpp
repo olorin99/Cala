@@ -195,8 +195,12 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
 
     createInfo.enabledExtensionCount = 2;
     createInfo.ppEnabledExtensionNames = deviceExtensions;
+    createInfo.enabledLayerCount = 0;
+    createInfo.ppEnabledLayerNames = nullptr;
+#ifndef NDEBUG
     createInfo.enabledLayerCount = 1;
     createInfo.ppEnabledLayerNames = validationLayers;
+#endif
 
     VkPhysicalDeviceDescriptorIndexingFeatures bindlessFeatures;
     bindlessFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;

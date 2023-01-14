@@ -182,7 +182,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             }
         }
         if (material) {
-            cmd.bindProgram(*material->getProgram(Material::Variants::POINT));
+            cmd.bindProgram(*material->getProgram());
             cmd.bindRasterState(material->_rasterState);
             cmd.bindDepthState(material->_depthState);
         }

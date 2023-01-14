@@ -88,8 +88,7 @@ int main() {
     //Shaders
     ProgramHandle program = engine.createProgram(loadShader(driver, "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/point_shadow.frag.spv"_path));
 
-    Material material(&engine);
-    material.setProgram(cala::Material::Variants::POINT, program);
+    Material material(&engine, program);
     material._rasterState = {
             CullMode::BACK,
             FrontFace::CCW,
@@ -110,8 +109,7 @@ int main() {
     ProgramHandle shadowProgram = engine.createProgram(loadShader(driver, "../../res/shaders/shadow_point.vert.spv"_path, "../../res/shaders/shadow_point.frag.spv"_path));
 //    ShaderProgram shadowProgram = loadShader(driver, "../../res/shaders/shadow.vert.spv"_path);
 
-    Material shadowMaterial(&engine);
-    shadowMaterial.setProgram(cala::Material::Variants::POINT, shadowProgram);
+    Material shadowMaterial(&engine, shadowProgram);
     shadowMaterial._rasterState = {
             .cullMode = CullMode::FRONT,
             .frontFace = FrontFace::CCW,
@@ -337,7 +335,7 @@ int main() {
             shadowProbe.draw(*frameInfo.cmd, [&](CommandBuffer& cmd, u32 face) {
                 cmd.clearDescriptors();
                 cmd.bindBuffer(3, 0, lightBuffer);
-                cmd.bindProgram(*shadowMatInstance.getMaterial()->getProgram(Material::Variants::POINT));
+                cmd.bindProgram(*shadowMatInstance.getMaterial()->getProgram());
                 cmd.bindRasterState(shadowMatInstance.getMaterial()->_rasterState);
                 cmd.bindDepthState(shadowMatInstance.getMaterial()->_depthState);
                 shadowMatInstance.bind(cmd);

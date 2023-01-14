@@ -572,8 +572,8 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
     assert(set < MAX_SET_COUNT && "set is greater than allowed descriptor count");
     auto key = _descriptorKey[set];
 
-//    if (!_boundInterface.setPresent(set))
-//        return _driver.emptySet();
+    if (set == _bindlessIndex)
+        return _driver.bindlessSet();
 
     if (key.setLayout == VK_NULL_HANDLE)
         return VK_NULL_HANDLE;

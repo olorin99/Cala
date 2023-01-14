@@ -10,14 +10,26 @@ layout (location = 0) in VsOut {
 
 layout (location = 0) out vec4 FragColour;
 
-layout (set = 2, binding = 0) uniform sampler2D albedoMap;
-layout (set = 2, binding = 1) uniform sampler2D normalMap;
-layout (set = 2, binding = 2) uniform sampler2D metallicMap;
-layout (set = 2, binding = 3) uniform sampler2D roughnessMap;
-layout (set = 2, binding = 4) uniform sampler2D aoMap;
+//layout (set = 2, binding = 0) uniform sampler2D albedoMap;
+//layout (set = 2, binding = 1) uniform sampler2D normalMap;
+//layout (set = 2, binding = 2) uniform sampler2D metallicMap;
+//layout (set = 2, binding = 3) uniform sampler2D roughnessMap;
+//layout (set = 2, binding = 4) uniform sampler2D aoMap;
 
 layout (set = 0, binding = 0) uniform samplerCube pointShadows[];
 layout (set = 0, binding = 0) uniform sampler2D directShadows[];
+
+struct MaterialData {
+    uint albedoIndex;
+    uint normalIndex;
+    uint metallicIndex;
+    uint roughnessIndex;
+    uint aoIndex;
+};
+
+layout (set = 2, binding = 0) uniform MatData {
+    MaterialData material;
+};
 
 //layout (set = 2, binding = 5) uniform samplerCube irradianceMap;
 //layout (set = 2, binding = 6) uniform samplerCube prefilterMap;
@@ -113,11 +125,17 @@ float filterPCF(uint index, vec3 lightPos, float bias, float range) {
 
 void main() {
 
-    vec3 albedo = texture(albedoMap, fsIn.TexCoords).rgb;
-    vec3 normal = texture(normalMap, fsIn.TexCoords).rgb;
-    float metallic = texture(metallicMap, fsIn.TexCoords).r;
-    float roughness = texture(roughnessMap, fsIn.TexCoords).r;
-    float ao = texture(aoMap, fsIn.TexCoords).r;
+//    vec3 albedo = texture(albedoMap, fsIn.TexCoords).rgb;
+//    vec3 normal = texture(normalMap, fsIn.TexCoords).rgb;
+//    float metallic = texture(metallicMap, fsIn.TexCoords).r;
+//    float roughness = texture(roughnessMap, fsIn.TexCoords).r;
+//    float ao = texture(aoMap, fsIn.TexCoords).r;
+
+    vec3 albedo = texture(directShadows[material.albedoIndex], fsIn.TexCoords).rgb;
+    vec3 normal = texture(directShadows[material.normalIndex], fsIn.TexCoords).rgb;
+    float metallic = texture(directShadows[material.metallicIndex], fsIn.TexCoords).r;
+    float roughness = texture(directShadows[material.roughnessIndex], fsIn.TexCoords).r;
+    float ao = texture(directShadows[material.aoIndex], fsIn.TexCoords).r;
 
     normal = normalize(normal * 2.0 - 1.0);
     normal = normalize(fsIn.TBN * normal);

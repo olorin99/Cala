@@ -124,8 +124,8 @@ int main() {
     ImGuiContext imGuiContext(engine.driver(), platform.window());
 
     //Shaders
-    ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
-    ProgramHandle directionalLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/direct_pbr.frag.spv"_path));
+    ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
+//    ProgramHandle directionalLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/direct_pbr.frag.spv"_path));
 
     Mesh cube = cala::shapes::cube().mesh(engine.driver());
 //    Mesh sphere = cala::shapes::sphereUV(1).mesh(engine.driver());
@@ -147,18 +147,32 @@ int main() {
 
 
 
-    Material material(&engine);
-    material.setProgram(Material::Variants::POINT, pointLightProgram);
-    material.setProgram(Material::Variants::DIRECTIONAL, directionalLightProgram);
+    Material material(&engine, pointLightProgram);
     material._depthState = { true, true, CompareOp::LESS_EQUAL };
 
     auto matInstance = material.instance();
 
-    matInstance.setSampler("albedoMap", brickwall_albedo->newView(), Sampler(engine.driver(), {}));
-    matInstance.setSampler("normalMap", brickwall_normal->newView(), Sampler(engine.driver(), {}));
-    matInstance.setSampler("metallicMap", brickwall_metallic->newView(), Sampler(engine.driver(), {}));
-    matInstance.setSampler("roughnessMap", brickwall_roughness->newView(), Sampler(engine.driver(), {}));
-    matInstance.setSampler("aoMap", brickwall_ao->newView(), Sampler(engine.driver(), {}));
+    struct MaterialData {
+        u32 albedoIndex;
+        u32 normalIndex;
+        u32 metallicIndex;
+        u32 roughnessIndex;
+        u32 aoIndex;
+    };
+    MaterialData materialData {
+        static_cast<u32>(brickwall_albedo.index()),
+        static_cast<u32>(brickwall_normal.index()),
+        static_cast<u32>(brickwall_metallic.index()),
+        static_cast<u32>(brickwall_roughness.index()),
+        static_cast<u32>(brickwall_ao.index())
+    };
+    matInstance.setUniform("material", materialData);
+
+//    matInstance.setSampler("albedoMap", brickwall_albedo->newView(), Sampler(engine.driver(), {}));
+//    matInstance.setSampler("normalMap", brickwall_normal->newView(), Sampler(engine.driver(), {}));
+//    matInstance.setSampler("metallicMap", brickwall_metallic->newView(), Sampler(engine.driver(), {}));
+//    matInstance.setSampler("roughnessMap", brickwall_roughness->newView(), Sampler(engine.driver(), {}));
+//    matInstance.setSampler("aoMap", brickwall_ao->newView(), Sampler(engine.driver(), {}));
 
     u32 objectCount = 100;
     Scene scene(&engine, objectCount);

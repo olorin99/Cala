@@ -114,6 +114,8 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
     if (_modelTransforms.size() * sizeof(ende::math::Mat4f) >= _modelBuffer[frame]->size())
         _modelBuffer[frame]->resize(_modelTransforms.size() * sizeof(ende::math::Mat4f) * 2);
     _modelBuffer[frame]->data({_modelTransforms.data(), static_cast<u32>(_modelTransforms.size() * sizeof(ende::math::Mat4f))});
+
+    _engine->updateMaterialdata();
 }
 
 void cala::Scene::render(backend::vulkan::CommandBuffer& cmd) {
@@ -144,7 +146,7 @@ void cala::Scene::render(backend::vulkan::CommandBuffer& cmd) {
                 }
             }
             if (material) {
-                cmd.bindProgram(*material->getProgram(Material::Variants::POINT));
+                cmd.bindProgram(*material->getProgram());
                 cmd.bindRasterState(material->_rasterState);
                 cmd.bindDepthState(material->_depthState);
             }
