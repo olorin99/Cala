@@ -14,7 +14,7 @@ cala::Renderer::Renderer(cala::Engine* engine)
     _passTimers.emplace("shadowsPass", backend::vulkan::Timer{_engine->driver(), 1});
     _passTimers.emplace("lightingPass", backend::vulkan::Timer{_engine->driver(), 2});
 
-    _engine->driver().setBindlessSetIndex(4);
+    _engine->driver().setBindlessSetIndex(0);
 }
 
 bool cala::Renderer::beginFrame() {
@@ -141,7 +141,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     cmd.pushDebugLabel("lighting pass");
     cmd.begin(*_swapchainInfo.framebuffer);
 
-    cmd.bindBuffer(0, 0, *_cameraBuffer);
+    cmd.bindBuffer(1, 0, *_cameraBuffer);
 
     Material* material = nullptr;
     MaterialInstance* materialInstance = nullptr;
@@ -153,9 +153,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()]);
 //        cmd.bindBuffer(3, 1, *scene._lightCountBuffer[frameIndex()], 0, sizeof(u32));
         cmd.bindBuffer(3, 1, *scene._lightCountBuffer[frameIndex()]);
-        auto lightCamData = scene._lights[0].camera().data();
-        _lightCameraBuffer->data({ &lightCamData, sizeof(lightCamData) });
-        cmd.bindBuffer(0, 1, *_lightCameraBuffer);
+//        auto lightCamData = scene._lights[0].camera().data();
+//        _lightCameraBuffer->data({ &lightCamData, sizeof(lightCamData) });
+//        cmd.bindBuffer(0, 1, *_lightCameraBuffer);
 
 //            if (scene._lights[light].type() == Light::DIRECTIONAL)
 //                variant = Material::Variants::DIRECTIONAL;
@@ -187,12 +187,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindDepthState(material->_depthState);
         }
 
-        cmd.bindBuffer(1, 0, *scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+        cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
 
-        if (scene._lights[0].shadowing())
-            cmd.bindImage(2, 5, _engine->getShadowProbe(0).view(), _engine->_shadowSampler); // TODO: directional shadows
-        else
-            cmd.bindImage(2, 5, _engine->_defaultPointShadowView, _engine->_shadowSampler);
+//        if (scene._lights[0].shadowing())
+//            cmd.bindImage(2, 5, _engine->getShadowProbe(0).view(), _engine->_shadowSampler); // TODO: directional shadows
+//        else
+//            cmd.bindImage(2, 5, _engine->_defaultPointShadowView, _engine->_shadowSampler);
 
         cmd.bindPipeline();
         cmd.bindDescriptors();
@@ -212,7 +212,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd.bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
         cmd.bindBindings({ &_engine->_cube._binding, 1 });
         cmd.bindAttributes(_engine->_cube._attributes);
-        cmd.bindBuffer(0, 0, *_cameraBuffer);
+        cmd.bindBuffer(1, 0, *_cameraBuffer);
         cmd.bindImage(2, 0, scene._skyLightMapView, _engine->_defaultSampler);
         cmd.bindPipeline();
         cmd.bindDescriptors();

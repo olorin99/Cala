@@ -11,7 +11,6 @@ layout (location = 0) out VsOut {
     vec2 TexCoords;
     mat3 TBN;
     vec3 ViewPos;
-    vec4 WorldPosLightSpace;
 } vsOut;
 
 struct CameraData {
@@ -22,15 +21,11 @@ struct CameraData {
     float far;
 };
 
-layout (set = 0, binding = 0) uniform FrameData {
+layout (set = 1, binding = 0) uniform FrameData {
     CameraData camera;
 };
 
-layout (set = 0, binding = 1) uniform LightData {
-    CameraData lightCam;
-};
-
-layout (set = 1, binding = 0) uniform ModelData {
+layout (set = 4, binding = 0) uniform ModelData {
     mat4 model;
 };
 
@@ -50,7 +45,6 @@ void main() {
     vsOut.TexCoords = inTexCoords;
     vsOut.TBN = mat3(T, B, N);
     vsOut.ViewPos = camera.position;
-    vsOut.WorldPosLightSpace = bias * lightCam.projection * lightCam.view * model * vec4(inPosition, 1.0);
 
     gl_Position = camera.projection * camera.view * model * vec4(inPosition, 1.0);
 }

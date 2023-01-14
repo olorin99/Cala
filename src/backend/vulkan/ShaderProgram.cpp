@@ -155,7 +155,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
     for (u32 i = 0; i < MAX_SET_COUNT; i++) {
         if (driver.getBindlessIndex() == i) {
             setLayouts[i] = driver.bindlessLayout();
-            break;
+            continue;
         }
         VkDescriptorSetLayoutBinding layoutBinding[MAX_BINDING_PER_SET];
         u32 layoutBindingCount = 0;

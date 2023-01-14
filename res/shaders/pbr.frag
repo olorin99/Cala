@@ -6,7 +6,6 @@ layout (location = 0) in VsOut {
     vec2 TexCoords;
     mat3 TBN;
     vec3 ViewPos;
-    vec4 WorldPosLightSpace;
 } fsIn;
 
 layout (location = 0) out vec4 FragColour;
@@ -17,10 +16,8 @@ layout (set = 2, binding = 2) uniform sampler2D metallicMap;
 layout (set = 2, binding = 3) uniform sampler2D roughnessMap;
 layout (set = 2, binding = 4) uniform sampler2D aoMap;
 
-layout (set = 2, binding = 5) uniform samplerCube shadowMap;
-
-layout (set = 4, binding = 0) uniform samplerCube pointShadows[];
-layout (set = 4, binding = 0) uniform sampler2D directShadows[];
+layout (set = 0, binding = 0) uniform samplerCube pointShadows[];
+layout (set = 0, binding = 0) uniform sampler2D directShadows[];
 
 //layout (set = 2, binding = 5) uniform samplerCube irradianceMap;
 //layout (set = 2, binding = 6) uniform samplerCube prefilterMap;
