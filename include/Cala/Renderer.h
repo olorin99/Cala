@@ -5,6 +5,7 @@
 #include <Cala/Camera.h>
 #include <Cala/backend/vulkan/Buffer.h>
 #include <Cala/backend/vulkan/Timer.h>
+#include <Cala/RenderGraph.h>
 
 class ImGuiContext;
 
@@ -39,12 +40,14 @@ namespace cala {
 
         Stats stats() const { return _stats; }
 
-    private:
+//    private:
 
         Engine* _engine;
 
         BufferHandle _cameraBuffer;
         BufferHandle _lightCameraBuffer;
+
+        RenderGraph _graph;
 
 
         backend::vulkan::Driver::FrameInfo _frameInfo;

@@ -187,8 +187,31 @@ void cala::backend::vulkan::Image::unmap() {
     vmaUnmapMemory(_driver.context().allocator(), _allocation);
 }
 
-void
-cala::backend::vulkan::Image::copy(cala::backend::vulkan::CommandBuffer &buffer, cala::backend::vulkan::Image &dst, u32 srcLayer, u32 dstLayer, u32 srcMipLevel, u32 dstMipLevel) {
+void cala::backend::vulkan::Image::blit(CommandBuffer &buffer, Image &dst, ImageLayout srcLayout, ImageLayout dstLayout, VkFilter filter) {
+    VkImageSubresourceLayers srcSubresource{};
+    srcSubresource.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    srcSubresource.mipLevel = 0;
+    srcSubresource.baseArrayLayer = 0;
+    srcSubresource.layerCount = _layers;
+
+    VkImageSubresourceLayers dstSubresource{};
+    dstSubresource.aspectMask = isDepthFormat(dst._format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    dstSubresource.mipLevel = 0;
+    dstSubresource.baseArrayLayer = 0;
+    dstSubresource.layerCount = dst._layers;
+
+    VkImageBlit blit{};
+    blit.srcSubresource = srcSubresource;
+    blit.srcOffsets[0] = {0, 0, 0 };
+    blit.srcOffsets[1] = { static_cast<i32>(_width), static_cast<i32>(_height), static_cast<i32>(_depth) };
+    blit.dstSubresource = dstSubresource;
+    blit.dstOffsets[0] = {0, 0, 0 };
+    blit.dstOffsets[1] = { static_cast<i32>(dst._width), static_cast<i32>(dst._height), static_cast<i32>(dst._depth) };
+
+    vkCmdBlitImage(buffer.buffer(), _image, getImageLayout(srcLayout), dst._image, getImageLayout(dstLayout), 1, &blit, filter);
+}
+
+void cala::backend::vulkan::Image::copy(cala::backend::vulkan::CommandBuffer &buffer, cala::backend::vulkan::Image &dst, u32 srcLayer, u32 dstLayer, u32 srcMipLevel, u32 dstMipLevel) {
     assert(_width == dst._width && _height == dst._height && _depth == dst._depth);
 
     VkImageCopy region{};

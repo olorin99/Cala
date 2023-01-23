@@ -102,7 +102,7 @@ bool cala::RenderGraph::compile() {
                 1,
                 attachment.second.format,
                 1, 1,
-                backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST | (backend::isDepthFormat(attachment.second.format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT)
+                backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST | (backend::isDepthFormat(attachment.second.format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT)
             });
         }
     }
@@ -116,12 +116,12 @@ bool cala::RenderGraph::compile() {
                 backend::vulkan::RenderPass::Attachment attachment{};
                 attachment.format = it->second.format;
                 attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-                attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
                 attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
                 attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
                 attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
                 attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-                attachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                attachment.finalLayout = output == _backbuffer ? VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 attachment.internalLayout = backend::isDepthFormat(attachment.format) ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
                 attachments.push(attachment);
@@ -143,10 +143,10 @@ bool cala::RenderGraph::compile() {
                     width = it->second.width;
                     height = it->second.height;
                 }
-                if (output == _backbuffer) {
-                    attachments.push(_engine->driver().swapchain().view(0));
-                    continue;
-                }
+//                if (output == _backbuffer) {
+//                    attachments.push(_engine->driver().swapchain().view(0));
+//                    continue;
+//                }
                 attachments.push(_engine->getImageView(it->second.handle).view);
             }
             pass->_framebuffer = new cala::backend::vulkan::Framebuffer(_engine->driver().context().device(), *pass->_renderPass, attachments, width, height);
@@ -157,7 +157,7 @@ bool cala::RenderGraph::compile() {
     return true;
 }
 
-bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd) {
+bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) {
     for (auto& pass : _orderedPasses) {
         cmd.pushDebugLabel(pass->_passName);
         cmd.begin(*pass->_framebuffer);
@@ -165,5 +165,13 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd) {
         cmd.end(*pass->_framebuffer);
         cmd.popDebugLabel();
     }
+    auto backbuffer = _attachments.find(_backbuffer);
+    if (backbuffer == _attachments.end())
+        return false;
+    _engine->driver().swapchain().blitImageToFrame(index, cmd, *backbuffer.value().handle);
     return true;
+}
+
+void cala::RenderGraph::reset() {
+    _passes.clear();
 }

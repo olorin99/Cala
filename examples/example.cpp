@@ -120,14 +120,14 @@ ImageHandle loadImageHDR(Engine& engine, const ende::fs::Path& path) {
 int main() {
     SDLPlatform platform("hello_triangle", 800, 600, SDL_WINDOW_RESIZABLE);
 
-    Engine engine(platform);
+    Engine engine(platform, false);
     Renderer renderer(&engine);
 
     ImGuiContext imGuiContext(engine.driver(), platform.window());
 
 
+    RenderGraph graph(&engine);
     {
-        RenderGraph graph(&engine);
 
         AttachmentInfo depthAttachment;
         depthAttachment.format = Format::D32_SFLOAT;
@@ -393,6 +393,7 @@ int main() {
         scene.prepare(renderer.frameIndex(), camera);
 
         renderer.render(scene, camera, &imGuiContext);
+//        graph.execute(*renderer._frameInfo.cmd, renderer._swapchainInfo.index);
 
         dt = renderer.endFrame();
     }

@@ -53,6 +53,8 @@ namespace cala::backend::vulkan {
 
         void copy(CommandBuffer& buffer, Image& dst, u32 srcLayer = 0, u32 dstLayer = 0, u32 srcMipLevel = 0, u32 dstMipLevel = 0);
 
+        void blit(CommandBuffer& buffer, Image& dst, ImageLayout srcLayout, ImageLayout dstLayout, VkFilter filter = VK_FILTER_NEAREST);
+
         void generateMips();
 
         void generateMips(CommandBuffer& cmd);

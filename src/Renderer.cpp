@@ -8,7 +8,8 @@
 cala::Renderer::Renderer(cala::Engine* engine)
     : _engine(engine),
       _cameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
-      _lightCameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT))
+      _lightCameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
+      _graph(engine)
 {
     _passTimers.emplace("totalGPU", backend::vulkan::Timer{_engine->driver(), 0});
     _passTimers.emplace("shadowsPass", backend::vulkan::Timer{_engine->driver(), 1});
@@ -139,71 +140,79 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     _passTimers[2].second.start(cmd);
     cmd.pushDebugLabel("lighting pass");
-    cmd.begin(*_swapchainInfo.framebuffer);
+//    cmd.begin(*_swapchainInfo.framebuffer);
 
-    cmd.bindBuffer(1, 0, *_cameraBuffer);
+    _graph.reset();
 
-    Material* material = nullptr;
-    MaterialInstance* materialInstance = nullptr;
+    AttachmentInfo depthAttachment;
+    depthAttachment.format = backend::Format::D32_SFLOAT;
 
-//    cmd.pushDebugLabel("direction_lights", {0, 0, 1, 1});
+    AttachmentInfo colourAttachment;
+    colourAttachment.format = backend::Format::RGBA8_SRGB;
 
-    if (!scene._lightData.empty()) {
-//        cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()], 0, sizeof(Light::Data) * scene._directionalLightCount);
-        cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()]);
-//        cmd.bindBuffer(3, 1, *scene._lightCountBuffer[frameIndex()], 0, sizeof(u32));
-        cmd.bindBuffer(3, 1, *scene._lightCountBuffer[frameIndex()]);
-//        auto lightCamData = scene._lights[0].camera().data();
-//        _lightCameraBuffer->data({ &lightCamData, sizeof(lightCamData) });
-//        cmd.bindBuffer(0, 1, *_lightCameraBuffer);
+    _graph.setBackbuffer("backbuffer");
 
-//            if (scene._lights[light].type() == Light::DIRECTIONAL)
-//                variant = Material::Variants::DIRECTIONAL;
-    }
+    auto& forwardPass = _graph.addPass("forward");
+    forwardPass.addColourOutput("backbuffer", colourAttachment);
+    forwardPass.setDepthOutput("depth", depthAttachment);
 
-    // lights
-    for (u32 i = 0; i < scene._renderList.size(); ++i) {
-        auto& renderable = scene._renderList[i].second.first;
-        auto& transform = scene._renderList[i].second.second;
+    forwardPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd) {
+        cmd.bindBuffer(1, 0, *_cameraBuffer);
 
-        if (!camera.frustum().intersect(transform->pos(), transform->scale().x()))
-            continue;
+        Material* material = nullptr;
+        MaterialInstance* materialInstance = nullptr;
 
-        cmd.bindBindings(renderable.bindings);
-        cmd.bindAttributes(renderable.attributes);
+        if (!scene._lightData.empty()) {
+            cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()]);
+            cmd.bindBuffer(3, 1, *scene._lightCountBuffer[frameIndex()]);
+        }
 
-        if (materialInstance != renderable.materialInstance) {
-            materialInstance = renderable.materialInstance;
-            if (materialInstance) {
-                if (materialInstance->getMaterial() != material) {
-                    material = materialInstance->getMaterial();
+        // lights
+        for (u32 i = 0; i < scene._renderList.size(); ++i) {
+            auto& renderable = scene._renderList[i].second.first;
+            auto& transform = scene._renderList[i].second.second;
+
+            if (!camera.frustum().intersect(transform->pos(), transform->scale().x()))
+                continue;
+
+            cmd.bindBindings(renderable.bindings);
+            cmd.bindAttributes(renderable.attributes);
+
+            if (materialInstance != renderable.materialInstance) {
+                materialInstance = renderable.materialInstance;
+                if (materialInstance) {
+                    if (materialInstance->getMaterial() != material) {
+                        material = materialInstance->getMaterial();
+                    }
+                    materialInstance->bind(cmd);
                 }
-                materialInstance->bind(cmd);
             }
+            if (material) {
+                cmd.bindProgram(*material->getProgram());
+                cmd.bindRasterState(material->_rasterState);
+                cmd.bindDepthState(material->_depthState);
+            }
+
+            cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+
+            cmd.bindPipeline();
+            cmd.bindDescriptors();
+
+            cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
+            if (renderable.index) {
+                cmd.bindIndexBuffer(renderable.index.buffer());
+                cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
+            } else
+                cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
         }
-        if (material) {
-            cmd.bindProgram(*material->getProgram());
-            cmd.bindRasterState(material->_rasterState);
-            cmd.bindDepthState(material->_depthState);
-        }
+    });
 
-        cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+    _graph.compile();
 
-//        if (scene._lights[0].shadowing())
-//            cmd.bindImage(2, 5, _engine->getShadowProbe(0).view(), _engine->_shadowSampler); // TODO: directional shadows
-//        else
-//            cmd.bindImage(2, 5, _engine->_defaultPointShadowView, _engine->_shadowSampler);
+    _graph.execute(cmd, _swapchainInfo.index);
 
-        cmd.bindPipeline();
-        cmd.bindDescriptors();
 
-        cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
-        if (renderable.index) {
-            cmd.bindIndexBuffer(renderable.index.buffer());
-            cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
-        } else
-            cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
-    }
+    cmd.begin(*_swapchainInfo.framebuffer);
 
     if (scene._skyLightMap) {
         cmd.clearDescriptors();
@@ -234,3 +243,85 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _passTimers[0].second.stop();
 
 }
+
+//void cala::Renderer::buildGraph() {
+//
+//    AttachmentInfo depthAttachment;
+//    depthAttachment.format = backend::Format::D32_SFLOAT;
+//
+//    AttachmentInfo colourAttachment;
+//    colourAttachment.format = backend::Format::RGBA8_SRGB;
+//
+//    auto& forwardPass = _graph.addPass("forward");
+//    forwardPass.addColourOutput("colour", colourAttachment);
+//    forwardPass.setDepthOutput("depth", depthAttachment);
+//
+//    forwardPass.setExecuteFunction([](backend::vulkan::CommandBuffer& cmd) {
+//        cmd.bindBuffer(1, 0, *_cameraBuffer);
+//
+//        Material* material = nullptr;
+//        MaterialInstance* materialInstance = nullptr;
+//
+////    cmd.pushDebugLabel("direction_lights", {0, 0, 1, 1});
+//
+//        if (!scene._lightData.empty()) {
+////        cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()], 0, sizeof(Light::Data) * scene._directionalLightCount);
+//            cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()]);
+////        cmd.bindBuffer(3, 1, *scene._lightCountBuffer[frameIndex()], 0, sizeof(u32));
+//            cmd.bindBuffer(3, 1, *scene._lightCountBuffer[frameIndex()]);
+////        auto lightCamData = scene._lights[0].camera().data();
+////        _lightCameraBuffer->data({ &lightCamData, sizeof(lightCamData) });
+////        cmd.bindBuffer(0, 1, *_lightCameraBuffer);
+//
+////            if (scene._lights[light].type() == Light::DIRECTIONAL)
+////                variant = Material::Variants::DIRECTIONAL;
+//        }
+//
+//        // lights
+//        for (u32 i = 0; i < scene._renderList.size(); ++i) {
+//            auto& renderable = scene._renderList[i].second.first;
+//            auto& transform = scene._renderList[i].second.second;
+//
+//            if (!camera.frustum().intersect(transform->pos(), transform->scale().x()))
+//                continue;
+//
+//            cmd.bindBindings(renderable.bindings);
+//            cmd.bindAttributes(renderable.attributes);
+//
+//            if (materialInstance != renderable.materialInstance) {
+//                materialInstance = renderable.materialInstance;
+//                if (materialInstance) {
+//                    if (materialInstance->getMaterial() != material) {
+//                        material = materialInstance->getMaterial();
+//                    }
+//                    materialInstance->bind(cmd);
+//                }
+//            }
+//            if (material) {
+//                cmd.bindProgram(*material->getProgram());
+//                cmd.bindRasterState(material->_rasterState);
+//                cmd.bindDepthState(material->_depthState);
+//            }
+//
+//            cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+//
+////        if (scene._lights[0].shadowing())
+////            cmd.bindImage(2, 5, _engine->getShadowProbe(0).view(), _engine->_shadowSampler); // TODO: directional shadows
+////        else
+////            cmd.bindImage(2, 5, _engine->_defaultPointShadowView, _engine->_shadowSampler);
+//
+//            cmd.bindPipeline();
+//            cmd.bindDescriptors();
+//
+//            cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
+//            if (renderable.index) {
+//                cmd.bindIndexBuffer(renderable.index.buffer());
+//                cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
+//            } else
+//                cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
+//        }
+//    });
+//
+//    _graph.compile();
+//
+//}

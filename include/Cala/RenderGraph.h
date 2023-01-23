@@ -65,7 +65,9 @@ namespace cala {
 
         bool compile();
 
-        bool execute(backend::vulkan::CommandBuffer& cmd);
+        bool execute(backend::vulkan::CommandBuffer& cmd, u32 index = 0);
+
+        void reset();
 
     private:
         friend RenderPass;
