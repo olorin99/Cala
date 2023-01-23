@@ -73,6 +73,9 @@ namespace cala::backend::vulkan {
         VkDescriptorSet emptySet() const { return _emptySet; }
 
 
+//        RenderPass* getRenderPass(ende::Span<);
+
+
         const Context& context() const { return _context; }
 
         Swapchain& swapchain() { return _swapchain; }

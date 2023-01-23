@@ -1,7 +1,3 @@
-//
-// Created by christian on 12/3/22.
-//
-
 #ifndef CALA_PROBE_H
 #define CALA_PROBE_H
 

@@ -1,7 +1,3 @@
-//
-// Created by christian on 12/3/22.
-//
-
 #include "Cala/Probe.h"
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include <Cala/backend/vulkan/Driver.h>

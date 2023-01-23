@@ -72,6 +72,9 @@ namespace cala {
 
         ImageHandle convertToCubeMap(ImageHandle equirectangular);
 
+
+        backend::vulkan::Image::View& getImageView(ImageHandle handle);
+
     private:
         friend Renderer;
         friend Scene;

@@ -216,6 +216,10 @@ cala::ImageHandle cala::Engine::convertToCubeMap(ImageHandle equirectangular) {
     return cubeMap;
 }
 
+cala::backend::vulkan::Image::View &cala::Engine::getImageView(ImageHandle handle) {
+    return _imageViews[handle.index()];
+}
+
 cala::Probe &cala::Engine::getShadowProbe(u32 index) {
     if (index < _shadowProbes.size())
         return _shadowProbes[index];
