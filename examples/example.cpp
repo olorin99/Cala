@@ -19,6 +19,8 @@
 #include <assimp/postprocess.h>
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
+#include <Cala/RenderGraph.h>
+#include <iostream>
 
 using namespace cala;
 using namespace cala::backend;
@@ -122,6 +124,62 @@ int main() {
     Renderer renderer(&engine);
 
     ImGuiContext imGuiContext(engine.driver(), platform.window());
+
+
+    {
+        RenderGraph graph(&engine);
+
+        AttachmentInfo depthAttachment;
+        depthAttachment.format = Format::D32_SFLOAT;
+
+        auto& depthPrePass = graph.addPass("depth_pre");
+        depthPrePass.setDepthOutput("depth", depthAttachment);
+        depthPrePass.setExecuteFunction([](CommandBuffer& cmd) {
+            std::cout << "This is depth pre pass\n";
+        });
+
+
+        AttachmentInfo hdrAttachment;
+        hdrAttachment.format = Format::RGBA32_SFLOAT;
+        auto& forwardPass = graph.addPass("forward");
+        forwardPass.addColourOutput("hdr", hdrAttachment);
+        forwardPass.setDepthInput("depth");
+        forwardPass.setExecuteFunction([](CommandBuffer& cmd) {
+            std::cout << "This is forward pass\n";
+        });
+
+        AttachmentInfo aoAttachment;
+        aoAttachment.format = Format::RGBA32_SFLOAT;
+        auto& aoPass = graph.addPass("ao");
+        aoPass.addColourOutput("ao", aoAttachment);
+        aoPass.setExecuteFunction([](CommandBuffer& cmd) {
+            std::cout << "This is ao pass\n";
+        });
+
+        AttachmentInfo backbufferAttachment;
+        backbufferAttachment.format = engine.driver().swapchain().format();
+        auto& hdrPass = graph.addPass("hdr");
+        hdrPass.addAttachmentInput("hdr");
+        hdrPass.addAttachmentInput("ao");
+        hdrPass.addColourOutput("backbuffer", backbufferAttachment);
+        hdrPass.setExecuteFunction([](CommandBuffer& cmd) {
+            std::cout << "This is hdr pass\n";
+        });
+
+        graph.setBackbuffer("backbuffer");
+
+
+        graph.compile();
+
+        engine.driver().immediate([&](CommandBuffer& cmd) {
+            graph.execute(cmd);
+        });
+
+    }
+
+
+
+
 
     //Shaders
     ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
