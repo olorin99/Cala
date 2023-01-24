@@ -207,6 +207,28 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         }
     });
 
+    auto& skyboxPass = _graph.addPass("skybox");
+    skyboxPass.addColourOutput("backbuffer");
+    skyboxPass.setDepthInput("depth");
+
+    skyboxPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd) {
+        if (scene._skyLightMap) {
+            cmd.clearDescriptors();
+            cmd.bindProgram(*_engine->_skyboxProgram);
+            cmd.bindRasterState({ backend::CullMode::NONE });
+            cmd.bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
+            cmd.bindBindings({ &_engine->_cube._binding, 1 });
+            cmd.bindAttributes(_engine->_cube._attributes);
+            cmd.bindBuffer(1, 0, *_cameraBuffer);
+            cmd.bindImage(2, 0, scene._skyLightMapView, _engine->_defaultSampler);
+            cmd.bindPipeline();
+            cmd.bindDescriptors();
+            cmd.bindVertexBuffer(0, _engine->_cube._vertex.buffer());
+            cmd.bindIndexBuffer(*_engine->_cube._index);
+            cmd.draw(_engine->_cube._index->size() / sizeof(u32), 1, 0, 0);
+        }
+    });
+
     _graph.compile();
 
     _graph.execute(cmd, _swapchainInfo.index);
@@ -214,21 +236,21 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     cmd.begin(*_swapchainInfo.framebuffer);
 
-    if (scene._skyLightMap) {
-        cmd.clearDescriptors();
-        cmd.bindProgram(*_engine->_skyboxProgram);
-        cmd.bindRasterState({ backend::CullMode::NONE });
-        cmd.bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
-        cmd.bindBindings({ &_engine->_cube._binding, 1 });
-        cmd.bindAttributes(_engine->_cube._attributes);
-        cmd.bindBuffer(1, 0, *_cameraBuffer);
-        cmd.bindImage(2, 0, scene._skyLightMapView, _engine->_defaultSampler);
-        cmd.bindPipeline();
-        cmd.bindDescriptors();
-        cmd.bindVertexBuffer(0, _engine->_cube._vertex.buffer());
-        cmd.bindIndexBuffer(*_engine->_cube._index);
-        cmd.draw(_engine->_cube._index->size() / sizeof(u32), 1, 0, 0);
-    }
+//    if (scene._skyLightMap) {
+//        cmd.clearDescriptors();
+//        cmd.bindProgram(*_engine->_skyboxProgram);
+//        cmd.bindRasterState({ backend::CullMode::NONE });
+//        cmd.bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
+//        cmd.bindBindings({ &_engine->_cube._binding, 1 });
+//        cmd.bindAttributes(_engine->_cube._attributes);
+//        cmd.bindBuffer(1, 0, *_cameraBuffer);
+//        cmd.bindImage(2, 0, scene._skyLightMapView, _engine->_defaultSampler);
+//        cmd.bindPipeline();
+//        cmd.bindDescriptors();
+//        cmd.bindVertexBuffer(0, _engine->_cube._vertex.buffer());
+//        cmd.bindIndexBuffer(*_engine->_cube._index);
+//        cmd.draw(_engine->_cube._index->size() / sizeof(u32), 1, 0, 0);
+//    }
 
     cmd.popDebugLabel();
     _passTimers[2].second.stop();

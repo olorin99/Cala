@@ -19,6 +19,11 @@ void cala::RenderPass::addColourOutput(const char *label, AttachmentInfo info) {
     _outputs.emplace(label);
 }
 
+void cala::RenderPass::addColourOutput(const char *label) {
+    auto it = _graph->_attachments.find(label);
+    _outputs.emplace(label);
+}
+
 void cala::RenderPass::setDepthOutput(const char *label, AttachmentInfo info) {
     _graph->_attachments.emplace(label, info);
     _depthAttachment = label;
@@ -64,22 +69,50 @@ void cala::RenderGraph::setBackbuffer(const char *label) {
 bool cala::RenderGraph::compile() {
     _orderedPasses.clear();
 
-    tsl::robin_map<const char*, ende::Vector<RenderPass*>> outputs;
-    for (auto& pass : _passes) {
+    tsl::robin_map<const char*, ende::Vector<u32>> outputs;
+    for (u32 i = 0; i < _passes.size(); i++) {
+        auto& pass = _passes[i];
         for (auto& output : pass._outputs)
-            outputs[output].push(&pass);
+            outputs[output].push(i);
     }
+//    tsl::robin_map<const char*, ende::Vector<RenderPass*>> outputs;
+//    for (auto& pass : _passes) {
+//        for (auto& output : pass._outputs)
+//            outputs[output].push(&pass);
+//    }
 
-    //TODO: add check for cyclical dependencies
-    std::function<void(RenderPass*)> dfs = [&](RenderPass* pass) {
-        for (auto& input : pass->_inputs) {
-            for (auto& parent : outputs[input]) {
-                dfs(parent);
+    ende::Vector<bool> visited(_passes.size(), false);
+    ende::Vector<bool> onStack(_passes.size(), false);
+
+    std::function<bool(u32)> dfs = [&](u32 index) -> bool {
+        visited[index] = true;
+        onStack[index] = true;
+        auto& pass = _passes[index];
+        for (auto& input : pass._inputs) {
+            for (u32 i = 0; i < outputs[input].size(); i++) {
+                if (visited[i] && onStack[i])
+                    return false;
+                if (!visited[i]) {
+                    if (!dfs(i))
+                        return false;
+                }
             }
         }
-        _orderedPasses.push(pass);
+        _orderedPasses.push(&_passes[index]);
+        onStack[index] = false;
+        return true;
     };
 
+    //TODO: add check for cyclical dependencies
+//    std::function<void(RenderPass*)> dfs = [&](RenderPass* pass, u32 index) -> bool {
+//        for (auto& input : pass->_inputs) {
+//            for (auto& parent : outputs[input]) {
+//                dfs(parent);
+//            }
+//        }
+//        _orderedPasses.push(pass);
+//    };
+//
     for (auto& pass : outputs[_backbuffer]) {
         dfs(pass);
     }
@@ -107,24 +140,60 @@ bool cala::RenderGraph::compile() {
         }
     }
 
-    for (auto& pass : _orderedPasses) {
+    for (u32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
+        auto& pass = _orderedPasses[passIndex];
         if (!pass->_renderPass) {
             ende::Vector<backend::vulkan::RenderPass::Attachment> attachments;
 
+            bool depthWritten = false;
+
             for (auto& output : pass->_outputs) {
+//                bool transition = false;
+//                for (u32 i = passIndex + 1; i < _orderedPasses.size(); i++) {
+//                    auto& nextPass = _orderedPasses[i];
+//
+//                    for (auto& input : nextPass->_inputs) {
+//                        if (input == output) {
+//                            transition = true;
+//                        }
+//                    }
+//
+//                }
+
                 auto it = _attachments.find(output);
+                bool depth = backend::isDepthFormat(it->second.format);
+
                 backend::vulkan::RenderPass::Attachment attachment{};
                 attachment.format = it->second.format;
                 attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-                attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+                attachment.loadOp = it->second.clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
                 attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
                 attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
                 attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-                attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-                attachment.finalLayout = output == _backbuffer ? VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                attachment.internalLayout = backend::isDepthFormat(attachment.format) ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                attachment.initialLayout = it->second.clear ? VK_IMAGE_LAYOUT_UNDEFINED : (depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                attachment.finalLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                attachment.internalLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+                if (depth)
+                    depthWritten = true;
+                it.value().clear = false;
                 attachments.push(attachment);
+            }
+
+            if (!depthWritten && pass->_depthAttachment) {
+                auto it = _attachments.find(pass->_depthAttachment);
+                backend::vulkan::RenderPass::Attachment attachment{};
+                attachment.format = it->second.format;
+                attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+                attachment.loadOp = it->second.clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+                attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+                attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+                attachment.initialLayout = it->second.clear ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+                attachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                attachment.internalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+                attachments.push(attachment);
+                it.value().clear = false;
             }
 
             pass->_renderPass = new cala::backend::vulkan::RenderPass(_engine->driver(), attachments);
@@ -133,6 +202,7 @@ bool cala::RenderGraph::compile() {
             ende::Vector<VkImageView> attachments;
             u32 width = 0;
             u32 height = 0;
+            bool depthWritten = false;
             for (auto& output : pass->_outputs) {
                 auto it = _attachments.find(output);
                 if (it->second.matchSwapchain) {
@@ -147,6 +217,20 @@ bool cala::RenderGraph::compile() {
 //                    attachments.push(_engine->driver().swapchain().view(0));
 //                    continue;
 //                }
+                if (backend::isDepthFormat(it->second.format))
+                    depthWritten = true;
+                attachments.push(_engine->getImageView(it->second.handle).view);
+            }
+            if (!depthWritten && pass->_depthAttachment) {
+                auto it = _attachments.find(pass->_depthAttachment);
+                if (it->second.matchSwapchain) {
+                    auto extent = _engine->driver().swapchain().extent();
+                    width = extent.width;
+                    height = extent.height;
+                } else {
+                    width = it->second.width;
+                    height = it->second.height;
+                }
                 attachments.push(_engine->getImageView(it->second.handle).view);
             }
             pass->_framebuffer = new cala::backend::vulkan::Framebuffer(_engine->driver().context().device(), *pass->_renderPass, attachments, width, height);
@@ -168,10 +252,18 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
     auto backbuffer = _attachments.find(_backbuffer);
     if (backbuffer == _attachments.end())
         return false;
+
+    auto barrier = backbuffer.value().handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::TRANSFER_READ, backend::ImageLayout::COLOUR_ATTACHMENT, backend::ImageLayout::TRANSFER_SRC);
+    cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::PipelineStage::TRANSFER, 0, nullptr, { &barrier, 1 });
+
     _engine->driver().swapchain().blitImageToFrame(index, cmd, *backbuffer.value().handle);
+
+    barrier = backbuffer.value().handle->barrier(backend::Access::TRANSFER_READ, backend::Access::COLOUR_ATTACHMENT_WRITE, backend::ImageLayout::TRANSFER_SRC, backend::ImageLayout::COLOUR_ATTACHMENT);
+    cmd.pipelineBarrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, 0, nullptr, { &barrier, 1 });
     return true;
 }
 
 void cala::RenderGraph::reset() {
     _passes.clear();
+    _attachments.clear();
 }

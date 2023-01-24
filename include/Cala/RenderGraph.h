@@ -15,6 +15,7 @@ namespace cala {
         backend::Format format = backend::Format::RGBA8_SRGB;
         bool persistent = true;
         bool matchSwapchain = true;
+        bool clear = true;
         ImageHandle handle;
     };
 
@@ -24,6 +25,8 @@ namespace cala {
     public:
 
         void addColourOutput(const char* label, AttachmentInfo info);
+
+        void addColourOutput(const char* label);
 
         void setDepthOutput(const char* label, AttachmentInfo info);
 
