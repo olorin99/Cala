@@ -52,7 +52,6 @@ namespace cala {
 
         std::function<void(backend::vulkan::CommandBuffer&)> _executeFunc;
 
-        cala::backend::vulkan::RenderPass* _renderPass;
         cala::backend::vulkan::Framebuffer* _framebuffer;
 
     };

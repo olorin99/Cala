@@ -73,6 +73,11 @@ namespace cala::backend::vulkan {
         VkDescriptorSet emptySet() const { return _emptySet; }
 
 
+        RenderPass* getRenderPass(ende::Span<RenderPass::Attachment> attachments);
+
+        Framebuffer* getFramebuffer(RenderPass* renderPass, ende::Span<VkImageView> attachments, u32 width, u32 height);
+
+
 //        RenderPass* getRenderPass(ende::Span<);
 
 
@@ -97,6 +102,8 @@ namespace cala::backend::vulkan {
         ende::time::StopWatch _frameClock;
         ende::time::Duration _lastFrameTime;
 
+        tsl::robin_map<u32, RenderPass*> _renderPasses;
+        tsl::robin_map<u64, Framebuffer*> _framebuffers;
 
         struct SetLayoutKey {
             VkDescriptorSetLayoutBinding bindings[8];

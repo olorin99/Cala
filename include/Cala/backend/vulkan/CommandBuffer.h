@@ -172,14 +172,14 @@ namespace cala::backend::vulkan {
             DepthState depth = {};
             BlendState blend = {};
             //TODO: add rest of pipeline state to key
-
-            bool operator==(const PipelineKey& rhs) const {
-                return memcmp(this, &rhs, sizeof(PipelineKey)) == 0;
-            }
         } _pipelineKey;
 
+        struct PipelineEqual {
+            bool operator()(const PipelineKey& lhs, const PipelineKey& rhs) const;
+        };
+
         VkPipeline _currentPipeline;
-        tsl::robin_map<PipelineKey, VkPipeline, ende::util::MurmurHash<PipelineKey>> _pipelines;
+        tsl::robin_map<PipelineKey, VkPipeline, ende::util::MurmurHash<PipelineKey>, PipelineEqual> _pipelines;
 
         struct DescriptorKey {
             VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;

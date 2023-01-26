@@ -1,7 +1,7 @@
 #include "Cala/backend/vulkan/Driver.h"
 #include <vulkan/vulkan.h>
 
-
+#include <Ende/log/log.h>
 
 cala::backend::vulkan::Driver::Driver(cala::backend::Platform& platform, bool clear)
     : _context(platform),
@@ -111,6 +111,12 @@ cala::backend::vulkan::Driver::Driver(cala::backend::Platform& platform, bool cl
 cala::backend::vulkan::Driver::~Driver() {
     vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS)); //ensures last frame finished before destroying stuff
 
+    for (auto& framebuffer : _framebuffers)
+        delete framebuffer.second;
+
+    for (auto& renderPass : _renderPasses)
+        delete renderPass.second;
+
     vkDestroyDescriptorSetLayout(_context.device(), _bindlessLayout, nullptr);
 
     vkDestroyDescriptorPool(_context.device(), _bindlessPool, nullptr);
@@ -132,7 +138,7 @@ cala::backend::vulkan::Driver::FrameInfo cala::backend::vulkan::Driver::beginFra
     VkFence fence = _frameFences[_frameCount % FRAMES_IN_FLIGHT];
 
     return {
-        _frameCount,
+        _frameCount++,
         cmd,
         fence
     };
@@ -262,11 +268,40 @@ void cala::backend::vulkan::Driver::updateBindlessImage(u32 index, Image::View &
     descriptorWrite.dstBinding = 0;
     descriptorWrite.pImageInfo = &imageInfo;
 
-    vkUpdateDescriptorSets(_context.device(), 01, &descriptorWrite, 0, nullptr);
+    vkUpdateDescriptorSets(_context.device(), 1, &descriptorWrite, 0, nullptr);
 }
 
 void cala::backend::vulkan::Driver::setBindlessSetIndex(u32 index) {
     for (auto& cmd : _frameCommands)
         cmd.setBindlessIndex(index);
     _bindlessIndex = index;
+}
+
+cala::backend::vulkan::RenderPass* cala::backend::vulkan::Driver::getRenderPass(ende::Span<RenderPass::Attachment> attachments) {
+    u32 hash = 0;
+    ende::util::MurmurHash<RenderPass::Attachment> hasher;
+    for (auto& attachment : attachments)
+        hash |= hasher(attachment);
+
+//    ende::log::info(hash);
+
+    auto it = _renderPasses.find(hash);
+    if (it != _renderPasses.end())
+        return it.value();
+
+    auto a = _renderPasses.emplace(std::make_pair(hash, new RenderPass(*this, attachments)));
+    return a.first.value();
+}
+
+cala::backend::vulkan::Framebuffer *cala::backend::vulkan::Driver::getFramebuffer(RenderPass *renderPass, ende::Span<VkImageView> attachmentImages, u32 width, u32 height) {
+    u64 hash = (u64)renderPass->renderPass();
+    for (auto& attachment : attachmentImages)
+        hash |= (u64)attachment;
+
+    auto it = _framebuffers.find(hash);
+    if (it != _framebuffers.end())
+        return it.value();
+
+    auto a = _framebuffers.emplace(std::make_pair(hash, new Framebuffer(_context.device(), *renderPass, attachmentImages, width, height)));
+    return a.first.value();
 }

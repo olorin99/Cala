@@ -39,6 +39,9 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(Driver& driver, VkQueue queu
     descriptorPoolCreateInfo.pPoolSizes = poolSizes;
     descriptorPoolCreateInfo.maxSets = 1000;
     vkCreateDescriptorPool(_driver.context().device(), &descriptorPoolCreateInfo, nullptr, &_descriptorPool);
+
+    memset(&_pipelineKey, 0, sizeof(PipelineKey));
+    _pipelineKey.viewPort.maxDepth = 1.f;
 }
 
 cala::backend::vulkan::CommandBuffer::~CommandBuffer() {
@@ -218,20 +221,30 @@ void cala::backend::vulkan::CommandBuffer::bindRasterState(RasterState state) {
         _pipelineKey.raster.rasterDiscard != state.rasterDiscard ||
         _pipelineKey.raster.depthBias != state.depthBias)
     {
-        _pipelineKey.raster = state;
-//        _dirty = true;
+        _pipelineKey.raster.cullMode = state.cullMode;
+        _pipelineKey.raster.frontFace = state.frontFace;
+        _pipelineKey.raster.polygonMode = state.polygonMode;
+        _pipelineKey.raster.lineWidth = state.lineWidth;
+        _pipelineKey.raster.depthClamp = state.depthClamp;
+        _pipelineKey.raster.rasterDiscard = state.rasterDiscard;
+        _pipelineKey.raster.depthBias = state.depthBias;
     }
 }
 
 void cala::backend::vulkan::CommandBuffer::bindDepthState(DepthState state) {
     if (ende::util::MurmurHash<DepthState>()(_pipelineKey.depth) != ende::util::MurmurHash<DepthState>()(state)) {
-        _pipelineKey.depth = state;
+        memset(&_pipelineKey.depth, 0, sizeof(DepthState));
+        _pipelineKey.depth.test = state.test;
+        _pipelineKey.depth.write = state.write;
+        _pipelineKey.depth.compareOp = state.compareOp;
     }
 }
 
 void cala::backend::vulkan::CommandBuffer::bindBlendState(BlendState state) {
     if (ende::util::MurmurHash<BlendState>()(_pipelineKey.blend) != ende::util::MurmurHash<BlendState>()(state)) {
-        _pipelineKey.blend = state;
+        _pipelineKey.blend.blend = state.blend;
+        _pipelineKey.blend.srcFactor = state.srcFactor;
+        _pipelineKey.blend.dstFactor = state.dstFactor;
     }
 }
 
@@ -242,12 +255,6 @@ void cala::backend::vulkan::CommandBuffer::bindPipeline() {
         _currentPipeline = pipeline;
     }
 }
-
-
-//void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 slot, VkBuffer buffer, u32 offset, u32 range) {
-//    assert(set < MAX_SET_COUNT && "set is greater than valid number of descriptor sets");
-//    _descriptorKey[set].buffers[slot] = {buffer, offset, range};
-//}
 
 void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 binding, Buffer &buffer, u32 offset, u32 range) {
     assert(set < MAX_SET_COUNT && "set is greater than valid number of descriptor sets");
@@ -638,4 +645,9 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
 
     _descriptorSets.emplace(std::make_pair(key, descriptorSet));
     return descriptorSet;
+}
+
+bool
+cala::backend::vulkan::CommandBuffer::PipelineEqual::operator()(const PipelineKey &lhs, const PipelineKey &rhs) const {
+    return 0 == memcmp((const void*)&lhs, (const void*)&rhs, sizeof(lhs));
 }

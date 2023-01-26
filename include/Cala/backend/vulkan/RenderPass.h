@@ -29,6 +29,14 @@ namespace cala::backend::vulkan {
 
         ~RenderPass();
 
+        RenderPass(const RenderPass&) = delete;
+
+        RenderPass& operator==(const RenderPass&) = delete;
+
+        RenderPass(RenderPass&& rhs) noexcept;
+
+        RenderPass& operator==(RenderPass&& rhs) noexcept;
+
         VkRenderPass renderPass() const { return _renderPass; }
 
         VkFramebuffer framebuffer(ende::Span<VkImageView> attachments, u32 width, u32 height);

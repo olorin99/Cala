@@ -4,6 +4,7 @@
 
 cala::backend::vulkan::RenderPass::RenderPass(Driver& driver, ende::Span<Attachment> attachments)
     : _device(driver.context().device()),
+    _renderPass(VK_NULL_HANDLE),
     _colourAttachments(0)
 {
     _clearValues.reserve(attachments.size());
@@ -85,7 +86,30 @@ cala::backend::vulkan::RenderPass::RenderPass(Driver& driver, ende::Span<Attachm
 }
 
 cala::backend::vulkan::RenderPass::~RenderPass() {
-    vkDestroyRenderPass(_device, _renderPass, nullptr);
+    if (_renderPass != VK_NULL_HANDLE)
+        vkDestroyRenderPass(_device, _renderPass, nullptr);
+}
+
+cala::backend::vulkan::RenderPass::RenderPass(RenderPass &&rhs) noexcept
+    : _device(VK_NULL_HANDLE),
+    _renderPass(VK_NULL_HANDLE)
+{
+    std::swap(_device, rhs._device);
+    std::swap(_renderPass, rhs._renderPass);
+    std::swap(_clearValues, rhs._clearValues);
+    std::swap(_colourAttachments, rhs._colourAttachments);
+    std::swap(_depthAttachments, rhs._depthAttachments);
+}
+
+cala::backend::vulkan::RenderPass &cala::backend::vulkan::RenderPass::operator==(RenderPass &&rhs) noexcept {
+    if (this == &rhs)
+        return *this;
+    std::swap(_device, rhs._device);
+    std::swap(_renderPass, rhs._renderPass);
+    std::swap(_clearValues, rhs._clearValues);
+    std::swap(_colourAttachments, rhs._colourAttachments);
+    std::swap(_depthAttachments, rhs._depthAttachments);
+    return *this;
 }
 
 
