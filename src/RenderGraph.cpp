@@ -110,16 +110,33 @@ bool cala::RenderGraph::compile() {
     for (auto& attachment : _attachments) {
         auto it = _attachments.find(attachment.first);
         it.value().clear = true;
+        auto extent = _engine->driver().swapchain().extent();
         if (!attachment.second.handle) {
             u32 width = attachment.second.width;
             u32 height = attachment.second.height;
             if (attachment.second.matchSwapchain) {
-                auto extent = _engine->driver().swapchain().extent();
                 width = extent.width;
                 height = extent.height;
             }
 
 
+            it.value().handle = _engine->createImage({
+                width,
+                height,
+                1,
+                attachment.second.format,
+                1, 1,
+                backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST | (backend::isDepthFormat(attachment.second.format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT)
+            });
+        }
+        if (attachment.second.matchSwapchain && (it.value().handle->width() != extent.width || it.value().handle->height() != extent.height)) {
+            u32 width = attachment.second.width;
+            u32 height = attachment.second.height;
+            if (attachment.second.matchSwapchain) {
+                width = extent.width;
+                height = extent.height;
+            }
+            _engine->destroyImage(it.value().handle);
             it.value().handle = _engine->createImage({
                 width,
                 height,

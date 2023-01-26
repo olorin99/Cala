@@ -62,6 +62,7 @@ namespace cala {
 
         backend::vulkan::Driver& driver() { return _driver; }
 
+        bool gc();
 
 
         BufferHandle createBuffer(u32 size, backend::BufferUsage usage, backend::MemoryProperties flags = backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT);
@@ -71,6 +72,9 @@ namespace cala {
         ProgramHandle createProgram(backend::vulkan::ShaderProgram&& program);
 
         ImageHandle convertToCubeMap(ImageHandle equirectangular);
+
+
+        void destroyImage(ImageHandle handle);
 
 
         backend::vulkan::Image::View& getImageView(ImageHandle handle);
@@ -104,10 +108,13 @@ namespace cala {
         Mesh _cube;
 
         ende::Vector<backend::vulkan::Buffer> _buffers;
-        ende::Vector<backend::vulkan::Image> _images;
+        ende::Vector<backend::vulkan::Image*> _images;
         ende::Vector<backend::vulkan::Image::View> _imageViews;
         ende::Vector<backend::vulkan::ShaderProgram> _programs;
         std::vector<Probe> _shadowProbes; //TODO: fix vectors in Ende, Optional implementation sucks
+
+        ende::Vector<std::pair<i32, ImageHandle>> _imagesToDestroy;
+        ende::Vector<u32> _freeImages;
 
         Probe& getShadowProbe(u32 index);
 

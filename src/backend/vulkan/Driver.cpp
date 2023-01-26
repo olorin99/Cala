@@ -111,8 +111,7 @@ cala::backend::vulkan::Driver::Driver(cala::backend::Platform& platform, bool cl
 cala::backend::vulkan::Driver::~Driver() {
     vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS)); //ensures last frame finished before destroying stuff
 
-    for (auto& framebuffer : _framebuffers)
-        delete framebuffer.second;
+    clearFramebuffers();
 
     for (auto& renderPass : _renderPasses)
         delete renderPass.second;
@@ -304,4 +303,10 @@ cala::backend::vulkan::Framebuffer *cala::backend::vulkan::Driver::getFramebuffe
 
     auto a = _framebuffers.emplace(std::make_pair(hash, new Framebuffer(_context.device(), *renderPass, attachmentImages, width, height)));
     return a.first.value();
+}
+
+void cala::backend::vulkan::Driver::clearFramebuffers() {
+    for (auto& framebuffer : _framebuffers)
+        delete framebuffer.second;
+    _framebuffers.clear();
 }

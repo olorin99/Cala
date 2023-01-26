@@ -15,11 +15,11 @@ cala::backend::vulkan::Buffer *cala::BufferHandle::operator->() noexcept {
 
 template <>
 cala::backend::vulkan::Image &cala::ImageHandle::operator*() noexcept {
-    return _engine->_images[_index];
+    return *_engine->_images[_index];
 }
 template <>
 cala::backend::vulkan::Image *cala::ImageHandle::operator->() noexcept {
-    return &_engine->_images[_index];
+    return _engine->_images[_index];
 }
 
 template <>
@@ -157,8 +157,25 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
 }
 
 cala::Engine::~Engine() {
-//    delete _pointShadowProgram;
-//    delete _directShadowProgram;
+    for (auto& image : _images)
+        delete image;
+}
+
+bool cala::Engine::gc() {
+    for (auto it = _imagesToDestroy.begin(); it != _imagesToDestroy.end(); it++) {
+        auto& frame = it->first;
+        auto& handle = it->second;
+        if (frame <= 0) {
+//            _driver.clearFramebuffers();
+            u32 index = handle.index();
+            _imageViews[index] = backend::vulkan::Image::View();
+            delete _images[index];
+            _freeImages.push(index);
+            _imagesToDestroy.erase(it--);
+        } else
+            --frame;
+    }
+    return true;
 }
 
 cala::BufferHandle cala::Engine::createBuffer(u32 size, backend::BufferUsage usage, backend::MemoryProperties flags) {
@@ -169,11 +186,19 @@ cala::BufferHandle cala::Engine::createBuffer(u32 size, backend::BufferUsage usa
 
 
 cala::ImageHandle cala::Engine::createImage(backend::vulkan::Image::CreateInfo info) {
-    u32 index = _images.size();
-    _images.emplace(_driver, info);
-    _imageViews.emplace(_images.back().newView());
+    u32 index = 0;
+    if (!_freeImages.empty()) {
+        index = _freeImages.pop().value();
+//        _driver.clearFramebuffers();
+        _images[index] = new backend::vulkan::Image(_driver, info);
+        _imageViews[index] = std::move(_images[index]->newView());
+    } else {
+        index = _images.size();
+        _images.emplace(new backend::vulkan::Image(_driver, info));
+        _imageViews.emplace(_images.back()->newView());
+    }
     assert(_images.size() == _imageViews.size());
-    _driver.updateBindlessImage(index, _imageViews.back(), info.format == driver().context().depthFormat() ? _shadowSampler : _defaultSampler);
+    _driver.updateBindlessImage(index, _imageViews[index], backend::isDepthFormat(info.format) ? _shadowSampler : _defaultSampler);
     return { this, index };
 }
 
@@ -214,6 +239,10 @@ cala::ImageHandle cala::Engine::convertToCubeMap(ImageHandle equirectangular) {
         cubeMap->generateMips(cmd);
     });
     return cubeMap;
+}
+
+void cala::Engine::destroyImage(ImageHandle handle) {
+    _imagesToDestroy.push(std::make_pair(10, handle));
 }
 
 cala::backend::vulkan::Image::View &cala::Engine::getImageView(ImageHandle handle) {

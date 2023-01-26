@@ -126,56 +126,56 @@ int main() {
     ImGuiContext imGuiContext(engine.driver(), platform.window());
 
 
-    RenderGraph graph(&engine);
-    {
-
-        AttachmentInfo depthAttachment;
-        depthAttachment.format = Format::D32_SFLOAT;
-
-        auto& depthPrePass = graph.addPass("depth_pre");
-        depthPrePass.setDepthOutput("depth", depthAttachment);
-        depthPrePass.setExecuteFunction([](CommandBuffer& cmd) {
-            std::cout << "This is depth pre pass\n";
-        });
-
-
-        AttachmentInfo hdrAttachment;
-        hdrAttachment.format = Format::RGBA32_SFLOAT;
-        auto& forwardPass = graph.addPass("forward");
-        forwardPass.addColourOutput("hdr", hdrAttachment);
-        forwardPass.setDepthInput("depth");
-        forwardPass.setExecuteFunction([](CommandBuffer& cmd) {
-            std::cout << "This is forward pass\n";
-        });
-
-        AttachmentInfo aoAttachment;
-        aoAttachment.format = Format::RGBA32_SFLOAT;
-        auto& aoPass = graph.addPass("ao");
-        aoPass.addColourOutput("ao", aoAttachment);
-        aoPass.setExecuteFunction([](CommandBuffer& cmd) {
-            std::cout << "This is ao pass\n";
-        });
-
-        AttachmentInfo backbufferAttachment;
-        backbufferAttachment.format = engine.driver().swapchain().format();
-        auto& hdrPass = graph.addPass("hdr");
-        hdrPass.addAttachmentInput("hdr");
-        hdrPass.addAttachmentInput("ao");
-        hdrPass.addColourOutput("backbuffer", backbufferAttachment);
-        hdrPass.setExecuteFunction([](CommandBuffer& cmd) {
-            std::cout << "This is hdr pass\n";
-        });
-
-        graph.setBackbuffer("backbuffer");
-
-
-        graph.compile();
-
-        engine.driver().immediate([&](CommandBuffer& cmd) {
-            graph.execute(cmd);
-        });
-
-    }
+//    RenderGraph graph(&engine);
+//    {
+//
+//        AttachmentInfo depthAttachment;
+//        depthAttachment.format = Format::D32_SFLOAT;
+//
+//        auto& depthPrePass = graph.addPass("depth_pre");
+//        depthPrePass.setDepthOutput("depth", depthAttachment);
+//        depthPrePass.setExecuteFunction([](CommandBuffer& cmd) {
+//            std::cout << "This is depth pre pass\n";
+//        });
+//
+//
+//        AttachmentInfo hdrAttachment;
+//        hdrAttachment.format = Format::RGBA32_SFLOAT;
+//        auto& forwardPass = graph.addPass("forward");
+//        forwardPass.addColourOutput("hdr", hdrAttachment);
+//        forwardPass.setDepthInput("depth");
+//        forwardPass.setExecuteFunction([](CommandBuffer& cmd) {
+//            std::cout << "This is forward pass\n";
+//        });
+//
+//        AttachmentInfo aoAttachment;
+//        aoAttachment.format = Format::RGBA32_SFLOAT;
+//        auto& aoPass = graph.addPass("ao");
+//        aoPass.addColourOutput("ao", aoAttachment);
+//        aoPass.setExecuteFunction([](CommandBuffer& cmd) {
+//            std::cout << "This is ao pass\n";
+//        });
+//
+//        AttachmentInfo backbufferAttachment;
+//        backbufferAttachment.format = engine.driver().swapchain().format();
+//        auto& hdrPass = graph.addPass("hdr");
+//        hdrPass.addAttachmentInput("hdr");
+//        hdrPass.addAttachmentInput("ao");
+//        hdrPass.addColourOutput("backbuffer", backbufferAttachment);
+//        hdrPass.setExecuteFunction([](CommandBuffer& cmd) {
+//            std::cout << "This is hdr pass\n";
+//        });
+//
+//        graph.setBackbuffer("backbuffer");
+//
+//
+//        graph.compile();
+//
+//        engine.driver().immediate([&](CommandBuffer& cmd) {
+//            graph.execute(cmd);
+//        });
+//
+//    }
 
 
 
@@ -393,7 +393,6 @@ int main() {
         scene.prepare(renderer.frameIndex(), camera);
 
         renderer.render(scene, camera, &imGuiContext);
-//        graph.execute(*renderer._frameInfo.cmd, renderer._swapchainInfo.index);
 
         dt = renderer.endFrame();
     }

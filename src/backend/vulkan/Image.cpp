@@ -65,7 +65,8 @@ cala::backend::vulkan::Image::Image(Driver& driver, CreateInfo info)
 }
 
 cala::backend::vulkan::Image::~Image() {
-    vmaDestroyImage(_driver.context().allocator(), _image, _allocation);
+    if (_image != VK_NULL_HANDLE)
+        vmaDestroyImage(_driver.context().allocator(), _image, _allocation);
 }
 
 cala::backend::vulkan::Image::Image(Image &&rhs) noexcept
