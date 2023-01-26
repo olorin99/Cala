@@ -40,9 +40,9 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Driver &driver, SDL_Window* wi
     _descriptorPool(VK_NULL_HANDLE),
     _commandPool(VK_NULL_HANDLE)
 {
-    std::array<cala::backend::vulkan::RenderPass::Attachment, 2> attachments = {
+    std::array<cala::backend::vulkan::RenderPass::Attachment, 1> attachments = {
             cala::backend::vulkan::RenderPass::Attachment{
-                    driver.swapchain().format(),
+                    cala::backend::Format::RGBA8_SRGB,
                     VK_SAMPLE_COUNT_1_BIT,
                     VK_ATTACHMENT_LOAD_OP_CLEAR,
                     VK_ATTACHMENT_STORE_OP_STORE,
@@ -51,18 +51,18 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Driver &driver, SDL_Window* wi
                     VK_IMAGE_LAYOUT_UNDEFINED,
                     VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-            },
-            cala::backend::vulkan::RenderPass::Attachment{
-                    driver.context().depthFormat(),
-                    VK_SAMPLE_COUNT_1_BIT,
-                    VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    VK_ATTACHMENT_STORE_OP_STORE,
-                    VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    VK_IMAGE_LAYOUT_UNDEFINED,
-                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
             }
+//            cala::backend::vulkan::RenderPass::Attachment{
+//                    driver.context().depthFormat(),
+//                    VK_SAMPLE_COUNT_1_BIT,
+//                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+//                    VK_ATTACHMENT_STORE_OP_STORE,
+//                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+//                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+//                    VK_IMAGE_LAYOUT_UNDEFINED,
+//                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+//                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+//            }
     };
     _renderPass = new cala::backend::vulkan::RenderPass(driver, attachments);
 

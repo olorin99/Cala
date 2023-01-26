@@ -5,6 +5,7 @@ cala::RenderPass::RenderPass(RenderGraph *graph, const char *name)
     : _graph(graph),
     _passName(name),
     _depthAttachment(nullptr),
+    _debugColour({0, 1, 0, 1}),
     _framebuffer(nullptr)
 {}
 
@@ -53,6 +54,10 @@ void cala::RenderPass::setDepthInput(const char *label) {
 
 void cala::RenderPass::setExecuteFunction(std::function<void(backend::vulkan::CommandBuffer&)> func) {
     _executeFunc = std::move(func);
+}
+
+void cala::RenderPass::setDebugColour(std::array<f32, 4> colour) {
+    _debugColour = colour;
 }
 
 
@@ -236,7 +241,7 @@ bool cala::RenderGraph::compile() {
 
 bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) {
     for (auto& pass : _orderedPasses) {
-        cmd.pushDebugLabel(pass->_passName);
+        cmd.pushDebugLabel(pass->_passName, pass->_debugColour);
         cmd.begin(*pass->_framebuffer);
         pass->_executeFunc(cmd);
         cmd.end(*pass->_framebuffer);

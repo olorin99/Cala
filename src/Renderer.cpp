@@ -155,6 +155,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     auto& forwardPass = _graph.addPass("forward");
     forwardPass.addColourOutput("backbuffer", colourAttachment);
     forwardPass.setDepthOutput("depth", depthAttachment);
+    forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
 
     forwardPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd) {
         cmd.bindBuffer(1, 0, *_cameraBuffer);
@@ -210,6 +211,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     auto& skyboxPass = _graph.addPass("skybox");
     skyboxPass.addColourOutput("backbuffer");
     skyboxPass.setDepthInput("depth");
+    skyboxPass.setDebugColour({0, 0.7, 0.1, 1});
 
     skyboxPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd) {
         if (scene._skyLightMap) {
@@ -229,40 +231,21 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         }
     });
 
+    if (imGui) {
+        auto& uiPass = _graph.addPass("ui");
+        uiPass.addColourOutput("backbuffer");
+        uiPass.setDebugColour({0.7, 0.1, 0.4, 1});
+
+        uiPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd) {
+            imGui->render(cmd);
+        });
+    }
+
     _graph.compile();
 
     _graph.execute(cmd, _swapchainInfo.index);
 
-
-    cmd.begin(*_swapchainInfo.framebuffer);
-
-//    if (scene._skyLightMap) {
-//        cmd.clearDescriptors();
-//        cmd.bindProgram(*_engine->_skyboxProgram);
-//        cmd.bindRasterState({ backend::CullMode::NONE });
-//        cmd.bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
-//        cmd.bindBindings({ &_engine->_cube._binding, 1 });
-//        cmd.bindAttributes(_engine->_cube._attributes);
-//        cmd.bindBuffer(1, 0, *_cameraBuffer);
-//        cmd.bindImage(2, 0, scene._skyLightMapView, _engine->_defaultSampler);
-//        cmd.bindPipeline();
-//        cmd.bindDescriptors();
-//        cmd.bindVertexBuffer(0, _engine->_cube._vertex.buffer());
-//        cmd.bindIndexBuffer(*_engine->_cube._index);
-//        cmd.draw(_engine->_cube._index->size() / sizeof(u32), 1, 0, 0);
-//    }
-
-    cmd.popDebugLabel();
-    _passTimers[2].second.stop();
     cmd.stopPipelineStatistics();
-
-    cmd.pushDebugLabel("gui pass");
-    if (imGui)
-        imGui->render(cmd);
-    cmd.popDebugLabel();
-
-    cmd.end(*_swapchainInfo.framebuffer);
-    _passTimers[0].second.stop();
 
 }
 

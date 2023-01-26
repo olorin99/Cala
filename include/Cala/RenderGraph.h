@@ -36,6 +36,8 @@ namespace cala {
 
         void setExecuteFunction(std::function<void(backend::vulkan::CommandBuffer&)> func);
 
+        void setDebugColour(std::array<f32, 4> colour);
+
         ~RenderPass();
     private:
 
@@ -51,6 +53,8 @@ namespace cala {
         const char* _depthAttachment;
 
         std::function<void(backend::vulkan::CommandBuffer&)> _executeFunc;
+
+        std::array<f32, 4> _debugColour;
 
         cala::backend::vulkan::Framebuffer* _framebuffer;
 
