@@ -166,10 +166,11 @@ bool cala::Engine::gc() {
         auto& frame = it->first;
         auto& handle = it->second;
         if (frame <= 0) {
-//            _driver.clearFramebuffers();
             u32 index = handle.index();
             _imageViews[index] = backend::vulkan::Image::View();
+            _driver.updateBindlessImage(index, _imageViews[0], _defaultSampler);
             delete _images[index];
+            _images[index] = nullptr;
             _freeImages.push(index);
             _imagesToDestroy.erase(it--);
         } else
@@ -189,7 +190,6 @@ cala::ImageHandle cala::Engine::createImage(backend::vulkan::Image::CreateInfo i
     u32 index = 0;
     if (!_freeImages.empty()) {
         index = _freeImages.pop().value();
-//        _driver.clearFramebuffers();
         _images[index] = new backend::vulkan::Image(_driver, info);
         _imageViews[index] = std::move(_images[index]->newView());
     } else {
