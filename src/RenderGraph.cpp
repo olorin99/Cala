@@ -1,11 +1,12 @@
 #include "Cala/RenderGraph.h"
 #include <Ende/log/log.h>
 
-cala::RenderPass::RenderPass(RenderGraph *graph, const char *name)
+cala::RenderPass::RenderPass(RenderGraph *graph, const char *name, u32 index)
     : _graph(graph),
     _passName(name),
     _depthAttachment(nullptr),
     _debugColour({0, 1, 0, 1}),
+    _passTimer(index),
     _framebuffer(nullptr)
 {}
 
@@ -66,7 +67,12 @@ cala::RenderGraph::RenderGraph(Engine *engine)
 {}
 
 cala::RenderPass &cala::RenderGraph::addPass(const char *name) {
-    _passes.push(RenderPass(this, name));
+    u32 index = _passes.size();
+    while (_timers.size() <= index)
+        _timers.push(std::make_pair("", backend::vulkan::Timer(_engine->driver())));
+    _passes.push(RenderPass(this, name, index));
+    _timers[index].first = name;
+    assert(_passes.size() <= _timers.size());
     return _passes.back();
 }
 
@@ -241,11 +247,13 @@ bool cala::RenderGraph::compile() {
 
 bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) {
     for (auto& pass : _orderedPasses) {
+        _timers[pass->_passTimer].second.start(cmd);
         cmd.pushDebugLabel(pass->_passName, pass->_debugColour);
         cmd.begin(*pass->_framebuffer);
         pass->_executeFunc(cmd);
         cmd.end(*pass->_framebuffer);
         cmd.popDebugLabel();
+        _timers[pass->_passTimer].second.stop();
     }
     auto backbuffer = _attachments.find(_backbuffer);
     if (backbuffer == _attachments.end())

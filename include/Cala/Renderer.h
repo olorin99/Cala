@@ -28,7 +28,7 @@ namespace cala {
 
         void render(Scene& scene, Camera& camera, ImGuiContext* imGui = nullptr);
 
-        ende::Span<std::pair<const char*, backend::vulkan::Timer>> timers() { return _passTimers; }
+        ende::Span<std::pair<const char*, backend::vulkan::Timer>> timers() { return _graph.getTimers(); }
 
         u32 frameIndex() const { return _frameInfo.frame % backend::vulkan::FRAMES_IN_FLIGHT; }
 

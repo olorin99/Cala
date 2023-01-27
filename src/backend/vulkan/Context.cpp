@@ -36,7 +36,8 @@ const char* validationLayers[] = {
 
 const char* deviceExtensions[] = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME
+        VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
+        VK_EXT_MEMORY_BUDGET_EXTENSION_NAME
 };
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
@@ -193,7 +194,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
 
     createInfo.pEnabledFeatures = &deviceFeatures;
 
-    createInfo.enabledExtensionCount = 2;
+    createInfo.enabledExtensionCount = 3;
     createInfo.ppEnabledExtensionNames = deviceExtensions;
     createInfo.enabledLayerCount = 0;
     createInfo.ppEnabledLayerNames = nullptr;

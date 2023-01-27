@@ -335,10 +335,15 @@ int main() {
             ImGui::Text("Milliseconds: %f", engine.driver().milliseconds());
             ImGui::Text("Delta Time: %f", dt);
 
+            ImGui::Text("GPU Times:");
             auto passTimers = renderer.timers();
+            u64 totalGPUTime = 0;
             for (auto& timer : passTimers) {
-                ImGui::Text("%s ms: %f", timer.first, timer.second.result() / 1e6);
+                u64 time = timer.second.result();
+                totalGPUTime += time;
+                ImGui::Text("\t%s ms: %f", timer.first, time / 1e6);
             }
+            ImGui::Text("Total GPU: %f", totalGPUTime / 1e6);
 
             Renderer::Stats rendererStats = renderer.stats();
             ImGui::Text("Descriptors: %d", rendererStats.descriptorCount);
@@ -379,6 +384,15 @@ int main() {
 
             ImGui::Text("Lights: %lu", scene._lights.size());
 
+            ImGui::Text("Memory Usage: ");
+            VmaBudget budgets[10]{};
+            vmaGetHeapBudgets(engine.driver().context().allocator(), budgets);
+            for (auto & budget : budgets) {
+                if (budget.usage == 0)
+                    break;
+                ImGui::Text("\tUsed: %lu mb", budget.usage / 1000000);
+                ImGui::Text("\tAvailable: %lu mb", budget.budget / 1000000);
+            }
 
             ImGui::End();
             ImGui::Render();

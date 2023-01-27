@@ -136,6 +136,8 @@ cala::backend::vulkan::Driver::FrameInfo cala::backend::vulkan::Driver::beginFra
     CommandBuffer* cmd = &_frameCommands[_frameCount % FRAMES_IN_FLIGHT];
     VkFence fence = _frameFences[_frameCount % FRAMES_IN_FLIGHT];
 
+    vmaSetCurrentFrameIndex(_context.allocator(), _frameCount);
+
     return {
         _frameCount++,
         cmd,

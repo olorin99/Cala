@@ -4,6 +4,7 @@
 #include <Cala/Engine.h>
 #include <functional>
 #include "../third_party/tsl/robin_map.h"
+#include <Cala/backend/vulkan/Timer.h>
 
 namespace cala {
 
@@ -43,7 +44,7 @@ namespace cala {
 
         friend RenderGraph;
 
-        RenderPass(RenderGraph* graph, const char* name);
+        RenderPass(RenderGraph* graph, const char* name, u32 index);
 
         RenderGraph* _graph;
         const char* _passName;
@@ -55,6 +56,7 @@ namespace cala {
         std::function<void(backend::vulkan::CommandBuffer&)> _executeFunc;
 
         std::array<f32, 4> _debugColour;
+        u32 _passTimer;
 
         cala::backend::vulkan::Framebuffer* _framebuffer;
 
@@ -75,12 +77,15 @@ namespace cala {
 
         void reset();
 
+        ende::Span<std::pair<const char*, backend::vulkan::Timer>> getTimers() { return _timers; }
+
     private:
         friend RenderPass;
 
         Engine* _engine;
 
         ende::Vector<RenderPass> _passes;
+        ende::Vector<std::pair<const char*, backend::vulkan::Timer>> _timers;
 
         tsl::robin_map<const char*, AttachmentInfo> _attachments;
 
