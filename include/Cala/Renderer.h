@@ -51,7 +51,6 @@ namespace cala {
 
 
         backend::vulkan::Driver::FrameInfo _frameInfo;
-        backend::vulkan::Swapchain::Frame _swapchainInfo;
 
         ende::Vector<std::pair<const char*, backend::vulkan::Timer>> _passTimers;
 

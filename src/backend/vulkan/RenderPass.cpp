@@ -55,23 +55,23 @@ cala::backend::vulkan::RenderPass::RenderPass(Driver& driver, ende::Span<Attachm
     if (depthPresent)
         subpass.pDepthStencilAttachment = &depthReference;
 
-    VkSubpassDependency dependencies[5]{};
-    for (u32 i = 0; i < attachments.size(); i++) {
-        dependencies[i].srcSubpass = VK_SUBPASS_EXTERNAL;
-        if (depthPresent && i == attachments.size() - 1) {
-            dependencies[i].dstSubpass = 0;
-            dependencies[i].srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-            dependencies[i].srcAccessMask = 0;
-            dependencies[i].dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;;
-            dependencies[i].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        } else {
-            dependencies[i].dstSubpass = 0;
-            dependencies[i].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            dependencies[i].srcAccessMask = 0;
-            dependencies[i].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            dependencies[i].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        }
-    }
+//    VkSubpassDependency dependencies[5]{};
+//    for (u32 i = 0; i < attachments.size(); i++) {
+//        dependencies[i].srcSubpass = VK_SUBPASS_EXTERNAL;
+//        if (depthPresent && i == attachments.size() - 1) {
+//            dependencies[i].dstSubpass = 0;
+//            dependencies[i].srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+//            dependencies[i].srcAccessMask = 0;
+//            dependencies[i].dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;;
+//            dependencies[i].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+//        } else {
+//            dependencies[i].dstSubpass = 0;
+//            dependencies[i].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+//            dependencies[i].srcAccessMask = 0;
+//            dependencies[i].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+//            dependencies[i].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+//        }
+//    }
 
     VkRenderPassCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -79,10 +79,12 @@ cala::backend::vulkan::RenderPass::RenderPass(Driver& driver, ende::Span<Attachm
     createInfo.pAttachments = attachmentDescriptions;
     createInfo.subpassCount = 1;
     createInfo.pSubpasses = &subpass;
-    createInfo.dependencyCount = attachments.size();
-    createInfo.pDependencies = dependencies;
+    createInfo.dependencyCount = 0;
+    createInfo.pDependencies = nullptr;
 
     vkCreateRenderPass(_device, &createInfo, nullptr, &_renderPass);
+
+    _attachments.insert(_attachments.begin(), attachments);
 }
 
 cala::backend::vulkan::RenderPass::~RenderPass() {

@@ -5,7 +5,6 @@
 #include <Cala/Light.h>
 #include <Ende/filesystem/File.h>
 #include <Cala/ImGuiContext.h>
-#include <Ende/thread/thread.h>
 #include <Cala/backend/vulkan/Timer.h>
 #include <Cala/Material.h>
 #include <Cala/MaterialInstance.h>
@@ -19,8 +18,6 @@
 #include <assimp/postprocess.h>
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
-#include <Cala/RenderGraph.h>
-#include <iostream>
 
 using namespace cala;
 using namespace cala::backend;
@@ -120,65 +117,10 @@ ImageHandle loadImageHDR(Engine& engine, const ende::fs::Path& path) {
 int main() {
     SDLPlatform platform("hello_triangle", 800, 600, SDL_WINDOW_RESIZABLE);
 
-    Engine engine(platform, false);
+    Engine engine(platform);
     Renderer renderer(&engine);
 
     ImGuiContext imGuiContext(engine.driver(), platform.window());
-
-
-//    RenderGraph graph(&engine);
-//    {
-//
-//        AttachmentInfo depthAttachment;
-//        depthAttachment.format = Format::D32_SFLOAT;
-//
-//        auto& depthPrePass = graph.addPass("depth_pre");
-//        depthPrePass.setDepthOutput("depth", depthAttachment);
-//        depthPrePass.setExecuteFunction([](CommandBuffer& cmd) {
-//            std::cout << "This is depth pre pass\n";
-//        });
-//
-//
-//        AttachmentInfo hdrAttachment;
-//        hdrAttachment.format = Format::RGBA32_SFLOAT;
-//        auto& forwardPass = graph.addPass("forward");
-//        forwardPass.addColourOutput("hdr", hdrAttachment);
-//        forwardPass.setDepthInput("depth");
-//        forwardPass.setExecuteFunction([](CommandBuffer& cmd) {
-//            std::cout << "This is forward pass\n";
-//        });
-//
-//        AttachmentInfo aoAttachment;
-//        aoAttachment.format = Format::RGBA32_SFLOAT;
-//        auto& aoPass = graph.addPass("ao");
-//        aoPass.addColourOutput("ao", aoAttachment);
-//        aoPass.setExecuteFunction([](CommandBuffer& cmd) {
-//            std::cout << "This is ao pass\n";
-//        });
-//
-//        AttachmentInfo backbufferAttachment;
-//        backbufferAttachment.format = engine.driver().swapchain().format();
-//        auto& hdrPass = graph.addPass("hdr");
-//        hdrPass.addAttachmentInput("hdr");
-//        hdrPass.addAttachmentInput("ao");
-//        hdrPass.addColourOutput("backbuffer", backbufferAttachment);
-//        hdrPass.setExecuteFunction([](CommandBuffer& cmd) {
-//            std::cout << "This is hdr pass\n";
-//        });
-//
-//        graph.setBackbuffer("backbuffer");
-//
-//
-//        graph.compile();
-//
-//        engine.driver().immediate([&](CommandBuffer& cmd) {
-//            graph.execute(cmd);
-//        });
-//
-//    }
-
-
-
 
 
     //Shaders
@@ -225,12 +167,6 @@ int main() {
         static_cast<u32>(brickwall_ao.index())
     };
     matInstance.setUniform("material", materialData);
-
-//    matInstance.setSampler("albedoMap", brickwall_albedo->newView(), Sampler(engine.driver(), {}));
-//    matInstance.setSampler("normalMap", brickwall_normal->newView(), Sampler(engine.driver(), {}));
-//    matInstance.setSampler("metallicMap", brickwall_metallic->newView(), Sampler(engine.driver(), {}));
-//    matInstance.setSampler("roughnessMap", brickwall_roughness->newView(), Sampler(engine.driver(), {}));
-//    matInstance.setSampler("aoMap", brickwall_ao->newView(), Sampler(engine.driver(), {}));
 
     u32 objectCount = 100;
     Scene scene(&engine, objectCount);

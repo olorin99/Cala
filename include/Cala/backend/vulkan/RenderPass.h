@@ -53,6 +53,8 @@ namespace cala::backend::vulkan {
         u32 _colourAttachments;
         u32 _depthAttachments;
 
+        ende::Vector<Attachment> _attachments;
+
     };
 
 }

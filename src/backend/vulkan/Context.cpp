@@ -91,6 +91,16 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     extensions.push(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
 
+//    extensions.push(VK_EXT_validation_features);
+
+//    VkValidationFeatureEnableEXT v[2] = {VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT, VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT};
+////    auto v = VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT;
+//
+//    VkValidationFeaturesEXT validationFeatures{};
+//    validationFeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+//    validationFeatures.pEnabledValidationFeatures = v;
+//    validationFeatures.enabledValidationFeatureCount = 2;
+
     //create instance with required extensions
     VkInstanceCreateInfo instanceCreateInfo{};
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -99,6 +109,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     instanceCreateInfo.ppEnabledLayerNames = validationLayers;
     instanceCreateInfo.enabledExtensionCount = extensions.size();
     instanceCreateInfo.ppEnabledExtensionNames = extensions.data();
+//    instanceCreateInfo.pNext = &validationFeatures;
 
     if (vkCreateInstance(&instanceCreateInfo, nullptr, &_instance) != VK_SUCCESS)
         throw VulkanContextException("Instance Creation Error");

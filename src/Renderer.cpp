@@ -21,7 +21,6 @@ cala::Renderer::Renderer(cala::Engine* engine)
 bool cala::Renderer::beginFrame() {
     _frameInfo = _engine->driver().beginFrame();
     _engine->driver().waitFrame(_frameInfo.frame);
-    _swapchainInfo = _engine->driver().swapchain().nextImage();
     _frameInfo.cmd->begin();
     return true;
 }
@@ -30,9 +29,9 @@ f64 cala::Renderer::endFrame() {
 
 //    _frameInfo.cmd->end(*_swapchainInfo.framebuffer);
     _frameInfo.cmd->end();
-    _frameInfo.cmd->submit({ &_swapchainInfo.imageAquired, 1 }, _frameInfo.fence);
+    _frameInfo.cmd->submit({ &_frameInfo.swapchainInfo.imageAquired, 1 }, _frameInfo.fence);
 
-    _engine->driver().swapchain().present(_swapchainInfo, _frameInfo.cmd->signal());
+    _engine->driver().swapchain().present(_frameInfo.swapchainInfo, _frameInfo.cmd->signal());
     _engine->driver().endFrame();
 
     _stats.pipelineCount = _frameInfo.cmd->pipelineCount();
@@ -138,9 +137,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     cmd.clearDescriptors();
 
-    _passTimers[2].second.start(cmd);
-    cmd.pushDebugLabel("lighting pass");
-
     _graph.reset();
 
     AttachmentInfo depthAttachment;
@@ -242,9 +238,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     _graph.compile();
 
-    _graph.execute(cmd, _swapchainInfo.index);
-
-    _passTimers[2].second.stop();
+    _graph.execute(cmd, _frameInfo.swapchainInfo.index);
 
     cmd.stopPipelineStatistics();
 

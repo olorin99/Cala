@@ -139,6 +139,16 @@ bool cala::RenderGraph::compile() {
                 1, 1,
                 backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST | (backend::isDepthFormat(attachment.second.format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT)
             });
+            _engine->driver().immediate([&](backend::vulkan::CommandBuffer& cmd) {
+                if (backend::isDepthFormat(attachment.second.format)) {
+                    auto b = it.value().handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+                    cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, 0, nullptr, { &b, 1 });
+                } else {
+                    auto b = it.value().handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::COLOUR_ATTACHMENT);
+                    cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, 0, nullptr, { &b, 1 });
+                }
+            });
+
         }
         if (attachment.second.matchSwapchain && (it.value().handle->width() != extent.width || it.value().handle->height() != extent.height)) {
             u32 width = attachment.second.width;
@@ -156,6 +166,15 @@ bool cala::RenderGraph::compile() {
                 1, 1,
                 backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST | (backend::isDepthFormat(attachment.second.format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT)
             });
+            _engine->driver().immediate([&](backend::vulkan::CommandBuffer& cmd) {
+                if (backend::isDepthFormat(attachment.second.format)) {
+                    auto b = it.value().handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+                    cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, 0, nullptr, { &b, 1 });
+                } else {
+                    auto b = it.value().handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::COLOUR_ATTACHMENT);
+                    cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, 0, nullptr, { &b, 1 });
+                }
+            });
         }
     }
 
@@ -172,17 +191,13 @@ bool cala::RenderGraph::compile() {
             backend::vulkan::RenderPass::Attachment attachment{};
             attachment.format = it->second.format;
             attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-            attachment.loadOp = it->second.clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+            attachment.loadOp = it.value().clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
             attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
             attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment.initialLayout = it->second.clear ? VK_IMAGE_LAYOUT_UNDEFINED : (depth
-                                                                                       ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-                                                                                       : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-            attachment.finalLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-                                           : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            attachment.internalLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-                                              : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            attachment.initialLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            attachment.finalLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            attachment.internalLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
             if (depth)
                 depthWritten = true;
@@ -194,12 +209,11 @@ bool cala::RenderGraph::compile() {
             backend::vulkan::RenderPass::Attachment attachment{};
             attachment.format = it->second.format;
             attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-            attachment.loadOp = it->second.clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+            attachment.loadOp = it.value().clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
             attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
             attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment.initialLayout = it->second.clear ? VK_IMAGE_LAYOUT_UNDEFINED
-                                                        : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            attachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             attachment.internalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             attachments.push(attachment);
@@ -250,10 +264,32 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
         _timers[pass->_passTimer].second.start(cmd);
         cmd.pushDebugLabel(pass->_passName, pass->_debugColour);
         cmd.begin(*pass->_framebuffer);
-        pass->_executeFunc(cmd);
+        if (pass->_executeFunc)
+            pass->_executeFunc(cmd);
         cmd.end(*pass->_framebuffer);
         cmd.popDebugLabel();
         _timers[pass->_passTimer].second.stop();
+        bool depth = false;
+        for (auto& output : pass->_outputs) {
+            auto it = _attachments.find(output);
+            if (it == _attachments.end())
+                continue;
+            if (backend::isDepthFormat(it.value().handle->format())) {
+                auto b = it.value().handle->barrier(backend::Access::DEPTH_STENCIL_WRITE, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+                cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, 0, nullptr, { &b, 1 });
+                depth = true;
+            } else {
+                auto b = it.value().handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::COLOUR_ATTACHMENT_WRITE | backend::Access::COLOUR_ATTACHMENT_READ, backend::ImageLayout::COLOUR_ATTACHMENT, backend::ImageLayout::COLOUR_ATTACHMENT);
+                cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, 0, nullptr, { &b, 1 });
+            }
+        }
+        if (!depth && pass->_depthAttachment) {
+            auto it = _attachments.find(pass->_depthAttachment);
+            if (it == _attachments.end())
+                continue;
+            auto b = it.value().handle->barrier(backend::Access::DEPTH_STENCIL_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+            cmd.pipelineBarrier(backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { &b, 1 });
+        }
     }
     auto backbuffer = _attachments.find(_backbuffer);
     if (backbuffer == _attachments.end())

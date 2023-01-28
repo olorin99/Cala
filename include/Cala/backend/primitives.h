@@ -306,4 +306,8 @@ constexpr cala::backend::Access operator&(cala::backend::Access lhs, cala::backe
     return static_cast<cala::backend::Access>(static_cast<std::underlying_type<cala::backend::Access>::type>(lhs) & static_cast<std::underlying_type<cala::backend::Access>::type>(rhs));
 }
 
+constexpr cala::backend::PipelineStage operator|(cala::backend::PipelineStage lhs, cala::backend::PipelineStage rhs) {
+    return static_cast<cala::backend::PipelineStage>(static_cast<std::underlying_type<cala::backend::PipelineStage>::type>(lhs) | static_cast<std::underlying_type<cala::backend::PipelineStage>::type>(rhs));
+}
+
 #endif //CALA_PRIMITIVES_H

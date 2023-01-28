@@ -5,7 +5,8 @@
 
 cala::backend::vulkan::Driver::Driver(cala::backend::Platform& platform, bool clear)
     : _context(platform),
-      _swapchain(*this, platform, clear),
+      _swapchain(nullptr),
+//      _swapchain(*this, platform, clear),
       _commandPool(VK_NULL_HANDLE),
       _frameCommands{
           CommandBuffer(*this, _context.getQueue(QueueType::GRAPHICS), VK_NULL_HANDLE),
@@ -14,6 +15,7 @@ cala::backend::vulkan::Driver::Driver(cala::backend::Platform& platform, bool cl
       _frameCount(0),
       _bindlessIndex(-1)
 {
+    _swapchain = new Swapchain(*this, platform, clear);
     VkCommandPoolCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     createInfo.queueFamilyIndex = _context.queueIndex(QueueType::GRAPHICS);
@@ -128,6 +130,7 @@ cala::backend::vulkan::Driver::~Driver() {
 
     for (auto& setLayout : _setLayouts)
         vkDestroyDescriptorSetLayout(_context.device(), setLayout.second, nullptr);
+    delete _swapchain;
 }
 
 
@@ -141,7 +144,8 @@ cala::backend::vulkan::Driver::FrameInfo cala::backend::vulkan::Driver::beginFra
     return {
         _frameCount++,
         cmd,
-        fence
+        fence,
+        _swapchain->nextImage()
     };
 }
 
@@ -164,23 +168,6 @@ bool cala::backend::vulkan::Driver::wait(u64 timeout) {
     for (u32 i = 0; i < FRAMES_IN_FLIGHT; i++)
         res = waitFrame(i);
     return res;
-}
-
-
-void cala::backend::vulkan::Driver::draw(CommandBuffer::RasterState state, Primitive primitive) {
-
-
-//    _context._pipelines->bindRasterState(state);
-//    _context._pipelines->bindPipeline(commandBuffer);
-
-//    commandBuffer->bindRasterState(state);
-//    commandBuffer->bindPipeline();
-//
-//    VkDeviceSize offsets[] = {0};
-//    vkCmdBindVertexBuffers(commandBuffer->buffer(), 0, 1, &primitive.vertex, offsets);
-//
-//    vkCmdDraw(commandBuffer->buffer(), primitive.vertices, 1, 0, 0);
-
 }
 
 cala::backend::vulkan::Buffer cala::backend::vulkan::Driver::stagingBuffer(u32 size) {
@@ -279,12 +266,15 @@ void cala::backend::vulkan::Driver::setBindlessSetIndex(u32 index) {
 }
 
 cala::backend::vulkan::RenderPass* cala::backend::vulkan::Driver::getRenderPass(ende::Span<RenderPass::Attachment> attachments) {
-    u32 hash = 0;
-    ende::util::MurmurHash<RenderPass::Attachment> hasher;
-    for (auto& attachment : attachments)
-        hash |= hasher(attachment);
-
-//    ende::log::info(hash);
+    u64 hash = 0;
+    for (auto& attachment : attachments) {
+        hash |= ((u64)attachment.format << 60);
+        hash |= ((u64)attachment.internalLayout << 50);
+        hash |= ((u64)attachment.loadOp << 40);
+        hash |= ((u64)attachment.storeOp << 30);
+        hash |= ((u64)attachment.finalLayout << 20);
+        hash |= ((u64)attachment.initialLayout << 10);
+    }
 
     auto it = _renderPasses.find(hash);
     if (it != _renderPasses.end())

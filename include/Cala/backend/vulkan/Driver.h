@@ -24,6 +24,7 @@ namespace cala::backend::vulkan {
             u64 frame = 0;
             CommandBuffer* cmd = nullptr;
             VkFence fence = VK_NULL_HANDLE;
+            Swapchain::Frame swapchainInfo;
         };
 
         FrameInfo beginFrame();
@@ -33,13 +34,6 @@ namespace cala::backend::vulkan {
         bool waitFrame(u64 frame, u64 timeout = 1000000000);
 
         bool wait(u64 timeout = 1000000000); // waits for all frames
-
-        struct Primitive {
-            VkBuffer vertex;
-            u32 vertices;
-        };
-
-        void draw(CommandBuffer::RasterState state, Primitive primitive);
 
 
         Buffer stagingBuffer(u32 size);
@@ -85,7 +79,7 @@ namespace cala::backend::vulkan {
 
         const Context& context() const { return _context; }
 
-        Swapchain& swapchain() { return _swapchain; }
+        Swapchain& swapchain() { return *_swapchain; }
 
         u32 setLayoutCount() const { return _setLayouts.size(); }
 
@@ -96,7 +90,7 @@ namespace cala::backend::vulkan {
     private:
 
         Context _context;
-        Swapchain _swapchain;
+        Swapchain* _swapchain;
         VkCommandPool _commandPool;
         CommandBuffer _frameCommands[FRAMES_IN_FLIGHT];
         VkFence _frameFences[FRAMES_IN_FLIGHT];
@@ -104,7 +98,7 @@ namespace cala::backend::vulkan {
         ende::time::StopWatch _frameClock;
         ende::time::Duration _lastFrameTime;
 
-        tsl::robin_map<u32, RenderPass*> _renderPasses;
+        tsl::robin_map<u64, RenderPass*> _renderPasses;
         tsl::robin_map<u64, Framebuffer*> _framebuffers;
 
         struct SetLayoutKey {

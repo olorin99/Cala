@@ -49,7 +49,7 @@ namespace cala::backend::vulkan {
 
         RenderPass& renderPass() const { return *_renderPass; }
 
-        Framebuffer& framebuffer(u32 i) { return _framebuffers[i]; }
+        Framebuffer& framebuffer(u32 i) { return *_framebuffers[i]; }
 
     private:
 
@@ -76,7 +76,7 @@ namespace cala::backend::vulkan {
         Image::View _depthView;
 
         RenderPass* _renderPass;
-        ende::Vector<Framebuffer> _framebuffers;
+        ende::Vector<Framebuffer*> _framebuffers;
 
     };
 

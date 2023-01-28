@@ -100,17 +100,18 @@ cala::backend::vulkan::Swapchain::Swapchain(Driver &driver, Platform& platform, 
             }
     };
 
-    _renderPass = new RenderPass(_driver, attachments);
+//    _renderPass = new RenderPass(_driver, attachments);
+    _renderPass = _driver.getRenderPass(attachments);
 
     for (auto& view : _imageViews) {
         VkImageView framebufferAttachments[2] = { view, _depthView.view };
-        _framebuffers.emplace(_driver.context().device(), *_renderPass, framebufferAttachments, _extent.width, _extent.height);
+        _framebuffers.emplace(_driver.getFramebuffer(_renderPass, framebufferAttachments, _extent.width, _extent.height));
+//        _framebuffers.emplace(_driver.context().device(), *_renderPass, framebufferAttachments, _extent.width, _extent.height);
     }
 }
 
 cala::backend::vulkan::Swapchain::~Swapchain() {
     delete _depthImage;
-    delete _renderPass;
 
     for (auto& semaphore : _semaphores) {
         vkDestroySemaphore(_driver.context().device(), semaphore, nullptr);
@@ -132,7 +133,7 @@ cala::backend::vulkan::Swapchain::Frame cala::backend::vulkan::Swapchain::nextIm
         resize(_depthImage->width(), _depthImage->height());
     }
 
-    return { _frame++, index, image, &_framebuffers[index] };
+    return { _frame++, index, image, _framebuffers[index] };
 }
 
 bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFinish) {
@@ -172,7 +173,8 @@ bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {
 
     for (auto& view : _imageViews) {
         VkImageView framebufferAttachments[2] = { view, _depthView.view };
-        _framebuffers.emplace(_driver.context().device(), *_renderPass, framebufferAttachments, _extent.width, _extent.height);
+        _framebuffers.emplace(_driver.getFramebuffer(_renderPass, framebufferAttachments, _extent.width, _extent.height));
+//        _framebuffers.emplace(_driver.context().device(), *_renderPass, framebufferAttachments, _extent.width, _extent.height);
     }
     return true;
 }
