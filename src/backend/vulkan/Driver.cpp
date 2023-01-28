@@ -285,9 +285,9 @@ cala::backend::vulkan::RenderPass* cala::backend::vulkan::Driver::getRenderPass(
 }
 
 cala::backend::vulkan::Framebuffer *cala::backend::vulkan::Driver::getFramebuffer(RenderPass *renderPass, ende::Span<VkImageView> attachmentImages, u32 width, u32 height) {
-    u64 hash = (u64)renderPass->renderPass();
+    u64 hash = ((u64)renderPass->renderPass() << 30);
     for (auto& attachment : attachmentImages)
-        hash |= (u64)attachment;
+        hash |= ((u64)attachment & 0x0000FFFF);
 
     auto it = _framebuffers.find(hash);
     if (it != _framebuffers.end())

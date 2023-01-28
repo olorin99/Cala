@@ -14,11 +14,11 @@ struct CameraData {
     float far;
 };
 
-layout (push_constant) uniform PushConstants {
+layout (set = 1, binding = 0) uniform FrameData {
     CameraData camera;
 };
 
-layout (set = 1, binding = 0) uniform ModelData {
+layout (set = 4, binding = 0) uniform ModelData {
     mat4 model;
 };
 

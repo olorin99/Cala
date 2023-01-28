@@ -46,7 +46,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _cameraBuffer->data({ &cameraData, sizeof(cameraData) });
 
     backend::vulkan::CommandBuffer& cmd = *_frameInfo.cmd;
-    cmd.startPipelineStatistics();
     _passTimers[0].second.start(cmd);
     cmd.pushDebugLabel("shadow pass");
 
@@ -147,8 +146,36 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     _graph.setBackbuffer("backbuffer");
 
+//    auto& depthPrePass = _graph.addPass("depth_pre");
+//    depthPrePass.setDepthOutput("depth", depthAttachment);
+//
+//    depthPrePass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd) {
+//        cmd.bindBuffer(1, 0, *_cameraBuffer);
+//        for (u32 i = 0; i < scene._renderList.size(); ++i) {
+//            auto& renderable = scene._renderList[i].second.first;
+//            auto& transform = scene._renderList[i].second.second;
+//            if (!camera.frustum().intersect(transform->pos(), transform->scale().x()))
+//                continue;
+//
+//            cmd.bindBindings(renderable.bindings);
+//            cmd.bindAttributes(renderable.attributes);
+//            cmd.bindProgram(*_engine->_directShadowProgram);
+//            cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
+//            cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+//            cmd.bindPipeline();
+//            cmd.bindDescriptors();
+//            cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
+//            if (renderable.index) {
+//                cmd.bindIndexBuffer(renderable.index.buffer());
+//                cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
+//            } else
+//                cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
+//        }
+//    });
+
     auto& forwardPass = _graph.addPass("forward");
     forwardPass.addColourOutput("backbuffer", colourAttachment);
+//    forwardPass.setDepthInput("depth");
     forwardPass.setDepthOutput("depth", depthAttachment);
     forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
 
@@ -238,8 +265,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     _graph.compile();
 
+    cmd.startPipelineStatistics();
     _graph.execute(cmd, _frameInfo.swapchainInfo.index);
-
     cmd.stopPipelineStatistics();
 
 }

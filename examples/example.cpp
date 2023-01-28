@@ -115,7 +115,7 @@ ImageHandle loadImageHDR(Engine& engine, const ende::fs::Path& path) {
 }
 
 int main() {
-    SDLPlatform platform("hello_triangle", 800, 600, SDL_WINDOW_RESIZABLE);
+    SDLPlatform platform("hello_triangle", 800, 600);
 
     Engine engine(platform);
     Renderer renderer(&engine);

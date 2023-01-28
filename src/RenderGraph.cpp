@@ -224,7 +224,7 @@ bool cala::RenderGraph::compile() {
             ende::Vector<VkImageView> attachmentImages;
             u32 width = 0;
             u32 height = 0;
-            bool depthWritten = false;
+            bool depthWritten1 = false;
             for (auto& output : pass->_outputs) {
                 auto it = _attachments.find(output);
                 if (it->second.matchSwapchain) {
@@ -236,10 +236,10 @@ bool cala::RenderGraph::compile() {
                     height = it->second.height;
                 }
                 if (backend::isDepthFormat(it->second.format))
-                    depthWritten = true;
+                    depthWritten1 = true;
                 attachmentImages.push(_engine->getImageView(it->second.handle).view);
             }
-            if (!depthWritten && pass->_depthAttachment) {
+            if (!depthWritten1 && pass->_depthAttachment) {
                 auto it = _attachments.find(pass->_depthAttachment);
                 if (it->second.matchSwapchain) {
                     auto extent = _engine->driver().swapchain().extent();
@@ -254,8 +254,6 @@ bool cala::RenderGraph::compile() {
             pass->_framebuffer = _engine->driver().getFramebuffer(renderPass, attachmentImages, width, height);
         }
     }
-
-
     return true;
 }
 
