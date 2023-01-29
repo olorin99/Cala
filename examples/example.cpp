@@ -115,7 +115,7 @@ ImageHandle loadImageHDR(Engine& engine, const ende::fs::Path& path) {
 }
 
 int main() {
-    SDLPlatform platform("hello_triangle", 800, 600);
+    SDLPlatform platform("hello_triangle", 1920, 1080);
 
     Engine engine(platform);
     Renderer renderer(&engine);
@@ -135,7 +135,7 @@ int main() {
     ende::Vector<Transform> models;
 
     Transform cameraTransform({0, 0, -20});
-    Camera camera((f32)ende::math::rad(54.4), 800.f, 600.f, 0.1f, 1000.f, cameraTransform);
+    Camera camera((f32)ende::math::rad(54.4), platform.windowSize().first, platform.windowSize().second, 0.1f, 1000.f, cameraTransform);
 
     Sampler sampler(engine.driver(), {});
 
@@ -220,6 +220,8 @@ int main() {
         scene.addLight(l);
     }
 
+    i32 lightIndex = 0;
+
     f64 dt = 1.f / 60.f;
     bool running = true;
     SDL_Event event;
@@ -294,32 +296,6 @@ int main() {
             ImGui::Text("Clipping Primitives: %lu", pipelineStats.clippingPrimitives);
             ImGui::Text("Fragment Shader Invocations: %lu", pipelineStats.fragmentShaderInvocations);
 
-            ende::math::Vec3f position = scene._lights[l0].transform().pos();
-            ende::math::Vec3f colour = scene._lights[l0].getColour();
-            f32 intensity = scene._lights[l0].getIntensity();
-            f32 near = scene._lights[l0].getNear();
-            f32 far = scene._lights[l0].getFar();
-            if (ImGui::DragFloat3("Position", &position[0], 0.1, -sceneSize, sceneSize) ||
-                ImGui::ColorEdit3("Colour", &colour[0]) ||
-                ImGui::SliderFloat("Intensity", &intensity, 1, 1000) ||
-                ImGui::SliderFloat("Near", &near, 0, 5) ||
-                ImGui::SliderFloat("Far", &far, 1, 200)) {
-                scene._lights[l0].setPosition(position);
-                scene._lights[l0].setColour(colour);
-                scene._lights[l0].setIntensity(intensity);
-                scene._lights[l0].setNear(near);
-                scene._lights[l0].setFar(far);
-            }
-
-            ImGui::DragFloat("Shadow Bias", &scene.shadowBias, 0.001, -1, 1);
-
-            ende::math::Quaternion direction = scene._lights[l2].transform().rot();
-            if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1)) {
-                scene._lights[l2].setDirection(direction);
-            }
-
-            ImGui::Text("Lights: %lu", scene._lights.size());
-
             ImGui::Text("Memory Usage: ");
             VmaBudget budgets[10]{};
             vmaGetHeapBudgets(engine.driver().context().allocator(), budgets);
@@ -329,6 +305,38 @@ int main() {
                 ImGui::Text("\tUsed: %lu mb", budget.usage / 1000000);
                 ImGui::Text("\tAvailable: %lu mb", budget.budget / 1000000);
             }
+
+            ImGui::End();
+
+            ImGui::Begin("Lights");
+            ImGui::Text("Lights: %lu", scene._lights.size());
+            ImGui::SliderInt("Light", &lightIndex, 0, scene._lights.size() - 1);
+
+            auto& lightRef = scene._lights[lightIndex];
+
+            ende::math::Vec3f position = lightRef.transform().pos();
+            ende::math::Vec3f colour = lightRef.getColour();
+            f32 intensity = lightRef.getIntensity();
+            f32 near = lightRef.getNear();
+            f32 far = lightRef.getFar();
+
+            if (lightRef.type() == cala::Light::POINT) {
+                if (ImGui::DragFloat3("Position", &position[0], 0.1, -sceneSize, sceneSize))
+                    light.setPosition(position);
+            } else {
+                ende::math::Quaternion direction = scene._lights[l2].transform().rot();
+                if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1))
+                    lightRef.setDirection(direction);
+            }
+            if (ImGui::ColorEdit3("Colour", &colour[0]))
+                lightRef.setColour(colour);
+            if (ImGui::SliderFloat("Intensity", &intensity, 1, 1000))
+                lightRef.setIntensity(intensity);
+            if (ImGui::SliderFloat("Near", &near, 0, 5))
+                lightRef.setNear(near);
+            if (ImGui::SliderFloat("Far", &far, 0, 1000))
+                lightRef.setFar(far);
+            ImGui::DragFloat("Shadow Bias", &scene.shadowBias, 0.001, -1, 1);
 
             ImGui::End();
             ImGui::Render();
