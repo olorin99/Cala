@@ -20,7 +20,15 @@ namespace cala {
     class Renderer {
     public:
 
-        Renderer(Engine* engine);
+        struct Info {
+            bool forward = true;
+            bool deferred = true;
+            bool tonemap = true;
+            bool depthPre = false;
+            bool skybox = true;
+        };
+
+        Renderer(Engine* engine, Info info = { true, true, true, false, true });
 
         bool beginFrame();
 
@@ -40,7 +48,9 @@ namespace cala {
 
         Stats stats() const { return _stats; }
 
-//    private:
+        Info& info() { return _renderInfo; }
+
+    private:
 
         Engine* _engine;
 
@@ -55,6 +65,8 @@ namespace cala {
         ende::Vector<std::pair<const char*, backend::vulkan::Timer>> _passTimers;
 
         Stats _stats;
+
+        Info _renderInfo;
 
 
 

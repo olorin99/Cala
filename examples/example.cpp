@@ -308,6 +308,15 @@ int main() {
 
             ImGui::End();
 
+            ImGui::Begin("Render Settings");
+            auto& renderSettings = renderer.info();
+            ImGui::Checkbox("Forward Pass", &renderSettings.forward);
+            ImGui::Checkbox("Depth Pre Pass", &renderSettings.depthPre);
+            ImGui::Checkbox("Skybox Pass", &renderSettings.skybox);
+            ImGui::Checkbox("Tonemap Pass", &renderSettings.tonemap);
+
+            ImGui::End();
+
             ImGui::Begin("Lights");
             ImGui::Text("Lights: %lu", scene._lights.size());
             ImGui::SliderInt("Light", &lightIndex, 0, scene._lights.size() - 1);

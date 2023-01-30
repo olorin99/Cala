@@ -195,10 +195,11 @@ bool cala::RenderGraph::compile() {
         auto& pass = _passes[index];
         for (auto& input : pass._inputs) {
             for (u32 i = 0; i < outputs[input.first].size(); i++) {
-                if (visited[i] && onStack[i])
+                u32 j = outputs[input.first][i];
+                if (visited[j] && onStack[j])
                     return false;
-                if (!visited[i]) {
-                    if (!dfs(i))
+                if (!visited[j]) {
+                    if (!dfs(j))
                         return false;
                 }
             }

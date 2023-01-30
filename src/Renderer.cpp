@@ -5,11 +5,12 @@
 #include <Cala/Material.h>
 #include <Cala/ImGuiContext.h>
 
-cala::Renderer::Renderer(cala::Engine* engine)
+cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Info info)
     : _engine(engine),
       _cameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _lightCameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
-      _graph(engine)
+      _graph(engine),
+      _renderInfo(info)
 {
     _passTimers.emplace("totalGPU", backend::vulkan::Timer{_engine->driver(), 0});
     _passTimers.emplace("shadowsPass", backend::vulkan::Timer{_engine->driver(), 1});
@@ -149,133 +150,142 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     _graph.setBackbuffer("backbuffer");
 
-//    auto& depthPrePass = _graph.addPass("depth_pre");
-//    depthPrePass.setDepthOutput("depth", depthAttachment);
-//
-//    depthPrePass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd) {
-//        cmd.bindBuffer(1, 0, *_cameraBuffer);
-//        for (u32 i = 0; i < scene._renderList.size(); ++i) {
-//            auto& renderable = scene._renderList[i].second.first;
-//            auto& transform = scene._renderList[i].second.second;
-//            if (!camera.frustum().intersect(transform->pos(), transform->scale().x()))
-//                continue;
-//
-//            cmd.bindBindings(renderable.bindings);
-//            cmd.bindAttributes(renderable.attributes);
-//            cmd.bindProgram(*_engine->_directShadowProgram);
-//            cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
-//            cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
-//            cmd.bindPipeline();
-//            cmd.bindDescriptors();
-//            cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
-//            if (renderable.index) {
-//                cmd.bindIndexBuffer(renderable.index.buffer());
-//                cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
-//            } else
-//                cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
-//        }
-//    });
 
-    auto& forwardPass = _graph.addPass("forward");
-    forwardPass.addColourOutput("hdr", colourAttachment);
-//    forwardPass.setDepthInput("depth");
-    forwardPass.setDepthOutput("depth", depthAttachment);
-    forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
+    if (_renderInfo.depthPre) {
+        auto& depthPrePass = _graph.addPass("depth_pre");
+        depthPrePass.setDepthOutput("depth", depthAttachment);
 
-    forwardPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-        cmd.bindBuffer(1, 0, *_cameraBuffer);
-
-        Material* material = nullptr;
-        MaterialInstance* materialInstance = nullptr;
-
-        if (!scene._lightData.empty()) {
-            cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()]);
-            cmd.bindBuffer(3, 1, *scene._lightCountBuffer[frameIndex()]);
-        }
-
-        // lights
-        for (u32 i = 0; i < scene._renderList.size(); ++i) {
-            auto& renderable = scene._renderList[i].second.first;
-            auto& transform = scene._renderList[i].second.second;
-
-            if (!camera.frustum().intersect(transform->pos(), transform->scale().x()))
-                continue;
-
-            cmd.bindBindings(renderable.bindings);
-            cmd.bindAttributes(renderable.attributes);
-
-            if (materialInstance != renderable.materialInstance) {
-                materialInstance = renderable.materialInstance;
-                if (materialInstance) {
-                    if (materialInstance->getMaterial() != material) {
-                        material = materialInstance->getMaterial();
-                    }
-                    materialInstance->bind(cmd);
-                }
-            }
-            if (material) {
-                cmd.bindProgram(*material->getProgram());
-                cmd.bindRasterState(material->_rasterState);
-                cmd.bindDepthState(material->_depthState);
-            }
-
-            cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
-
-            cmd.bindPipeline();
-            cmd.bindDescriptors();
-
-            cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
-            if (renderable.index) {
-                cmd.bindIndexBuffer(renderable.index.buffer());
-                cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
-            } else
-                cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
-        }
-    });
-
-    auto& tonemapPass = _graph.addPass("tonemap");
-//    tonemapPass.addColourOutput("backbuffer", backbufferAttachment);
-    tonemapPass.addImageOutput("backbuffer", backbufferAttachment, true);
-    tonemapPass.addImageInput("hdr", true);
-    tonemapPass.setDebugColour({0.1, 0.4, 0.7, 1});
-    tonemapPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-        auto hdrImage = graph.getResource<ImageResource>("hdr");
-        auto backbuffer = graph.getResource<ImageResource>("backbuffer");
-        cmd.clearDescriptors();
-        cmd.bindProgram(*_engine->_tonemapProgram);
-        cmd.bindBindings(nullptr);
-        cmd.bindAttributes(nullptr);
-        cmd.bindBuffer(1, 0, *_cameraBuffer);
-        cmd.bindImage(2, 0, _engine->getImageView(hdrImage->handle), _engine->_defaultSampler, true);
-        cmd.bindImage(2, 1, _engine->getImageView(backbuffer->handle), _engine->_defaultSampler, true);
-        cmd.bindPipeline();
-        cmd.bindDescriptors();
-        cmd.dispatchCompute(std::ceil(backbuffer->width / 32.f), std::ceil(backbuffer->height / 32.f), 1);
-//        cmd.draw(3, 1, 0, 0);
-    });
-
-    auto& skyboxPass = _graph.addPass("skybox");
-    skyboxPass.addColourOutput("backbuffer");
-    skyboxPass.setDepthInput("depth");
-    skyboxPass.setDebugColour({0, 0.7, 0.1, 1});
-
-    skyboxPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-        if (scene._skyLightMap) {
-            cmd.clearDescriptors();
-            cmd.bindProgram(*_engine->_skyboxProgram);
-            cmd.bindRasterState({ backend::CullMode::NONE });
-            cmd.bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
-            cmd.bindBindings({ &_engine->_cube._binding, 1 });
-            cmd.bindAttributes(_engine->_cube._attributes);
+        depthPrePass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
             cmd.bindBuffer(1, 0, *_cameraBuffer);
-            cmd.bindImage(2, 0, scene._skyLightMapView, _engine->_defaultSampler);
+            for (u32 i = 0; i < scene._renderList.size(); ++i) {
+                auto& renderable = scene._renderList[i].second.first;
+                auto& transform = scene._renderList[i].second.second;
+                if (!camera.frustum().intersect(transform->pos(), transform->scale().x()))
+                    continue;
+
+                cmd.bindBindings(renderable.bindings);
+                cmd.bindAttributes(renderable.attributes);
+                cmd.bindProgram(*_engine->_directShadowProgram);
+                cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
+                cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+                cmd.bindPipeline();
+                cmd.bindDescriptors();
+                cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
+                if (renderable.index) {
+                    cmd.bindIndexBuffer(renderable.index.buffer());
+                    cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
+                } else
+                    cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
+            }
+        });
+    }
+
+    if (_renderInfo.forward) {
+        auto& forwardPass = _graph.addPass("forward");
+        forwardPass.addColourOutput("hdr", colourAttachment);
+        if (_renderInfo.depthPre)
+            forwardPass.setDepthInput("depth");
+        else
+            forwardPass.setDepthOutput("depth", depthAttachment);
+        forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
+
+        forwardPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            cmd.bindBuffer(1, 0, *_cameraBuffer);
+
+            Material* material = nullptr;
+            MaterialInstance* materialInstance = nullptr;
+
+            if (!scene._lightData.empty()) {
+                cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()]);
+                cmd.bindBuffer(3, 1, *scene._lightCountBuffer[frameIndex()]);
+            }
+
+            // lights
+            for (u32 i = 0; i < scene._renderList.size(); ++i) {
+                auto& renderable = scene._renderList[i].second.first;
+                auto& transform = scene._renderList[i].second.second;
+
+                if (!camera.frustum().intersect(transform->pos(), transform->scale().x()))
+                    continue;
+
+                cmd.bindBindings(renderable.bindings);
+                cmd.bindAttributes(renderable.attributes);
+
+                if (materialInstance != renderable.materialInstance) {
+                    materialInstance = renderable.materialInstance;
+                    if (materialInstance) {
+                        if (materialInstance->getMaterial() != material) {
+                            material = materialInstance->getMaterial();
+                        }
+                        materialInstance->bind(cmd);
+                    }
+                }
+                if (material) {
+                    cmd.bindProgram(*material->getProgram());
+                    cmd.bindRasterState(material->_rasterState);
+                    cmd.bindDepthState(material->_depthState);
+                }
+
+                cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+
+                cmd.bindPipeline();
+                cmd.bindDescriptors();
+
+                cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
+                if (renderable.index) {
+                    cmd.bindIndexBuffer(renderable.index.buffer());
+                    cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
+                } else
+                    cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
+            }
+        });
+    }
+
+    if (_renderInfo.tonemap) {
+        auto& tonemapPass = _graph.addPass("tonemap");
+        tonemapPass.addImageOutput("backbuffer", backbufferAttachment, true);
+        tonemapPass.addImageInput("hdr", true);
+        tonemapPass.setDebugColour({0.1, 0.4, 0.7, 1});
+        tonemapPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            auto hdrImage = graph.getResource<ImageResource>("hdr");
+            auto backbuffer = graph.getResource<ImageResource>("backbuffer");
+            cmd.clearDescriptors();
+            cmd.bindProgram(*_engine->_tonemapProgram);
+            cmd.bindBindings(nullptr);
+            cmd.bindAttributes(nullptr);
+            cmd.bindBuffer(1, 0, *_cameraBuffer);
+            cmd.bindImage(2, 0, _engine->getImageView(hdrImage->handle), _engine->_defaultSampler, true);
+            cmd.bindImage(2, 1, _engine->getImageView(backbuffer->handle), _engine->_defaultSampler, true);
             cmd.bindPipeline();
             cmd.bindDescriptors();
-            cmd.bindVertexBuffer(0, _engine->_cube._vertex.buffer());
-            cmd.bindIndexBuffer(*_engine->_cube._index);
-            cmd.draw(_engine->_cube._index->size() / sizeof(u32), 1, 0, 0);
-        }
-    });
+            cmd.dispatchCompute(std::ceil(backbuffer->width / 32.f), std::ceil(backbuffer->height / 32.f), 1);
+        });
+    }
+
+    if (_renderInfo.skybox) {
+        auto& skyboxPass = _graph.addPass("skybox");
+        skyboxPass.addColourOutput("backbuffer");
+        skyboxPass.setDepthInput("depth");
+        skyboxPass.setDebugColour({0, 0.7, 0.1, 1});
+
+        skyboxPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            if (scene._skyLightMap) {
+                cmd.clearDescriptors();
+                cmd.bindProgram(*_engine->_skyboxProgram);
+                cmd.bindRasterState({ backend::CullMode::NONE });
+                cmd.bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
+                cmd.bindBindings({ &_engine->_cube._binding, 1 });
+                cmd.bindAttributes(_engine->_cube._attributes);
+                cmd.bindBuffer(1, 0, *_cameraBuffer);
+                cmd.bindImage(2, 0, scene._skyLightMapView, _engine->_defaultSampler);
+                cmd.bindPipeline();
+                cmd.bindDescriptors();
+                cmd.bindVertexBuffer(0, _engine->_cube._vertex.buffer());
+                cmd.bindIndexBuffer(*_engine->_cube._index);
+                cmd.draw(_engine->_cube._index->size() / sizeof(u32), 1, 0, 0);
+            }
+        });
+    }
 
     if (imGui) {
         auto& uiPass = _graph.addPass("ui");
@@ -287,7 +297,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         });
     }
 
-    _graph.compile();
+    if (!_graph.compile())
+        throw "cyclical graph found";
 
     cmd.startPipelineStatistics();
     _graph.execute(cmd, _frameInfo.swapchainInfo.index);
