@@ -1,10 +1,56 @@
 #include "Cala/RenderGraph.h"
 #include <Ende/log/log.h>
 
+void cala::ImageResource::devirtualize(cala::Engine* engine) {
+    auto extent = engine->driver().swapchain().extent();
+    if (transient)
+        clear = true;
+    if (!handle) {
+        if (matchSwapchain) {
+            width = extent.width;
+            height = extent.height;
+        }
+        handle = engine->createImage({
+            width, height, 1, format, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST | (backend::isDepthFormat(format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT)
+        });
+        engine->driver().immediate([&](backend::vulkan::CommandBuffer& cmd) {
+            if (backend::isDepthFormat(format)) {
+                auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+                cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, 0, nullptr, { &b, 1 });
+            } else {
+                auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::COLOUR_ATTACHMENT);
+                cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, 0, nullptr, { &b, 1 });
+            }
+        });
+    }
+    if (matchSwapchain && (handle->width() != extent.width || handle->height() != extent.height)) {
+        width = extent.width;
+        height = extent.height;
+        engine->destroyImage(handle);
+        handle = engine->createImage({
+            width, height, 1, format, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST | (backend::isDepthFormat(format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT)
+        });
+        engine->driver().immediate([&](backend::vulkan::CommandBuffer& cmd) {
+            if (backend::isDepthFormat(format)) {
+                auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+                cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, 0, nullptr, { &b, 1 });
+            } else {
+                auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::COLOUR_ATTACHMENT);
+                cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, 0, nullptr, { &b, 1 });
+            }
+        });
+    }
+}
+
+void cala::BufferResource::devirtualize(Engine *engine) {
+    if (!handle) {
+        handle = engine->createBuffer(size, usage);
+    }
+}
+
 cala::RenderPass::RenderPass(RenderGraph *graph, const char *name, u32 index)
     : _graph(graph),
     _passName(name),
-    _depthAttachment(nullptr),
     _debugColour({0, 1, 0, 1}),
     _passTimer(index),
     _framebuffer(nullptr)
@@ -15,42 +61,77 @@ cala::RenderPass::~RenderPass() {
 //    delete _renderPass;
 }
 
-void cala::RenderPass::addColourOutput(const char *label, AttachmentInfo info) {
-    auto it = _graph->_attachments.find(label);
-    if (it == _graph->_attachments.end())
-        _graph->_attachments.emplace(label, info);
+void cala::RenderPass::addColourOutput(const char *label, ImageResource info) {
+    auto it = _graph->_attachmentMap.find(label);
+    if (it == _graph->_attachmentMap.end())
+        _graph->_attachmentMap.emplace(label, new ImageResource(std::move(info)));
     _outputs.emplace(label);
+    _attachments.push(label);
 }
 
 void cala::RenderPass::addColourOutput(const char *label) {
-    auto it = _graph->_attachments.find(label);
+    auto it = _graph->_attachmentMap.find(label);
     _outputs.emplace(label);
+    _attachments.push(label);
 }
 
-void cala::RenderPass::setDepthOutput(const char *label, AttachmentInfo info) {
-    auto it = _graph->_attachments.find(label);
-    if (it == _graph->_attachments.end())
-        _graph->_attachments.emplace(label, info);
-    _depthAttachment = label;
+void cala::RenderPass::setDepthOutput(const char *label, ImageResource info) {
+    auto it = _graph->_attachmentMap.find(label);
+    if (it == _graph->_attachmentMap.end()) {
+        _graph->_attachmentMap.emplace(label, new ImageResource(std::move(info)));
+    }
     _outputs.emplace(label);
+    _attachments.push(label);
 }
 
-void cala::RenderPass::addAttachmentInput(const char *label) {
-    auto it = _graph->_attachments.find(label);
-    if (it != _graph->_attachments.end())
+void cala::RenderPass::addImageInput(const char *label) {
+    auto it = _graph->_attachmentMap.find(label);
+    if (it != _graph->_attachmentMap.end()) {
         _inputs.emplace(label);
+        _attachments.push(label);
+    }
     else
         throw "couldn't find attachment"; //TODO: better error handling
 }
 
 void cala::RenderPass::setDepthInput(const char *label) {
-    auto it = _graph->_attachments.find(label);
-    if (it != _graph->_attachments.end()) {
+    auto it = _graph->_attachmentMap.find(label);
+    if (it != _graph->_attachmentMap.end()) {
         _inputs.emplace(label);
-        _depthAttachment = label;
+        _attachments.push(label);
     }
     else
         throw "couldn't find depth attachment"; //TODO: better error handling
+}
+
+void cala::RenderPass::addBufferInput(const char *label, BufferResource info) {
+    auto it = _graph->_attachmentMap.find(label);
+    if (it == _graph->_attachmentMap.end())
+        _graph->_attachmentMap.emplace(label, new BufferResource(std::move(info)));
+    _inputs.emplace(label);
+}
+
+void cala::RenderPass::addBufferOutput(const char *label, BufferResource info) {
+    auto it = _graph->_attachmentMap.find(label);
+    if (it == _graph->_attachmentMap.end())
+        _graph->_attachmentMap.emplace(label, new BufferResource(std::move(info)));
+    _outputs.emplace(label);
+}
+
+void cala::RenderPass::addBufferInput(const char *label) {
+    auto it = _graph->_attachmentMap.find(label);
+    if (it != _graph->_attachmentMap.end())
+        _inputs.emplace(label);
+    else
+        throw "couldn't find buffer resource";
+}
+
+void cala::RenderPass::addBufferOutput(const char *label) {
+    auto it = _graph->_attachmentMap.find(label);
+    if (it != _graph->_attachmentMap.end())
+        _outputs.emplace(label);
+    else
+        throw "couldn't find buffer resource";
 }
 
 void cala::RenderPass::setExecuteFunction(std::function<void(backend::vulkan::CommandBuffer&)> func) {
@@ -65,6 +146,11 @@ void cala::RenderPass::setDebugColour(std::array<f32, 4> colour) {
 cala::RenderGraph::RenderGraph(Engine *engine)
     : _engine(engine)
 {}
+
+cala::RenderGraph::~RenderGraph() {
+    for (auto& attachment : _attachmentMap)
+        delete attachment.second;
+}
 
 cala::RenderPass &cala::RenderGraph::addPass(const char *name) {
     u32 index = _passes.size();
@@ -118,139 +204,50 @@ bool cala::RenderGraph::compile() {
     }
 
 
-    for (auto& attachment : _attachments) {
-        auto it = _attachments.find(attachment.first);
-        it.value().clear = true;
-        auto extent = _engine->driver().swapchain().extent();
-        if (!attachment.second.handle) {
-            u32 width = attachment.second.width;
-            u32 height = attachment.second.height;
-            if (attachment.second.matchSwapchain) {
-                width = extent.width;
-                height = extent.height;
-            }
-
-
-            it.value().handle = _engine->createImage({
-                width,
-                height,
-                1,
-                attachment.second.format,
-                1, 1,
-                backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST | (backend::isDepthFormat(attachment.second.format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT)
-            });
-            _engine->driver().immediate([&](backend::vulkan::CommandBuffer& cmd) {
-                if (backend::isDepthFormat(attachment.second.format)) {
-                    auto b = it.value().handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
-                    cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, 0, nullptr, { &b, 1 });
-                } else {
-                    auto b = it.value().handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::COLOUR_ATTACHMENT);
-                    cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, 0, nullptr, { &b, 1 });
-                }
-            });
-
-        }
-        if (attachment.second.matchSwapchain && (it.value().handle->width() != extent.width || it.value().handle->height() != extent.height)) {
-            u32 width = attachment.second.width;
-            u32 height = attachment.second.height;
-            if (attachment.second.matchSwapchain) {
-                width = extent.width;
-                height = extent.height;
-            }
-            _engine->destroyImage(it.value().handle);
-            it.value().handle = _engine->createImage({
-                width,
-                height,
-                1,
-                attachment.second.format,
-                1, 1,
-                backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST | (backend::isDepthFormat(attachment.second.format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT)
-            });
-            _engine->driver().immediate([&](backend::vulkan::CommandBuffer& cmd) {
-                if (backend::isDepthFormat(attachment.second.format)) {
-                    auto b = it.value().handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
-                    cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, 0, nullptr, { &b, 1 });
-                } else {
-                    auto b = it.value().handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::COLOUR_ATTACHMENT);
-                    cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, 0, nullptr, { &b, 1 });
-                }
-            });
-        }
+    for (auto& attachment : _attachmentMap) {
+        attachment.second->devirtualize(_engine);
     }
 
     for (u32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
         auto& pass = _orderedPasses[passIndex];
-        backend::vulkan::RenderPass* renderPass = nullptr;
-        ende::Vector<backend::vulkan::RenderPass::Attachment> attachments;
-        bool depthWritten = false;
-        for (auto &output: pass->_outputs) {
-
-            auto it = _attachments.find(output);
-            bool depth = backend::isDepthFormat(it->second.format);
-
-            backend::vulkan::RenderPass::Attachment attachment{};
-            attachment.format = it->second.format;
-            attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-            attachment.loadOp = it.value().clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-            attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment.initialLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            attachment.finalLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            attachment.internalLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-            if (depth)
-                depthWritten = true;
-            it.value().clear = false;
-            attachments.push(attachment);
-        }
-        if (!depthWritten && pass->_depthAttachment) {
-            auto it = _attachments.find(pass->_depthAttachment);
-            backend::vulkan::RenderPass::Attachment attachment{};
-            attachment.format = it->second.format;
-            attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-            attachment.loadOp = it.value().clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-            attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            attachment.internalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            attachments.push(attachment);
-            it.value().clear = false;
-        }
-        renderPass = _engine->driver().getRenderPass(attachments);
         if (!pass->_framebuffer) {
             ende::Vector<VkImageView> attachmentImages;
             u32 width = 0;
             u32 height = 0;
-            bool depthWritten1 = false;
-            for (auto& output : pass->_outputs) {
-                auto it = _attachments.find(output);
-                if (it->second.matchSwapchain) {
+            backend::vulkan::RenderPass* renderPass = nullptr;
+            ende::Vector<backend::vulkan::RenderPass::Attachment> attachments;
+            for (auto &attachment: pass->_attachments) {
+
+                auto it = _attachmentMap.find(attachment);
+                auto resource = dynamic_cast<ImageResource*>(it.value());
+
+                bool depth = backend::isDepthFormat(resource->format);
+
+                backend::vulkan::RenderPass::Attachment attachmentRenderPass{};
+                attachmentRenderPass.format = resource->format;
+                attachmentRenderPass.samples = VK_SAMPLE_COUNT_1_BIT;
+                attachmentRenderPass.loadOp = resource->clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+                attachmentRenderPass.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+                attachmentRenderPass.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                attachmentRenderPass.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+                attachmentRenderPass.initialLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                attachmentRenderPass.finalLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                attachmentRenderPass.internalLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+                resource->clear = false;
+                attachments.push(attachmentRenderPass);
+
+                if (resource->matchSwapchain) {
                     auto extent = _engine->driver().swapchain().extent();
                     width = extent.width;
                     height = extent.height;
                 } else {
-                    width = it->second.width;
-                    height = it->second.height;
+                    width = resource->width;
+                    height = resource->height;
                 }
-                if (backend::isDepthFormat(it->second.format))
-                    depthWritten1 = true;
-                attachmentImages.push(_engine->getImageView(it->second.handle).view);
+                attachmentImages.push(_engine->getImageView(resource->handle).view);
             }
-            if (!depthWritten1 && pass->_depthAttachment) {
-                auto it = _attachments.find(pass->_depthAttachment);
-                if (it->second.matchSwapchain) {
-                    auto extent = _engine->driver().swapchain().extent();
-                    width = extent.width;
-                    height = extent.height;
-                } else {
-                    width = it->second.width;
-                    height = it->second.height;
-                }
-                attachmentImages.push(_engine->getImageView(it->second.handle).view);
-            }
+            renderPass = _engine->driver().getRenderPass(attachments);
             pass->_framebuffer = _engine->driver().getFramebuffer(renderPass, attachmentImages, width, height);
         }
     }
@@ -267,43 +264,37 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
         cmd.end(*pass->_framebuffer);
         cmd.popDebugLabel();
         _timers[pass->_passTimer].second.stop();
-        bool depth = false;
-        for (auto& output : pass->_outputs) {
-            auto it = _attachments.find(output);
-            if (it == _attachments.end())
+        for (auto& attachment : pass->_attachments) {
+            auto it = _attachmentMap.find(attachment);
+            if (it == _attachmentMap.end())
                 continue;
-            if (backend::isDepthFormat(it.value().handle->format())) {
-                auto b = it.value().handle->barrier(backend::Access::DEPTH_STENCIL_WRITE, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+            auto resource = dynamic_cast<ImageResource*>(it.value());
+            if (backend::isDepthFormat(resource->handle->format())) {
+                auto b = resource->handle->barrier(backend::Access::DEPTH_STENCIL_WRITE, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
                 cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, 0, nullptr, { &b, 1 });
-                depth = true;
             } else {
-                auto b = it.value().handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::COLOUR_ATTACHMENT_WRITE | backend::Access::COLOUR_ATTACHMENT_READ, backend::ImageLayout::COLOUR_ATTACHMENT, backend::ImageLayout::COLOUR_ATTACHMENT);
+                auto b = resource->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::COLOUR_ATTACHMENT_WRITE | backend::Access::COLOUR_ATTACHMENT_READ, backend::ImageLayout::COLOUR_ATTACHMENT, backend::ImageLayout::COLOUR_ATTACHMENT);
                 cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, 0, nullptr, { &b, 1 });
             }
         }
-        if (!depth && pass->_depthAttachment) {
-            auto it = _attachments.find(pass->_depthAttachment);
-            if (it == _attachments.end())
-                continue;
-            auto b = it.value().handle->barrier(backend::Access::DEPTH_STENCIL_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
-            cmd.pipelineBarrier(backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { &b, 1 });
-        }
     }
-    auto backbuffer = _attachments.find(_backbuffer);
-    if (backbuffer == _attachments.end())
+    auto it = _attachmentMap.find(_backbuffer);
+    if (it == _attachmentMap.end())
         return false;
 
-    auto barrier = backbuffer.value().handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::TRANSFER_READ, backend::ImageLayout::COLOUR_ATTACHMENT, backend::ImageLayout::TRANSFER_SRC);
+    auto backbuffer = dynamic_cast<ImageResource*>(it.value());
+
+    auto barrier = backbuffer->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::TRANSFER_READ, backend::ImageLayout::COLOUR_ATTACHMENT, backend::ImageLayout::TRANSFER_SRC);
     cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::PipelineStage::TRANSFER, 0, nullptr, { &barrier, 1 });
 
-    _engine->driver().swapchain().blitImageToFrame(index, cmd, *backbuffer.value().handle);
+    _engine->driver().swapchain().blitImageToFrame(index, cmd, *backbuffer->handle);
 
-    barrier = backbuffer.value().handle->barrier(backend::Access::TRANSFER_READ, backend::Access::COLOUR_ATTACHMENT_WRITE, backend::ImageLayout::TRANSFER_SRC, backend::ImageLayout::COLOUR_ATTACHMENT);
+    barrier = backbuffer->handle->barrier(backend::Access::TRANSFER_READ, backend::Access::COLOUR_ATTACHMENT_WRITE, backend::ImageLayout::TRANSFER_SRC, backend::ImageLayout::COLOUR_ATTACHMENT);
     cmd.pipelineBarrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, 0, nullptr, { &barrier, 1 });
     return true;
 }
 
 void cala::RenderGraph::reset() {
     _passes.clear();
-//    _attachments.clear();
+//    _attachmentMap.clear();
 }

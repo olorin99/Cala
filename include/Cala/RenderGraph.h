@@ -10,30 +10,57 @@ namespace cala {
 
     class RenderGraph;
 
-    struct AttachmentInfo {
+    struct Resource {
+        bool transient = true;
+
+        virtual ~Resource() = default;
+
+        virtual void devirtualize(Engine* engine) = 0;
+    };
+
+    struct ImageResource : public Resource {
+
         u32 width = 1;
         u32 height = 1;
         backend::Format format = backend::Format::RGBA8_SRGB;
-        bool persistent = true;
         bool matchSwapchain = true;
         bool clear = true;
         ImageHandle handle;
+
+        void devirtualize(Engine* engine) override;
+
     };
 
+    struct BufferResource : public Resource {
 
+        u32 size = 1;
+        backend::BufferUsage usage = backend::BufferUsage::UNIFORM;
+
+        BufferHandle handle;
+
+        void devirtualize(Engine* engine) override;
+    };
 
     class RenderPass {
     public:
 
-        void addColourOutput(const char* label, AttachmentInfo info);
+        void addColourOutput(const char* label, ImageResource info);
 
         void addColourOutput(const char* label);
 
-        void setDepthOutput(const char* label, AttachmentInfo info);
+        void setDepthOutput(const char* label, ImageResource info);
 
-        void addAttachmentInput(const char* label);
+        void addImageInput(const char* label);
 
         void setDepthInput(const char* label);
+
+        void addBufferInput(const char* label, BufferResource info);
+
+        void addBufferOutput(const char* label, BufferResource info);
+
+        void addBufferInput(const char* label);
+
+        void addBufferOutput(const char* label);
 
         void setExecuteFunction(std::function<void(backend::vulkan::CommandBuffer&)> func);
 
@@ -51,7 +78,7 @@ namespace cala {
 
         ende::Vector<const char*> _inputs;
         ende::Vector<const char*> _outputs;
-        const char* _depthAttachment;
+        ende::Vector<const char*> _attachments;
 
         std::function<void(backend::vulkan::CommandBuffer&)> _executeFunc;
 
@@ -66,6 +93,8 @@ namespace cala {
     public:
 
         RenderGraph(Engine* engine);
+
+        ~RenderGraph();
 
         RenderPass& addPass(const char* name);
 
@@ -87,7 +116,7 @@ namespace cala {
         ende::Vector<RenderPass> _passes;
         ende::Vector<std::pair<const char*, backend::vulkan::Timer>> _timers;
 
-        tsl::robin_map<const char*, AttachmentInfo> _attachments;
+        tsl::robin_map<const char*, Resource*> _attachmentMap;
 
         const char* _backbuffer;
 

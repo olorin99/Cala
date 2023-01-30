@@ -138,10 +138,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     _graph.reset();
 
-    AttachmentInfo depthAttachment;
+    ImageResource depthAttachment;
     depthAttachment.format = backend::Format::D32_SFLOAT;
 
-    AttachmentInfo colourAttachment;
+    ImageResource colourAttachment;
     colourAttachment.format = backend::Format::RGBA8_SRGB;
 
     _graph.setBackbuffer("backbuffer");
