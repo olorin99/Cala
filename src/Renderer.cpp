@@ -145,7 +145,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     colourAttachment.format = backend::Format::RGBA32_SFLOAT;
 
     ImageResource backbufferAttachment;
-    backbufferAttachment.format = backend::Format::RGBA8_SRGB;
+    backbufferAttachment.format = backend::Format::RGBA8_UNORM;
 
     _graph.setBackbuffer("backbuffer");
 

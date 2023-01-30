@@ -191,8 +191,5 @@ void main() {
     vec3 ambient = vec3(0.03) * albedo * ao;
     vec3 colour = (ambient + Lo);
 
-    colour = colour / (colour + vec3(1.0));
-    colour = pow(colour, vec3(1.0 / 2.2));
-
     FragColour = vec4(colour, 1.0);
 }

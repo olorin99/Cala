@@ -42,7 +42,7 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Driver &driver, SDL_Window* wi
 {
     std::array<cala::backend::vulkan::RenderPass::Attachment, 1> attachments = {
             cala::backend::vulkan::RenderPass::Attachment{
-                    cala::backend::Format::RGBA8_SRGB,
+                    cala::backend::Format::RGBA8_UNORM,
                     VK_SAMPLE_COUNT_1_BIT,
                     VK_ATTACHMENT_LOAD_OP_CLEAR,
                     VK_ATTACHMENT_STORE_OP_STORE,
