@@ -11,7 +11,7 @@ void cala::ImageResource::devirtualize(cala::Engine* engine) {
             height = extent.height;
         }
         handle = engine->createImage({
-            width, height, 1, format, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST | (backend::isDepthFormat(format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT)
+            width, height, 1, format, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST | (backend::isDepthFormat(format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT)
         });
         engine->driver().immediate([&](backend::vulkan::CommandBuffer& cmd) {
             if (backend::isDepthFormat(format)) {
@@ -30,7 +30,7 @@ void cala::ImageResource::devirtualize(cala::Engine* engine) {
         height = extent.height;
         engine->destroyImage(handle);
         handle = engine->createImage({
-            width, height, 1, format, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST | (backend::isDepthFormat(format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT)
+            width, height, 1, format, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST | (backend::isDepthFormat(format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT)
         });
         engine->driver().immediate([&](backend::vulkan::CommandBuffer& cmd) {
             if (backend::isDepthFormat(format)) {
@@ -88,19 +88,26 @@ void cala::RenderPass::setDepthOutput(const char *label, ImageResource info) {
     _attachments.push(label);
 }
 
-void cala::RenderPass::addImageInput(const char *label) {
+void cala::RenderPass::addImageInput(const char *label, bool storage) {
     auto it = _graph->_attachmentMap.find(label);
     if (it != _graph->_attachmentMap.end()) {
-        _inputs.emplace(label);
+        _inputs.emplace(std::make_pair(label, storage));
     }
     else
         throw "couldn't find attachment"; //TODO: better error handling
 }
 
+void cala::RenderPass::addImageOutput(const char *label, ImageResource info, bool storage) {
+    auto it = _graph->_attachmentMap.find(label);
+    if (it == _graph->_attachmentMap.end())
+        _graph->_attachmentMap.emplace(label, new ImageResource(std::move(info)));
+    _outputs.emplace(label);
+}
+
 void cala::RenderPass::setDepthInput(const char *label) {
     auto it = _graph->_attachmentMap.find(label);
     if (it != _graph->_attachmentMap.end()) {
-        _inputs.emplace(label);
+        _inputs.emplace(std::make_pair(label, false));
         _attachments.push(label);
     }
     else
@@ -111,7 +118,7 @@ void cala::RenderPass::addBufferInput(const char *label, BufferResource info) {
     auto it = _graph->_attachmentMap.find(label);
     if (it == _graph->_attachmentMap.end())
         _graph->_attachmentMap.emplace(label, new BufferResource(std::move(info)));
-    _inputs.emplace(label);
+    _inputs.emplace(std::make_pair(label, false));
 }
 
 void cala::RenderPass::addBufferOutput(const char *label, BufferResource info) {
@@ -124,7 +131,7 @@ void cala::RenderPass::addBufferOutput(const char *label, BufferResource info) {
 void cala::RenderPass::addBufferInput(const char *label) {
     auto it = _graph->_attachmentMap.find(label);
     if (it != _graph->_attachmentMap.end())
-        _inputs.emplace(label);
+        _inputs.emplace(std::make_pair(label, false));
     else
         throw "couldn't find buffer resource";
 }
@@ -187,7 +194,7 @@ bool cala::RenderGraph::compile() {
         onStack[index] = true;
         auto& pass = _passes[index];
         for (auto& input : pass._inputs) {
-            for (u32 i = 0; i < outputs[input].size(); i++) {
+            for (u32 i = 0; i < outputs[input.first].size(); i++) {
                 if (visited[i] && onStack[i])
                     return false;
                 if (!visited[i]) {
@@ -213,8 +220,9 @@ bool cala::RenderGraph::compile() {
 
     for (u32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
         auto& pass = _orderedPasses[passIndex];
-        if (!pass->_framebuffer) {
+        if (!pass->_framebuffer && !pass->_attachments.empty()) {
             ende::Vector<VkImageView> attachmentImages;
+            ende::Vector<u32> attachmentHashes;
             u32 width = 0;
             u32 height = 0;
             backend::vulkan::RenderPass* renderPass = nullptr;
@@ -249,9 +257,16 @@ bool cala::RenderGraph::compile() {
                     height = resource->height;
                 }
                 attachmentImages.push(_engine->getImageView(resource->handle).view);
+                attachmentHashes.push(resource->handle.index());
             }
             renderPass = _engine->driver().getRenderPass(attachments);
-            pass->_framebuffer = _engine->driver().getFramebuffer(renderPass, attachmentImages, width, height);
+            pass->_framebuffer = _engine->driver().getFramebuffer(renderPass, attachmentImages, attachmentHashes, width, height);
+        } else if (!pass->_framebuffer) {
+            for (auto& output : pass->_outputs) {
+                if (auto resource = getResource<ImageResource>(output); resource) {
+                    resource->clear = false;
+                }
+            }
         }
     }
     return true;
@@ -260,10 +275,45 @@ bool cala::RenderGraph::compile() {
 bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) {
     for (auto& pass : _orderedPasses) {
         for (auto& input : pass->_inputs) {
-            if (auto resource = getResource<ImageResource>(input); resource) {
-                if (resource->handle->layout() != backend::ImageLayout::SHADER_READ_ONLY) {
-                    auto b = resource->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::SHADER_READ, resource->handle->layout(), backend::ImageLayout::SHADER_READ_ONLY);
-                    cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { &b, 1 });
+            bool attach = false;
+            for (auto& attachment : pass->_attachments) {
+                if (input.first == attachment) {
+                    attach = true;
+                    continue;
+                }
+            }
+            if (attach)
+                continue;
+            if (auto resource = getResource<ImageResource>(input.first); resource) {
+                if (input.second) {
+                    if (resource->handle->layout() != backend::ImageLayout::GENERAL) {
+                        auto b = resource->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::SHADER_READ, resource->handle->layout(), backend::ImageLayout::GENERAL);
+                        cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { &b, 1 });
+                        resource->handle->setLayout(b);
+                    }
+                } else {
+                    if (resource->handle->layout() != backend::ImageLayout::SHADER_READ_ONLY) {
+                        auto b = resource->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::SHADER_READ, resource->handle->layout(), backend::ImageLayout::SHADER_READ_ONLY);
+                        cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { &b, 1 });
+                        resource->handle->setLayout(b);
+                    }
+                }
+            }
+        }
+        for (auto& output : pass->_outputs) {
+            bool attach = false;
+            for (auto& attachment : pass->_attachments) {
+                if (output == attachment) {
+                    attach = true;
+                    continue;
+                }
+            }
+            if (attach)
+                continue;
+            if (auto resource = getResource<ImageResource>(output); resource) {
+                if (resource->handle->layout() != backend::ImageLayout::GENERAL) {
+                    auto b = resource->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::SHADER_WRITE, resource->handle->layout(), backend::ImageLayout::GENERAL);
+                    cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::COMPUTE_SHADER | backend::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { &b, 1 });
                     resource->handle->setLayout(b);
                 }
             }
@@ -278,8 +328,8 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
                 }
             } else {
                 if (resource->handle->layout() != backend::ImageLayout::COLOUR_ATTACHMENT) {
-                    auto b = resource->handle->barrier(backend::Access::SHADER_READ, backend::Access::COLOUR_ATTACHMENT_WRITE | backend::Access::COLOUR_ATTACHMENT_READ, resource->handle->layout(), backend::ImageLayout::COLOUR_ATTACHMENT);
-                    cmd.pipelineBarrier(backend::PipelineStage::FRAGMENT_SHADER, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, 0, nullptr, { &b, 1 });
+                    auto b = resource->handle->barrier(backend::Access::SHADER_READ | backend::Access::SHADER_WRITE, backend::Access::COLOUR_ATTACHMENT_WRITE | backend::Access::COLOUR_ATTACHMENT_READ, resource->handle->layout(), backend::ImageLayout::COLOUR_ATTACHMENT);
+                    cmd.pipelineBarrier(backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, 0, nullptr, { &b, 1 });
                     resource->handle->setLayout(b);
                 }
             }
@@ -288,10 +338,12 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
 
         _timers[pass->_passTimer].second.start(cmd);
         cmd.pushDebugLabel(pass->_passName, pass->_debugColour);
-        cmd.begin(*pass->_framebuffer);
+        if (pass->_framebuffer)
+            cmd.begin(*pass->_framebuffer);
         if (pass->_executeFunc)
             pass->_executeFunc(cmd, *this);
-        cmd.end(*pass->_framebuffer);
+        if (pass->_framebuffer)
+            cmd.end(*pass->_framebuffer);
         cmd.popDebugLabel();
         _timers[pass->_passTimer].second.stop();
         for (auto& attachment : pass->_attachments) {

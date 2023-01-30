@@ -45,6 +45,8 @@ namespace cala::backend::vulkan {
 
         u32 colourAttachmentCount() const { return _colourAttachments; }
 
+        ende::Span<Attachment> attachments() { return _attachments; }
+
     private:
 
         VkDevice _device;

@@ -1,0 +1,34 @@
+#version 450
+
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+struct CameraData {
+    mat4 projection;
+    mat4 view;
+    vec3 position;
+    float near;
+    float far;
+    float exposure;
+};
+
+layout (set = 1, binding = 0) uniform FrameData {
+    CameraData camera;
+};
+
+layout (rgba32f, set = 2, binding = 0) uniform readonly image2D hdrMap;
+layout (set = 2, binding = 1) uniform writeonly image2D backbuffer;
+
+
+void main() {
+
+    const float gamma = 2.2;
+    ivec2 globCoords = ivec2(gl_GlobalInvocationID.xy);
+    vec2 texCoords = globCoords / vec2(1920.0, 1080.0);
+
+    vec3 hdr = imageLoad(hdrMap, globCoords).rgb;
+    vec3 result = vec3(1.0) - exp(-hdr * camera.exposure);
+    result = pow(result, vec3(1.0 / gamma));
+
+    imageStore(backbuffer, globCoords, vec4(result, 1.0));
+
+}

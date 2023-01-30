@@ -50,7 +50,9 @@ namespace cala {
 
         void setDepthOutput(const char* label, ImageResource info);
 
-        void addImageInput(const char* label);
+        void addImageInput(const char* label, bool storage = false);
+
+        void addImageOutput(const char* label, ImageResource info, bool storage = false);
 
         void setDepthInput(const char* label);
 
@@ -76,7 +78,7 @@ namespace cala {
         RenderGraph* _graph;
         const char* _passName;
 
-        ende::Vector<const char*> _inputs;
+        ende::Vector<std::pair<const char*, bool>> _inputs;
         ende::Vector<const char*> _outputs;
         ende::Vector<const char*> _attachments;
 

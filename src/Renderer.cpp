@@ -234,20 +234,24 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     });
 
     auto& tonemapPass = _graph.addPass("tonemap");
-    tonemapPass.addColourOutput("backbuffer", backbufferAttachment);
-    tonemapPass.addImageInput("hdr");
+//    tonemapPass.addColourOutput("backbuffer", backbufferAttachment);
+    tonemapPass.addImageOutput("backbuffer", backbufferAttachment, true);
+    tonemapPass.addImageInput("hdr", true);
     tonemapPass.setDebugColour({0.1, 0.4, 0.7, 1});
     tonemapPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
         auto hdrImage = graph.getResource<ImageResource>("hdr");
+        auto backbuffer = graph.getResource<ImageResource>("backbuffer");
         cmd.clearDescriptors();
         cmd.bindProgram(*_engine->_tonemapProgram);
         cmd.bindBindings(nullptr);
         cmd.bindAttributes(nullptr);
         cmd.bindBuffer(1, 0, *_cameraBuffer);
-        cmd.bindImage(2, 0, _engine->getImageView(hdrImage->handle), _engine->_defaultSampler);
+        cmd.bindImage(2, 0, _engine->getImageView(hdrImage->handle), _engine->_defaultSampler, true);
+        cmd.bindImage(2, 1, _engine->getImageView(backbuffer->handle), _engine->_defaultSampler, true);
         cmd.bindPipeline();
         cmd.bindDescriptors();
-        cmd.draw(3, 1, 0, 0);
+        cmd.dispatchCompute(std::ceil(backbuffer->width / 32.f), std::ceil(backbuffer->height / 32.f), 1);
+//        cmd.draw(3, 1, 0, 0);
     });
 
     auto& skyboxPass = _graph.addPass("skybox");

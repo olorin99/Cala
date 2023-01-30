@@ -103,18 +103,27 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
                 .addStage(fragmentData, backend::ShaderStage::FRAGMENT)
                 .compile(_driver)));
     }
+//    {
+//        file.open("../../res/shaders/fullscreen.vert.spv"_path, ende::fs::in | ende::fs::binary);
+//        ende::Vector<u32> vertexData(file.size() / sizeof(u32));
+//        file.read({ reinterpret_cast<char*>(vertexData.data()), static_cast<u32>(vertexData.size() * sizeof(u32)) });
+//
+//        file.open("../../res/shaders/hdr.frag.spv"_path, ende::fs::in | ende::fs::binary);
+//        ende::Vector<u32> fragmentData(file.size() / sizeof(u32));
+//        file.read({ reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32)) });
+//
+//        _tonemapProgram = createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
+//                .addStage(vertexData, backend::ShaderStage::VERTEX)
+//                .addStage(fragmentData, backend::ShaderStage::FRAGMENT)
+//                .compile(_driver)));
+//    }
     {
-        file.open("../../res/shaders/fullscreen.vert.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> vertexData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(vertexData.data()), static_cast<u32>(vertexData.size() * sizeof(u32)) });
-
-        file.open("../../res/shaders/hdr.frag.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> fragmentData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32)) });
+        file.open("../../res/shaders/hdr.comp.spv"_path, ende::fs::in | ende::fs::binary);
+        ende::Vector<u32> computeData(file.size() / sizeof(u32));
+        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
 
         _tonemapProgram = createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-                .addStage(vertexData, backend::ShaderStage::VERTEX)
-                .addStage(fragmentData, backend::ShaderStage::FRAGMENT)
+                .addStage(computeData, backend::ShaderStage::COMPUTE)
                 .compile(_driver)));
     }
 
