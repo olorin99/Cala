@@ -8,7 +8,8 @@ cala::Camera::Camera(f32 fov, f32 width, f32 height, f32 near, f32 far, Transfor
     _width(width),
     _height(height),
     _near(near),
-    _far(far)
+    _far(far),
+    _exposure(1.0)
 {
     _frustum.update(viewProjection());
 }
@@ -62,6 +63,10 @@ void cala::Camera::updateFrustum() {
     _frustum.update(viewProjection());
 }
 
+void cala::Camera::setExposure(f32 exposure) {
+    _exposure = exposure;
+}
+
 cala::Camera::Data cala::Camera::data() const {
     auto viewPos = _transform.pos();
     viewPos = viewPos * ende::math::Vec3f({-1.f, 1.f, -1.f});
@@ -71,6 +76,7 @@ cala::Camera::Data cala::Camera::data() const {
         view(),
         viewPos,
         _near,
-        _far
+        _far,
+        _exposure
     };
 }

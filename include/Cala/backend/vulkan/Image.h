@@ -83,6 +83,8 @@ namespace cala::backend::vulkan {
 
         VkImageMemoryBarrier barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer = 0);
 
+        void setLayout(VkImageMemoryBarrier barrier);
+
         VkImage image() const { return _image; }
 
         Format format() const { return _format; }

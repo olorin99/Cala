@@ -29,12 +29,17 @@ namespace cala {
 
         void updateFrustum();
 
+        void setExposure(f32 exposure);
+
+        f32 getExposure() const { return _exposure; }
+
         struct Data {
             ende::math::Mat4f projection;
             ende::math::Mat4f view;
             ende::math::Vec3f position;
             f32 near;
             f32 far;
+            f32 exposure;
         };
 
         Data data() const;
@@ -50,6 +55,7 @@ namespace cala {
         f32 _height;
         f32 _near;
         f32 _far;
+        f32 _exposure;
 
     };
 

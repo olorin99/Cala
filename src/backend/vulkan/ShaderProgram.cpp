@@ -150,6 +150,9 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
         program._stageFlags |= stage.second;
     }
 
+//    if (_stages.size() > 1)
+//        pushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
     VkDescriptorSetLayout setLayouts[MAX_SET_COUNT] = {};
     u32 setCount = 0;
     for (u32 i = 0; i < MAX_SET_COUNT; i++) {

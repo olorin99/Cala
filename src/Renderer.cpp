@@ -142,7 +142,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     depthAttachment.format = backend::Format::D32_SFLOAT;
 
     ImageResource colourAttachment;
-    colourAttachment.format = backend::Format::RGBA8_SRGB;
+    colourAttachment.format = backend::Format::RGBA32_SFLOAT;
+
+    ImageResource backbufferAttachment;
+    backbufferAttachment.format = backend::Format::RGBA8_SRGB;
 
     _graph.setBackbuffer("backbuffer");
 
@@ -174,12 +177,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 //    });
 
     auto& forwardPass = _graph.addPass("forward");
-    forwardPass.addColourOutput("backbuffer", colourAttachment);
+    forwardPass.addColourOutput("hdr", colourAttachment);
 //    forwardPass.setDepthInput("depth");
     forwardPass.setDepthOutput("depth", depthAttachment);
     forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
 
-    forwardPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd) {
+    forwardPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
         cmd.bindBuffer(1, 0, *_cameraBuffer);
 
         Material* material = nullptr;
@@ -230,12 +233,29 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         }
     });
 
+    auto& tonemapPass = _graph.addPass("tonemap");
+    tonemapPass.addColourOutput("backbuffer", backbufferAttachment);
+    tonemapPass.addImageInput("hdr");
+    tonemapPass.setDebugColour({0.1, 0.4, 0.7, 1});
+    tonemapPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+        auto hdrImage = graph.getResource<ImageResource>("hdr");
+        cmd.clearDescriptors();
+        cmd.bindProgram(*_engine->_tonemapProgram);
+        cmd.bindBindings(nullptr);
+        cmd.bindAttributes(nullptr);
+        cmd.bindBuffer(1, 0, *_cameraBuffer);
+        cmd.bindImage(2, 0, _engine->getImageView(hdrImage->handle), _engine->_defaultSampler);
+        cmd.bindPipeline();
+        cmd.bindDescriptors();
+        cmd.draw(3, 1, 0, 0);
+    });
+
     auto& skyboxPass = _graph.addPass("skybox");
     skyboxPass.addColourOutput("backbuffer");
     skyboxPass.setDepthInput("depth");
     skyboxPass.setDebugColour({0, 0.7, 0.1, 1});
 
-    skyboxPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd) {
+    skyboxPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
         if (scene._skyLightMap) {
             cmd.clearDescriptors();
             cmd.bindProgram(*_engine->_skyboxProgram);
@@ -258,7 +278,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         uiPass.addColourOutput("backbuffer");
         uiPass.setDebugColour({0.7, 0.1, 0.4, 1});
 
-        uiPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd) {
+        uiPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
             imGui->render(cmd);
         });
     }

@@ -62,7 +62,7 @@ namespace cala {
 
         void addBufferOutput(const char* label);
 
-        void setExecuteFunction(std::function<void(backend::vulkan::CommandBuffer&)> func);
+        void setExecuteFunction(std::function<void(backend::vulkan::CommandBuffer&, RenderGraph&)> func);
 
         void setDebugColour(std::array<f32, 4> colour);
 
@@ -80,7 +80,7 @@ namespace cala {
         ende::Vector<const char*> _outputs;
         ende::Vector<const char*> _attachments;
 
-        std::function<void(backend::vulkan::CommandBuffer&)> _executeFunc;
+        std::function<void(backend::vulkan::CommandBuffer&, RenderGraph&)> _executeFunc;
 
         std::array<f32, 4> _debugColour;
         u32 _passTimer;
@@ -107,6 +107,14 @@ namespace cala {
         void reset();
 
         ende::Span<std::pair<const char*, backend::vulkan::Timer>> getTimers() { return _timers; }
+
+        template<class T>
+        T* getResource(const char* label) {
+            auto it = _attachmentMap.find(label);
+            if (it == _attachmentMap.end())
+                return nullptr;
+            return dynamic_cast<T*>(it.value());
+        }
 
     private:
         friend RenderPass;

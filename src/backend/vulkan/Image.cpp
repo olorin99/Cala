@@ -368,3 +368,7 @@ VkImageMemoryBarrier cala::backend::vulkan::Image::barrier(Access srcAccess, Acc
     memoryBarrier.subresourceRange = range;
     return memoryBarrier;
 }
+
+void cala::backend::vulkan::Image::setLayout(VkImageMemoryBarrier barrier) {
+    _layout = static_cast<ImageLayout>(barrier.newLayout);
+}

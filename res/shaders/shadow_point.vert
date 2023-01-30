@@ -16,6 +16,7 @@ struct CameraData {
     vec3 position;
     float near;
     float far;
+    float exposure;
 };
 
 layout (push_constant) uniform PushConstants {

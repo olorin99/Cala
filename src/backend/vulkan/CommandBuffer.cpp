@@ -180,11 +180,13 @@ void cala::backend::vulkan::CommandBuffer::bindBindings(ende::Span<VkVertexInput
     assert(bindings.size() <= MAX_VERTEX_INPUT_BINDINGS && "number of supplied vertex input bindings is greater than valid count");
     memset(_pipelineKey.bindings, 0, sizeof(_pipelineKey.bindings));
     memcpy(_pipelineKey.bindings, bindings.data(), bindings.size() * sizeof(VkVertexInputBindingDescription));
+    _pipelineKey.bindingCount = bindings.size();
 }
 
 void cala::backend::vulkan::CommandBuffer::bindAttributeDescriptions(ende::Span<VkVertexInputAttributeDescription> attributes) {
     memset(_pipelineKey.attributes, 0, sizeof(_pipelineKey.attributes));
     memcpy(_pipelineKey.attributes, attributes.data(), attributes.size() * sizeof(VkVertexInputAttributeDescription));
+    _pipelineKey.attributeCount = attributes.size();
 }
 
 void cala::backend::vulkan::CommandBuffer::bindVertexArray(ende::Span<VkVertexInputBindingDescription> bindings,
@@ -424,20 +426,20 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
 
         u32 countVertexBinding = 0;
         u32 countVertexAttribute = 0;
-        for (u32 binding = 0; binding < MAX_VERTEX_INPUT_BINDINGS; binding++) {
+        for (u32 binding = 0; binding < _pipelineKey.bindingCount; binding++) {
             if (_pipelineKey.bindings[binding].stride > 0)
                 countVertexBinding++;
         }
-        for (u32 attribute = 0; attribute < MAX_VERTEX_INPUT_ATTRIBUTES; attribute++) {
+        for (u32 attribute = 0; attribute < _pipelineKey.attributeCount; attribute++) {
             if (_pipelineKey.attributes[attribute].format > 0)
                 countVertexAttribute++;
         }
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInputInfo.vertexBindingDescriptionCount = countVertexBinding;
+        vertexInputInfo.vertexBindingDescriptionCount = _pipelineKey.bindingCount;
         vertexInputInfo.pVertexBindingDescriptions = _pipelineKey.bindings;
-        vertexInputInfo.vertexAttributeDescriptionCount = countVertexAttribute;
+        vertexInputInfo.vertexAttributeDescriptionCount = _pipelineKey.attributeCount;
         vertexInputInfo.pVertexAttributeDescriptions = _pipelineKey.attributes;
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};

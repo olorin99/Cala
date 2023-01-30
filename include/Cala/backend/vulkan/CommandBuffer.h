@@ -163,6 +163,8 @@ namespace cala::backend::vulkan {
         struct PipelineKey {
             u32 shaderCount = 0;
             VkPipelineShaderStageCreateInfo shaders[2] = {};
+            u32 bindingCount = 0;
+            u32 attributeCount = 0;
             VkVertexInputBindingDescription bindings[MAX_VERTEX_INPUT_BINDINGS]{};
             VkVertexInputAttributeDescription attributes[MAX_VERTEX_INPUT_ATTRIBUTES]{};
             VkRenderPass renderPass = VK_NULL_HANDLE;

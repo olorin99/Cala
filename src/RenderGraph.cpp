@@ -17,9 +17,11 @@ void cala::ImageResource::devirtualize(cala::Engine* engine) {
             if (backend::isDepthFormat(format)) {
                 auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
                 cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, 0, nullptr, { &b, 1 });
+                handle->setLayout(b);
             } else {
                 auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::COLOUR_ATTACHMENT);
                 cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, 0, nullptr, { &b, 1 });
+                handle->setLayout(b);
             }
         });
     }
@@ -34,9 +36,11 @@ void cala::ImageResource::devirtualize(cala::Engine* engine) {
             if (backend::isDepthFormat(format)) {
                 auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
                 cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, 0, nullptr, { &b, 1 });
+                handle->setLayout(b);
             } else {
                 auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::COLOUR_ATTACHMENT);
                 cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, 0, nullptr, { &b, 1 });
+                handle->setLayout(b);
             }
         });
     }
@@ -88,7 +92,6 @@ void cala::RenderPass::addImageInput(const char *label) {
     auto it = _graph->_attachmentMap.find(label);
     if (it != _graph->_attachmentMap.end()) {
         _inputs.emplace(label);
-        _attachments.push(label);
     }
     else
         throw "couldn't find attachment"; //TODO: better error handling
@@ -134,7 +137,7 @@ void cala::RenderPass::addBufferOutput(const char *label) {
         throw "couldn't find buffer resource";
 }
 
-void cala::RenderPass::setExecuteFunction(std::function<void(backend::vulkan::CommandBuffer&)> func) {
+void cala::RenderPass::setExecuteFunction(std::function<void(backend::vulkan::CommandBuffer&, cala::RenderGraph&)> func) {
     _executeFunc = std::move(func);
 }
 
@@ -256,11 +259,38 @@ bool cala::RenderGraph::compile() {
 
 bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) {
     for (auto& pass : _orderedPasses) {
+        for (auto& input : pass->_inputs) {
+            if (auto resource = getResource<ImageResource>(input); resource) {
+                if (resource->handle->layout() != backend::ImageLayout::SHADER_READ_ONLY) {
+                    auto b = resource->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::SHADER_READ, resource->handle->layout(), backend::ImageLayout::SHADER_READ_ONLY);
+                    cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { &b, 1 });
+                    resource->handle->setLayout(b);
+                }
+            }
+        }
+        for (auto& attachment : pass->_attachments) {
+            auto resource = getResource<ImageResource>(attachment);
+            if (backend::isDepthFormat(resource->handle->format())) {
+                if (resource->handle->layout() != backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT) {
+                    auto b = resource->handle->barrier(backend::Access::SHADER_READ, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, resource->handle->layout(), backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+                    cmd.pipelineBarrier(backend::PipelineStage::FRAGMENT_SHADER, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, 0, nullptr, { &b, 1 });
+                    resource->handle->setLayout(b);
+                }
+            } else {
+                if (resource->handle->layout() != backend::ImageLayout::COLOUR_ATTACHMENT) {
+                    auto b = resource->handle->barrier(backend::Access::SHADER_READ, backend::Access::COLOUR_ATTACHMENT_WRITE | backend::Access::COLOUR_ATTACHMENT_READ, resource->handle->layout(), backend::ImageLayout::COLOUR_ATTACHMENT);
+                    cmd.pipelineBarrier(backend::PipelineStage::FRAGMENT_SHADER, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, 0, nullptr, { &b, 1 });
+                    resource->handle->setLayout(b);
+                }
+            }
+        }
+
+
         _timers[pass->_passTimer].second.start(cmd);
         cmd.pushDebugLabel(pass->_passName, pass->_debugColour);
         cmd.begin(*pass->_framebuffer);
         if (pass->_executeFunc)
-            pass->_executeFunc(cmd);
+            pass->_executeFunc(cmd, *this);
         cmd.end(*pass->_framebuffer);
         cmd.popDebugLabel();
         _timers[pass->_passTimer].second.stop();
@@ -272,9 +302,11 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
             if (backend::isDepthFormat(resource->handle->format())) {
                 auto b = resource->handle->barrier(backend::Access::DEPTH_STENCIL_WRITE, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
                 cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, 0, nullptr, { &b, 1 });
+                resource->handle->setLayout(b);
             } else {
                 auto b = resource->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::COLOUR_ATTACHMENT_WRITE | backend::Access::COLOUR_ATTACHMENT_READ, backend::ImageLayout::COLOUR_ATTACHMENT, backend::ImageLayout::COLOUR_ATTACHMENT);
                 cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, 0, nullptr, { &b, 1 });
+                resource->handle->setLayout(b);
             }
         }
     }
@@ -286,11 +318,13 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
 
     auto barrier = backbuffer->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::TRANSFER_READ, backend::ImageLayout::COLOUR_ATTACHMENT, backend::ImageLayout::TRANSFER_SRC);
     cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::PipelineStage::TRANSFER, 0, nullptr, { &barrier, 1 });
+    backbuffer->handle->setLayout(barrier);
 
     _engine->driver().swapchain().blitImageToFrame(index, cmd, *backbuffer->handle);
 
     barrier = backbuffer->handle->barrier(backend::Access::TRANSFER_READ, backend::Access::COLOUR_ATTACHMENT_WRITE, backend::ImageLayout::TRANSFER_SRC, backend::ImageLayout::COLOUR_ATTACHMENT);
     cmd.pipelineBarrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, 0, nullptr, { &barrier, 1 });
+    backbuffer->handle->setLayout(barrier);
     return true;
 }
 

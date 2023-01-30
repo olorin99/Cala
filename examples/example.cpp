@@ -338,6 +338,10 @@ int main() {
                 lightRef.setFar(far);
             ImGui::DragFloat("Shadow Bias", &scene.shadowBias, 0.001, -1, 1);
 
+            f32 exposure = camera.getExposure();
+            if (ImGui::SliderFloat("Exposure", &exposure, 0, 10))
+                camera.setExposure(exposure);
+
             ImGui::End();
             ImGui::Render();
         }
