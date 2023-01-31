@@ -1,7 +1,7 @@
 #include "Cala/backend/vulkan/ShaderProgram.h"
 #include <Cala/backend/vulkan/Driver.h>
 #include <Cala/backend/vulkan/primitives.h>
-#include "../third_party/SPIRV-Cross-master/spirv_cross.hpp"
+#include <SPIRV-Cross/spirv_cross.hpp>
 
 cala::backend::vulkan::ShaderProgram::Builder cala::backend::vulkan::ShaderProgram::create() {
     return {};
