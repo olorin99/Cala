@@ -241,6 +241,7 @@ int main() {
                     }
                     break;
             }
+            imGuiContext.processEvent(&event);
         }
         {
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_W])

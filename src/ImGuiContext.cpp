@@ -136,8 +136,12 @@ ImGuiContext::~ImGuiContext() {
 
 void ImGuiContext::newFrame() {
     ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplSDL2_NewFrame(_window);
+    ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
+}
+
+void ImGuiContext::processEvent(void *event) {
+    ImGui_ImplSDL2_ProcessEvent((SDL_Event*)event);
 }
 
 void ImGuiContext::render(cala::backend::vulkan::CommandBuffer &buffer) {

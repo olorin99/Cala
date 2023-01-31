@@ -22,6 +22,8 @@ public:
 
     void newFrame();
 
+    void processEvent(void* event);
+
     void render(cala::backend::vulkan::CommandBuffer& buffer);
 
 private:
