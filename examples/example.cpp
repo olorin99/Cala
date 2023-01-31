@@ -310,7 +310,7 @@ int main() {
             ImGui::End();
 
             ImGui::Begin("Render Settings");
-            auto& renderSettings = renderer.info();
+            auto& renderSettings = renderer.settings();
             ImGui::Checkbox("Forward Pass", &renderSettings.forward);
             ImGui::Checkbox("Depth Pre Pass", &renderSettings.depthPre);
             ImGui::Checkbox("Skybox Pass", &renderSettings.skybox);

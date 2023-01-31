@@ -5,12 +5,12 @@
 #include <Cala/Material.h>
 #include <Cala/ImGuiContext.h>
 
-cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Info info)
+cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings)
     : _engine(engine),
       _cameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _lightCameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _graph(engine),
-      _renderInfo(info)
+      _renderSettings(settings)
 {
     _passTimers.emplace("totalGPU", backend::vulkan::Timer{_engine->driver(), 0});
     _passTimers.emplace("shadowsPass", backend::vulkan::Timer{_engine->driver(), 1});
@@ -151,7 +151,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _graph.setBackbuffer("backbuffer");
 
 
-    if (_renderInfo.depthPre) {
+    if (_renderSettings.depthPre) {
         auto& depthPrePass = _graph.addPass("depth_pre");
         depthPrePass.setDepthOutput("depth", depthAttachment);
 
@@ -180,10 +180,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         });
     }
 
-    if (_renderInfo.forward) {
+    if (_renderSettings.forward) {
         auto& forwardPass = _graph.addPass("forward");
         forwardPass.addColourOutput("hdr", colourAttachment);
-        if (_renderInfo.depthPre)
+        if (_renderSettings.depthPre)
             forwardPass.setDepthInput("depth");
         else
             forwardPass.setDepthOutput("depth", depthAttachment);
@@ -241,7 +241,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         });
     }
 
-    if (_renderInfo.tonemap) {
+    if (_renderSettings.tonemap) {
         auto& tonemapPass = _graph.addPass("tonemap");
         tonemapPass.addImageOutput("backbuffer", backbufferAttachment, true);
         tonemapPass.addImageInput("hdr", true);
@@ -262,9 +262,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         });
     }
 
-    if (_renderInfo.skybox) {
+    if (_renderSettings.skybox) {
         auto& skyboxPass = _graph.addPass("skybox");
-        skyboxPass.addColourOutput("backbuffer");
+        skyboxPass.addColourOutput("hdr");
         skyboxPass.setDepthInput("depth");
         skyboxPass.setDebugColour({0, 0.7, 0.1, 1});
 

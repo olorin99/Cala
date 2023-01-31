@@ -2,10 +2,13 @@
 #include <Cala/backend/vulkan/Driver.h>
 #include <Cala/backend/vulkan/primitives.h>
 
+static u32 glob_id = 1;
+
 cala::backend::vulkan::RenderPass::RenderPass(Driver& driver, ende::Span<Attachment> attachments)
     : _device(driver.context().device()),
     _renderPass(VK_NULL_HANDLE),
-    _colourAttachments(0)
+    _colourAttachments(0),
+    _id(glob_id++)
 {
     _clearValues.reserve(attachments.size());
     u32 colourAttachmentCount = 0;
@@ -94,7 +97,8 @@ cala::backend::vulkan::RenderPass::~RenderPass() {
 
 cala::backend::vulkan::RenderPass::RenderPass(RenderPass &&rhs) noexcept
     : _device(VK_NULL_HANDLE),
-    _renderPass(VK_NULL_HANDLE)
+    _renderPass(VK_NULL_HANDLE),
+    _id(0)
 {
     std::swap(_device, rhs._device);
     std::swap(_renderPass, rhs._renderPass);

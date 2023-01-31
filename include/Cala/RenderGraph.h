@@ -108,7 +108,10 @@ namespace cala {
 
         void reset();
 
-        ende::Span<std::pair<const char*, backend::vulkan::Timer>> getTimers() { return _timers; }
+        ende::Span<std::pair<const char*, backend::vulkan::Timer>> getTimers() {
+            assert(_orderedPasses.size() <= _timers.size());
+            return { _timers.data(), static_cast<u32>(_orderedPasses.size()) };
+        }
 
         template<class T>
         T* getResource(const char* label) {

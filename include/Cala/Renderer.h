@@ -20,7 +20,7 @@ namespace cala {
     class Renderer {
     public:
 
-        struct Info {
+        struct Settings {
             bool forward = true;
             bool deferred = true;
             bool tonemap = true;
@@ -28,7 +28,7 @@ namespace cala {
             bool skybox = true;
         };
 
-        Renderer(Engine* engine, Info info = { true, true, true, false, true });
+        Renderer(Engine* engine, Settings settings = {true, true, true, false, true });
 
         bool beginFrame();
 
@@ -48,7 +48,7 @@ namespace cala {
 
         Stats stats() const { return _stats; }
 
-        Info& info() { return _renderInfo; }
+        Settings& settings() { return _renderSettings; }
 
     private:
 
@@ -66,7 +66,7 @@ namespace cala {
 
         Stats _stats;
 
-        Info _renderInfo;
+        Settings _renderSettings;
 
 
 

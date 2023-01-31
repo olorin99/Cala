@@ -47,6 +47,8 @@ namespace cala::backend::vulkan {
 
         ende::Span<Attachment> attachments() { return _attachments; }
 
+        u32 id() const { return _id; }
+
     private:
 
         VkDevice _device;
@@ -56,6 +58,7 @@ namespace cala::backend::vulkan {
         u32 _depthAttachments;
 
         ende::Vector<Attachment> _attachments;
+        const u32 _id;
 
     };
 

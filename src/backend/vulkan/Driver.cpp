@@ -285,19 +285,18 @@ cala::backend::vulkan::RenderPass* cala::backend::vulkan::Driver::getRenderPass(
 }
 
 cala::backend::vulkan::Framebuffer *cala::backend::vulkan::Driver::getFramebuffer(RenderPass *renderPass, ende::Span<VkImageView> attachmentImages, ende::Span<u32> attachmentHashes, u32 width, u32 height) {
-    u64 renderPassHash = 0;
-    for (auto& attachment : renderPass->attachments()) {
-        renderPassHash |= ((u64)attachment.format << 60);
-        renderPassHash |= ((u64)attachment.internalLayout << 50);
-        renderPassHash |= ((u64)attachment.loadOp << 40);
-        renderPassHash |= ((u64)attachment.storeOp << 30);
-        renderPassHash |= ((u64)attachment.finalLayout << 20);
-        renderPassHash |= ((u64)attachment.initialLayout << 10);
-    }
-
+//    u64 renderPassHash = 0;
+//    for (auto& attachment : renderPass->attachments()) {
+//        renderPassHash |= ((u64)attachment.format << 60);
+//        renderPassHash |= ((u64)attachment.internalLayout << 50);
+//        renderPassHash |= ((u64)attachment.loadOp << 40);
+//        renderPassHash |= ((u64)attachment.storeOp << 30);
+//        renderPassHash |= ((u64)attachment.finalLayout << 20);
+//        renderPassHash |= ((u64)attachment.initialLayout << 10);
+//    }
 
 //    u64 hash = ((u64)renderPass->renderPass() << 30);
-    u64 hash = renderPassHash & 0xFFFF0000;
+    u64 hash = ((u64)renderPass->id() << 32);
     for (auto& attachment : attachmentHashes)
         hash |= attachment;
 
