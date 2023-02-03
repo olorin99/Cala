@@ -3,6 +3,8 @@ project(Cala)
 
 set(CMAKE_CXX_STANDARD 20)
 
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -DENDE_PROFILE)
+
 find_package(SDL2 REQUIRED)
 find_package(assimp)
 find_package(X11 REQUIRED)

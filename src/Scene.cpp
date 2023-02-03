@@ -3,6 +3,7 @@
 #include <Ende/thread/thread.h>
 #include <Cala/Material.h>
 #include <Cala/Probe.h>
+#include <Ende/profile/profile.h>
 
 cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     : _engine(engine),
@@ -62,6 +63,7 @@ void cala::Scene::addSkyLightMap(ImageHandle skyLightMap, bool equirectangular, 
 }
 
 void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
+    PROFILE_NAMED("Scene::prepare");
 //    std::sort(_lights.begin(), _lights.end(), [](const Light& lhs, const Light& rhs) {
 //        return !lhs.shadowing() and rhs.shadowing();
 //    });

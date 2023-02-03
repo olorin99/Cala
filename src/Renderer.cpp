@@ -4,6 +4,7 @@
 #include <Cala/Probe.h>
 #include <Cala/Material.h>
 #include <Cala/ImGuiContext.h>
+#include <Ende/profile/profile.h>
 
 cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings)
     : _engine(engine),
@@ -295,7 +296,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         });
     }
 
-    if (_renderSettings.skybox) {
+    if (_renderSettings.skybox && scene._skyLightMap) {
         auto& skyboxPass = _graph.addPass("skybox");
         if (scene._hdrSkyLight)
             skyboxPass.addColourOutput("hdr");
@@ -305,21 +306,19 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         skyboxPass.setDebugColour({0, 0.7, 0.1, 1});
 
         skyboxPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-            if (scene._skyLightMap) {
-                cmd.clearDescriptors();
-                cmd.bindProgram(*_engine->_skyboxProgram);
-                cmd.bindRasterState({ backend::CullMode::NONE });
-                cmd.bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
-                cmd.bindBindings({ &_engine->_cube._binding, 1 });
-                cmd.bindAttributes(_engine->_cube._attributes);
-                cmd.bindBuffer(1, 0, *_cameraBuffer);
-                cmd.bindImage(2, 0, scene._skyLightMapView, _engine->_defaultSampler);
-                cmd.bindPipeline();
-                cmd.bindDescriptors();
-                cmd.bindVertexBuffer(0, _engine->_cube._vertex.buffer());
-                cmd.bindIndexBuffer(*_engine->_cube._index);
-                cmd.draw(_engine->_cube._index->size() / sizeof(u32), 1, 0, 0);
-            }
+            cmd.clearDescriptors();
+            cmd.bindProgram(*_engine->_skyboxProgram);
+            cmd.bindRasterState({ backend::CullMode::NONE });
+            cmd.bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
+            cmd.bindBindings({ &_engine->_cube._binding, 1 });
+            cmd.bindAttributes(_engine->_cube._attributes);
+            cmd.bindBuffer(1, 0, *_cameraBuffer);
+            cmd.bindImage(2, 0, scene._skyLightMapView, _engine->_defaultSampler);
+            cmd.bindPipeline();
+            cmd.bindDescriptors();
+            cmd.bindVertexBuffer(0, _engine->_cube._vertex.buffer());
+            cmd.bindIndexBuffer(*_engine->_cube._index);
+            cmd.draw(_engine->_cube._index->size() / sizeof(u32), 1, 0, 0);
         });
     }
 

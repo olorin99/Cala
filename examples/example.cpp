@@ -18,6 +18,7 @@
 #include <assimp/postprocess.h>
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
+#include <Ende/profile/ProfileManager.h>
 
 using namespace cala;
 using namespace cala::backend;
@@ -274,6 +275,37 @@ int main() {
             ImGui::Text("Milliseconds: %f", engine.driver().milliseconds());
             ImGui::Text("Delta Time: %f", dt);
 
+#ifdef ENDE_PROFILE
+            {
+                PROFILE_NAMED("show_profile");
+                u32 currentProfileFrame = ende::profile::ProfileManager::getCurrentFrame();
+                auto f = ende::profile::ProfileManager::getFrameData(currentProfileFrame);
+                tsl::robin_map<const char*, std::pair<f64, u32>> data;
+                for (auto& profileData : f) {
+                    f64 diff = (profileData.end.nanoseconds() - profileData.start.nanoseconds()) / 1e6;
+                    auto it = data.find(profileData.label);
+                    if (it == data.end())
+                        data.emplace(std::make_pair(profileData.label, std::make_pair(diff, 1)));
+                    else {
+                        it.value().first += diff;
+                        it.value().second++;
+                    }
+                }
+
+                ende::Vector<std::pair<const char*, std::pair<f64, u32>>> dataVec;
+
+                for (auto& func : data) {
+                    dataVec.push(std::make_pair(func.first, std::make_pair(func.second.first, func.second.second)));
+                }
+                std::sort(dataVec.begin(), dataVec.end(), [](std::pair<const char*, std::pair<f64, u32>> lhs, std::pair<const char*, std::pair<f64, u32>> rhs) -> bool {
+                    return lhs.first > rhs.first;
+                });
+                for (auto& func : dataVec) {
+                    ImGui::Text("\t%s ms: %f, avg: %f", func.first, func.second.first, func.second.first / func.second.second);
+                }
+            }
+#endif
+
             ImGui::Text("GPU Times:");
             auto passTimers = renderer.timers();
             u64 totalGPUTime = 0;
@@ -371,6 +403,8 @@ int main() {
         renderer.render(scene, camera, &imGuiContext);
 
         dt = renderer.endFrame();
+
+        ende::profile::ProfileManager::frame();
     }
 
     engine.driver().wait();

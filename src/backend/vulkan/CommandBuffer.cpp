@@ -375,7 +375,7 @@ void cala::backend::vulkan::CommandBuffer::stopPipelineStatistics() {
 
 
 bool cala::backend::vulkan::CommandBuffer::submit(ende::Span<VkSemaphore> wait, VkFence fence) {
-    PROFILE
+    PROFILE_NAMED("CommandBuffer::Submit");
 
     end();
 
@@ -405,7 +405,7 @@ bool cala::backend::vulkan::CommandBuffer::submit(ende::Span<VkSemaphore> wait, 
 
 
 VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
-    PROFILE
+    PROFILE_NAMED("CommandBuffer:getPipeline");
     // check if exists in cache
     auto it = _pipelines.find(_pipelineKey);
     if (it != _pipelines.end())
@@ -577,7 +577,7 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
 }
 
 VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) {
-    PROFILE
+    PROFILE_NAMED("CommandBuffer::getDescriptorSet");
     assert(set < MAX_SET_COUNT && "set is greater than allowed descriptor count");
     auto key = _descriptorKey[set];
 

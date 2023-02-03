@@ -1,5 +1,6 @@
 #include "Cala/RenderGraph.h"
 #include <Ende/log/log.h>
+#include <Ende/profile/profile.h>
 
 void cala::ImageResource::devirtualize(cala::Engine* engine) {
     auto extent = engine->driver().swapchain().extent();
@@ -177,6 +178,7 @@ void cala::RenderGraph::setBackbuffer(const char *label) {
 }
 
 bool cala::RenderGraph::compile() {
+    PROFILE_NAMED("RenderGraph::Compile");
     _orderedPasses.clear();
 
     tsl::robin_map<const char*, ende::Vector<u32>> outputs;
@@ -274,6 +276,7 @@ bool cala::RenderGraph::compile() {
 }
 
 bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) {
+    PROFILE_NAMED("RenderGraph::Execute");
     for (auto& pass : _orderedPasses) {
         for (auto& input : pass->_inputs) {
             bool attach = false;
