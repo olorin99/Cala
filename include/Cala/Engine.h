@@ -114,8 +114,12 @@ namespace cala {
         ende::Vector<backend::vulkan::ShaderProgram> _programs;
         std::vector<Probe> _shadowProbes; //TODO: fix vectors in Ende, Optional implementation sucks
 
+        ende::Vector<ImageHandle> _shadowMaps;
+
         ende::Vector<std::pair<i32, ImageHandle>> _imagesToDestroy;
         ende::Vector<u32> _freeImages;
+
+        ImageHandle getShadowMap(u32 index);
 
         Probe& getShadowProbe(u32 index);
 

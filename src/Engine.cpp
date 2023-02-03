@@ -272,6 +272,24 @@ cala::backend::vulkan::Image::View &cala::Engine::getImageView(ImageHandle handl
     return _imageViews[handle.index()];
 }
 
+cala::ImageHandle cala::Engine::getShadowMap(u32 index) {
+    if (index < _shadowMaps.size())
+        return _shadowMaps[index];
+
+    auto map = createImage({
+        1024, 1024, 1,
+        backend::Format::D32_SFLOAT,
+        1, 6,
+        backend::ImageUsage::SAMPLED | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT | backend::ImageUsage::TRANSFER_DST
+    });
+    _shadowMaps.push(map);
+    _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
+        auto cubeBarrier = map->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, 0, nullptr, { &cubeBarrier, 1 });
+    });
+    return map;
+}
+
 cala::Probe &cala::Engine::getShadowProbe(u32 index) {
     if (index < _shadowProbes.size())
         return _shadowProbes[index];

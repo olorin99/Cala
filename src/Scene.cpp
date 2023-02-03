@@ -91,11 +91,12 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
         return lhs.type < rhs.type;
     });
     _lightData.clear();
+    u32 shadowIndex = 0;
     for (u32 i = 0; i < _lights.size(); i++) {
         auto& light = _lights[i];
         auto data = light.data();
         if (light.shadowing())
-            data.shadowIndex = _engine->getShadowProbe(i).map().index();
+            data.shadowIndex = _engine->getShadowMap(shadowIndex++).index();
         else
             data.shadowIndex = _engine->_defaultPointShadow.index();
 

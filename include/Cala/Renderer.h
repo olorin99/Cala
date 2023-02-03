@@ -57,12 +57,12 @@ namespace cala {
         BufferHandle _cameraBuffer;
         BufferHandle _lightCameraBuffer;
 
+        ImageHandle _shadowTarget;
+        backend::vulkan::Framebuffer* _shadowFramebuffer;
+
         RenderGraph _graph;
 
-
         backend::vulkan::Driver::FrameInfo _frameInfo;
-
-        ende::Vector<std::pair<const char*, backend::vulkan::Timer>> _passTimers;
 
         Stats _stats;
 

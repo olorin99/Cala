@@ -12,11 +12,33 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
       _graph(engine),
       _renderSettings(settings)
 {
-    _passTimers.emplace("totalGPU", backend::vulkan::Timer{_engine->driver(), 0});
-    _passTimers.emplace("shadowsPass", backend::vulkan::Timer{_engine->driver(), 1});
-    _passTimers.emplace("lightingPass", backend::vulkan::Timer{_engine->driver(), 2});
-
     _engine->driver().setBindlessSetIndex(0);
+
+    _shadowTarget = _engine->createImage({
+        1024, 1024, 1,
+        backend::Format::D32_SFLOAT,
+        1, 1,
+        backend::ImageUsage::SAMPLED | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT | backend::ImageUsage::TRANSFER_SRC
+    });
+    _engine->driver().immediate([&](backend::vulkan::CommandBuffer& cmd) {
+        auto targetBarrier = _shadowTarget->barrier(backend::Access::NONE, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::EARLY_FRAGMENT, 0, nullptr, { &targetBarrier, 1 });
+    });
+    backend::vulkan::RenderPass::Attachment shadowAttachment = {
+            cala::backend::Format::D32_SFLOAT,
+            VK_SAMPLE_COUNT_1_BIT,
+            VK_ATTACHMENT_LOAD_OP_CLEAR,
+            VK_ATTACHMENT_STORE_OP_STORE,
+            VK_ATTACHMENT_LOAD_OP_CLEAR,
+            VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+    };
+    auto shadowRenderPass = _engine->driver().getRenderPass({ &shadowAttachment, 1 });
+    u32 h = _shadowTarget.index();
+    _shadowFramebuffer = _engine->driver().getFramebuffer(shadowRenderPass, { &_engine->getImageView(_shadowTarget).view, 1 }, { &h, 1 }, 1024, 1024);
 }
 
 bool cala::Renderer::beginFrame() {
@@ -27,8 +49,6 @@ bool cala::Renderer::beginFrame() {
 }
 
 f64 cala::Renderer::endFrame() {
-
-//    _frameInfo.cmd->end(*_swapchainInfo.framebuffer);
     _frameInfo.cmd->end();
     _frameInfo.cmd->submit({ &_frameInfo.swapchainInfo.imageAquired, 1 }, _frameInfo.fence);
 
@@ -47,25 +67,46 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _cameraBuffer->data({ &cameraData, sizeof(cameraData) });
 
     backend::vulkan::CommandBuffer& cmd = *_frameInfo.cmd;
-    _passTimers[0].second.start(cmd);
-    cmd.pushDebugLabel("shadow pass");
 
-    // shadows
-    _passTimers[1].second.start(cmd);
-    for (u32 light = 0; light < scene._lights.size(); ++light) {
-        if (scene._lights[light].shadowing()) {
-            // draw shadows
-            auto& lightObj = scene._lights[light];
+    cmd.clearDescriptors();
 
-            Transform shadowTransform(lightObj.transform().pos());
-            Camera shadowCamera((f32)ende::math::rad(90.f), 1024.f, 1024.f, lightObj.getNear(), lightObj.getFar(), shadowTransform);
+    _graph.reset();
 
-            if (lightObj.type() == Light::POINT) { // point shadows
-                auto& shadowProbe = _engine->getShadowProbe(light);
-                shadowProbe.draw(cmd, [&](backend::vulkan::CommandBuffer& cmd, u32 face) {
+    ImageResource depthAttachment;
+    depthAttachment.format = backend::Format::D32_SFLOAT;
+
+    ImageResource pointDepth;
+    pointDepth.format = backend::Format::D32_SFLOAT;
+    pointDepth.matchSwapchain = false;
+    pointDepth.transient = false;
+    pointDepth.width = 10;
+    pointDepth.height = 10;
+
+    ImageResource colourAttachment;
+    colourAttachment.format = backend::Format::RGBA32_SFLOAT;
+
+    ImageResource backbufferAttachment;
+    backbufferAttachment.format = backend::Format::RGBA8_UNORM;
+
+    _graph.setBackbuffer("backbuffer");
+
+    auto& pointShadows = _graph.addPass("point_shadows");
+    pointShadows.addImageOutput("point_depth", pointDepth);
+    pointShadows.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+        u32 shadowIndex = 0;
+        for (u32 i = 0; i < scene._lights.size(); i++) {
+            auto& light = scene._lights[i];
+            if (light.shadowing()) {
+                Transform shadowTransform(light.transform().pos());
+                Camera shadowCam(ende::math::rad(90.f), 1024.f, 1024.f, light.getNear(), light.getFar(), shadowTransform);
+                auto shadowMap = _engine->getShadowMap(shadowIndex++);
+
+                for (u32 face = 0; face < 6; face++) {
+                    cmd.begin(*_shadowFramebuffer);
+
                     cmd.clearDescriptors();
                     cmd.bindRasterState({
-                        backend::CullMode::FRONT,
+                        backend::CullMode::FRONT
                     });
                     cmd.bindDepthState({
                         true, true,
@@ -74,7 +115,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                     cmd.bindProgram(*_engine->_pointShadowProgram);
 
-                    cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()], light * sizeof(Light::Data), sizeof(Light::Data));
+                    cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()], i * sizeof(Light::Data), sizeof(Light::Data));
 
                     switch (face) {
                         case 0:
@@ -98,23 +139,23 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                             break;
                     }
 
-                    auto shadowData = shadowCamera.data();
+                    auto shadowData = shadowCam.data();
                     cmd.pushConstants({ &shadowData, sizeof(shadowData) });
-                    shadowCamera.updateFrustum();
+                    shadowCam.updateFrustum();
 
-                    for (u32 i = 0; i < scene._renderList.size(); ++i) {
-                        auto& renderable = scene._renderList[i].second.first;
-                        auto& transform = scene._renderList[i].second.second;
+                    for (u32 j = 0; j < scene._renderList.size(); ++j) {
+                        auto& renderable = scene._renderList[j].second.first;
+                        auto& transform = scene._renderList[j].second.second;
 
                         if (!renderable.castShadows)
                             continue;
 
-                        if (!shadowCamera.frustum().intersect(transform->pos(), 2))
+                        if (!shadowCam.frustum().intersect(transform->pos(), 2))
                             continue;
 
                         cmd.bindBindings(renderable.bindings);
                         cmd.bindAttributes(renderable.attributes);
-                        cmd.bindBuffer(1, 0, *scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
+                        cmd.bindBuffer(1, 0, *scene._modelBuffer[frameIndex()], j * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
                         cmd.bindPipeline();
                         cmd.bindDescriptors();
                         cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
@@ -124,32 +165,23 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         } else
                             cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
                     }
-                });
-            } else { // directional shadows
 
+                    cmd.end(*_shadowFramebuffer);
+
+                    auto srcBarrier = _shadowTarget->barrier(backend::Access::DEPTH_STENCIL_WRITE, backend::Access::TRANSFER_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT, backend::ImageLayout::TRANSFER_SRC);
+                    auto dstBarrier = shadowMap->barrier(backend::Access::SHADER_READ, backend::Access::TRANSFER_WRITE, backend::ImageLayout::SHADER_READ_ONLY, backend::ImageLayout::TRANSFER_DST, face);
+                    cmd.pipelineBarrier(backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::TRANSFER, 0, nullptr, { &srcBarrier, 1 });
+                    cmd.pipelineBarrier(backend::PipelineStage::FRAGMENT_SHADER, backend::PipelineStage::TRANSFER, 0, nullptr, { &dstBarrier, 1 });
+
+                    _shadowTarget->copy(cmd, *shadowMap, 0, face);
+                    srcBarrier = _shadowTarget->barrier(backend::Access::TRANSFER_READ, backend::Access::DEPTH_STENCIL_WRITE, backend::ImageLayout::TRANSFER_SRC, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+                    dstBarrier = shadowMap->barrier(backend::Access::TRANSFER_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::TRANSFER_DST, backend::ImageLayout::SHADER_READ_ONLY, face);
+                    cmd.pipelineBarrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::EARLY_FRAGMENT, 0, nullptr, { &srcBarrier, 1 });
+                    cmd.pipelineBarrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { &dstBarrier, 1 });
+                }
             }
-
         }
-    }
-    cmd.popDebugLabel();
-    _passTimers[1].second.stop();
-
-
-    cmd.clearDescriptors();
-
-    _graph.reset();
-
-    ImageResource depthAttachment;
-    depthAttachment.format = backend::Format::D32_SFLOAT;
-
-    ImageResource colourAttachment;
-    colourAttachment.format = backend::Format::RGBA32_SFLOAT;
-
-    ImageResource backbufferAttachment;
-    backbufferAttachment.format = backend::Format::RGBA8_UNORM;
-
-    _graph.setBackbuffer("backbuffer");
-
+    });
 
     if (_renderSettings.depthPre) {
         auto& depthPrePass = _graph.addPass("depth_pre");
@@ -187,6 +219,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             forwardPass.setDepthInput("depth");
         else
             forwardPass.setDepthOutput("depth", depthAttachment);
+        forwardPass.addImageInput("point_depth");
         forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
 
         forwardPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
