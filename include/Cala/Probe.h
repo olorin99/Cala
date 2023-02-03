@@ -26,6 +26,10 @@ namespace cala {
 
         Probe(Probe&& rhs) noexcept;
 
+        Probe(const Probe&) = delete;
+
+        Probe& operator=(const Probe&) = delete;
+
         void draw(backend::vulkan::CommandBuffer& cmd, std::function<void(backend::vulkan::CommandBuffer& cmd, u32 face)> perFace);
 
         ImageHandle map() const { return _cubeMap; }

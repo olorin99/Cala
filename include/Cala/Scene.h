@@ -32,7 +32,7 @@ namespace cala {
 
         u32 addLight(Light& light);
 
-        void addSkyLightMap(ImageHandle skyLightMap, bool equirectangular = false);
+        void addSkyLightMap(ImageHandle skyLightMap, bool equirectangular = false, bool hdr = true);
 
         void prepare(u32 frame, Camera& camera);
 
@@ -51,6 +51,7 @@ namespace cala {
         BufferHandle _lightCountBuffer[2];
         ImageHandle _skyLightMap;
         backend::vulkan::Image::View _skyLightMapView;
+        bool _hdrSkyLight;
         u32 _skyLight;
 
         ende::Vector<ende::math::Mat4f> _modelTransforms;

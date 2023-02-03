@@ -51,13 +51,14 @@ u32 cala::Scene::addLight(cala::Light &light) {
     return _lights.size() - 1;
 }
 
-void cala::Scene::addSkyLightMap(ImageHandle skyLightMap, bool equirectangular) {
+void cala::Scene::addSkyLightMap(ImageHandle skyLightMap, bool equirectangular, bool hdr) {
     if (equirectangular) {
         _skyLightMap = _engine->convertToCubeMap(skyLightMap);
     } else
         _skyLightMap = skyLightMap;
 
     _skyLightMapView = _skyLightMap->newView(0, 10);
+    _hdrSkyLight = hdr;
 }
 
 void cala::Scene::prepare(u32 frame, cala::Camera& camera) {

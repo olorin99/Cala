@@ -264,7 +264,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     if (_renderSettings.skybox) {
         auto& skyboxPass = _graph.addPass("skybox");
-        skyboxPass.addColourOutput("hdr");
+        if (scene._hdrSkyLight)
+            skyboxPass.addColourOutput("hdr");
+        else
+            skyboxPass.addColourOutput("backbuffer");
         skyboxPass.setDepthInput("depth");
         skyboxPass.setDebugColour({0, 0.7, 0.1, 1});
 

@@ -329,10 +329,11 @@ int main() {
             f32 intensity = lightRef.getIntensity();
             f32 near = lightRef.getNear();
             f32 far = lightRef.getFar();
+            bool shadowing = lightRef.shadowing();
 
             if (lightRef.type() == cala::Light::POINT) {
                 if (ImGui::DragFloat3("Position", &position[0], 0.1, -sceneSize, sceneSize))
-                    light.setPosition(position);
+                    lightRef.setPosition(position);
             } else {
                 ende::math::Quaternion direction = scene._lights[l2].transform().rot();
                 if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1))
@@ -347,6 +348,8 @@ int main() {
             if (ImGui::SliderFloat("Far", &far, 0, 1000))
                 lightRef.setFar(far);
             ImGui::DragFloat("Shadow Bias", &scene.shadowBias, 0.001, -1, 1);
+            if (ImGui::Checkbox("Shadowing", &shadowing))
+                lightRef.setShadowing(shadowing);
 
             f32 exposure = camera.getExposure();
             if (ImGui::SliderFloat("Exposure", &exposure, 0, 10))

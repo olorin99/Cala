@@ -46,7 +46,9 @@ cala::Probe::~Probe() {
 //    delete _renderTarget;
 }
 
-cala::Probe::Probe(Probe &&rhs) noexcept {
+cala::Probe::Probe(Probe &&rhs) noexcept
+    : _drawBuffer(nullptr)
+{
     std::swap(_renderTarget, rhs._renderTarget);
     std::swap(_cubeMap, rhs._cubeMap);
     std::swap(_drawBuffer, rhs._drawBuffer);
