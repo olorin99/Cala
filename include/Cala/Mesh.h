@@ -2,7 +2,8 @@
 #define CALA_MESH_H
 
 #include <Cala/backend/vulkan/Buffer.h>
-
+#include <Ende/Vector.h>
+#include <Cala/Engine.h>
 #include <optional>
 
 namespace cala {
@@ -10,12 +11,18 @@ namespace cala {
     class Mesh {
     public:
 
-        Mesh(backend::vulkan::Buffer&& vertex, std::optional<backend::vulkan::Buffer> index, VkVertexInputBindingDescription binding, std::array<backend::Attribute, 5> attributes);
+        Mesh(BufferHandle vertex, BufferHandle index, VkVertexInputBindingDescription binding, std::array<backend::Attribute, 5> attributes);
 
     //private:
 
-        backend::vulkan::Buffer _vertex;
-        std::optional<backend::vulkan::Buffer> _index; // optional
+        BufferHandle _vertex;
+        BufferHandle _index; // optional
+
+        struct Primitive {
+            u32 firstIndex;
+            u32 indexCount;
+        };
+        ende::Vector<Primitive> _primitives;
 
         VkVertexInputBindingDescription _binding;
         std::array<backend::Attribute, 5> _attributes;

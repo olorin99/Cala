@@ -19,10 +19,249 @@
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
 #include <Ende/profile/ProfileManager.h>
+#include <iostream>
+#include <Cala/Model.h>
+
+#define TINYGLTF_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "../../third_party/tiny_gltf.h"
 
 using namespace cala;
 using namespace cala::backend;
 using namespace cala::backend::vulkan;
+
+ImageHandle loadImage(Engine& engine, const ende::fs::Path& path) {
+    i32 width, height, channels;
+    u8* data = stbi_load((*path).c_str(), &width, &height, &channels, STBI_rgb_alpha);
+    if (!data) throw "unable load image";
+    u32 length = width * height * 4;
+
+    ImageHandle handle = engine.createImage({(u32)width, (u32)height, 1, backend::Format::RGBA8_UNORM});
+
+    handle->data(engine.driver(), {0, (u32)width, (u32)height, 1, 4, {data, length}});
+    stbi_image_free(data);
+    return handle;
+}
+
+ImageHandle loadImageHDR(Engine& engine, const ende::fs::Path& path) {
+    stbi_set_flip_vertically_on_load(true);
+    i32 width, height, channels;
+    f32* data = stbi_loadf((*path).c_str(), &width, &height, &channels, STBI_rgb_alpha);
+    if (!data) throw "unable load image";
+    u32 length = width * height * 4 * 4;
+
+    ImageHandle handle = engine.createImage({(u32)width, (u32)height, 1, backend::Format::RGBA32_SFLOAT});
+    handle->data(engine.driver(), {0, (u32)width, (u32)height, 1, (u32)4 * 4, {data, length}});
+    stbi_image_free(data);
+    return handle;
+}
+
+Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
+    tinygltf::TinyGLTF loader;
+    tinygltf::Model model;
+    std::string err;
+    std::string warn;
+    loader.LoadASCIIFromFile(&model, &err, &warn, *path);
+
+    ende::Vector<ImageHandle> images;
+
+    for (u32 i = 0; i < model.images.size(); i++) {
+        tinygltf::Image& image = model.images[i];
+        u8* buf = nullptr;
+        u32 bufferSize = 0;
+        bool del = false;
+        if (image.component == 3) {
+            bufferSize = image.width * image.height * 4;
+            buf = new u8[bufferSize];
+            u8* rgba = buf;
+            u8* rgb = &image.image[0];
+            for (u32 j = 0; j < image.width * image.height; j++) {
+                memcpy(rgba, rgb, sizeof(u8) * 3);
+                rgba += 4;
+                rgb += 3;
+            }
+            del = true;
+        } else {
+            buf = &image.image[0];
+            bufferSize = image.image.size();
+        }
+        images.push(engine->createImage({
+            (u32)image.width, (u32)image.height, 1,
+            Format::RGBA8_UNORM,
+            1, 1,
+            ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST
+        }))->data(engine->driver(), {
+            0, (u32)image.width, (u32)image.height, 1, 4,
+            { buf, bufferSize}
+        });
+        if (del)
+            delete buf;
+    }
+
+    ende::Vector<MaterialInstance> materials;
+    struct PbrMat {
+        u32 albedoIndex = 0;
+        u32 normalIndex = 0;
+        u32 metallicRoughnessIndex = 0;
+        u32 aoIndex = 0;
+    };
+
+    for (u32 i = 0; i < model.materials.size(); i++) {
+        tinygltf::Material& material1 = model.materials[i];
+        PbrMat mat{};
+        if (auto it = material1.values.find("baseColorTexture"); it != material1.values.end()) {
+            images[model.textures[it->second.TextureIndex()].source].index();
+            mat.albedoIndex = images[model.textures[it->second.TextureIndex()].source].index();
+        } else
+            mat.albedoIndex = engine->defaultAlbedo().index();
+        if (auto it = material1.values.find("normalTexture"); it != material1.values.end()) {
+            mat.normalIndex = images[model.textures[it->second.TextureIndex()].source].index();
+        } else if (auto it1 = material1.additionalValues.find("normalTexture"); it1 != material1.additionalValues.end()) {
+            mat.normalIndex = images[model.textures[it1->second.TextureIndex()].source].index();
+        } else
+            mat.normalIndex = engine->defaultNormal().index();
+        if (auto it = material1.values.find("metallicRoughnessTexture"); it != material1.values.end()) {
+            mat.metallicRoughnessIndex = images[model.textures[it->second.TextureIndex()].source].index();
+        } else {
+            mat.metallicRoughnessIndex = engine->defaultMetallic().index();
+        }
+        mat.aoIndex = engine->defaultAO().index();
+        MaterialInstance instance = material->instance();
+        instance.setUniform("material", mat);
+        materials.push(std::move(instance));
+    }
+
+    ende::Vector<Vertex> vertices;
+    ende::Vector<u32> indices;
+
+    ende::Vector<Model::Primitive> primitives;
+
+    for (auto& node : model.nodes) {
+        if (node.mesh > -1) {
+            tinygltf::Mesh mesh = model.meshes[node.mesh];
+            for (u32 i = 0; i < mesh.primitives.size(); i++) {
+                tinygltf::Primitive& primitive = mesh.primitives[i];
+                u32 firstIndex = indices.size();
+                u32 vertexStart = vertices.size();
+                u32 indexCount = 0;
+                ende::math::Vec3f min = {std::numeric_limits<f32>::max(), std::numeric_limits<f32>::max(), std::numeric_limits<f32>::max()};
+                ende::math::Vec3f max = {std::numeric_limits<f32>::min(), std::numeric_limits<f32>::min(), std::numeric_limits<f32>::min()};
+
+                {
+                    f32* positions = nullptr;
+                    f32* normals = nullptr;
+                    f32* texCoords = nullptr;
+                    u32 vertexCount = 0;
+                    if (auto it = primitive.attributes.find("POSITION"); it != primitive.attributes.end()) {
+                        tinygltf::Accessor& accessor = model.accessors[it->second];
+                        tinygltf::BufferView& view = model.bufferViews[accessor.bufferView];
+                        positions = (f32*)&model.buffers[view.buffer].data[accessor.byteOffset + view.byteOffset];
+                        vertexCount = accessor.count;
+
+                        for (u32 v = 0; v < vertexCount; v++) {
+                            ende::math::Vec3f pos{positions[v * 3], positions[v * 3 + 1], positions[v * 3 + 2]};
+                            if (pos.x() < min.x())
+                                min[0] = pos.x();
+                            if (pos.y() < min.y())
+                                min[1] = pos.y();
+                            if (pos.z() < min.z())
+                                min[2] = pos.z();
+                            if (pos.x() > max.x())
+                                max[0] = pos.x();
+                            if (pos.y() > max.y())
+                                max[1] = pos.y();
+                            if (pos.z() > max.z())
+                                max[2] = pos.z();
+                        }
+                    }
+                    if (auto it = primitive.attributes.find("NORMAL"); it != primitive.attributes.end()) {
+                        tinygltf::Accessor& accessor = model.accessors[it->second];
+                        tinygltf::BufferView& view = model.bufferViews[accessor.bufferView];
+                        normals = (f32*)&model.buffers[view.buffer].data[accessor.byteOffset + view.byteOffset];
+                    }
+                    if (auto it = primitive.attributes.find("TEXCOORD_0"); it != primitive.attributes.end()) {
+                        tinygltf::Accessor& accessor = model.accessors[it->second];
+                        tinygltf::BufferView& view = model.bufferViews[accessor.bufferView];
+                        texCoords = (f32*)&model.buffers[view.buffer].data[accessor.byteOffset + view.byteOffset];
+                    }
+                    for (u32 v = 0; v < vertexCount; v++) {
+                        Vertex vertex{};
+                        if (positions)
+                            vertex.position = {positions[v * 3], positions[v * 3 + 1], positions[v * 3 + 2]};
+                        if (normals)
+                            vertex.normal = {normals[v * 3], normals[v * 3 + 1], normals[v * 3 + 2]};
+                        if (texCoords)
+                            vertex.texCoords = {texCoords[v * 2], texCoords[v * 2 + 1]};
+                        vertices.push(vertex);
+                    }
+                }
+                {
+                    tinygltf::Accessor& accessor = model.accessors[primitive.indices];
+                    tinygltf::BufferView& view = model.bufferViews[accessor.bufferView];
+                    tinygltf::Buffer& buffer = model.buffers[view.buffer];
+                    indexCount = accessor.count;
+                    switch (accessor.componentType) {
+                        case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT: {
+                            u32* buf = (u32*)&buffer.data[accessor.byteOffset + view.byteOffset];
+                            for (u32 index = 0; index < accessor.count; index++)
+                                indices.push(buf[index] + vertexStart);
+                            break;
+                        }
+                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: {
+                            u16* buf = (u16*)&buffer.data[accessor.byteOffset + view.byteOffset];
+                            for (u32 index = 0; index < accessor.count; index++)
+                                indices.push(buf[index] + vertexStart);
+                            break;
+                        }
+                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: {
+                            u8* buf = (u8*)&buffer.data[accessor.byteOffset + view.byteOffset];
+                            for (u32 index = 0; index < accessor.count; index++)
+                                indices.push(buf[index] + vertexStart);
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                }
+                Model::Primitive prim{};
+                prim.firstIndex = firstIndex;
+                prim.indexCount = indexCount;
+                prim.materialIndex = primitive.material;
+                prim.aabb.min = min;
+                prim.aabb.max = max;
+                primitives.push(prim);
+            }
+        }
+    }
+
+    VkVertexInputBindingDescription binding{};
+    binding.binding = 0;
+    binding.stride = 14 * sizeof(f32);
+    binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    std::array<backend::Attribute, 5> attributes = {
+            backend::Attribute{0, 0, backend::AttribType::Vec3f},
+            backend::Attribute{1, 0, backend::AttribType::Vec3f},
+            backend::Attribute{2, 0, backend::AttribType::Vec2f},
+            backend::Attribute{3, 0, backend::AttribType::Vec3f},
+            backend::Attribute{4, 0, backend::AttribType::Vec3f}
+    };
+
+    BufferHandle vertexBuffer = engine->createBuffer(vertices.size() * sizeof(Vertex), BufferUsage::VERTEX);
+    BufferHandle indexBuffer = engine->createBuffer(indices.size() * sizeof(u32), BufferUsage::INDEX);
+    vertexBuffer->data({ vertices.data(), static_cast<u32>(vertices.size() * sizeof(Vertex)) });
+    indexBuffer->data({ indices.data(), static_cast<u32>(indices.size() * sizeof(u32)) });
+
+    Model mesh;
+    mesh.vertexBuffer = vertexBuffer;
+    mesh.indexBuffer = indexBuffer;
+    mesh.primitives = std::move(primitives);
+    mesh.images = std::move(images);
+    mesh.materials = std::move(materials);
+    mesh._binding = binding;
+    mesh._attributes = attributes;
+    return std::move(mesh);
+}
 
 MeshData loadModel(const ende::fs::Path& path) {
     MeshData data;
@@ -89,37 +328,14 @@ ShaderProgram loadShader(Driver& driver, const ende::fs::Path& vertex, const end
             .compile(driver);
 }
 
-ImageHandle loadImage(Engine& engine, const ende::fs::Path& path) {
-    i32 width, height, channels;
-    u8* data = stbi_load((*path).c_str(), &width, &height, &channels, STBI_rgb_alpha);
-    if (!data) throw "unable load image";
-    u32 length = width * height * 4;
-
-    ImageHandle handle = engine.createImage({(u32)width, (u32)height, 1, backend::Format::RGBA8_SRGB});
-
-    handle->data(engine.driver(), {0, (u32)width, (u32)height, 1, 4, {data, length}});
-    stbi_image_free(data);
-    return handle;
-}
-
-ImageHandle loadImageHDR(Engine& engine, const ende::fs::Path& path) {
-    stbi_set_flip_vertically_on_load(true);
-    i32 width, height, channels;
-    f32* data = stbi_loadf((*path).c_str(), &width, &height, &channels, STBI_rgb_alpha);
-    if (!data) throw "unable load image";
-    u32 length = width * height * 4 * 4;
-
-    ImageHandle handle = engine.createImage({(u32)width, (u32)height, 1, backend::Format::RGBA32_SFLOAT});
-    handle->data(engine.driver(), {0, (u32)width, (u32)height, 1, (u32)4 * 4, {data, length}});
-    stbi_image_free(data);
-    return handle;
-}
-
 int main() {
     SDLPlatform platform("hello_triangle", 1920, 1080);
 
     Engine engine(platform);
-    Renderer renderer(&engine);
+    Renderer renderer(&engine, {
+//        .tonemap = false,
+//        .skybox = false
+    });
 
     ImGuiContext imGuiContext(engine.driver(), platform.window());
 
@@ -128,65 +344,54 @@ int main() {
     ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
 //    ProgramHandle directionalLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/direct_pbr.frag.spv"_path));
 
-    Mesh cube = cala::shapes::cube().mesh(engine.driver());
-//    Mesh sphere = cala::shapes::sphereUV(1).mesh(engine.driver());
-    Mesh sphere = loadModel("../../res/models/sphere.obj"_path).mesh(engine.driver());
+    Material material(&engine, pointLightProgram);
+    material._depthState = { true, true, CompareOp::LESS_EQUAL };
 
-    Transform modelTransform({0, 0, 0});
-    ende::Vector<Transform> models;
+    Transform sponzaTransform({0, 0, 0}, {0, 0, 0, 1}, {0.008, 0.008, 0.008});
+    auto sponza = loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf"_path);
+
+
+    Mesh cube = cala::shapes::cube().mesh(&engine);
 
     Transform cameraTransform({0, 0, -20});
     Camera camera((f32)ende::math::rad(54.4), platform.windowSize().first, platform.windowSize().second, 0.1f, 1000.f, cameraTransform);
 
     Sampler sampler(engine.driver(), {});
 
-    ImageHandle brickwall_albedo = loadImage(engine, "../../res/textures/pbr_rusted_iron/rustediron2_basecolor.png"_path);
-    ImageHandle brickwall_normal = loadImage(engine, "../../res/textures/pbr_rusted_iron/rustediron2_normal.png"_path);
-    ImageHandle brickwall_metallic = loadImage(engine, "../../res/textures/pbr_rusted_iron/rustediron2_metallic.png"_path);
-    ImageHandle brickwall_roughness = loadImage(engine, "../../res/textures/pbr_rusted_iron/rustediron2_roughness.png"_path);
-    ImageHandle brickwall_ao = loadImage(engine, "../../res/textures/pbr_rusted_iron/rustediron2_ao.png"_path);
-
-
-
-    Material material(&engine, pointLightProgram);
-    material._depthState = { true, true, CompareOp::LESS_EQUAL };
-
     auto matInstance = material.instance();
 
     struct MaterialData {
         u32 albedoIndex;
         u32 normalIndex;
-        u32 metallicIndex;
-        u32 roughnessIndex;
+        u32 metallicRoughness;
         u32 aoIndex;
     };
     MaterialData materialData {
-        static_cast<u32>(brickwall_albedo.index()),
-        static_cast<u32>(brickwall_normal.index()),
-        static_cast<u32>(brickwall_metallic.index()),
-        static_cast<u32>(brickwall_roughness.index()),
-        static_cast<u32>(brickwall_ao.index())
+            static_cast<u32>(engine.defaultAlbedo().index()),
+            static_cast<u32>(engine.defaultNormal().index()),
+            static_cast<u32>(engine.defaultMetallic().index()),
+            static_cast<u32>(engine.defaultAO().index())
     };
     matInstance.setUniform("material", materialData);
 
     u32 objectCount = 100;
     Scene scene(&engine, objectCount);
 
-    Transform lightTransform({-10, 0, 0}, {0, 0, 0, 1}, {0.5, 0.5, 0.5});
+    Transform lightTransform({-10, 0, 0}, {0, 0, 0, 1}, {0.1, 0.1, 0.1});
     Light light(cala::Light::POINT, true, lightTransform);
     light.setColour({1, 0, 0});
-    light.setIntensity(300);
+    light.setIntensity(50);
     Transform light1Transform({10, 2, 4});
     Light light1(cala::Light::POINT, false, light1Transform);
     light1.setColour({0, 1, 0});
-    light1.setIntensity(100);
+    light1.setIntensity(10);
     Transform light2Transform({0, 0, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-45)));
     Light light2(cala::Light::DIRECTIONAL, false, light2Transform);
     light2.setColour({0, 0, 1});
-    light2.setIntensity(2000);
+    light2.setIntensity(20);
     Transform light3Transform({-10, 2, 4});
     Light light3(cala::Light::POINT, false, light3Transform);
-    light3.setIntensity(120);
+    light3.setIntensity(1);
     light3.setColour({0.23, 0.46, 0.10});
 
     u32 l0 = scene.addLight(light);
@@ -197,19 +402,12 @@ int main() {
     ImageHandle background = loadImageHDR(engine, "../../res/textures/TropicalRuins_3k.hdr"_path);
     scene.addSkyLightMap(background, true);
 
+    scene.addRenderable(sponza, &sponzaTransform, true);
+
 //    scene.addRenderable(cube, &matInstance, &modelTransform);
     scene.addRenderable(cube, &matInstance, &lightTransform, false);
 
     f32 sceneSize = std::max(objectCount / 10, 20u);
-
-    Transform floorTransform({0, -sceneSize * 1.5f, 0}, {0, 0, 0, 1}, {sceneSize * 1.5f, 1, sceneSize * 1.5f});
-    scene.addRenderable(cube, &matInstance, &floorTransform, false);
-
-    models.reserve(objectCount);
-    for (u32 i = 0; i < objectCount; i++) {
-        models.push(Transform({ende::math::rand(-sceneSize, sceneSize), ende::math::rand(-sceneSize, sceneSize), ende::math::rand(-sceneSize, sceneSize)}));
-        scene.addRenderable(i % 2 == 0 ? cube : sphere, &matInstance, &models.back());
-    }
 
     ende::Vector<Transform> lightTransforms;
     lightTransforms.reserve(100);
@@ -367,7 +565,7 @@ int main() {
                 if (ImGui::DragFloat3("Position", &position[0], 0.1, -sceneSize, sceneSize))
                     lightRef.setPosition(position);
             } else {
-                ende::math::Quaternion direction = scene._lights[l2].transform().rot();
+                ende::math::Quaternion direction = lightRef.transform().rot();
                 if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1))
                     lightRef.setDirection(direction);
             }
@@ -392,7 +590,7 @@ int main() {
         }
 
         {
-            modelTransform.rotate(ende::math::Vec3f{0, 1, 0}, ende::math::rad(45) * dt);
+//            modelTransform.rotate(ende::math::Vec3f{0, 1, 0}, ende::math::rad(45) * dt);
             lightTransform.rotate(ende::math::Vec3f{0, 1, 1}, ende::math::rad(45) * dt);
         }
         engine.gc();

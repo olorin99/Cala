@@ -24,23 +24,33 @@ void cala::Scene::addRenderable(cala::Scene::Renderable &&renderable, cala::Tran
 }
 
 void cala::Scene::addRenderable(cala::Mesh &mesh, cala::MaterialInstance *materialInstance, cala::Transform *transform, bool castShadow) {
-    if (mesh._index) {
-        addRenderable(Renderable{
+    for (auto& primitive : mesh._primitives) {
+        addRenderable({
             mesh._vertex,
-            (*mesh._index),
+            mesh._index,
+            primitive.firstIndex,
+            primitive.indexCount,
             materialInstance,
-            {&mesh._binding, 1},
+            { &mesh._binding, 1 },
             mesh._attributes,
             castShadow
         }, transform);
-    } else {
-        addRenderable(Renderable{
-            mesh._vertex,
-            {},
-            materialInstance,
-            {&mesh._binding, 1},
-            mesh._attributes,
-            castShadow
+    }
+}
+
+void cala::Scene::addRenderable(Model &model, Transform *transform, bool castShadow) {
+    for (auto& primitive : model.primitives) {
+        auto& matInstance = model.materials[primitive.materialIndex];
+        addRenderable({
+            model.vertexBuffer,
+            model.indexBuffer,
+            primitive.firstIndex,
+            primitive.indexCount,
+            &matInstance,
+            { &model._binding, 1 },
+            model._attributes,
+            castShadow,
+            { primitive.aabb.min, primitive.aabb.max }
         }, transform);
     }
 }
@@ -160,14 +170,14 @@ void cala::Scene::render(backend::vulkan::CommandBuffer& cmd) {
             cmd.bindPipeline();
             cmd.bindDescriptors();
 
-            cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
+            cmd.bindVertexBuffer(0, renderable.vertex->buffer());
             if (renderable.index)
-                cmd.bindIndexBuffer(renderable.index.buffer());
+                cmd.bindIndexBuffer(*renderable.index);
 
             if (renderable.index)
-                cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
+                cmd.draw(renderable.index->size() / sizeof(u32), 1, 0, 0);
             else
-                cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
+                cmd.draw(renderable.vertex->size() / (4 * 14), 1, 0, 0);
         }
     }
 }

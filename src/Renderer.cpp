@@ -151,7 +151,13 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         if (!renderable.castShadows)
                             continue;
 
-                        if (!shadowCam.frustum().intersect(transform->pos(), 2))
+                        if (renderable.aabb.max != ende::math::Vec3f{0, 0, 0} && renderable.aabb.min != ende::math::Vec3f{0, 0, 0}) {
+//                            auto mat = transform->toMat();
+//                            auto min = mat.transform(renderable.aabb.min);
+//                            auto max = mat.transform(renderable.aabb.max);
+//                            if (!shadowCam.frustum().intersect(min, max))
+//                                continue;
+                        } else if (!shadowCam.frustum().intersect(transform->pos(), 2))
                             continue;
 
                         cmd.bindBindings(renderable.bindings);
@@ -159,12 +165,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         cmd.bindBuffer(1, 0, *scene._modelBuffer[frameIndex()], j * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
                         cmd.bindPipeline();
                         cmd.bindDescriptors();
-                        cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
+                        cmd.bindVertexBuffer(0, renderable.vertex->buffer());
                         if (renderable.index) {
-                            cmd.bindIndexBuffer(renderable.index.buffer());
-                            cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
+                            cmd.bindIndexBuffer(*renderable.index);
+                            cmd.draw(renderable.indexCount, 1, renderable.firstIndex, 0);
                         } else
-                            cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
+                            cmd.draw(renderable.vertex->size() / (4 * 14), 1, 0, 0);
                     }
 
                     cmd.end(*_shadowFramebuffer);
@@ -203,19 +209,22 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
                 cmd.bindPipeline();
                 cmd.bindDescriptors();
-                cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
+                cmd.bindVertexBuffer(0, renderable.vertex->buffer());
                 if (renderable.index) {
-                    cmd.bindIndexBuffer(renderable.index.buffer());
-                    cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
+                    cmd.bindIndexBuffer(*renderable.index);
+                    cmd.draw(renderable.indexCount, 1, renderable.firstIndex, 0);
                 } else
-                    cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
+                    cmd.draw(renderable.vertex->size() / (4 * 14), 1, 0, 0);
             }
         });
     }
 
     if (_renderSettings.forward) {
         auto& forwardPass = _graph.addPass("forward");
-        forwardPass.addColourOutput("hdr", colourAttachment);
+        if (_renderSettings.tonemap)
+            forwardPass.addColourOutput("hdr", colourAttachment);
+        else
+            forwardPass.addColourOutput("backbuffer");
         if (_renderSettings.depthPre)
             forwardPass.setDepthInput("depth");
         else
@@ -239,7 +248,13 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 auto& renderable = scene._renderList[i].second.first;
                 auto& transform = scene._renderList[i].second.second;
 
-                if (!camera.frustum().intersect(transform->pos(), transform->scale().x()))
+                if (renderable.aabb.max != ende::math::Vec3f{0, 0, 0} && renderable.aabb.min != ende::math::Vec3f{0, 0, 0}) {
+//                    auto mat = transform->toMat();
+//                    auto min = mat.transform(renderable.aabb.min);
+//                    auto max = mat.transform(renderable.aabb.max);
+//                    if (!camera.frustum().intersect(min, max))
+//                        continue;
+                } else if (!camera.frustum().intersect(transform->pos(), transform->scale().x()))
                     continue;
 
                 cmd.bindBindings(renderable.bindings);
@@ -265,12 +280,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 cmd.bindPipeline();
                 cmd.bindDescriptors();
 
-                cmd.bindVertexBuffer(0, renderable.vertex.buffer().buffer());
+                cmd.bindVertexBuffer(0, renderable.vertex->buffer());
                 if (renderable.index) {
-                    cmd.bindIndexBuffer(renderable.index.buffer());
-                    cmd.draw(renderable.index.size() / sizeof(u32), 1, 0, 0);
+                    cmd.bindIndexBuffer(*renderable.index);
+                    cmd.draw(renderable.indexCount, 1, renderable.firstIndex, 0);
                 } else
-                    cmd.draw(renderable.vertex.size() / (4 * 14), 1, 0, 0);
+                    cmd.draw(renderable.vertex->size() / (4 * 14), 1, 0, 0);
             }
         });
     }
@@ -298,7 +313,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     if (_renderSettings.skybox && scene._skyLightMap) {
         auto& skyboxPass = _graph.addPass("skybox");
-        if (scene._hdrSkyLight)
+        if (scene._hdrSkyLight && _renderSettings.tonemap)
             skyboxPass.addColourOutput("hdr");
         else
             skyboxPass.addColourOutput("backbuffer");
@@ -310,21 +325,21 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindProgram(*_engine->_skyboxProgram);
             cmd.bindRasterState({ backend::CullMode::NONE });
             cmd.bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
-            cmd.bindBindings({ &_engine->_cube._binding, 1 });
-            cmd.bindAttributes(_engine->_cube._attributes);
+            cmd.bindBindings({ &_engine->_cube->_binding, 1 });
+            cmd.bindAttributes(_engine->_cube->_attributes);
             cmd.bindBuffer(1, 0, *_cameraBuffer);
             cmd.bindImage(2, 0, scene._skyLightMapView, _engine->_defaultSampler);
             cmd.bindPipeline();
             cmd.bindDescriptors();
-            cmd.bindVertexBuffer(0, _engine->_cube._vertex.buffer());
-            cmd.bindIndexBuffer(*_engine->_cube._index);
-            cmd.draw(_engine->_cube._index->size() / sizeof(u32), 1, 0, 0);
+            cmd.bindVertexBuffer(0, _engine->_cube->_vertex->buffer());
+            cmd.bindIndexBuffer(*_engine->_cube->_index);
+            cmd.draw(_engine->_cube->_index->size() / sizeof(u32), 1, 0, 0);
         });
     }
 
     if (imGui) {
         auto& uiPass = _graph.addPass("ui");
-        uiPass.addColourOutput("backbuffer");
+        uiPass.addColourOutput("backbuffer", backbufferAttachment);
         uiPass.setDebugColour({0.7, 0.1, 0.4, 1});
 
         uiPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {

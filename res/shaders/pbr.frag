@@ -22,8 +22,7 @@ layout (set = 0, binding = 0) uniform sampler2D directShadows[];
 struct MaterialData {
     uint albedoIndex;
     uint normalIndex;
-    uint metallicIndex;
-    uint roughnessIndex;
+    uint metallicRoughnessIndex;
     uint aoIndex;
 };
 
@@ -133,8 +132,8 @@ void main() {
 
     vec3 albedo = texture(directShadows[material.albedoIndex], fsIn.TexCoords).rgb;
     vec3 normal = texture(directShadows[material.normalIndex], fsIn.TexCoords).rgb;
-    float metallic = texture(directShadows[material.metallicIndex], fsIn.TexCoords).r;
-    float roughness = texture(directShadows[material.roughnessIndex], fsIn.TexCoords).r;
+    float metallic = texture(directShadows[material.metallicRoughnessIndex], fsIn.TexCoords).b;
+    float roughness = texture(directShadows[material.metallicRoughnessIndex], fsIn.TexCoords).g;
     float ao = texture(directShadows[material.aoIndex], fsIn.TexCoords).r;
 
     normal = normalize(normal * 2.0 - 1.0);

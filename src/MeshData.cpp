@@ -53,9 +53,15 @@ cala::backend::vulkan::Buffer cala::MeshData::indexBuffer(backend::vulkan::Drive
     return std::move(buf);
 }
 
-cala::Mesh cala::MeshData::mesh(backend::vulkan::Driver &driver) const {
-    auto vertex = vertexBuffer(driver);
-    auto index = indexBuffer(driver);
+cala::Mesh cala::MeshData::mesh(cala::Engine* engine) const {
+//    auto vertex = vertexBuffer(driver);
+//    auto index = indexBuffer(driver);
+
+    auto vertex = engine->createBuffer(_vertices.size() * sizeof(Vertex), backend::BufferUsage::VERTEX);
+    auto index = engine->createBuffer(_indices.size() * sizeof(u32), backend::BufferUsage::INDEX);
+
+    vertex->data({_vertices.data(), static_cast<u32>(_vertices.size() * sizeof(Vertex))});
+    index->data({_indices.data(), static_cast<u32>(_indices.size() * sizeof(u32))});
 
     VkVertexInputBindingDescription binding{};
     binding.binding = 0;
@@ -70,5 +76,10 @@ cala::Mesh cala::MeshData::mesh(backend::vulkan::Driver &driver) const {
             backend::Attribute{4, 0, backend::AttribType::Vec3f}
     };
 
-    return {std::move(vertex), std::move(index), binding, attributes};
+    Mesh mesh = {vertex, index, binding, attributes};
+    mesh._primitives.push({
+        0,
+        (u32)_indices.size()
+    });
+    return std::move(mesh);
 }

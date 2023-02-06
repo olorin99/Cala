@@ -3,6 +3,7 @@
 #include <Cala/backend/vulkan/ShaderProgram.h>
 #include <Cala/Probe.h>
 #include <Cala/shapes.h>
+#include <Cala/Mesh.h>
 
 template <>
 cala::backend::vulkan::Buffer &cala::BufferHandle::operator*() noexcept {
@@ -48,7 +49,6 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
     : _driver(platform, clear),
       _shadowPass(_driver, { &shadowPassAttachment, 1 }),
       _defaultSampler(_driver, {}),
-      _cube(shapes::cube().mesh(_driver)),
       _shadowSampler(_driver, {
           .filter = VK_FILTER_NEAREST,
           .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
@@ -163,19 +163,38 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
             0, 1, 1, 1, 4, { &data, sizeof(data) }
     });
 
+    f32 white[4] = { 1, 1, 1, 1 };
+    (_defaultAlbedo = createImage({1, 1, 1, backend::Format::RGBA8_UNORM, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST}))
+            ->data(_driver, {0, 1, 1, 1, 4 * 4, { white, sizeof(f32) * 4 }});
+    f32 normalData[] = { 0.52, 0.52, 1, 1 };
+    (_defaultNormal = createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST}))
+            ->data(_driver, {0, 1, 1, 1, 4 * 4, { normalData, sizeof(f32) * 4 }});
+    (_defaultMetallic = createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST}))
+            ->data(_driver, {0, 1, 1, 1, 4 * 4, { white, sizeof(f32) * 4 }});
+    (_defaultRoughness = createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST}))
+            ->data(_driver, {0, 1, 1, 1, 4 * 4, { white, sizeof(f32) * 4 }});
+    (_defaultAO = createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST}))
+            ->data(_driver, {0, 1, 1, 1, 4 * 4, { white, sizeof(f32) * 4 }});
 
 
     _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
-        auto cubeBarrier = _defaultPointShadow->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
-        auto flatBarrier = _defaultDirectionalShadow->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
-        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, 0, nullptr, { &cubeBarrier, 1 });
-        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, 0, nullptr, { &flatBarrier, 1 });
+        VkImageMemoryBarrier barriers[7];
+        barriers[0] = _defaultPointShadow->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
+        barriers[1] = _defaultDirectionalShadow->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
+        barriers[2] = _defaultAlbedo->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
+        barriers[3] = _defaultNormal->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
+        barriers[4] = _defaultMetallic->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
+        barriers[5] = _defaultRoughness->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
+        barriers[6] = _defaultAO->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER | backend::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { barriers, 7 });
     });
 
     _defaultPointShadowView = _defaultPointShadow->newView();
     _defaultDirectionalShadowView = _defaultDirectionalShadow->newView();
 
     _materialBuffer = createBuffer(256, backend::BufferUsage::UNIFORM);
+
+    _cube = new Mesh(shapes::cube().mesh(this));
 
 }
 
@@ -305,7 +324,11 @@ cala::Probe &cala::Engine::getShadowProbe(u32 index) {
 }
 
 void cala::Engine::updateMaterialdata() {
-    if (_materialDataDirty)
+    if (_materialDataDirty) {
+        if (_materialData.size() >= _materialBuffer->size()) {
+            _materialBuffer = createBuffer(_materialData.size(), backend::BufferUsage::UNIFORM);
+        }
         _materialBuffer->data(_materialData);
+    }
     _materialDataDirty = false;
 }

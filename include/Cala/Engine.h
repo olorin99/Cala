@@ -9,7 +9,6 @@
 
 #include <Cala/backend/vulkan/Platform.h>
 #include <Cala/backend/vulkan/Driver.h>
-#include <Cala/Mesh.h>
 
 namespace cala {
 
@@ -52,6 +51,7 @@ namespace cala {
     class Renderer;
     class Material;
     class MaterialInstance;
+    class Mesh;
 
     class Engine {
     public:
@@ -78,6 +78,16 @@ namespace cala {
 
 
         backend::vulkan::Image::View& getImageView(ImageHandle handle);
+
+        ImageHandle defaultAlbedo() const { return _defaultAlbedo; }
+
+        ImageHandle defaultNormal() const { return _defaultNormal; }
+
+        ImageHandle defaultMetallic() const { return _defaultMetallic; }
+
+        ImageHandle defaultRoughness() const { return _defaultRoughness; }
+
+        ImageHandle defaultAO() const { return _defaultAO; }
 
     private:
         friend Renderer;
@@ -106,7 +116,13 @@ namespace cala {
         backend::vulkan::Image::View _defaultDirectionalShadowView;
         backend::vulkan::Sampler _shadowSampler;
 
-        Mesh _cube;
+        ImageHandle _defaultAlbedo;
+        ImageHandle _defaultNormal;
+        ImageHandle _defaultMetallic;
+        ImageHandle _defaultRoughness;
+        ImageHandle _defaultAO;
+
+        Mesh* _cube;
 
         ende::Vector<backend::vulkan::Buffer> _buffers;
         ende::Vector<backend::vulkan::Image*> _images;

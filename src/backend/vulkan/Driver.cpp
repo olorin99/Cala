@@ -266,15 +266,18 @@ void cala::backend::vulkan::Driver::setBindlessSetIndex(u32 index) {
 }
 
 cala::backend::vulkan::RenderPass* cala::backend::vulkan::Driver::getRenderPass(ende::Span<RenderPass::Attachment> attachments) {
+//    u64 hash = ende::util::murmur3(reinterpret_cast<u32*>(attachments.data()), attachments.size() * sizeof(RenderPass::Attachment), attachments.size());
     u64 hash = 0;
     for (auto& attachment : attachments) {
-        hash |= ((u64)attachment.format << 60);
-        hash |= ((u64)attachment.internalLayout << 50);
-        hash |= ((u64)attachment.loadOp << 40);
+        hash |= (((u64)attachment.format) << 50); //TODO: find appropriate hash
+//        ende::log::info("format:{}", (u32)attachment.format);
+        hash |= ((u64)attachment.internalLayout << 40);
+        hash |= ((u64)attachment.loadOp << 35);
         hash |= ((u64)attachment.storeOp << 30);
         hash |= ((u64)attachment.finalLayout << 20);
         hash |= ((u64)attachment.initialLayout << 10);
     }
+//    ende::log::info("end hash: {}", hash);
 
     auto it = _renderPasses.find(hash);
     if (it != _renderPasses.end())
@@ -285,17 +288,6 @@ cala::backend::vulkan::RenderPass* cala::backend::vulkan::Driver::getRenderPass(
 }
 
 cala::backend::vulkan::Framebuffer *cala::backend::vulkan::Driver::getFramebuffer(RenderPass *renderPass, ende::Span<VkImageView> attachmentImages, ende::Span<u32> attachmentHashes, u32 width, u32 height) {
-//    u64 renderPassHash = 0;
-//    for (auto& attachment : renderPass->attachments()) {
-//        renderPassHash |= ((u64)attachment.format << 60);
-//        renderPassHash |= ((u64)attachment.internalLayout << 50);
-//        renderPassHash |= ((u64)attachment.loadOp << 40);
-//        renderPassHash |= ((u64)attachment.storeOp << 30);
-//        renderPassHash |= ((u64)attachment.finalLayout << 20);
-//        renderPassHash |= ((u64)attachment.initialLayout << 10);
-//    }
-
-//    u64 hash = ((u64)renderPass->renderPass() << 30);
     u64 hash = ((u64)renderPass->id() << 32);
     for (auto& attachment : attachmentHashes)
         hash |= attachment;

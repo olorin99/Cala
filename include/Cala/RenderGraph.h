@@ -22,7 +22,7 @@ namespace cala {
 
         u32 width = 1;
         u32 height = 1;
-        backend::Format format = backend::Format::RGBA8_SRGB;
+        backend::Format format = backend::Format::RGBA8_UNORM;
         bool matchSwapchain = true;
         bool clear = true;
         ImageHandle handle;
@@ -52,6 +52,8 @@ namespace cala {
 
         void addImageInput(const char* label, bool storage = false);
 
+        void addImageOutput(const char* label, bool storage = false);
+
         void addImageOutput(const char* label, ImageResource info, bool storage = false);
 
         void setDepthInput(const char* label);
@@ -69,7 +71,7 @@ namespace cala {
         void setDebugColour(std::array<f32, 4> colour);
 
         ~RenderPass();
-    private:
+//    private:
 
         friend RenderGraph;
 

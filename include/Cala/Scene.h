@@ -7,6 +7,7 @@
 #include <Cala/Transform.h>
 #include <Cala/MaterialInstance.h>
 #include <Cala/Mesh.h>
+#include <Cala/Model.h>
 #include <Cala/Light.h>
 #include <Cala/Engine.h>
 
@@ -15,13 +16,21 @@ namespace cala {
     class Scene {
     public:
 
+        struct AABB {
+            ende::math::Vec3f min;
+            ende::math::Vec3f max;
+        };
+
         struct Renderable {
-            backend::vulkan::Buffer::View vertex;
-            backend::vulkan::Buffer::View index;
+            BufferHandle vertex;
+            BufferHandle index;
+            u32 firstIndex = 0;
+            u32 indexCount = 0;
             MaterialInstance* materialInstance = nullptr;
             ende::Span<VkVertexInputBindingDescription> bindings = nullptr;
             ende::Span<backend::Attribute> attributes = nullptr;
             bool castShadows = true;
+            AABB aabb = {};
         };
 
         Scene(Engine* engine, u32 count, u32 lightCount = 10);
@@ -29,6 +38,8 @@ namespace cala {
         void addRenderable(Renderable&& renderable, Transform* transform);
 
         void addRenderable(Mesh& mesh, MaterialInstance* materialInstance, Transform* transform, bool castShadow = true);
+
+        void addRenderable(Model& model, Transform* transform, bool castShadow = true);
 
         u32 addLight(Light& light);
 

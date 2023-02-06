@@ -46,7 +46,7 @@ namespace cala {
 
         void bind(backend::vulkan::CommandBuffer& cmd, u32 set = 2, u32 first = 0);
 
-        const backend::vulkan::SamplerArray& samplers() const { return _samplers; }
+//        const backend::vulkan::SamplerArray& samplers() const { return _samplers; }
 
     private:
         friend Material;
@@ -55,7 +55,7 @@ namespace cala {
 
         Material* _material;
         u32 _offset;
-        backend::vulkan::SamplerArray _samplers;
+//        backend::vulkan::SamplerArray _samplers;
 
     };
 

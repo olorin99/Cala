@@ -98,6 +98,14 @@ void cala::RenderPass::addImageInput(const char *label, bool storage) {
         throw "couldn't find attachment"; //TODO: better error handling
 }
 
+void cala::RenderPass::addImageOutput(const char *label, bool storage) {
+    auto it = _graph->_attachmentMap.find(label);
+    if (it != _graph->_attachmentMap.end())
+        _inputs.emplace(std::make_pair(label, storage));
+    else
+        throw "couldn't find attachment";
+}
+
 void cala::RenderPass::addImageOutput(const char *label, ImageResource info, bool storage) {
     auto it = _graph->_attachmentMap.find(label);
     if (it == _graph->_attachmentMap.end())
@@ -223,7 +231,8 @@ bool cala::RenderGraph::compile() {
 
     for (u32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
         auto& pass = _orderedPasses[passIndex];
-        if (!pass->_framebuffer && !pass->_attachments.empty()) {
+//        if (!pass->_framebuffer && !pass->_attachments.empty()) {
+        if (!pass->_attachments.empty()) {
             ende::Vector<VkImageView> attachmentImages;
             ende::Vector<u32> attachmentHashes;
             u32 width = 0;

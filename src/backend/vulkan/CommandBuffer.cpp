@@ -26,7 +26,7 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(Driver& driver, VkQueue queu
     vkCreateSemaphore(_driver.context().device(), &createInfo, nullptr, &_signal);
 
     VkDescriptorPoolSize poolSizes[] = {
-            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10000},
             {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
             {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
             {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000}
@@ -37,7 +37,7 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(Driver& driver, VkQueue queu
     descriptorPoolCreateInfo.flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
     descriptorPoolCreateInfo.poolSizeCount = 4;
     descriptorPoolCreateInfo.pPoolSizes = poolSizes;
-    descriptorPoolCreateInfo.maxSets = 1000;
+    descriptorPoolCreateInfo.maxSets = 10000;
     vkCreateDescriptorPool(_driver.context().device(), &descriptorPoolCreateInfo, nullptr, &_descriptorPool);
 
     memset(&_pipelineKey, 0, sizeof(PipelineKey));

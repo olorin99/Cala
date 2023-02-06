@@ -6,6 +6,7 @@
 #include <array>
 #include <Cala/backend/vulkan/Buffer.h>
 #include <Cala/Mesh.h>
+#include <Cala/Engine.h>
 
 namespace cala {
 
@@ -42,7 +43,7 @@ namespace cala {
 
         backend::vulkan::Buffer indexBuffer(backend::vulkan::Driver& driver) const;
 
-        Mesh mesh(backend::vulkan::Driver& driver) const;
+        Mesh mesh(Engine* engine) const;
 
     private:
 
