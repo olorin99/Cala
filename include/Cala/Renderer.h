@@ -50,12 +50,16 @@ namespace cala {
 
         Settings& settings() { return _renderSettings; }
 
+        void setGamma(f32 gamma) { _globalData.gamma = gamma; }
+
+        f32 getGamma() const { return _globalData.gamma; }
+
     private:
 
         Engine* _engine;
 
         BufferHandle _cameraBuffer;
-        BufferHandle _lightCameraBuffer;
+        BufferHandle _globalDataBuffer;
 
         ImageHandle _shadowTarget;
         backend::vulkan::Framebuffer* _shadowFramebuffer;
@@ -67,6 +71,13 @@ namespace cala {
         Stats _stats;
 
         Settings _renderSettings;
+
+        struct RendererGlobal {
+            f32 gamma = 2.2;
+            u32 time = 0;
+        };
+
+        RendererGlobal _globalData;
 
 
 

@@ -62,6 +62,8 @@ namespace cala {
 
         backend::vulkan::Driver& driver() { return _driver; }
 
+        ende::time::Duration getRunningTime() const { return _startTime.elapsed(); }
+
         bool gc();
 
 
@@ -99,6 +101,8 @@ namespace cala {
         friend ProgramHandle;
 
         backend::vulkan::Driver _driver;
+
+        ende::time::SystemTime _startTime;
 
         backend::vulkan::Sampler _defaultSampler;
 

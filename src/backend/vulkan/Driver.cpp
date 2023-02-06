@@ -269,7 +269,7 @@ cala::backend::vulkan::RenderPass* cala::backend::vulkan::Driver::getRenderPass(
 //    u64 hash = ende::util::murmur3(reinterpret_cast<u32*>(attachments.data()), attachments.size() * sizeof(RenderPass::Attachment), attachments.size());
     u64 hash = 0;
     for (auto& attachment : attachments) {
-        hash |= (((u64)attachment.format) << 50); //TODO: find appropriate hash
+        hash |= (((u64)attachment.format) * 0x100000001b3ull);
 //        ende::log::info("format:{}", (u32)attachment.format);
         hash |= ((u64)attachment.internalLayout << 40);
         hash |= ((u64)attachment.loadOp << 35);

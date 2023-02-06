@@ -87,7 +87,7 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
         }
         images.push(engine->createImage({
             (u32)image.width, (u32)image.height, 1,
-            Format::RGBA8_UNORM,
+            Format::RGBA8_SRGB,
             1, 1,
             ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST
         }))->data(engine->driver(), {
@@ -545,6 +545,10 @@ int main() {
             ImGui::Checkbox("Depth Pre Pass", &renderSettings.depthPre);
             ImGui::Checkbox("Skybox Pass", &renderSettings.skybox);
             ImGui::Checkbox("Tonemap Pass", &renderSettings.tonemap);
+
+            f32 gamma = renderer.getGamma();
+            if (ImGui::SliderFloat("Gamma", &gamma, 0, 5))
+                renderer.setGamma(gamma);
 
             ImGui::End();
 

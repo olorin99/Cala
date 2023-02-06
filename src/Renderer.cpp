@@ -9,7 +9,7 @@
 cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings)
     : _engine(engine),
       _cameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
-      _lightCameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
+      _globalDataBuffer(engine->createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _graph(engine),
       _renderSettings(settings)
 {
@@ -46,6 +46,9 @@ bool cala::Renderer::beginFrame() {
     _frameInfo = _engine->driver().beginFrame();
     _engine->driver().waitFrame(_frameInfo.frame);
     _frameInfo.cmd->begin();
+    _globalData.time = _engine->getRunningTime().milliseconds();
+    auto mapped = _globalDataBuffer->map(0, sizeof(RendererGlobal));
+    *static_cast<RendererGlobal*>(mapped.address) = _globalData;
     return true;
 }
 
@@ -234,6 +237,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
         forwardPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
             cmd.bindBuffer(1, 0, *_cameraBuffer);
+//            cmd.bindBuffer(1, 1, *_globalDataBuffer);
 
             Material* material = nullptr;
             MaterialInstance* materialInstance = nullptr;
@@ -303,6 +307,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindBindings(nullptr);
             cmd.bindAttributes(nullptr);
             cmd.bindBuffer(1, 0, *_cameraBuffer);
+            cmd.bindBuffer(1, 1, *_globalDataBuffer);
             cmd.bindImage(2, 0, _engine->getImageView(hdrImage->handle), _engine->_defaultSampler, true);
             cmd.bindImage(2, 1, _engine->getImageView(backbuffer->handle), _engine->_defaultSampler, true);
             cmd.bindPipeline();
