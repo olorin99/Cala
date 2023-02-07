@@ -91,8 +91,8 @@ namespace cala::backend::vulkan {
         void bindPipeline();
 
 
-//        void bindBuffer(u32 set, u32 slot, VkBuffer buffer, u32 offset, u32 range);
-        void bindBuffer(u32 set, u32 binding, Buffer& buffer, u32 offset = 0, u32 range = 0);
+        void bindBuffer(u32 set, u32 binding, Buffer& buffer, u32 offset, u32 range, bool storage = false);
+        void bindBuffer(u32 set, u32 binding, Buffer& buffer, bool storage = false);
 
         void bindImage(u32 set, u32 binding, Image::View& image, Sampler& sampler, bool storage = false);
 
@@ -114,6 +114,8 @@ namespace cala::backend::vulkan {
         void draw(u32 count, u32 instanceCount, u32 first, u32 firstInstance);
 
         void drawIndirect(Buffer& buffer, u32 offset, u32 drawCount, u32 stride = 0);
+
+        void drawIndirectCount(Buffer& buffer, u32 bufferOffset, Buffer& countBuffer, u32 countOffset, u32 maxDrawCount, u32 stride = sizeof(VkDrawIndexedIndirectCommand));
 
         void dispatchCompute(u32 x, u32 y, u32 z);
 
@@ -189,6 +191,7 @@ namespace cala::backend::vulkan {
                 Buffer* buffer = nullptr;
                 u32 offset = 0;
                 u32 range = 0;
+                bool storage = false;
             } buffers[MAX_BINDING_PER_SET] {};
             struct {
                 Image* image = nullptr;

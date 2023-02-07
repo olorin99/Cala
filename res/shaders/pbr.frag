@@ -1,4 +1,5 @@
-#version 450
+#version 460
+
 #extension GL_EXT_nonuniform_qualifier : enable
 
 layout (location = 0) in VsOut {
@@ -6,6 +7,7 @@ layout (location = 0) in VsOut {
     vec2 TexCoords;
     mat3 TBN;
     vec3 ViewPos;
+    flat uint drawID;
 } fsIn;
 
 layout (location = 0) out vec4 FragColour;
@@ -26,9 +28,23 @@ struct MaterialData {
     uint aoIndex;
 };
 
-layout (set = 2, binding = 0) uniform MatData {
-    MaterialData material;
+layout (set = 2, binding = 0) readonly buffer MatData {
+    MaterialData material[];
 };
+
+struct Mesh {
+    uint firstIndex;
+    uint indexCount;
+    uint materialIndex;
+};
+
+layout (set = 2, binding = 1) readonly buffer MeshData {
+    Mesh meshData[];
+};
+
+//layout (set = 2, binding = 0) readonly buffer MatData {
+//    MaterialData materials[];
+//};
 
 //layout (set = 2, binding = 5) uniform samplerCube irradianceMap;
 //layout (set = 2, binding = 6) uniform samplerCube prefilterMap;
@@ -123,18 +139,14 @@ float filterPCF(uint index, vec3 lightPos, float bias, float range) {
 }
 
 void main() {
+    Mesh mesh = meshData[fsIn.drawID];
+    MaterialData materialData = material[mesh.materialIndex];
 
-//    vec3 albedo = texture(albedoMap, fsIn.TexCoords).rgb;
-//    vec3 normal = texture(normalMap, fsIn.TexCoords).rgb;
-//    float metallic = texture(metallicMap, fsIn.TexCoords).r;
-//    float roughness = texture(roughnessMap, fsIn.TexCoords).r;
-//    float ao = texture(aoMap, fsIn.TexCoords).r;
-
-    vec3 albedo = texture(directShadows[material.albedoIndex], fsIn.TexCoords).rgb;
-    vec3 normal = texture(directShadows[material.normalIndex], fsIn.TexCoords).rgb;
-    float metallic = texture(directShadows[material.metallicRoughnessIndex], fsIn.TexCoords).b;
-    float roughness = texture(directShadows[material.metallicRoughnessIndex], fsIn.TexCoords).g;
-    float ao = texture(directShadows[material.aoIndex], fsIn.TexCoords).r;
+    vec3 albedo = texture(directShadows[materialData.albedoIndex], fsIn.TexCoords).rgb;
+    vec3 normal = texture(directShadows[materialData.normalIndex], fsIn.TexCoords).rgb;
+    float metallic = texture(directShadows[materialData.metallicRoughnessIndex], fsIn.TexCoords).b;
+    float roughness = texture(directShadows[materialData.metallicRoughnessIndex], fsIn.TexCoords).g;
+    float ao = texture(directShadows[materialData.aoIndex], fsIn.TexCoords).r;
 
     normal = normalize(normal * 2.0 - 1.0);
     normal = normalize(fsIn.TBN * normal);

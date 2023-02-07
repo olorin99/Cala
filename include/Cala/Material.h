@@ -23,7 +23,7 @@ namespace cala {
     class Material {
     public:
 
-        Material(Engine* engine, ProgramHandle program);
+        Material(Engine* engine, ProgramHandle program, u32 size = 0);
 
         MaterialInstance instance();
 

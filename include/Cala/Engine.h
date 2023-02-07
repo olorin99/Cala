@@ -113,6 +113,7 @@ namespace cala {
         ProgramHandle _equirectangularToCubeMap;
         ProgramHandle _skyboxProgram;
         ProgramHandle _tonemapProgram;
+        ProgramHandle _cullProgram;
 
         ImageHandle _defaultPointShadow;
         backend::vulkan::Image::View _defaultPointShadowView;

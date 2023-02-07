@@ -258,10 +258,15 @@ void cala::backend::vulkan::CommandBuffer::bindPipeline() {
     }
 }
 
-void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 binding, Buffer &buffer, u32 offset, u32 range) {
+void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 binding, Buffer &buffer, u32 offset, u32 range, bool storage) {
     assert(set < MAX_SET_COUNT && "set is greater than valid number of descriptor sets");
-    _descriptorKey[set].buffers[binding] = { &buffer, offset, range == 0 ? (buffer.size() - offset) : range };
+    _descriptorKey[set].buffers[binding] = { &buffer, offset, range == 0 ? (buffer.size() - offset) : range , storage };
 //    bindBuffer(set, slot, buffer.buffer(), offset, range == 0 ? buffer.size() : range);
+}
+
+void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 binding, Buffer &buffer, bool storage) {
+    assert(set < MAX_SET_COUNT && "set is greater than valid number of descriptor sets");
+    _descriptorKey[set].buffers[binding] = { &buffer, 0, buffer.size(), storage };
 }
 
 void cala::backend::vulkan::CommandBuffer::bindImage(u32 set, u32 binding, Image::View& image, Sampler& sampler, bool storage) {
@@ -335,6 +340,22 @@ void cala::backend::vulkan::CommandBuffer::drawIndirect(Buffer &buffer, u32 offs
     if (stride == 0)
         stride = sizeof(u32) * 4;
     vkCmdDrawIndirect(_buffer, buffer.buffer(), offset, drawCount, stride);
+    ++_drawCallCount;
+}
+
+void cala::backend::vulkan::CommandBuffer::drawIndirectCount(Buffer &buffer, u32 bufferOffset, Buffer &countBuffer, u32 countOffset, u32 maxDrawCount, u32 stride) {
+    if (_computeBound) throw std::runtime_error("Trying to draw when compute pipeline is bound");
+
+    if (_indexBuffer) {
+        if (stride == 0)
+            stride = sizeof(u32) * 4;
+        vkCmdDrawIndexedIndirectCount(_buffer, buffer.buffer(), bufferOffset, countBuffer.buffer(), countOffset, maxDrawCount, stride);
+    }
+    else {
+        if (stride == 0)
+            stride = sizeof(u32) * 5;
+        vkCmdDrawIndirectCount(_buffer, buffer.buffer(), bufferOffset, countBuffer.buffer(), countOffset, maxDrawCount, stride);
+    }
     ++_drawCallCount;
 }
 
@@ -615,7 +636,8 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
             descriptorWrite.dstSet = descriptorSet;
             descriptorWrite.dstBinding = i;
             descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType = key.buffers[i].buffer->usage() == BufferUsage::UNIFORM ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            assert(_boundInterface->sets[set].bindings[i].type == (key.buffers[i].storage ? ShaderInterface::BindingType::STORAGE_BUFFER : ShaderInterface::BindingType::UNIFORM));
+            descriptorWrite.descriptorType = key.buffers[i].storage ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             descriptorWrite.descriptorCount = 1;
             descriptorWrite.pBufferInfo = &bufferInfo;
             descriptorWrite.pImageInfo = nullptr;

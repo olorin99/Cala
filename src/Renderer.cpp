@@ -9,6 +9,8 @@
 cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings)
     : _engine(engine),
       _cameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
+      _cullInfoBuffer(engine->createBuffer(sizeof(Camera::Data) + sizeof(std::array<std::pair<ende::math::Vec3f, f32>, 6>), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
+      _drawCountBuffer(engine->createBuffer(sizeof(u32), backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _globalDataBuffer(engine->createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _graph(engine),
       _renderSettings(settings)
@@ -69,6 +71,11 @@ f64 cala::Renderer::endFrame() {
 void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiContext* imGui) {
     auto cameraData = camera.data();
     _cameraBuffer->data({ &cameraData, sizeof(cameraData) });
+    {
+        auto mapped = _cullInfoBuffer->map(0, sizeof(Camera::Data) + sizeof(std::array<std::pair<ende::math::Vec3f, f32>, 6>));
+        *static_cast<Camera::Data*>(mapped.address) = cameraData;
+        *reinterpret_cast<ende::math::Frustum*>(static_cast<u8*>(mapped.address) + sizeof(Camera::Data)) = camera.frustum();
+    }
 
     backend::vulkan::CommandBuffer& cmd = *_frameInfo.cmd;
 
@@ -119,7 +126,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                     cmd.bindProgram(*_engine->_pointShadowProgram);
 
-                    cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()], i * sizeof(Light::Data), sizeof(Light::Data));
+                    cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()], i * sizeof(Light::Data), sizeof(Light::Data), true);
 
                     switch (face) {
                         case 0:
@@ -193,6 +200,46 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         }
     });
 
+
+    BufferResource transformsResource;
+    transformsResource.handle = scene._modelBuffer[frameIndex()];
+    transformsResource.size = scene._modelBuffer[frameIndex()]->size();
+    transformsResource.usage = scene._modelBuffer[frameIndex()]->usage();
+
+    BufferResource meshDataResource;
+    meshDataResource.handle = scene._meshDataBuffer[frameIndex()];
+    meshDataResource.size = scene._meshDataBuffer[frameIndex()]->size();
+    meshDataResource.usage = scene._meshDataBuffer[frameIndex()]->usage();
+
+    BufferResource drawCommandsResource;
+    drawCommandsResource.size = sizeof(VkDrawIndexedIndirectCommand) * scene._renderList.size();
+    drawCommandsResource.usage = backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT;
+
+    auto& cullPass = _graph.addPass("cull");
+    cullPass.addBufferInput("transforms", transformsResource);
+    cullPass.addBufferInput("meshData", meshDataResource);
+
+    cullPass.addBufferOutput("drawCommands", drawCommandsResource);
+
+    cullPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+        auto transforms = graph.getResource<BufferResource>("transforms");
+        auto meshData = graph.getResource<BufferResource>("meshData");
+        auto drawCommands = graph.getResource<BufferResource>("drawCommands");
+        cmd.clearDescriptors();
+        cmd.bindProgram(*_engine->_cullProgram);
+        cmd.bindBindings(nullptr);
+        cmd.bindAttributes(nullptr);
+        cmd.bindBuffer(1, 0, *_cullInfoBuffer);
+        cmd.bindBuffer(2, 0, *transforms->handle, true);
+        cmd.bindBuffer(2, 1, *meshData->handle, true);
+        cmd.bindBuffer(2, 2, *drawCommands->handle, true);
+        cmd.bindBuffer(2, 3, *_drawCountBuffer, true);
+        cmd.bindPipeline();
+        cmd.bindDescriptors();
+        cmd.dispatchCompute(scene._renderList.size() / 16, 1, 1);
+    });
+
+
     if (_renderSettings.depthPre) {
         auto& depthPrePass = _graph.addPass("depth_pre");
         depthPrePass.setDepthOutput("depth", depthAttachment);
@@ -233,9 +280,13 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         else
             forwardPass.setDepthOutput("depth", depthAttachment);
         forwardPass.addImageInput("point_depth");
+        forwardPass.addBufferInput("drawCommands");
         forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
 
         forwardPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            auto meshData = graph.getResource<BufferResource>("meshData");
+            auto drawCommands = graph.getResource<BufferResource>("drawCommands");
+            cmd.clearDescriptors();
             cmd.bindBuffer(1, 0, *_cameraBuffer);
 //            cmd.bindBuffer(1, 1, *_globalDataBuffer);
 
@@ -243,54 +294,42 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             MaterialInstance* materialInstance = nullptr;
 
             if (!scene._lightData.empty()) {
-                cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()]);
-                cmd.bindBuffer(3, 1, *scene._lightCountBuffer[frameIndex()]);
+                cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()], true);
+                cmd.bindBuffer(3, 1, *scene._lightCountBuffer[frameIndex()], true);
             }
 
-            // lights
-            for (u32 i = 0; i < scene._renderList.size(); ++i) {
-                auto& renderable = scene._renderList[i].second.first;
-                auto& transform = scene._renderList[i].second.second;
+            auto& renderable = scene._renderList[0].second.first;
 
-                if (renderable.aabb.max != ende::math::Vec3f{0, 0, 0} && renderable.aabb.min != ende::math::Vec3f{0, 0, 0}) {
-//                    auto mat = transform->toMat();
-//                    auto min = mat.transform(renderable.aabb.min);
-//                    auto max = mat.transform(renderable.aabb.max);
-//                    if (!camera.frustum().intersect(min, max))
-//                        continue;
-                } else if (!camera.frustum().intersect(transform->pos(), transform->scale().x()))
-                    continue;
+            cmd.bindBindings(renderable.bindings);
+            cmd.bindAttributes(renderable.attributes);
 
-                cmd.bindBindings(renderable.bindings);
-                cmd.bindAttributes(renderable.attributes);
-
-                if (materialInstance != renderable.materialInstance) {
-                    materialInstance = renderable.materialInstance;
-                    if (materialInstance) {
-                        if (materialInstance->getMaterial() != material) {
-                            material = materialInstance->getMaterial();
-                        }
-                        materialInstance->bind(cmd);
+            if (materialInstance != renderable.materialInstance) {
+                materialInstance = renderable.materialInstance;
+                if (materialInstance) {
+                    if (materialInstance->material() != material) {
+                        material = materialInstance->material();
                     }
                 }
-                if (material) {
-                    cmd.bindProgram(*material->getProgram());
-                    cmd.bindRasterState(material->_rasterState);
-                    cmd.bindDepthState(material->_depthState);
-                }
-
-                cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
-
-                cmd.bindPipeline();
-                cmd.bindDescriptors();
-
-                cmd.bindVertexBuffer(0, renderable.vertex->buffer());
-                if (renderable.index) {
-                    cmd.bindIndexBuffer(*renderable.index);
-                    cmd.draw(renderable.indexCount, 1, renderable.firstIndex, 0);
-                } else
-                    cmd.draw(renderable.vertex->size() / (4 * 14), 1, 0, 0);
             }
+            if (material) {
+                cmd.bindProgram(*material->getProgram());
+                cmd.bindRasterState(material->_rasterState);
+                cmd.bindDepthState(material->_depthState);
+            }
+
+            cmd.bindBuffer(2, 0, *_engine->_materialBuffer, true);
+            cmd.bindBuffer(2, 1, *meshData->handle, true);
+            cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], true);
+
+            cmd.bindPipeline();
+            cmd.bindDescriptors();
+
+            cmd.bindVertexBuffer(0, renderable.vertex->buffer());
+            if (renderable.index) {
+                cmd.bindIndexBuffer(*renderable.index);
+                cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderList.size());
+            } else
+                cmd.draw(renderable.vertex->size() / (4 * 14), 1, 0, 0);
         });
     }
 

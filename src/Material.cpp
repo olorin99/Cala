@@ -1,10 +1,10 @@
 #include "Cala/Material.h"
 
 
-cala::Material::Material(cala::Engine* engine, ProgramHandle program)
+cala::Material::Material(cala::Engine* engine, ProgramHandle program, u32 size)
     : _engine(engine),
       _program(program),
-      _setSize(shaderDataSize())
+      _setSize(size == 0 ? shaderDataSize() : size)
 {}
 
 cala::MaterialInstance cala::Material::instance() {

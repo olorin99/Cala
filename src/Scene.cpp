@@ -7,8 +7,10 @@
 
 cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     : _engine(engine),
-    _modelBuffer{engine->createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM),
-                 engine->createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM)},
+    _meshDataBuffer{engine->createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE),
+                 engine->createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE)},
+    _modelBuffer{engine->createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE),
+                 engine->createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE)},
     _lightBuffer{engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE),
                  engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE)},
     _lightCountBuffer{engine->createBuffer(sizeof(u32) * 2 + sizeof(f32), backend::BufferUsage::STORAGE),
@@ -95,9 +97,9 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
         _renderList.push(std::make_pair(index, item));
     }
 
-    std::sort(_renderList.begin(), _renderList.end(), [](const std::pair<u32, std::pair<Renderable, Transform*>>& lhs, const std::pair<u32, std::pair<Renderable, Transform*>>& rhs) {
-        return lhs.first < rhs.first;
-    });
+//    std::sort(_renderList.begin(), _renderList.end(), [](const std::pair<u32, std::pair<Renderable, Transform*>>& lhs, const std::pair<u32, std::pair<Renderable, Transform*>>& rhs) {
+//        return lhs.first < rhs.first;
+//    });
 
     std::sort(_lightData.begin(), _lightData.end(), [](const Light::Data& lhs, const Light::Data& rhs) {
         return lhs.type < rhs.type;
@@ -120,11 +122,19 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
     _lightCountBuffer[frame]->data({ lightCount, sizeof(u32) * 3 });
     _lightBuffer[frame]->data({_lightData.data(), static_cast<u32>(_lightData.size() * sizeof(Light::Data))});
 
+
+    _meshData.clear();
     _modelTransforms.clear();
     for (auto& renderablePair : _renderList) {
+        auto& renderable = renderablePair.second.first;
         auto& transform = renderablePair.second.second;
+        _meshData.push({ renderable.firstIndex, renderable.indexCount, static_cast<u32>(renderable.materialInstance->getOffset() / (sizeof(u32) * 4)) });
         _modelTransforms.push(transform->toMat());
     }
+    if (_meshData.size() * sizeof(MeshData) >= _meshDataBuffer[frame]->size())
+        _meshDataBuffer[frame]->resize(_meshData.size() * sizeof(MeshData) * 2);
+    _meshDataBuffer[frame]->data({_meshData.data(), static_cast<u32>(_meshData.size() * sizeof(MeshData))});
+
     if (_modelTransforms.size() * sizeof(ende::math::Mat4f) >= _modelBuffer[frame]->size())
         _modelBuffer[frame]->resize(_modelTransforms.size() * sizeof(ende::math::Mat4f) * 2);
     _modelBuffer[frame]->data({_modelTransforms.data(), static_cast<u32>(_modelTransforms.size() * sizeof(ende::math::Mat4f))});
@@ -153,8 +163,8 @@ void cala::Scene::render(backend::vulkan::CommandBuffer& cmd) {
             if (materialInstance != renderable.materialInstance) {
                 materialInstance = renderable.materialInstance;
                 if (materialInstance) {
-                    if (materialInstance->getMaterial() != material) {
-                        material = materialInstance->getMaterial();
+                    if (materialInstance->material() != material) {
+                        material = materialInstance->material();
                     }
                     materialInstance->bind(cmd);
                 }

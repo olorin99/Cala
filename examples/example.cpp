@@ -127,7 +127,7 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
         }
         mat.aoIndex = engine->defaultAO().index();
         MaterialInstance instance = material->instance();
-        instance.setUniform("material", mat);
+        instance.setData(mat);
         materials.push(std::move(instance));
     }
 
@@ -344,7 +344,7 @@ int main() {
     ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
 //    ProgramHandle directionalLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/direct_pbr.frag.spv"_path));
 
-    Material material(&engine, pointLightProgram);
+    Material material(&engine, pointLightProgram, sizeof(u32) * 4);
     material._depthState = { true, true, CompareOp::LESS_EQUAL };
 
     Transform sponzaTransform({0, 0, 0}, {0, 0, 0, 1}, {0.008, 0.008, 0.008});

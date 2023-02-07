@@ -214,19 +214,20 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     createInfo.ppEnabledLayerNames = validationLayers;
 #endif
 
-    VkPhysicalDeviceDescriptorIndexingFeatures bindlessFeatures;
-    bindlessFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
-    bindlessFeatures.descriptorBindingPartiallyBound = VK_TRUE;
-    bindlessFeatures.runtimeDescriptorArray = VK_TRUE;
-    bindlessFeatures.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
-    bindlessFeatures.descriptorBindingVariableDescriptorCount = VK_TRUE;
-    createInfo.pNext = &bindlessFeatures;
+    VkPhysicalDeviceVulkan12Features vulkan12Features{};
 
-    VkPhysicalDeviceHostQueryResetFeatures resetFeatures{};
-    resetFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES;
-    resetFeatures.hostQueryReset = VK_TRUE;
-    bindlessFeatures.pNext = &resetFeatures;
-//    createInfo.pNext = &resetFeatures;
+    createInfo.pNext = &vulkan12Features;
+
+    vulkan12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+    vulkan12Features.drawIndirectCount = VK_TRUE;
+
+    vulkan12Features.descriptorIndexing = VK_TRUE;
+    vulkan12Features.descriptorBindingPartiallyBound = VK_TRUE;
+    vulkan12Features.runtimeDescriptorArray = VK_TRUE;
+    vulkan12Features.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+    vulkan12Features.descriptorBindingVariableDescriptorCount = VK_TRUE;
+
+    vulkan12Features.hostQueryReset = VK_TRUE;
 
     if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device) != VK_SUCCESS)
         throw VulkanContextException("Failed to create logical device");

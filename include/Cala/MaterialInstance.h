@@ -42,7 +42,14 @@ namespace cala {
 
         bool setSampler(const char* name, cala::backend::vulkan::Image::View&& view, backend::vulkan::Sampler&& sampler);
 
-        Material* getMaterial() const { return _material; }
+        void setData(u8* data, u32 size);
+
+        template <typename T>
+        void setData(const T& data) {
+            setData((u8*)&data, sizeof(data));
+        }
+
+        u32 getOffset() const { return _offset; }
 
         void bind(backend::vulkan::CommandBuffer& cmd, u32 set = 2, u32 first = 0);
 

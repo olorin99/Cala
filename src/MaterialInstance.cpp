@@ -53,11 +53,16 @@ bool cala::MaterialInstance::setSampler(const char *name, backend::vulkan::Image
     return setSampler(2, name, std::forward<backend::vulkan::Image::View>(view), std::forward<backend::vulkan::Sampler>(sampler));
 }
 
+void cala::MaterialInstance::setData(u8 *data, u32 size) {
+    std::memcpy(_material->_engine->_materialData.data() + _offset, data, size);
+    _material->_engine->_materialDataDirty = true;
+}
+
 void cala::MaterialInstance::bind(backend::vulkan::CommandBuffer &cmd, u32 set, u32 first) {
 //    for (u32 i = 0; i < _samplers.size(); i++) {
 //        auto viewPair = _samplers.get(i);
 //        cmd.bindImage(set, first + i, viewPair.first, viewPair.second);
 //    }
     if (_material->_setSize > 0)
-        cmd.bindBuffer(2, 0, *_material->_engine->_materialBuffer, _offset, _material->_setSize);
+        cmd.bindBuffer(2, 0, *_material->_engine->_materialBuffer, _offset, _material->_setSize, false);
 }

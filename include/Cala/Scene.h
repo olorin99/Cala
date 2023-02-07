@@ -57,6 +57,7 @@ namespace cala {
         ende::Vector<Light> _lights;
         u32 _directionalLightCount;
 
+        BufferHandle _meshDataBuffer[2];
         BufferHandle _modelBuffer[2];
         BufferHandle _lightBuffer[2];
         BufferHandle _lightCountBuffer[2];
@@ -65,6 +66,12 @@ namespace cala {
         bool _hdrSkyLight;
         u32 _skyLight;
 
+        struct MeshData {
+            u32 firstIndex;
+            u32 indexCount;
+            u32 materialOffset;
+        };
+        ende::Vector<MeshData> _meshData;
         ende::Vector<ende::math::Mat4f> _modelTransforms;
         ende::Vector<Light::Data> _lightData;
         ende::Vector<std::pair<u32, std::pair<Renderable, Transform*>>> _renderList;

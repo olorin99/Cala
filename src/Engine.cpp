@@ -127,6 +127,15 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
                 .addStage(computeData, backend::ShaderStage::COMPUTE)
                 .compile(_driver)));
     }
+    {
+        file.open("../../res/shaders/cull.comp.spv"_path, ende::fs::in | ende::fs::binary);
+        ende::Vector<u32> computeData(file.size() / sizeof(u32));
+        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
+
+        _cullProgram = createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
+                .addStage(computeData, backend::ShaderStage::COMPUTE)
+                .compile(_driver)));
+    }
 
 
     _defaultPointShadow = createImage({
@@ -193,7 +202,7 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
     _defaultPointShadowView = _defaultPointShadow->newView();
     _defaultDirectionalShadowView = _defaultDirectionalShadow->newView();
 
-    _materialBuffer = createBuffer(256, backend::BufferUsage::UNIFORM);
+    _materialBuffer = createBuffer(256, backend::BufferUsage::STORAGE | backend::BufferUsage::UNIFORM);
 
     _cube = new Mesh(shapes::cube().mesh(this));
 
@@ -327,7 +336,7 @@ cala::Probe &cala::Engine::getShadowProbe(u32 index) {
 void cala::Engine::updateMaterialdata() {
     if (_materialDataDirty) {
         if (_materialData.size() >= _materialBuffer->size()) {
-            _materialBuffer = createBuffer(_materialData.size(), backend::BufferUsage::UNIFORM);
+            _materialBuffer = createBuffer(_materialData.size(), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE);
         }
         _materialBuffer->data(_materialData);
     }

@@ -59,6 +59,8 @@ namespace cala {
         Engine* _engine;
 
         BufferHandle _cameraBuffer;
+        BufferHandle _cullInfoBuffer;
+        BufferHandle _drawCountBuffer;
         BufferHandle _globalDataBuffer;
 
         ImageHandle _shadowTarget;

@@ -35,7 +35,7 @@ namespace cala::backend {
 
         u32 setCount() const { return _setCount; }
 
-    private:
+//    private:
         friend cala::backend::vulkan::ShaderProgram;
 
         enum class BindingType {
