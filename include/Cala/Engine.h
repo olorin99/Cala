@@ -75,8 +75,11 @@ namespace cala {
 
         ImageHandle convertToCubeMap(ImageHandle equirectangular);
 
+        void destroyBuffer(BufferHandle handle);
 
         void destroyImage(ImageHandle handle);
+
+        BufferHandle resizeBuffer(BufferHandle handle, u32 size, bool transfer = false);
 
 
         backend::vulkan::Image::View& getImageView(ImageHandle handle);
@@ -129,13 +132,16 @@ namespace cala {
 
         Mesh* _cube;
 
-        ende::Vector<backend::vulkan::Buffer> _buffers;
+        ende::Vector<backend::vulkan::Buffer*> _buffers;
         ende::Vector<backend::vulkan::Image*> _images;
         ende::Vector<backend::vulkan::Image::View> _imageViews;
         ende::Vector<backend::vulkan::ShaderProgram> _programs;
         std::vector<Probe> _shadowProbes; //TODO: fix vectors in Ende, Optional implementation sucks
 
         ende::Vector<ImageHandle> _shadowMaps;
+
+        ende::Vector<std::pair<i32, BufferHandle>> _buffersToDestroy;
+        ende::Vector<u32> _freeBuffers;
 
         ende::Vector<std::pair<i32, ImageHandle>> _imagesToDestroy;
         ende::Vector<u32> _freeImages;

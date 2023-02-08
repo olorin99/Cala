@@ -7,11 +7,11 @@
 
 template <>
 cala::backend::vulkan::Buffer &cala::BufferHandle::operator*() noexcept {
-    return _engine->_buffers[_index];
+    return *_engine->_buffers[_index];
 }
 template <>
 cala::backend::vulkan::Buffer *cala::BufferHandle::operator->() noexcept {
-    return &_engine->_buffers[_index];
+    return _engine->_buffers[_index];
 }
 
 template <>
@@ -209,11 +209,26 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
 }
 
 cala::Engine::~Engine() {
+    for (auto& buffer : _buffers)
+        delete buffer;
     for (auto& image : _images)
         delete image;
 }
 
 bool cala::Engine::gc() {
+    for (auto it = _buffersToDestroy.begin(); it != _buffersToDestroy.end(); it++) {
+        auto& frame = it->first;
+        auto& handle = it->second;
+        if (frame <= 0) {
+            u32 index = handle.index();
+            delete _buffers[index];
+            _buffers[index] = nullptr;
+            _freeBuffers.push(index);
+            _buffersToDestroy.erase(it--);
+        } else
+            --frame;
+    }
+
     for (auto it = _imagesToDestroy.begin(); it != _imagesToDestroy.end(); it++) {
         auto& frame = it->first;
         auto& handle = it->second;
@@ -232,8 +247,14 @@ bool cala::Engine::gc() {
 }
 
 cala::BufferHandle cala::Engine::createBuffer(u32 size, backend::BufferUsage usage, backend::MemoryProperties flags) {
-    _buffers.emplace(_driver, size, usage, flags);
-    u32 index = _buffers.size() - 1;
+    u32 index = 0;
+    if (!_freeBuffers.empty()) {
+        index = _freeBuffers.pop().value();
+        _buffers[index] = new backend::vulkan::Buffer(_driver, size, usage, flags);
+    } else {
+        index = _buffers.size();
+        _buffers.emplace(new backend::vulkan::Buffer(_driver, size, usage, flags));
+    }
     return { this, index };
 }
 
@@ -293,8 +314,23 @@ cala::ImageHandle cala::Engine::convertToCubeMap(ImageHandle equirectangular) {
     return cubeMap;
 }
 
+void cala::Engine::destroyBuffer(BufferHandle handle) {
+    _buffersToDestroy.push(std::make_pair(10, handle));
+}
+
 void cala::Engine::destroyImage(ImageHandle handle) {
     _imagesToDestroy.push(std::make_pair(10, handle));
+}
+
+cala::BufferHandle cala::Engine::resizeBuffer(BufferHandle handle, u32 size, bool transfer) {
+    BufferHandle newBuffer = createBuffer(size, handle->usage());
+    if (transfer) { // TODO: implement buffer data transfer
+//        _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
+//
+//        });
+    }
+    destroyBuffer(handle);
+    return newBuffer;
 }
 
 cala::backend::vulkan::Image::View &cala::Engine::getImageView(ImageHandle handle) {

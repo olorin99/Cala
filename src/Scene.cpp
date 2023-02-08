@@ -117,7 +117,7 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
         _lightData.push(data);
     }
     if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame]->size())
-        _lightBuffer[frame]->resize(_lightData.size() * sizeof(Light::Data) * 2);
+        _lightBuffer[frame] = _engine->resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(Light::Data) * 2);
     u32 lightCount[3] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount), *reinterpret_cast<u32*>(&shadowBias) };
     _lightCountBuffer[frame]->data({ lightCount, sizeof(u32) * 3 });
     _lightBuffer[frame]->data({_lightData.data(), static_cast<u32>(_lightData.size() * sizeof(Light::Data))});
@@ -132,11 +132,11 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
         _modelTransforms.push(transform->toMat());
     }
     if (_meshData.size() * sizeof(MeshData) >= _meshDataBuffer[frame]->size())
-        _meshDataBuffer[frame]->resize(_meshData.size() * sizeof(MeshData) * 2);
+        _meshDataBuffer[frame] = _engine->resizeBuffer(_meshDataBuffer[frame], _meshData.size() * sizeof(MeshData) * 2);
     _meshDataBuffer[frame]->data({_meshData.data(), static_cast<u32>(_meshData.size() * sizeof(MeshData))});
 
     if (_modelTransforms.size() * sizeof(ende::math::Mat4f) >= _modelBuffer[frame]->size())
-        _modelBuffer[frame]->resize(_modelTransforms.size() * sizeof(ende::math::Mat4f) * 2);
+        _modelBuffer[frame] = _engine->resizeBuffer(_modelBuffer[frame], _modelTransforms.size() * sizeof(ende::math::Mat4f) * 2);
     _modelBuffer[frame]->data({_modelTransforms.data(), static_cast<u32>(_modelTransforms.size() * sizeof(ende::math::Mat4f))});
 
     _engine->updateMaterialdata();

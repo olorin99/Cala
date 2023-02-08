@@ -154,8 +154,6 @@ void main() {
     normal = normalize(normal * 2.0 - 1.0);
     normal = normalize(fsIn.TBN * normal);
 
-    vec3 faceNormal = fsIn.TBN[2];
-
     vec3 viewPos = fsIn.ViewPos * vec3(-1, 1, -1);
 
     vec3 V = normalize(viewPos - fsIn.FragPos);
