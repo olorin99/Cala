@@ -2,16 +2,7 @@
 
 layout (local_size_x = 16) in;
 
-struct CameraData {
-    mat4 projection;
-    mat4 view;
-    vec3 position;
-    float near;
-    float far;
-};
-
 layout (set = 1, binding = 0) uniform FrameData {
-    CameraData camera;
     vec4 planes[6];
 };
 
@@ -61,7 +52,7 @@ void main() {
         atomicExchange(drawCount, 0);
     }
 
-    vec3 point = transforms[idx][2].xyz;
+    vec3 point = transforms[idx][3].xyz;
 
     if (frustumCheck(point, 1.0)) {
         uint a = atomicAdd(drawCount, 1);

@@ -20,6 +20,7 @@
 #include <assimp/scene.h>
 #include <Ende/profile/ProfileManager.h>
 #include <iostream>
+#include <Ende/log/log.h>
 #include <Cala/Model.h>
 
 #define TINYGLTF_IMPLEMENTATION
@@ -138,6 +139,12 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
 
     for (auto& node : model.nodes) {
         if (node.mesh > -1) {
+            ende::math::Mat4f transform;
+
+            if (node.scale.size() == 3) {
+                transform = ende::math::scale<4>(ende::math::Vec3f{ (f32)node.scale[0], (f32)node.scale[1], (f32)node.scale[2] });
+            }
+
             tinygltf::Mesh mesh = model.meshes[node.mesh];
             for (u32 i = 0; i < mesh.primitives.size(); i++) {
                 tinygltf::Primitive& primitive = mesh.primitives[i];
@@ -160,6 +167,7 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
 
                         for (u32 v = 0; v < vertexCount; v++) {
                             ende::math::Vec3f pos{positions[v * 3], positions[v * 3 + 1], positions[v * 3 + 2]};
+                            pos = transform.transform(pos);
                             if (pos.x() < min.x())
                                 min[0] = pos.x();
                             if (pos.y() < min.y())
@@ -172,6 +180,9 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
                                 max[1] = pos.y();
                             if (pos.z() > max.z())
                                 max[2] = pos.z();
+                            positions[v * 3] = pos.x();
+                            positions[v * 3 + 1] = pos.y();
+                            positions[v * 3 + 2] = pos.z();
                         }
                     }
                     if (auto it = primitive.attributes.find("NORMAL"); it != primitive.attributes.end()) {
@@ -347,13 +358,13 @@ int main() {
     Material material(&engine, pointLightProgram, sizeof(u32) * 4);
     material._depthState = { true, true, CompareOp::LESS_EQUAL };
 
-    Transform sponzaTransform({0, 0, 0}, {0, 0, 0, 1}, {0.008, 0.008, 0.008});
+    Transform sponzaTransform;
     auto sponza = loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf"_path);
 
 
     Mesh cube = cala::shapes::cube().mesh(&engine);
 
-    Transform cameraTransform({0, 0, -20});
+    Transform cameraTransform({0, 0, 0});
     Camera camera((f32)ende::math::rad(54.4), platform.windowSize().first, platform.windowSize().second, 0.1f, 1000.f, cameraTransform);
 
     Sampler sampler(engine.driver(), {});
@@ -403,11 +414,33 @@ int main() {
     scene.addSkyLightMap(background, true);
 
     scene.addRenderable(sponza, &sponzaTransform, true);
-
-//    scene.addRenderable(cube, &matInstance, &modelTransform);
+\
     scene.addRenderable(cube, &matInstance, &lightTransform, false);
 
     f32 sceneSize = std::max(objectCount / 10, 20u);
+
+
+    u32 width = 10;
+    u32 height = 10;
+    u32 depth = 10;
+
+    Transform transform;
+    ende::Vector<Transform> transforms;
+    transforms.reserve(width * height * depth);
+    for (u32 i = 0; i < width; i++) {
+        auto xpos = transform.pos();
+        for (u32 j = 0; j < height; j++) {
+            auto ypos = transform.pos();
+            for (u32 k = 0; k < depth; k++) {
+                transform.addPos({0, 0, 3});
+                auto& t = transforms.push(transform);
+                scene.addRenderable(cube, &matInstance, &t, false);
+            }
+            transform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
+        }
+        transform.setPos(xpos + ende::math::Vec3f{3, 0, 0});
+    }
+
 
     ende::Vector<Transform> lightTransforms;
     lightTransforms.reserve(100);
@@ -545,6 +578,7 @@ int main() {
             ImGui::Checkbox("Depth Pre Pass", &renderSettings.depthPre);
             ImGui::Checkbox("Skybox Pass", &renderSettings.skybox);
             ImGui::Checkbox("Tonemap Pass", &renderSettings.tonemap);
+            ImGui::Checkbox("Freeze Frustum,", &renderSettings.freezeFrustum);
 
             f32 gamma = renderer.getGamma();
             if (ImGui::SliderFloat("Gamma", &gamma, 0, 5))
@@ -588,6 +622,9 @@ int main() {
             f32 exposure = camera.getExposure();
             if (ImGui::SliderFloat("Exposure", &exposure, 0, 10))
                 camera.setExposure(exposure);
+
+            auto pos = camera.transform().pos();
+            ImGui::Text("Position: { %f, %f, %f }", pos.x(), pos.y(), pos.z());
 
             ImGui::End();
             ImGui::Render();

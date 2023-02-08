@@ -26,9 +26,10 @@ namespace cala {
             bool tonemap = true;
             bool depthPre = false;
             bool skybox = true;
+            bool freezeFrustum = false;
         };
 
-        Renderer(Engine* engine, Settings settings = {true, true, true, false, true });
+        Renderer(Engine* engine, Settings settings = {true, true, true, false, true, true});
 
         bool beginFrame();
 
@@ -80,6 +81,8 @@ namespace cala {
         };
 
         RendererGlobal _globalData;
+
+        ende::math::Frustum _cullingFrustum;
 
 
 

@@ -348,12 +348,12 @@ void cala::backend::vulkan::CommandBuffer::drawIndirectCount(Buffer &buffer, u32
 
     if (_indexBuffer) {
         if (stride == 0)
-            stride = sizeof(u32) * 4;
+            stride = sizeof(u32) * 5;
         vkCmdDrawIndexedIndirectCount(_buffer, buffer.buffer(), bufferOffset, countBuffer.buffer(), countOffset, maxDrawCount, stride);
     }
     else {
         if (stride == 0)
-            stride = sizeof(u32) * 5;
+            stride = sizeof(u32) * 4;
         vkCmdDrawIndirectCount(_buffer, buffer.buffer(), bufferOffset, countBuffer.buffer(), countOffset, maxDrawCount, stride);
     }
     ++_drawCallCount;

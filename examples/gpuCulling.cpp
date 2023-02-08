@@ -47,13 +47,14 @@ Image loadImage(Driver& driver, const ende::fs::Path& path) {
 
 int main() {
     SDLPlatform platform("hello_triangle", 800, 600);
-    Driver driver(platform);
+    Engine engine(platform);
+    Driver& driver = engine.driver();
     ImGuiContext imGuiContext(driver, platform.window());
 
     //Shaders
-    ShaderProgram program = loadShader(driver, "../../res/shaders/instancedCulled.vert.spv"_path, "../../res/shaders/default.frag.spv"_path);
+    ProgramHandle program = engine.createProgram(loadShader(driver, "../../res/shaders/instancedCulled.vert.spv"_path, "../../res/shaders/default.frag.spv"_path));
     ende::fs::File shaderFile;
-    if (!shaderFile.open("../../res/shaders/cull.comp.spv"_path, ende::fs::in | ende::fs::binary))
+    if (!shaderFile.open("../../res/shaders/cullExample.comp.spv"_path, ende::fs::in | ende::fs::binary))
         return -2;
     ende::Vector<u32> computeShaderData(shaderFile.size() / sizeof(u32));
     shaderFile.read({reinterpret_cast<char*>(computeShaderData.data()), static_cast<u32>(computeShaderData.size() * sizeof(u32))});
@@ -125,7 +126,7 @@ int main() {
     Image brickwall_normal = loadImage(driver, "../../res/textures/brickwall_normal.jpg"_path);
     Image brickwall_specular = loadImage(driver, "../../res/textures/brickwall_specular.jpg"_path);
 
-    Material instancedMaterial(driver, std::move(program));
+    Material instancedMaterial(&engine, std::move(program));
     instancedMaterial._depthState = {true, true, CompareOp::LESS_EQUAL};
 
     auto brickwallMat = instancedMaterial.instance();
@@ -259,10 +260,10 @@ int main() {
             frameInfo.cmd->clearDescriptors();
             frameInfo.cmd->bindProgram(computeProgram);
             frameInfo.cmd->bindBuffer(0, 0, cameraBuffer);
-            frameInfo.cmd->bindBuffer(1, 0, modelBuffer);
-            frameInfo.cmd->bindBuffer(1, 1, renderBuffer);
-            frameInfo.cmd->bindBuffer(1, 2, positionBuffer);
-            frameInfo.cmd->bindBuffer(2, 0, outputBuffer);
+            frameInfo.cmd->bindBuffer(1, 0, modelBuffer, true);
+            frameInfo.cmd->bindBuffer(1, 1, renderBuffer, true);
+            frameInfo.cmd->bindBuffer(1, 2, positionBuffer, true);
+            frameInfo.cmd->bindBuffer(2, 0, outputBuffer, true);
 
             frameInfo.cmd->bindPipeline();
             frameInfo.cmd->bindDescriptors();
@@ -279,14 +280,16 @@ int main() {
             rasterTimer.start(*frameInfo.cmd);
             frameInfo.cmd->begin(*frame.framebuffer);
 
+            frameInfo.cmd->bindProgram(*instancedMaterial._program);
+
             frameInfo.cmd->bindBindings({binding, 1});
             frameInfo.cmd->bindAttributes(attributes);
 
             brickwallMat.bind(*frameInfo.cmd);
             frameInfo.cmd->bindBuffer(0, 0, cameraBuffer);
 
-            frameInfo.cmd->bindBuffer(1, 0, modelBuffer);
-            frameInfo.cmd->bindBuffer(1, 1, renderBuffer);
+            frameInfo.cmd->bindBuffer(1, 0, modelBuffer, true);
+            frameInfo.cmd->bindBuffer(1, 1, renderBuffer, true);
 
             frameInfo.cmd->bindPipeline();
             frameInfo.cmd->bindDescriptors();

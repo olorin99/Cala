@@ -11,7 +11,12 @@ cala::Camera::Camera(f32 fov, f32 width, f32 height, f32 near, f32 far, Transfor
     _far(far),
     _exposure(1.0)
 {
-    _frustum.update(viewProjection());
+    auto proj = projection();
+    ende::math::Mat4f translation = ende::math::translation<4, f32>(_transform.pos());
+    ende::math::Quaternion rot = _transform.rot().conjugate().unit();
+    ende::math::Mat4f rotation = rot.toMat(); //inverse rotation of y axis
+    auto v = rotation * translation;
+    _frustum.update(proj * v);
 }
 
 cala::Camera::Camera(const ende::math::Mat4f &projection, Transform &transform)
@@ -19,7 +24,12 @@ cala::Camera::Camera(const ende::math::Mat4f &projection, Transform &transform)
       _frustum(projection),
     _transform(transform)
 {
-    _frustum.update(viewProjection());
+    auto proj = this->projection();
+    ende::math::Mat4f translation = ende::math::translation<4, f32>(_transform.pos());
+    ende::math::Quaternion rot = _transform.rot().conjugate().unit();
+    ende::math::Mat4f rotation = rot.toMat(); //inverse rotation of y axis
+    auto v = rotation * translation;
+    _frustum.update(proj * v);
 }
 
 cala::Camera &cala::Camera::operator=(const cala::Camera &rhs) {
@@ -44,10 +54,8 @@ void cala::Camera::resize(f32 width, f32 height) {
 ende::math::Mat4f cala::Camera::view() const {
     ende::math::Vec3f pos = _transform.pos();
     pos = pos * -1;
-//    pos[1] *= -1; //inverses all movement on y axis
     ende::math::Mat4f translation = ende::math::translation<4, f32>(pos);
-    ende::math::Quaternion rot = _transform.rot().conjugate().unit();
-    ende::math::Mat4f rotation = rot.invertY().toMat(); //inverse rotation of y axis
+    ende::math::Mat4f rotation = _transform.rot().toMat().transpose();
     return rotation * translation;
 }
 

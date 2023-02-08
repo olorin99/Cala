@@ -9,11 +9,12 @@
 cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings)
     : _engine(engine),
       _cameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
-      _cullInfoBuffer(engine->createBuffer(sizeof(Camera::Data) + sizeof(std::array<std::pair<ende::math::Vec3f, f32>, 6>), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
+      _cullInfoBuffer(engine->createBuffer(sizeof(ende::math::Frustum), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _drawCountBuffer(engine->createBuffer(sizeof(u32), backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _globalDataBuffer(engine->createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _graph(engine),
-      _renderSettings(settings)
+      _renderSettings(settings),
+      _cullingFrustum(ende::math::perspective(45.f, 1920.f / 1080.f, 0.1f, 1000.f, true))
 {
     _engine->driver().setBindlessSetIndex(0);
 
@@ -69,12 +70,14 @@ f64 cala::Renderer::endFrame() {
 }
 
 void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiContext* imGui) {
+    if (!_renderSettings.freezeFrustum)
+        _cullingFrustum = camera.frustum();
     auto cameraData = camera.data();
     _cameraBuffer->data({ &cameraData, sizeof(cameraData) });
     {
-        auto mapped = _cullInfoBuffer->map(0, sizeof(Camera::Data) + sizeof(std::array<std::pair<ende::math::Vec3f, f32>, 6>));
-        *static_cast<Camera::Data*>(mapped.address) = cameraData;
-        *reinterpret_cast<ende::math::Frustum*>(static_cast<u8*>(mapped.address) + sizeof(Camera::Data)) = camera.frustum();
+        auto mapped = _cullInfoBuffer->map(0, sizeof(ende::math::Frustum));
+//        *static_cast<Camera::Data*>(mapped.address) = cameraData;
+        *reinterpret_cast<ende::math::Frustum*>(mapped.address) = _cullingFrustum;
     }
 
     backend::vulkan::CommandBuffer& cmd = *_frameInfo.cmd;
@@ -212,7 +215,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     meshDataResource.usage = scene._meshDataBuffer[frameIndex()]->usage();
 
     BufferResource drawCommandsResource;
-    drawCommandsResource.size = sizeof(VkDrawIndexedIndirectCommand) * scene._renderList.size();
+    drawCommandsResource.size = sizeof(VkDrawIndexedIndirectCommand) * std::max(scene._renderList.size(), (u64)1);
     drawCommandsResource.usage = backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT;
 
     auto& cullPass = _graph.addPass("cull");
@@ -298,6 +301,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 cmd.bindBuffer(3, 1, *scene._lightCountBuffer[frameIndex()], true);
             }
 
+            if (scene._renderList.empty())
+                return;
             auto& renderable = scene._renderList[0].second.first;
 
             cmd.bindBindings(renderable.bindings);

@@ -34,7 +34,7 @@ layout (set = 4, binding = 0) readonly buffer ModelData {
 };
 
 void main() {
-    mat4 model = transforms[gl_DrawID];
+    mat4 model = transforms[gl_BaseInstance];
     vec3 T = normalize(vec3(model * vec4(inTangent, 0.0)));
     vec3 N = normalize(vec3(model * vec4(inNormal, 0.0)));
     T = normalize(T - dot(T, N) * N);
