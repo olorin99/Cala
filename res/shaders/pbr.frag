@@ -36,6 +36,9 @@ struct Mesh {
     uint firstIndex;
     uint indexCount;
     uint materialIndex;
+    uint _pad;
+    vec4 min;
+    vec4 max;
 };
 
 layout (set = 2, binding = 1) readonly buffer MeshData {

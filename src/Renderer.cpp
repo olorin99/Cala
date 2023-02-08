@@ -10,7 +10,7 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
     : _engine(engine),
       _cameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _cullInfoBuffer(engine->createBuffer(sizeof(ende::math::Frustum), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
-      _drawCountBuffer(engine->createBuffer(sizeof(u32), backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
+      _drawCountBuffer(engine->createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _globalDataBuffer(engine->createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _graph(engine),
       _renderSettings(settings),
@@ -78,6 +78,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         auto mapped = _cullInfoBuffer->map(0, sizeof(ende::math::Frustum));
 //        *static_cast<Camera::Data*>(mapped.address) = cameraData;
         *reinterpret_cast<ende::math::Frustum*>(mapped.address) = _cullingFrustum;
+    }
+    {
+        auto mapped = _drawCountBuffer->map(sizeof(u32), sizeof(u32));
+        *static_cast<u32*>(mapped.address) = scene._renderList.size();
     }
 
     backend::vulkan::CommandBuffer& cmd = *_frameInfo.cmd;
@@ -164,13 +168,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         if (!renderable.castShadows)
                             continue;
 
-                        if (renderable.aabb.max != ende::math::Vec3f{0, 0, 0} && renderable.aabb.min != ende::math::Vec3f{0, 0, 0}) {
-//                            auto mat = transform->toMat();
-//                            auto min = mat.transform(renderable.aabb.min);
-//                            auto max = mat.transform(renderable.aabb.max);
-//                            if (!shadowCam.frustum().intersect(min, max))
-//                                continue;
-                        } else if (!shadowCam.frustum().intersect(transform->pos(), 2))
+                        if (!shadowCam.frustum().intersect(transform->pos(), 2))
                             continue;
 
                         cmd.bindBindings(renderable.bindings);
@@ -239,7 +237,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd.bindBuffer(2, 3, *_drawCountBuffer, true);
         cmd.bindPipeline();
         cmd.bindDescriptors();
-        cmd.dispatchCompute(scene._renderList.size() / 16, 1, 1);
+        cmd.dispatchCompute(std::ceil(scene._renderList.size() / 16.f), 1, 1);
     });
 
 

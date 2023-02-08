@@ -52,7 +52,7 @@ void cala::Scene::addRenderable(Model &model, Transform *transform, bool castSha
             { &model._binding, 1 },
             model._attributes,
             castShadow,
-            { primitive.aabb.min, primitive.aabb.max }
+            { { primitive.aabb.min.x(), primitive.aabb.min.y(), primitive.aabb.min.z(), 1.f }, { primitive.aabb.max.x(), primitive.aabb.max.y(), primitive.aabb.max.z(), 1.f } }
         }, transform);
     }
 }
@@ -128,7 +128,7 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
     for (auto& renderablePair : _renderList) {
         auto& renderable = renderablePair.second.first;
         auto& transform = renderablePair.second.second;
-        _meshData.push({ renderable.firstIndex, renderable.indexCount, static_cast<u32>(renderable.materialInstance->getOffset() / (sizeof(u32) * 4)) });
+        _meshData.push({ renderable.firstIndex, renderable.indexCount, static_cast<u32>(renderable.materialInstance->getOffset() / (sizeof(u32) * 4)), 0, renderable.aabb.min, renderable.aabb.max });
         _modelTransforms.push(transform->toMat());
     }
     if (_meshData.size() * sizeof(MeshData) >= _meshDataBuffer[frame]->size())

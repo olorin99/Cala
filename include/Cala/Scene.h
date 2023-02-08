@@ -17,8 +17,8 @@ namespace cala {
     public:
 
         struct AABB {
-            ende::math::Vec3f min;
-            ende::math::Vec3f max;
+            ende::math::Vec4f min;
+            ende::math::Vec4f max;
         };
 
         struct Renderable {
@@ -70,6 +70,9 @@ namespace cala {
             u32 firstIndex;
             u32 indexCount;
             u32 materialOffset;
+            uint _pad;
+            ende::math::Vec4f min;
+            ende::math::Vec4f max;
         };
         ende::Vector<MeshData> _meshData;
         ende::Vector<ende::math::Mat4f> _modelTransforms;

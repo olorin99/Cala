@@ -152,7 +152,7 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
                 u32 vertexStart = vertices.size();
                 u32 indexCount = 0;
                 ende::math::Vec3f min = {std::numeric_limits<f32>::max(), std::numeric_limits<f32>::max(), std::numeric_limits<f32>::max()};
-                ende::math::Vec3f max = {std::numeric_limits<f32>::min(), std::numeric_limits<f32>::min(), std::numeric_limits<f32>::min()};
+                ende::math::Vec3f max = {-std::numeric_limits<f32>::max(), -std::numeric_limits<f32>::max(), -std::numeric_limits<f32>::max()};
 
                 {
                     f32* positions = nullptr;
@@ -414,32 +414,32 @@ int main() {
     scene.addSkyLightMap(background, true);
 
     scene.addRenderable(sponza, &sponzaTransform, true);
-\
-    scene.addRenderable(cube, &matInstance, &lightTransform, false);
+
+//    scene.addRenderable(cube, &matInstance, &lightTransform, false);
 
     f32 sceneSize = std::max(objectCount / 10, 20u);
 
 
-    u32 width = 10;
-    u32 height = 10;
-    u32 depth = 10;
-
-    Transform transform;
-    ende::Vector<Transform> transforms;
-    transforms.reserve(width * height * depth);
-    for (u32 i = 0; i < width; i++) {
-        auto xpos = transform.pos();
-        for (u32 j = 0; j < height; j++) {
-            auto ypos = transform.pos();
-            for (u32 k = 0; k < depth; k++) {
-                transform.addPos({0, 0, 3});
-                auto& t = transforms.push(transform);
-                scene.addRenderable(cube, &matInstance, &t, false);
-            }
-            transform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
-        }
-        transform.setPos(xpos + ende::math::Vec3f{3, 0, 0});
-    }
+//    u32 width = 10;
+//    u32 height = 10;
+//    u32 depth = 10;
+//
+//    Transform transform;
+//    ende::Vector<Transform> transforms;
+//    transforms.reserve(width * height * depth);
+//    for (u32 i = 0; i < width; i++) {
+//        auto xpos = transform.pos();
+//        for (u32 j = 0; j < height; j++) {
+//            auto ypos = transform.pos();
+//            for (u32 k = 0; k < depth; k++) {
+//                transform.addPos({0, 0, 3});
+//                auto& t = transforms.push(transform);
+//                scene.addRenderable(cube, &matInstance, &t, false);
+//            }
+//            transform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
+//        }
+//        transform.setPos(xpos + ende::math::Vec3f{3, 0, 0});
+//    }
 
 
     ende::Vector<Transform> lightTransforms;
