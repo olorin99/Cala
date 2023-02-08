@@ -55,7 +55,8 @@ ende::math::Mat4f cala::Camera::view() const {
     ende::math::Vec3f pos = _transform.pos();
     pos = pos * -1;
     ende::math::Mat4f translation = ende::math::translation<4, f32>(pos);
-    ende::math::Mat4f rotation = _transform.rot().toMat().transpose();
+    ende::math::Quaternion rot = _transform.rot().conjugate().unit();
+    ende::math::Mat4f rotation = rot.invertY().toMat();
     return rotation * translation;
 }
 

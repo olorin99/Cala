@@ -1,4 +1,4 @@
-#version 450
+#version 460
 
 layout (location = 0) in VsOut {
     vec3 FragPos;

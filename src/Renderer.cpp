@@ -9,7 +9,6 @@
 cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings)
     : _engine(engine),
       _cameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
-      _cullInfoBuffer(engine->createBuffer(sizeof(ende::math::Frustum), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _drawCountBuffer(engine->createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _globalDataBuffer(engine->createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _graph(engine),
@@ -75,11 +74,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     auto cameraData = camera.data();
     _cameraBuffer->data({ &cameraData, sizeof(cameraData) });
     {
-        auto mapped = _cullInfoBuffer->map(0, sizeof(ende::math::Frustum));
-//        *static_cast<Camera::Data*>(mapped.address) = cameraData;
-        *reinterpret_cast<ende::math::Frustum*>(mapped.address) = _cullingFrustum;
-    }
-    {
         auto mapped = _drawCountBuffer->map(sizeof(u32), sizeof(u32));
         *static_cast<u32*>(mapped.address) = scene._renderList.size();
     }
@@ -106,11 +100,32 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     ImageResource backbufferAttachment;
     backbufferAttachment.format = backend::Format::RGBA8_UNORM;
 
+    BufferResource transformsResource;
+    transformsResource.handle = scene._modelBuffer[frameIndex()];
+    transformsResource.size = scene._modelBuffer[frameIndex()]->size();
+    transformsResource.usage = scene._modelBuffer[frameIndex()]->usage();
+
+    BufferResource meshDataResource;
+    meshDataResource.handle = scene._meshDataBuffer[frameIndex()];
+    meshDataResource.size = scene._meshDataBuffer[frameIndex()]->size();
+    meshDataResource.usage = scene._meshDataBuffer[frameIndex()]->usage();
+
+    BufferResource drawCommandsResource;
+    drawCommandsResource.size = sizeof(VkDrawIndexedIndirectCommand) * std::max(scene._renderList.size(), (u64)1);
+    drawCommandsResource.usage = backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT;
+
     _graph.setBackbuffer("backbuffer");
 
     auto& pointShadows = _graph.addPass("point_shadows");
     pointShadows.addImageOutput("point_depth", pointDepth);
+    pointShadows.addBufferInput("transforms", transformsResource);
+    pointShadows.addBufferInput("meshData", meshDataResource);
+
+    pointShadows.addBufferOutput("drawCommands", drawCommandsResource);
     pointShadows.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+        auto transforms = graph.getResource<BufferResource>("transforms");
+        auto meshData = graph.getResource<BufferResource>("meshData");
+        auto drawCommands = graph.getResource<BufferResource>("drawCommands");
         u32 shadowIndex = 0;
         for (u32 i = 0; i < scene._lights.size(); i++) {
             auto& light = scene._lights[i];
@@ -120,21 +135,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 auto shadowMap = _engine->getShadowMap(shadowIndex++);
 
                 for (u32 face = 0; face < 6; face++) {
-                    cmd.begin(*_shadowFramebuffer);
-
-                    cmd.clearDescriptors();
-                    cmd.bindRasterState({
-                        backend::CullMode::FRONT
-                    });
-                    cmd.bindDepthState({
-                        true, true,
-                        backend::CompareOp::LESS_EQUAL
-                    });
-
-                    cmd.bindProgram(*_engine->_pointShadowProgram);
-
-                    cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()], i * sizeof(Light::Data), sizeof(Light::Data), true);
-
                     switch (face) {
                         case 0:
                             shadowTransform.rotate({0, 1, 0}, ende::math::rad(90));
@@ -156,33 +156,55 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                             shadowTransform.rotate({0, 1, 0}, ende::math::rad(180));
                             break;
                     }
+                    ende::math::Frustum shadowFrustum = shadowCam.frustum();
+
+                    cmd.clearDescriptors();
+                    cmd.bindProgram(*_engine->_cullProgram);
+                    cmd.bindBindings(nullptr);
+                    cmd.bindAttributes(nullptr);
+                    cmd.pushConstants({ &shadowFrustum, sizeof(shadowFrustum) });
+                    cmd.bindBuffer(2, 0, *transforms->handle, true);
+                    cmd.bindBuffer(2, 1, *meshData->handle, true);
+                    cmd.bindBuffer(2, 2, *drawCommands->handle, true);
+                    cmd.bindBuffer(2, 3, *_drawCountBuffer, true);
+                    cmd.bindPipeline();
+                    cmd.bindDescriptors();
+                    cmd.dispatchCompute(std::ceil(scene._renderList.size() / 16.f), 1, 1);
+
+
+                    cmd.begin(*_shadowFramebuffer);
+
+                    cmd.clearDescriptors();
+                    cmd.bindRasterState({
+                        backend::CullMode::FRONT
+                    });
+                    cmd.bindDepthState({
+                        true, true,
+                        backend::CompareOp::LESS_EQUAL
+                    });
+
+                    cmd.bindProgram(*_engine->_pointShadowProgram);
+
+                    cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()], sizeof(Light::Data) * i, sizeof(Light::Data), true);
 
                     auto shadowData = shadowCam.data();
                     cmd.pushConstants({ &shadowData, sizeof(shadowData) });
                     shadowCam.updateFrustum();
 
-                    for (u32 j = 0; j < scene._renderList.size(); ++j) {
-                        auto& renderable = scene._renderList[j].second.first;
-                        auto& transform = scene._renderList[j].second.second;
+                    auto& renderable = scene._renderList[0].second.first;
+                    cmd.bindBindings(renderable.bindings);
+                    cmd.bindAttributes(renderable.attributes);
 
-                        if (!renderable.castShadows)
-                            continue;
+                    cmd.bindBuffer(1, 0, *scene._modelBuffer[frameIndex()], true);
 
-                        if (!shadowCam.frustum().intersect(transform->pos(), 2))
-                            continue;
-
-                        cmd.bindBindings(renderable.bindings);
-                        cmd.bindAttributes(renderable.attributes);
-                        cmd.bindBuffer(1, 0, *scene._modelBuffer[frameIndex()], j * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
-                        cmd.bindPipeline();
-                        cmd.bindDescriptors();
-                        cmd.bindVertexBuffer(0, renderable.vertex->buffer());
-                        if (renderable.index) {
-                            cmd.bindIndexBuffer(*renderable.index);
-                            cmd.draw(renderable.indexCount, 1, renderable.firstIndex, 0);
-                        } else
-                            cmd.draw(renderable.vertex->size() / (4 * 14), 1, 0, 0);
-                    }
+                    cmd.bindPipeline();
+                    cmd.bindDescriptors();
+                    cmd.bindVertexBuffer(0, renderable.vertex->buffer());
+                    if (renderable.index) {
+                        cmd.bindIndexBuffer(*renderable.index);
+                        cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderList.size());
+                    } else
+                        cmd.draw(renderable.vertex->size() / (4 * 14), 1, 0, 0);
 
                     cmd.end(*_shadowFramebuffer);
 
@@ -202,25 +224,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     });
 
 
-    BufferResource transformsResource;
-    transformsResource.handle = scene._modelBuffer[frameIndex()];
-    transformsResource.size = scene._modelBuffer[frameIndex()]->size();
-    transformsResource.usage = scene._modelBuffer[frameIndex()]->usage();
-
-    BufferResource meshDataResource;
-    meshDataResource.handle = scene._meshDataBuffer[frameIndex()];
-    meshDataResource.size = scene._meshDataBuffer[frameIndex()]->size();
-    meshDataResource.usage = scene._meshDataBuffer[frameIndex()]->usage();
-
-    BufferResource drawCommandsResource;
-    drawCommandsResource.size = sizeof(VkDrawIndexedIndirectCommand) * std::max(scene._renderList.size(), (u64)1);
-    drawCommandsResource.usage = backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT;
-
     auto& cullPass = _graph.addPass("cull");
     cullPass.addBufferInput("transforms", transformsResource);
     cullPass.addBufferInput("meshData", meshDataResource);
 
     cullPass.addBufferOutput("drawCommands", drawCommandsResource);
+    cullPass.setDebugColour({0.3, 0.3, 1, 1});
 
     cullPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
         auto transforms = graph.getResource<BufferResource>("transforms");
@@ -230,7 +239,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd.bindProgram(*_engine->_cullProgram);
         cmd.bindBindings(nullptr);
         cmd.bindAttributes(nullptr);
-        cmd.bindBuffer(1, 0, *_cullInfoBuffer);
+        cmd.pushConstants({ &_cullingFrustum, sizeof(_cullingFrustum) });
         cmd.bindBuffer(2, 0, *transforms->handle, true);
         cmd.bindBuffer(2, 1, *meshData->handle, true);
         cmd.bindBuffer(2, 2, *drawCommands->handle, true);
