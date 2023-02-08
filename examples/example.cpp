@@ -364,7 +364,7 @@ int main() {
 
     Mesh cube = cala::shapes::cube().mesh(&engine);
 
-    Transform cameraTransform({0, 0, 0});
+    Transform cameraTransform({10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(-90)));
     Camera camera((f32)ende::math::rad(54.4), platform.windowSize().first, platform.windowSize().second, 0.1f, 1000.f, cameraTransform);
 
     Sampler sampler(engine.driver(), {});
@@ -385,13 +385,13 @@ int main() {
     };
     matInstance.setUniform("material", materialData);
 
-    u32 objectCount = 100;
+    u32 objectCount = 20;
     Scene scene(&engine, objectCount);
 
-    Transform lightTransform({-10, 0, 0}, {0, 0, 0, 1}, {0.1, 0.1, 0.1});
+    Transform lightTransform({-10, 1, 0}, {0, 0, 0, 1}, {0.1, 0.1, 0.1});
     Light light(cala::Light::POINT, true, lightTransform);
-    light.setColour({1, 0, 0});
-    light.setIntensity(50);
+    light.setColour({1, 1, 1});
+    light.setIntensity(20);
     Transform light1Transform({10, 2, 4});
     Light light1(cala::Light::POINT, false, light1Transform);
     light1.setColour({0, 1, 0});
@@ -407,7 +407,7 @@ int main() {
 
     u32 l0 = scene.addLight(light);
     u32 l1 = scene.addLight(light1);
-    u32 l2 = scene.addLight(light2);
+//    u32 l2 = scene.addLight(light2);
     u32 l3 = scene.addLight(light3);
 
     ImageHandle background = loadImageHDR(engine, "../../res/textures/TropicalRuins_3k.hdr"_path);
@@ -622,6 +622,14 @@ int main() {
             f32 exposure = camera.getExposure();
             if (ImGui::SliderFloat("Exposure", &exposure, 0, 10))
                 camera.setExposure(exposure);
+
+            if (ImGui::Button("Add Light")) {
+                auto& t = lightTransforms.push(Transform({ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f)}));
+                Light l(Light::LightType::POINT, false, t);
+                l.setIntensity(ende::math::rand(1.f, 20.f));
+                l.setColour({ ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f) });
+                scene.addLight(l);
+            }
 
             auto pos = camera.transform().pos();
             ImGui::Text("Position: { %f, %f, %f }", pos.x(), pos.y(), pos.z());
