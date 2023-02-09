@@ -41,8 +41,18 @@ cala::backend::vulkan::Image::Image(Driver& driver, CreateInfo info)
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 
+    if (info.aliasFormat != Format::UNDEFINED) {
+        imageInfo.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+        VkImageFormatListCreateInfo listCreateInfo{};
+        listCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO;
+        listCreateInfo.viewFormatCount = 1;
+        VkFormat aliasFormat = getFormat(info.aliasFormat);
+        listCreateInfo.pViewFormats = &aliasFormat;
+        imageInfo.pNext = &listCreateInfo;
+    }
+
     if (imageInfo.arrayLayers == 6)
-        imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 
     VmaAllocationCreateInfo allocInfo{};
     allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
@@ -301,7 +311,7 @@ void cala::backend::vulkan::Image::generateMips(CommandBuffer &cmd) {
 }
 
 
-cala::backend::vulkan::Image::View cala::backend::vulkan::Image::newView(u32 mipLevel, u32 levelCount, u32 arrayLayer, u32 layerCount, cala::backend::ImageViewType viewType) {
+cala::backend::vulkan::Image::View cala::backend::vulkan::Image::newView(u32 mipLevel, u32 levelCount, u32 arrayLayer, u32 layerCount, cala::backend::ImageViewType viewType, Format format) {
     VkImageViewCreateInfo viewCreateInfo{};
     viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 
@@ -332,7 +342,7 @@ cala::backend::vulkan::Image::View cala::backend::vulkan::Image::newView(u32 mip
 
     viewCreateInfo.image = _image;
     viewCreateInfo.viewType = getImageViewType(viewType);
-    viewCreateInfo.format = getFormat(_format);
+    viewCreateInfo.format = format == Format::UNDEFINED ? getFormat(_format) : getFormat(format);
 
     viewCreateInfo.subresourceRange.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
 //    viewCreateInfo.subresourceRange.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;

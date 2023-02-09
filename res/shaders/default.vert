@@ -5,7 +5,7 @@
 layout (location = 0) in vec3 inPosition;
 layout (location = 1) in vec3 inNormal;
 layout (location = 2) in vec2 inTexCoords;
-layout (location = 3) in vec3 inTangent;
+layout (location = 3) in vec4 inTangent;
 
 layout (location = 0) out VsOut {
     vec3 FragPos;
@@ -34,10 +34,10 @@ layout (set = 4, binding = 0) readonly buffer ModelData {
 
 void main() {
     mat4 model = transforms[gl_BaseInstance];
-    vec3 T = normalize(vec3(model * vec4(inTangent, 0.0)));
+    vec3 T = normalize(vec3(model * vec4(inTangent.xyz, 0.0)));
     vec3 N = normalize(vec3(model * vec4(inNormal, 0.0)));
     T = normalize(T - dot(T, N) * N);
-    vec3 B = cross(N, T);
+    vec3 B = cross(N, T) * inTangent.w;
 
     vsOut.FragPos = (model * vec4(inPosition, 1.0)).xyz;
     vsOut.TexCoords = inTexCoords;

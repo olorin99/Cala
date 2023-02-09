@@ -51,6 +51,10 @@ namespace cala::backend::vulkan {
 
         Framebuffer& framebuffer(u32 i) { return *_framebuffers[i]; }
 
+        void setVsync(bool vsync);
+
+        bool getVsync() const { return _vsync; }
+
     private:
 
         bool createSwapchain();
@@ -77,6 +81,8 @@ namespace cala::backend::vulkan {
 
         RenderPass* _renderPass;
         ende::Vector<Framebuffer*> _framebuffers;
+
+        bool _vsync;
 
     };
 

@@ -25,6 +25,7 @@ namespace cala::backend::vulkan {
             ImageUsage usage = ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST;
             ImageLayout initialLayout = ImageLayout::GENERAL;
             ImageType type = ImageType::AUTO;
+            Format aliasFormat = Format::UNDEFINED;
         };
 
         struct DataInfo {
@@ -79,7 +80,7 @@ namespace cala::backend::vulkan {
             Image* _image;
         };
 
-        View newView(u32 mipLevel = 0, u32 levelCount = 1, u32 arrayLayer = 0, u32 layerCount = 1, ImageViewType viewType = ImageViewType::AUTO);
+        View newView(u32 mipLevel = 0, u32 levelCount = 1, u32 arrayLayer = 0, u32 layerCount = 1, ImageViewType viewType = ImageViewType::AUTO, Format format = Format::UNDEFINED);
 
         VkImageMemoryBarrier barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer = 0);
 

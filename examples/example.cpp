@@ -210,7 +210,7 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
                         if (texCoords)
                             vertex.texCoords = {texCoords[v * 2], texCoords[v * 2 + 1]};
                         if (tangents)
-                            vertex.tangent = { tangents[v * 4], tangents[v * 4 + 1], tangents[v * 4 + 2] };
+                            vertex.tangent = { tangents[v * 4], tangents[v * 4 + 1], tangents[v * 4 + 2], tangents[v * 4 + 3] };
                         vertices.push(vertex);
                     }
                 }
@@ -255,14 +255,14 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
 
     VkVertexInputBindingDescription binding{};
     binding.binding = 0;
-    binding.stride = 11 * sizeof(f32);
+    binding.stride = 12 * sizeof(f32);
     binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     std::array<backend::Attribute, 4> attributes = {
             backend::Attribute{0, 0, backend::AttribType::Vec3f},
             backend::Attribute{1, 0, backend::AttribType::Vec3f},
             backend::Attribute{2, 0, backend::AttribType::Vec2f},
-            backend::Attribute{3, 0, backend::AttribType::Vec3f}
+            backend::Attribute{3, 0, backend::AttribType::Vec4f}
     };
 
     BufferHandle vertexBuffer = engine->createBuffer(vertices.size() * sizeof(Vertex), BufferUsage::VERTEX);
@@ -412,9 +412,9 @@ int main() {
     light3.setColour({0.23, 0.46, 0.10});
 
     u32 l0 = scene.addLight(light);
-    u32 l1 = scene.addLight(light1);
+//    u32 l1 = scene.addLight(light1);
 //    u32 l2 = scene.addLight(light2);
-    u32 l3 = scene.addLight(light3);
+//    u32 l3 = scene.addLight(light3);
 
     ImageHandle background = loadImageHDR(engine, "../../res/textures/TropicalRuins_3k.hdr"_path);
     scene.addSkyLightMap(background, true);
@@ -585,6 +585,11 @@ int main() {
             ImGui::Checkbox("Skybox Pass", &renderSettings.skybox);
             ImGui::Checkbox("Tonemap Pass", &renderSettings.tonemap);
             ImGui::Checkbox("Freeze Frustum,", &renderSettings.freezeFrustum);
+            bool vsync = engine.driver().swapchain().getVsync();
+            if (ImGui::Checkbox("Vsync", &vsync)) {
+                engine.driver().wait();
+                engine.driver().swapchain().setVsync(vsync);
+            }
 
             f32 gamma = renderer.getGamma();
             if (ImGui::SliderFloat("Gamma", &gamma, 0, 5))

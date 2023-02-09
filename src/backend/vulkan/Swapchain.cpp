@@ -27,15 +27,21 @@ VkSurfaceFormatKHR getSurfaceFormat(VkPhysicalDevice device, VkSurfaceKHR surfac
     return formats.front();
 }
 
-VkPresentModeKHR getPresentMode(VkPhysicalDevice device, VkSurfaceKHR surface) {
+VkPresentModeKHR getPresentMode(VkPhysicalDevice device, VkSurfaceKHR surface, VkPresentModeKHR preference = VK_PRESENT_MODE_MAILBOX_KHR) {
     u32 count = 0;
     vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &count, nullptr);
     ende::Vector<VkPresentModeKHR> modes(count);
     vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &count, modes.data());
 
     for (auto& mode : modes) {
+        if (mode == preference)
+            return mode;
+    }
+    for (auto& mode : modes) {
         if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
             return mode;
+    }
+    for (auto& mode : modes) {
         if (mode == VK_PRESENT_MODE_IMMEDIATE_KHR)
             return mode;
     }
@@ -57,7 +63,8 @@ cala::backend::vulkan::Swapchain::Swapchain(Driver &driver, Platform& platform, 
     _swapchain(VK_NULL_HANDLE),
     _frame(0),
     _depthImage(nullptr),
-    _depthView()
+    _depthView(),
+    _vsync(false)
 {
     _surface = platform.surface(_driver.context().instance());
     VkBool32 supported = VK_FALSE;
@@ -311,12 +318,17 @@ void cala::backend::vulkan::Swapchain::copyFrameToImage(u32 index, cala::backend
     });
 }
 
+void cala::backend::vulkan::Swapchain::setVsync(bool vsync) {
+    _vsync = vsync;
+    resize(_extent.width, _extent.height);
+}
+
 
 
 bool cala::backend::vulkan::Swapchain::createSwapchain() {
     VkSurfaceCapabilitiesKHR capabilities = getCapabilities(_driver.context().physicalDevice(), _surface);
     VkSurfaceFormatKHR format = getSurfaceFormat(_driver.context().physicalDevice(), _surface);
-    VkPresentModeKHR mode = getPresentMode(_driver.context().physicalDevice(), _surface);
+    VkPresentModeKHR mode = getPresentMode(_driver.context().physicalDevice(), _surface, _vsync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR);
     VkExtent2D extent = getExtent(capabilities, _extent.width, _extent.height);
 
     u32 imageCount = capabilities.minImageCount + 1;

@@ -65,14 +65,14 @@ cala::Mesh cala::MeshData::mesh(cala::Engine* engine) const {
 
     VkVertexInputBindingDescription binding{};
     binding.binding = 0;
-    binding.stride = 11 * sizeof(f32);
+    binding.stride = 12 * sizeof(f32);
     binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     std::array<backend::Attribute, 4> attributes = {
             backend::Attribute{0, 0, backend::AttribType::Vec3f},
             backend::Attribute{1, 0, backend::AttribType::Vec3f},
             backend::Attribute{2, 0, backend::AttribType::Vec2f},
-            backend::Attribute{3, 0, backend::AttribType::Vec3f}
+            backend::Attribute{3, 0, backend::AttribType::Vec4f}
     };
 
     Mesh mesh = {vertex, index, binding, attributes};
