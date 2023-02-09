@@ -11,7 +11,7 @@ namespace cala {
     class Mesh {
     public:
 
-        Mesh(BufferHandle vertex, BufferHandle index, VkVertexInputBindingDescription binding, std::array<backend::Attribute, 5> attributes);
+        Mesh(BufferHandle vertex, BufferHandle index, VkVertexInputBindingDescription binding, std::array<backend::Attribute, 4> attributes);
 
     //private:
 
@@ -25,7 +25,7 @@ namespace cala {
         ende::Vector<Primitive> _primitives;
 
         VkVertexInputBindingDescription _binding;
-        std::array<backend::Attribute, 5> _attributes;
+        std::array<backend::Attribute, 4> _attributes;
 
     };
 

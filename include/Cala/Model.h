@@ -33,7 +33,7 @@ namespace cala {
         ende::Vector<ImageHandle> images;
 
         VkVertexInputBindingDescription _binding;
-        std::array<backend::Attribute, 5> _attributes;
+        std::array<backend::Attribute, 4> _attributes;
 
     };
 

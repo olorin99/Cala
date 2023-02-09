@@ -158,6 +158,7 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
                     f32* positions = nullptr;
                     f32* normals = nullptr;
                     f32* texCoords = nullptr;
+                    f32* tangents = nullptr;
                     u32 vertexCount = 0;
                     if (auto it = primitive.attributes.find("POSITION"); it != primitive.attributes.end()) {
                         tinygltf::Accessor& accessor = model.accessors[it->second];
@@ -195,6 +196,11 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
                         tinygltf::BufferView& view = model.bufferViews[accessor.bufferView];
                         texCoords = (f32*)&model.buffers[view.buffer].data[accessor.byteOffset + view.byteOffset];
                     }
+                    if (auto it = primitive.attributes.find("TANGENT"); it != primitive.attributes.end()) {
+                        tinygltf::Accessor& accessor = model.accessors[it->second];
+                        tinygltf::BufferView& view = model.bufferViews[accessor.bufferView];
+                        tangents = (f32*)&model.buffers[view.buffer].data[accessor.byteOffset + view.byteOffset];
+                    }
                     for (u32 v = 0; v < vertexCount; v++) {
                         Vertex vertex{};
                         if (positions)
@@ -203,6 +209,8 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
                             vertex.normal = {normals[v * 3], normals[v * 3 + 1], normals[v * 3 + 2]};
                         if (texCoords)
                             vertex.texCoords = {texCoords[v * 2], texCoords[v * 2 + 1]};
+                        if (tangents)
+                            vertex.tangent = { tangents[v * 4], tangents[v * 4 + 1], tangents[v * 4 + 2] };
                         vertices.push(vertex);
                     }
                 }
@@ -247,15 +255,14 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
 
     VkVertexInputBindingDescription binding{};
     binding.binding = 0;
-    binding.stride = 14 * sizeof(f32);
+    binding.stride = 11 * sizeof(f32);
     binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    std::array<backend::Attribute, 5> attributes = {
+    std::array<backend::Attribute, 4> attributes = {
             backend::Attribute{0, 0, backend::AttribType::Vec3f},
             backend::Attribute{1, 0, backend::AttribType::Vec3f},
             backend::Attribute{2, 0, backend::AttribType::Vec2f},
-            backend::Attribute{3, 0, backend::AttribType::Vec3f},
-            backend::Attribute{4, 0, backend::AttribType::Vec3f}
+            backend::Attribute{3, 0, backend::AttribType::Vec3f}
     };
 
     BufferHandle vertexBuffer = engine->createBuffer(vertices.size() * sizeof(Vertex), BufferUsage::VERTEX);
@@ -304,9 +311,8 @@ MeshData loadModel(const ende::fs::Path& path) {
 
             if (mesh->HasTangentsAndBitangents()) {
                 const aiVector3D tangent = mesh->mTangents[j];
-                const aiVector3D bitangent = mesh->mBitangents[j];
+//                const aiVector3D bitangent = mesh->mBitangents[j];
                 vertex.tangent = { tangent.x, tangent.y, tangent.z };
-                vertex.bitangent = { bitangent.x, bitangent.y, bitangent.z };
             }
 
             data.addVertex(vertex);

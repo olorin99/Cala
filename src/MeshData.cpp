@@ -4,16 +4,16 @@ bool cala::operator==(const Vertex &lhs, const Vertex &rhs) {
     return lhs.position == rhs.position ||
             lhs.normal == rhs.normal ||
             lhs.texCoords == rhs.texCoords ||
-            lhs.tangent == rhs.tangent ||
-            lhs.bitangent == rhs.bitangent;
+            lhs.tangent == rhs.tangent;
+//            lhs.bitangent == rhs.bitangent;
 }
 
 bool cala::operator!=(const Vertex &lhs, const Vertex &rhs) {
     return lhs.position != rhs.position ||
             lhs.normal != rhs.normal ||
             lhs.texCoords != rhs.texCoords ||
-            lhs.tangent != rhs.tangent ||
-            lhs.bitangent != rhs.bitangent;
+            lhs.tangent != rhs.tangent;
+//            lhs.bitangent != rhs.bitangent;
 }
 
 
@@ -65,15 +65,14 @@ cala::Mesh cala::MeshData::mesh(cala::Engine* engine) const {
 
     VkVertexInputBindingDescription binding{};
     binding.binding = 0;
-    binding.stride = 14 * sizeof(f32);
+    binding.stride = 11 * sizeof(f32);
     binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    std::array<backend::Attribute, 5> attributes = {
+    std::array<backend::Attribute, 4> attributes = {
             backend::Attribute{0, 0, backend::AttribType::Vec3f},
             backend::Attribute{1, 0, backend::AttribType::Vec3f},
             backend::Attribute{2, 0, backend::AttribType::Vec2f},
-            backend::Attribute{3, 0, backend::AttribType::Vec3f},
-            backend::Attribute{4, 0, backend::AttribType::Vec3f}
+            backend::Attribute{3, 0, backend::AttribType::Vec3f}
     };
 
     Mesh mesh = {vertex, index, binding, attributes};
