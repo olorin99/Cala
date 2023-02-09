@@ -128,7 +128,7 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
     for (auto& renderablePair : _renderList) {
         auto& renderable = renderablePair.second.first;
         auto& transform = renderablePair.second.second;
-        _meshData.push({ renderable.firstIndex, renderable.indexCount, static_cast<u32>(renderable.materialInstance->getOffset() / (sizeof(u32) * 4)), 0, renderable.aabb.min, renderable.aabb.max });
+        _meshData.push({ renderable.firstIndex, renderable.indexCount, static_cast<u32>(renderable.materialInstance->getOffset() / renderable.materialInstance->material()->_setSize), 0, renderable.aabb.min, renderable.aabb.max });
         _modelTransforms.push(transform->toMat());
     }
     if (_meshData.size() * sizeof(MeshData) >= _meshDataBuffer[frame]->size())

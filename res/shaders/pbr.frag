@@ -12,12 +12,6 @@ layout (location = 0) in VsOut {
 
 layout (location = 0) out vec4 FragColour;
 
-//layout (set = 2, binding = 0) uniform sampler2D albedoMap;
-//layout (set = 2, binding = 1) uniform sampler2D normalMap;
-//layout (set = 2, binding = 2) uniform sampler2D metallicMap;
-//layout (set = 2, binding = 3) uniform sampler2D roughnessMap;
-//layout (set = 2, binding = 4) uniform sampler2D aoMap;
-
 layout (set = 0, binding = 0) uniform samplerCube pointShadows[];
 layout (set = 0, binding = 0) uniform sampler2D directShadows[];
 
@@ -25,7 +19,6 @@ struct MaterialData {
     uint albedoIndex;
     uint normalIndex;
     uint metallicRoughnessIndex;
-    uint aoIndex;
 };
 
 layout (set = 2, binding = 0) readonly buffer MatData {
@@ -149,12 +142,11 @@ void main() {
     vec3 normal = texture(directShadows[materialData.normalIndex], fsIn.TexCoords).rgb;
     float metallic = texture(directShadows[materialData.metallicRoughnessIndex], fsIn.TexCoords).b;
     float roughness = texture(directShadows[materialData.metallicRoughnessIndex], fsIn.TexCoords).g;
-    float ao = texture(directShadows[materialData.aoIndex], fsIn.TexCoords).r;
 
     normal = normalize(normal * 2.0 - 1.0);
     normal = normalize(fsIn.TBN * normal);
 
-    vec3 viewPos = fsIn.ViewPos * vec3(-1, 1, -1);
+    vec3 viewPos = fsIn.ViewPos;
 
     vec3 V = normalize(viewPos - fsIn.FragPos);
     vec3 R = reflect(-V, normal);
@@ -200,7 +192,7 @@ void main() {
 
     }
 
-    vec3 ambient = vec3(0.03) * albedo * ao;
+    vec3 ambient = vec3(0.03) * albedo;
     vec3 colour = (ambient + Lo);
 
     FragColour = vec4(colour, 1.0);

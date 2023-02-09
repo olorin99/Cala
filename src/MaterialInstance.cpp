@@ -54,6 +54,7 @@ bool cala::MaterialInstance::setSampler(const char *name, backend::vulkan::Image
 }
 
 void cala::MaterialInstance::setData(u8 *data, u32 size) {
+    assert(size <= _material->_setSize);
     std::memcpy(_material->_engine->_materialData.data() + _offset, data, size);
     _material->_engine->_materialDataDirty = true;
 }

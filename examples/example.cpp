@@ -104,7 +104,6 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
         u32 albedoIndex = 0;
         u32 normalIndex = 0;
         u32 metallicRoughnessIndex = 0;
-        u32 aoIndex = 0;
     };
 
     for (u32 i = 0; i < model.materials.size(); i++) {
@@ -126,7 +125,6 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
         } else {
             mat.metallicRoughnessIndex = engine->defaultMetallic().index();
         }
-        mat.aoIndex = engine->defaultAO().index();
         MaterialInstance instance = material->instance();
         instance.setData(mat);
         materials.push(std::move(instance));
@@ -349,10 +347,8 @@ int main() {
     SDLPlatform platform("hello_triangle", 1920, 1080);
 
     Engine engine(platform);
-    Renderer renderer(&engine, {
-//        .tonemap = false,
-//        .skybox = false
-    });
+    Renderer renderer(&engine, {});
+    engine.driver().swapchain().setVsync(true);
 
     ImGuiContext imGuiContext(engine.driver(), platform.window());
 
@@ -361,7 +357,7 @@ int main() {
     ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
 //    ProgramHandle directionalLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/direct_pbr.frag.spv"_path));
 
-    Material material(&engine, pointLightProgram, sizeof(u32) * 4);
+    Material material(&engine, pointLightProgram, sizeof(u32) * 3);
     material._depthState = { true, true, CompareOp::LESS_EQUAL };
 
     Transform sponzaTransform;
@@ -381,15 +377,13 @@ int main() {
         u32 albedoIndex;
         u32 normalIndex;
         u32 metallicRoughness;
-        u32 aoIndex;
     };
     MaterialData materialData {
             static_cast<u32>(engine.defaultAlbedo().index()),
             static_cast<u32>(engine.defaultNormal().index()),
-            static_cast<u32>(engine.defaultMetallic().index()),
-            static_cast<u32>(engine.defaultAO().index())
+            static_cast<u32>(engine.defaultMetallic().index())
     };
-    matInstance.setUniform("material", materialData);
+    matInstance.setData(materialData);
 
     u32 objectCount = 20;
     Scene scene(&engine, objectCount);
