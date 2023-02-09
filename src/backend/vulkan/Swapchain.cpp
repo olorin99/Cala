@@ -356,12 +356,16 @@ bool cala::backend::vulkan::Swapchain::createSwapchain() {
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = _swapchain;
 
+    VkSwapchainKHR oldSwap = _swapchain;
+
     VkResult result = vkCreateSwapchainKHR(_driver.context().device(), &createInfo, nullptr, &_swapchain);
 
     u32 count = 0;
     vkGetSwapchainImagesKHR(_driver.context().device(), _swapchain, &count, nullptr);
     _images.resize(count);
     vkGetSwapchainImagesKHR(_driver.context().device(), _swapchain, &count, _images.data());
+
+    vkDestroySwapchainKHR(_driver.context().device(), oldSwap, nullptr);
 
     _extent = extent;
     _format = static_cast<Format>(format.format);

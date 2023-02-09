@@ -73,7 +73,7 @@ void main() {
 
     vec3 result = aces(hdr * camera.exposure);
 
-    result = pow(result, vec3(1.0 / globalData.gamma));
+//    result = pow(result, vec3(1.0 / globalData.gamma)); //TODO: find how to write to srgb storage images
 
     imageStore(backbuffer, globCoords, vec4(result, 1.0));
 
