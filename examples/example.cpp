@@ -123,7 +123,7 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
         if (auto it = material1.values.find("metallicRoughnessTexture"); it != material1.values.end()) {
             mat.metallicRoughnessIndex = images[model.textures[it->second.TextureIndex()].source].index();
         } else {
-            mat.metallicRoughnessIndex = engine->defaultMetallic().index();
+            mat.metallicRoughnessIndex = engine->defaultMetallicRoughness().index();
         }
         MaterialInstance instance = material->instance();
         instance.setData(mat);
@@ -381,7 +381,7 @@ int main() {
     MaterialData materialData {
             static_cast<u32>(engine.defaultAlbedo().index()),
             static_cast<u32>(engine.defaultNormal().index()),
-            static_cast<u32>(engine.defaultMetallic().index())
+            static_cast<u32>(engine.defaultMetallicRoughness().index())
     };
     matInstance.setData(materialData);
 

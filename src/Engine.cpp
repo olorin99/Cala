@@ -179,24 +179,19 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
     f32 normalData[] = { 0.52, 0.52, 1, 1 };
     (_defaultNormal = createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST}))
             ->data(_driver, {0, 1, 1, 1, 4 * 4, { normalData, sizeof(f32) * 4 }});
-    (_defaultMetallic = createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST}))
-            ->data(_driver, {0, 1, 1, 1, 4 * 4, { white, sizeof(f32) * 4 }});
-    (_defaultRoughness = createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST}))
-            ->data(_driver, {0, 1, 1, 1, 4 * 4, { white, sizeof(f32) * 4 }});
-    (_defaultAO = createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST}))
-            ->data(_driver, {0, 1, 1, 1, 4 * 4, { white, sizeof(f32) * 4 }});
+    f32 metallicRoughnessData[] = { 0.f, 1.f, 0.f, 1.f };
+    (_defaultMetallicRoughness = createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST}))
+            ->data(_driver, {0, 1, 1, 1, 4 * 4, { metallicRoughnessData, sizeof(f32) * 4 }});
 
 
     _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
-        VkImageMemoryBarrier barriers[7];
+        VkImageMemoryBarrier barriers[5];
         barriers[0] = _defaultPointShadow->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
         barriers[1] = _defaultDirectionalShadow->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
         barriers[2] = _defaultAlbedo->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
         barriers[3] = _defaultNormal->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
-        barriers[4] = _defaultMetallic->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
-        barriers[5] = _defaultRoughness->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
-        barriers[6] = _defaultAO->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
-        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER | backend::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { barriers, 7 });
+        barriers[4] = _defaultMetallicRoughness->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER | backend::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { barriers, 5 });
     });
 
     _defaultPointShadowView = _defaultPointShadow->newView();

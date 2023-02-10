@@ -88,11 +88,7 @@ namespace cala {
 
         ImageHandle defaultNormal() const { return _defaultNormal; }
 
-        ImageHandle defaultMetallic() const { return _defaultMetallic; }
-
-        ImageHandle defaultRoughness() const { return _defaultRoughness; }
-
-        ImageHandle defaultAO() const { return _defaultAO; }
+        ImageHandle defaultMetallicRoughness() const { return _defaultMetallicRoughness; }
 
     private:
         friend Renderer;
@@ -126,9 +122,7 @@ namespace cala {
 
         ImageHandle _defaultAlbedo;
         ImageHandle _defaultNormal;
-        ImageHandle _defaultMetallic;
-        ImageHandle _defaultRoughness;
-        ImageHandle _defaultAO;
+        ImageHandle _defaultMetallicRoughness;
 
         Mesh* _cube;
 
