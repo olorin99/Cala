@@ -1,4 +1,4 @@
-#version 450
+#version 460
 
 layout (location = 0) in vec3 inPosition;
 layout (location = 1) in vec3 inNormal;
@@ -17,10 +17,11 @@ layout (set = 1, binding = 0) uniform FrameData {
     CameraData camera;
 };
 
-layout (set = 4, binding = 0) uniform ModelData {
-    mat4 model;
+layout (set = 4, binding = 0) readonly buffer ModelData {
+    mat4 transforms[];
 };
 
 void main() {
+    mat4 model = transforms[gl_BaseInstance];
     gl_Position = camera.projection * camera.view * model * vec4(inPosition, 1.0);
 }

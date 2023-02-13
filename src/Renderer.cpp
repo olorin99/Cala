@@ -250,29 +250,24 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     if (_renderSettings.depthPre) {
         auto& depthPrePass = _graph.addPass("depth_pre");
         depthPrePass.setDepthOutput("depth", depthAttachment);
+        depthPrePass.addBufferInput("drawCommands");
 
         depthPrePass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            auto drawCommands = graph.getResource<BufferResource>("drawCommands");
+            cmd.clearDescriptors();
             cmd.bindBuffer(1, 0, *_cameraBuffer);
-            for (u32 i = 0; i < scene._renderList.size(); ++i) {
-                auto& renderable = scene._renderList[i].second.first;
-                auto& transform = scene._renderList[i].second.second;
-                if (!camera.frustum().intersect(transform->pos(), transform->scale().x()))
-                    continue;
+            auto& renderable = scene._renderList[0].second.first;
 
-                cmd.bindBindings(renderable.bindings);
-                cmd.bindAttributes(renderable.attributes);
-                cmd.bindProgram(*_engine->_directShadowProgram);
-                cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
-                cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
-                cmd.bindPipeline();
-                cmd.bindDescriptors();
-                cmd.bindVertexBuffer(0, renderable.vertex->buffer());
-                if (renderable.index) {
-                    cmd.bindIndexBuffer(*renderable.index);
-                    cmd.draw(renderable.indexCount, 1, renderable.firstIndex, 0);
-                } else
-                    cmd.draw(renderable.vertex->size() / (4 * 14), 1, 0, 0);
-            }
+            cmd.bindBindings(renderable.bindings);
+            cmd.bindAttributes(renderable.attributes);
+            cmd.bindProgram(*_engine->_directShadowProgram);
+            cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
+            cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], true);
+            cmd.bindPipeline();
+            cmd.bindDescriptors();
+            cmd.bindVertexBuffer(0, _engine->activeVertexBuffer()->buffer());
+            cmd.bindIndexBuffer(*_engine->activeIndexBuffer());
+            cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderList.size());
         });
     }
 
