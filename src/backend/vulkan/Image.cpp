@@ -56,7 +56,7 @@ cala::backend::vulkan::Image::Image(Driver& driver, CreateInfo info)
 
     VmaAllocationCreateInfo allocInfo{};
     allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-    allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+    allocInfo.flags = 0;
 
     vmaCreateImage(driver.context().allocator(), &imageInfo, &allocInfo, &_image, &_allocation, nullptr);
 

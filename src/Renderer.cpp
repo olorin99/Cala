@@ -199,12 +199,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                     cmd.bindPipeline();
                     cmd.bindDescriptors();
-                    cmd.bindVertexBuffer(0, renderable.vertex->buffer());
-                    if (renderable.index) {
-                        cmd.bindIndexBuffer(*renderable.index);
-                        cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderList.size());
-                    } else
-                        cmd.draw(renderable.vertex->size() / (4 * 14), 1, 0, 0);
+                    cmd.bindVertexBuffer(0, _engine->activeVertexBuffer()->buffer());
+                    cmd.bindIndexBuffer(*_engine->activeIndexBuffer());
+                    cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderList.size());
 
                     cmd.end(*_shadowFramebuffer);
 
@@ -336,12 +333,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindPipeline();
             cmd.bindDescriptors();
 
-            cmd.bindVertexBuffer(0, renderable.vertex->buffer());
-            if (renderable.index) {
-                cmd.bindIndexBuffer(*renderable.index);
-                cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderList.size());
-            } else
-                cmd.draw(renderable.vertex->size() / (4 * 14), 1, 0, 0);
+            cmd.bindVertexBuffer(0, _engine->activeVertexBuffer()->buffer());
+            cmd.bindIndexBuffer(*_engine->activeIndexBuffer());
+            cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderList.size());
         });
     }
 
@@ -387,9 +381,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindImage(2, 0, scene._skyLightMapView, _engine->_defaultSampler);
             cmd.bindPipeline();
             cmd.bindDescriptors();
-            cmd.bindVertexBuffer(0, _engine->_cube->_vertex->buffer());
-            cmd.bindIndexBuffer(*_engine->_cube->_index);
-            cmd.draw(_engine->_cube->_index->size() / sizeof(u32), 1, 0, 0);
+            cmd.bindVertexBuffer(0, _engine->activeVertexBuffer()->buffer());
+            cmd.bindIndexBuffer(*_engine->activeIndexBuffer());
+            cmd.draw(_engine->_cube->_primitives.front().indexCount, 1, _engine->_cube->_primitives.front().firstIndex, 0);
         });
     }
 

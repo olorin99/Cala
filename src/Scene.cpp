@@ -35,7 +35,8 @@ void cala::Scene::addRenderable(cala::Mesh &mesh, cala::MaterialInstance *materi
             materialInstance,
             { &mesh._binding, 1 },
             mesh._attributes,
-            castShadow
+            castShadow,
+            { { -1, -1, -1 }, { 1, 1, 1 } }
         }, transform);
     }
 }

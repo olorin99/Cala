@@ -53,15 +53,20 @@ cala::backend::vulkan::Buffer cala::MeshData::indexBuffer(backend::vulkan::Drive
     return std::move(buf);
 }
 
-cala::Mesh cala::MeshData::mesh(cala::Engine* engine) const {
+cala::Mesh cala::MeshData::mesh(cala::Engine* engine) {
 //    auto vertex = vertexBuffer(driver);
 //    auto index = indexBuffer(driver);
 
-    auto vertex = engine->createBuffer(_vertices.size() * sizeof(Vertex), backend::BufferUsage::VERTEX);
-    auto index = engine->createBuffer(_indices.size() * sizeof(u32), backend::BufferUsage::INDEX);
+//    auto vertex = engine->createBuffer(_vertices.size() * sizeof(Vertex), backend::BufferUsage::VERTEX);
+//    auto index = engine->createBuffer(_indices.size() * sizeof(u32), backend::BufferUsage::INDEX);
 
-    vertex->data({_vertices.data(), static_cast<u32>(_vertices.size() * sizeof(Vertex))});
-    index->data({_indices.data(), static_cast<u32>(_indices.size() * sizeof(u32))});
+//    vertex->data({_vertices.data(), static_cast<u32>(_vertices.size() * sizeof(Vertex))});
+//    index->data({_indices.data(), static_cast<u32>(_indices.size() * sizeof(u32))});
+
+    u32 vertexOffset = engine->uploadVertexData({ reinterpret_cast<f32*>(_vertices.data()), static_cast<u32>(_vertices.size() * sizeof(Vertex)) });
+    for (auto& index : _indices)
+        index += vertexOffset / sizeof(Vertex);
+    u32 indexOffset = engine->uploadIndexData({ reinterpret_cast<u32*>(_indices.data()), static_cast<u32>(_indices.size() * sizeof(u32)) });
 
     VkVertexInputBindingDescription binding{};
     binding.binding = 0;
@@ -75,9 +80,9 @@ cala::Mesh cala::MeshData::mesh(cala::Engine* engine) const {
             backend::Attribute{3, 0, backend::AttribType::Vec4f}
     };
 
-    Mesh mesh = {vertex, index, binding, attributes};
+    Mesh mesh = {{}, {}, binding, attributes};
     mesh._primitives.push({
-        0,
+        static_cast<u32>(indexOffset / sizeof(u32)),
         (u32)_indices.size()
     });
     return std::move(mesh);

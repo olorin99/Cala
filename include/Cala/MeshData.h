@@ -42,7 +42,7 @@ namespace cala {
 
         backend::vulkan::Buffer indexBuffer(backend::vulkan::Driver& driver) const;
 
-        Mesh mesh(Engine* engine) const;
+        Mesh mesh(Engine* engine);
 
     private:
 

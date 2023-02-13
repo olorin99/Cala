@@ -138,7 +138,12 @@ void main() {
     Mesh mesh = meshData[fsIn.drawID];
     MaterialData materialData = material[mesh.materialIndex];
 
-    vec3 albedo = texture(directShadows[materialData.albedoIndex], fsIn.TexCoords).rgb;
+    vec4 a = texture(directShadows[materialData.albedoIndex], fsIn.TexCoords);
+
+    if (a.a < 0.5)
+        discard;
+
+    vec3 albedo = a.rgb;
     vec3 normal = texture(directShadows[materialData.normalIndex], fsIn.TexCoords).rgb;
     float metallic = texture(directShadows[materialData.metallicRoughnessIndex], fsIn.TexCoords).b;
     float roughness = texture(directShadows[materialData.metallicRoughnessIndex], fsIn.TexCoords).g;
@@ -161,8 +166,12 @@ void main() {
         Light light = lights[i];
         float shadow = 0.0;
         vec3 L = vec3(0.0);
+        float attenuation = 1;
         if (light.type > 0) {
             L = normalize(light.position - fsIn.FragPos);
+            float distance = length(light.position - fsIn.FragPos);
+            attenuation = 1.0 / (distance * distance);
+
             float bias = max(shadowBias * (1.0 - dot(normal, L)), 0.0001);
             shadow = filterPCF(light.shadowIndex, light.position, bias, light.range);
         } else {
@@ -170,8 +179,6 @@ void main() {
             shadow = 1;
         }
         vec3 H = normalize(V + L);
-        float distance = length(light.position.xyz - fsIn.FragPos);
-        float attenuation = 1.0 / (distance * distance);
         vec3 radiance = light.colour * light.intensity * attenuation;
 
         float NDF = distributionGGX(normal, H, roughness);

@@ -29,6 +29,13 @@ namespace cala {
 
     };
 
+//    struct Mesh {
+//        BufferHandle vertexBuffer;
+//        BufferHandle indexBuffer;
+//        u32 firstIndex = 0;
+//        u32 indexCount = 0;
+//    };
+
 
 }
 

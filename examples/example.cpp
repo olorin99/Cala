@@ -137,7 +137,7 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
 
     for (auto& node : model.nodes) {
         if (node.mesh > -1) {
-            ende::math::Mat4f transform;
+            ende::math::Mat4f transform = ende::math::identity<4, f32>();
 
             if (node.scale.size() == 3) {
                 transform = ende::math::scale<4>(ende::math::Vec3f{ (f32)node.scale[0], (f32)node.scale[1], (f32)node.scale[2] });
@@ -263,14 +263,22 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
             backend::Attribute{3, 0, backend::AttribType::Vec4f}
     };
 
-    BufferHandle vertexBuffer = engine->createBuffer(vertices.size() * sizeof(Vertex), BufferUsage::VERTEX);
-    BufferHandle indexBuffer = engine->createBuffer(indices.size() * sizeof(u32), BufferUsage::INDEX);
-    vertexBuffer->data({ vertices.data(), static_cast<u32>(vertices.size() * sizeof(Vertex)) });
-    indexBuffer->data({ indices.data(), static_cast<u32>(indices.size() * sizeof(u32)) });
+//    BufferHandle vertexBuffer = engine->createBuffer(vertices.size() * sizeof(Vertex), BufferUsage::VERTEX);
+//    BufferHandle indexBuffer = engine->createBuffer(indices.size() * sizeof(u32), BufferUsage::INDEX);
+//    vertexBuffer->data({ vertices.data(), static_cast<u32>(vertices.size() * sizeof(Vertex)) });
+//    indexBuffer->data({ indices.data(), static_cast<u32>(indices.size() * sizeof(u32)) });
+
+    u32 vertexOffset = engine->uploadVertexData({ reinterpret_cast<f32*>(vertices.data()), static_cast<u32>(vertices.size() * sizeof(Vertex)) });
+    for (auto& index : indices)
+        index += vertexOffset / sizeof(Vertex);
+    u32 indexOffset = engine->uploadIndexData({ reinterpret_cast<u32*>(indices.data()), static_cast<u32>(indices.size() * sizeof(u32)) });
+    for (auto& primitive : primitives)
+        primitive.firstIndex += indexOffset / sizeof(u32);
+
 
     Model mesh;
-    mesh.vertexBuffer = vertexBuffer;
-    mesh.indexBuffer = indexBuffer;
+//    mesh.vertexBuffer = engine;
+//    mesh.indexBuffer = indexBuffer;
     mesh.primitives = std::move(primitives);
     mesh.images = std::move(images);
     mesh.materials = std::move(materials);
@@ -362,6 +370,7 @@ int main() {
 
     Transform sponzaTransform;
     auto sponza = loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf"_path);
+    auto damagedHelmet = loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path);
 
 
     Mesh cube = cala::shapes::cube().mesh(&engine);
@@ -414,8 +423,9 @@ int main() {
     scene.addSkyLightMap(background, true);
 
     scene.addRenderable(sponza, &sponzaTransform, true);
+    scene.addRenderable(damagedHelmet, &sponzaTransform, true);
 
-//    scene.addRenderable(cube, &matInstance, &lightTransform, false);
+    scene.addRenderable(cube, &matInstance, &lightTransform, false);
 
     f32 sceneSize = std::max(objectCount / 10, 20u);
 

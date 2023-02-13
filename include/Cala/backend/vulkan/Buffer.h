@@ -29,7 +29,7 @@ namespace cala::backend::vulkan {
             Buffer* buffer = nullptr;
             ~Mapped();
         };
-        Mapped map(u32 offset, u32 size);
+        Mapped map(u32 offset = 0, u32 size = 0);
 
         void unmap();
 

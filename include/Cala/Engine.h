@@ -90,6 +90,14 @@ namespace cala {
 
         ImageHandle defaultMetallicRoughness() const { return _defaultMetallicRoughness; }
 
+        u32 uploadVertexData(ende::Span<f32> data);
+
+        u32 uploadIndexData(ende::Span<u32> data);
+
+        BufferHandle activeVertexBuffer() const { return _globalVertexBuffers[_activeVertexIndex]; }
+
+        BufferHandle activeIndexBuffer() const { return _globalIndexBuffers[_activeVertexIndex]; }
+
     private:
         friend Renderer;
         friend Scene;
@@ -123,6 +131,13 @@ namespace cala {
         ImageHandle _defaultAlbedo;
         ImageHandle _defaultNormal;
         ImageHandle _defaultMetallicRoughness;
+
+        BufferHandle _globalVertexBuffers[2];
+        BufferHandle _globalIndexBuffers[2];
+        u32 _activeVertexIndex;
+        u32 _vertexOffset;
+        u32 _indexOffset;
+        bool _switchActive;
 
         Mesh* _cube;
 

@@ -55,7 +55,11 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
           .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
           .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
       }),
-      _materialDataDirty(true)
+      _materialDataDirty(true),
+      _activeVertexIndex(0),
+      _vertexOffset(0),
+      _indexOffset(0),
+      _switchActive(false)
 {
     ende::fs::File file;
     {
@@ -199,6 +203,11 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
 
     _materialBuffer = createBuffer(256, backend::BufferUsage::STORAGE | backend::BufferUsage::UNIFORM);
 
+    _globalVertexBuffers[0] = createBuffer(10000, backend::BufferUsage::VERTEX);
+    _globalVertexBuffers[1] = createBuffer(10000, backend::BufferUsage::VERTEX);
+    _globalIndexBuffers[0] = createBuffer(10000, backend::BufferUsage::INDEX);
+    _globalIndexBuffers[1] = createBuffer(10000, backend::BufferUsage::INDEX);
+
     _cube = new Mesh(shapes::cube().mesh(this));
 
 }
@@ -238,6 +247,19 @@ bool cala::Engine::gc() {
         } else
             --frame;
     }
+
+    if (_switchActive) {
+        u32 inactive = (_activeVertexIndex + 1) % 2;
+        if (_globalVertexBuffers[inactive]->size() > _globalVertexBuffers[_activeVertexIndex]->size())
+            _globalVertexBuffers[_activeVertexIndex] = resizeBuffer(_globalVertexBuffers[_activeVertexIndex], _globalVertexBuffers[inactive]->size(), true);
+        if (_globalIndexBuffers[inactive]->size() > _globalIndexBuffers[_activeVertexIndex]->size())
+            _globalIndexBuffers[_activeVertexIndex] = resizeBuffer(_globalIndexBuffers[_activeVertexIndex], _globalIndexBuffers[inactive]->size(), true);
+        _activeVertexIndex = inactive;
+        _switchActive = false;
+    }
+
+
+
     return true;
 }
 
@@ -320,6 +342,9 @@ void cala::Engine::destroyImage(ImageHandle handle) {
 cala::BufferHandle cala::Engine::resizeBuffer(BufferHandle handle, u32 size, bool transfer) {
     BufferHandle newBuffer = createBuffer(size, handle->usage());
     if (transfer) { // TODO: implement buffer data transfer
+        auto mapped = handle->map();
+        auto newMapped = newBuffer->map();
+        std::memcpy(newMapped.address, mapped.address, handle->size());
 //        _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
 //
 //        });
@@ -372,4 +397,32 @@ void cala::Engine::updateMaterialdata() {
         _materialBuffer->data(_materialData);
     }
     _materialDataDirty = false;
+}
+
+
+u32 cala::Engine::uploadVertexData(ende::Span<f32> data) {
+    u32 currentOffset = _vertexOffset;
+    u32 inactive = (_activeVertexIndex + 1) % 2;
+    if (currentOffset + data.size() >= _globalVertexBuffers[inactive]->size())
+        _globalVertexBuffers[inactive] = resizeBuffer(_globalVertexBuffers[inactive], currentOffset + data.size(), true);
+
+    auto mapped = _globalVertexBuffers[inactive]->map(currentOffset, data.size());
+    std::memcpy(mapped.address, data.data(), data.size());
+
+    _vertexOffset += data.size();
+    _switchActive = true;
+    return currentOffset;
+}
+
+u32 cala::Engine::uploadIndexData(ende::Span<u32> data) {
+    u32 currentOffset = _indexOffset;
+    u32 inactive = (_activeVertexIndex + 1) % 2;
+    if (currentOffset + data.size() >= _globalIndexBuffers[inactive]->size())
+        _globalIndexBuffers[inactive] = resizeBuffer(_globalIndexBuffers[inactive], currentOffset + data.size(), true);
+
+    auto mapped = _globalIndexBuffers[inactive]->map(currentOffset, data.size());
+    std::memcpy(mapped.address, data.data(), data.size());
+    _indexOffset += data.size();
+    _switchActive = true;
+    return currentOffset;
 }

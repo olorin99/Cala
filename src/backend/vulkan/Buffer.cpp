@@ -63,6 +63,9 @@ cala::backend::vulkan::Buffer::Mapped::~Mapped() {
 }
 
 cala::backend::vulkan::Buffer::Mapped cala::backend::vulkan::Buffer::map(u32 offset, u32 size) {
+    if (size == 0 && offset == 0)
+        size = _size;
+
     assert(_size >= size + offset);
     void* address = nullptr;
     vmaMapMemory(_driver.context().allocator(), _allocation, &address);
