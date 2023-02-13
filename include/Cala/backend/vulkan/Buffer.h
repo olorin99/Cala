@@ -28,6 +28,16 @@ namespace cala::backend::vulkan {
             void* address = nullptr;
             Buffer* buffer = nullptr;
             ~Mapped();
+
+            Mapped();
+
+            Mapped(const Mapped&) = delete;
+
+            Mapped& operator=(const Mapped&) = delete;
+
+            Mapped(Mapped&& rhs) noexcept;
+
+            Mapped& operator=(Mapped&& rhs) noexcept;
         };
         Mapped map(u32 offset = 0, u32 size = 0);
 

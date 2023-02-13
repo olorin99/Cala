@@ -13,7 +13,8 @@ cala::Light::Light(LightType type, bool shadows, Transform &transform)
       _quadratic(0.0075),
       _radius(80),
       _near(0.1),
-      _far(100)
+      _far(100),
+      _dirty(true)
 {
     switch (_type) {
         case DIRECTIONAL:
@@ -64,25 +65,31 @@ cala::Light::Data cala::Light::data() const {
 void cala::Light::setDirection(const ende::math::Quaternion &dir) {
     assert(_type == DIRECTIONAL);
     _transform->setRot(dir);
+    _dirty = true;
 }
 
 void cala::Light::setPosition(const ende::math::Vec3f &pos) {
     assert(_type == POINT);
     _transform->setPos(pos);
+    _dirty = true;
 }
 
 void cala::Light::setColour(const ende::math::Vec3f &colour) {
     _colour = colour;
+    _dirty = true;
 }
 
 void cala::Light::setIntensity(f32 intensity) {
     _intensity = intensity;
+    _dirty = true;
 }
 
 void cala::Light::setNear(f32 near) {
     _near = near;
+    _dirty = true;
 }
 
 void cala::Light::setFar(f32 far) {
     _far = far;
+    _dirty = true;
 }

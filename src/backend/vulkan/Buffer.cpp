@@ -59,7 +59,27 @@ cala::backend::vulkan::Buffer &cala::backend::vulkan::Buffer::operator=(cala::ba
 
 
 cala::backend::vulkan::Buffer::Mapped::~Mapped() {
-    buffer->unmap();
+    if (address && buffer)
+        buffer->unmap();
+}
+
+cala::backend::vulkan::Buffer::Mapped::Mapped()
+    : address(nullptr),
+    buffer(nullptr)
+{}
+
+cala::backend::vulkan::Buffer::Mapped::Mapped(Mapped &&rhs) noexcept
+    : address(nullptr),
+    buffer(nullptr)
+{
+    std::swap(address, rhs.address);
+    std::swap(buffer, rhs.buffer);
+}
+
+cala::backend::vulkan::Buffer::Mapped &cala::backend::vulkan::Buffer::Mapped::operator=(Mapped &&rhs) noexcept {
+    std::swap(address, rhs.address);
+    std::swap(buffer, rhs.buffer);
+    return *this;
 }
 
 cala::backend::vulkan::Buffer::Mapped cala::backend::vulkan::Buffer::map(u32 offset, u32 size) {
@@ -69,7 +89,10 @@ cala::backend::vulkan::Buffer::Mapped cala::backend::vulkan::Buffer::map(u32 off
     assert(_size >= size + offset);
     void* address = nullptr;
     vmaMapMemory(_driver.context().allocator(), _allocation, &address);
-    return { (void*)((char*)address + offset), this };
+    Mapped mapped;
+    mapped.address = (void*)((char*)address + offset);
+    mapped.buffer = this;
+    return std::move(mapped);
 }
 
 void cala::backend::vulkan::Buffer::unmap() {

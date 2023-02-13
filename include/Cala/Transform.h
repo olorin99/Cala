@@ -41,11 +41,16 @@ namespace cala {
 
         inline const ende::math::Vec3f& scale() const { return _scale; }
 
+        bool isDirty() const { return _dirty; }
+
+        void setDirty(bool dirty) { _dirty = dirty; }
+
     private:
 
         ende::math::Vec3f _position;
         ende::math::Quaternion _rotation;
         ende::math::Vec3f _scale;
+        bool _dirty;
 
     };
 

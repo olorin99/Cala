@@ -47,22 +47,22 @@ namespace cala {
 
         void prepare(u32 frame, Camera& camera);
 
-        void render(backend::vulkan::CommandBuffer& cmd);
-
 //    private:
 
         Engine* _engine;
 
-        ende::Vector<std::pair<Renderable, Transform*>> _renderables;
+        ende::Vector<std::pair<i32, std::pair<Renderable, Transform*>>> _renderables;
         ende::Vector<Light> _lights;
         u32 _directionalLightCount;
 
-        i32 _objectsDirtyFrames;
         i32 _lightsDirtyFrame;
 
         BufferHandle _meshDataBuffer[2];
+        backend::vulkan::Buffer::Mapped _mappedMesh[2];
         BufferHandle _modelBuffer[2];
+        backend::vulkan::Buffer::Mapped _mappedModel[2];
         BufferHandle _lightBuffer[2];
+        backend::vulkan::Buffer::Mapped _mappedLight[2];
         BufferHandle _lightCountBuffer[2];
         ImageHandle _skyLightMap;
         backend::vulkan::Image::View _skyLightMapView;
@@ -80,7 +80,6 @@ namespace cala {
         ende::Vector<MeshData> _meshData;
         ende::Vector<ende::math::Mat4f> _modelTransforms;
         ende::Vector<Light::Data> _lightData;
-        ende::Vector<std::pair<u32, std::pair<Renderable, Transform*>>> _renderList;
 
         f32 shadowBias = 0.01;
 

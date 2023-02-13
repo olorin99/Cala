@@ -16,16 +16,22 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     _lightCountBuffer{engine->createBuffer(sizeof(u32) * 2 + sizeof(f32), backend::BufferUsage::STORAGE),
                  engine->createBuffer(sizeof(u32) * 2 + sizeof(f32), backend::BufferUsage::STORAGE)},
     _directionalLightCount(0),
-    _objectsDirtyFrames(2),
     _lightsDirtyFrame(2)
-{}
+{
+    _mappedMesh[0] = _meshDataBuffer[0]->map();
+    _mappedMesh[1] = _meshDataBuffer[1]->map();
+    _mappedModel[0] = _modelBuffer[0]->map();
+    _mappedModel[1] = _modelBuffer[1]->map();
+    _mappedLight[0] = _lightBuffer[0]->map();
+    _mappedLight[1] = _lightBuffer[1]->map();
+}
 
 
 void cala::Scene::addRenderable(cala::Scene::Renderable &&renderable, cala::Transform *transform) {
     u32 key = 0;
 
-    _renderables.push(std::make_pair(renderable, transform));
-    _objectsDirtyFrames = 2;
+    assert(transform);
+    _renderables.push(std::make_pair(2, std::make_pair(renderable, transform)));
 }
 
 void cala::Scene::addRenderable(cala::Mesh &mesh, cala::MaterialInstance *materialInstance, cala::Transform *transform, bool castShadow) {
@@ -77,43 +83,54 @@ void cala::Scene::addSkyLightMap(ImageHandle skyLightMap, bool equirectangular, 
     _hdrSkyLight = hdr;
 }
 
+template <typename T>
+void assignMemory(void* start, u32 offset, T& data) {
+    u8* address = static_cast<u8*>(start) + offset;
+    *reinterpret_cast<T*>(address) = data;
+}
+
 void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
     PROFILE_NAMED("Scene::prepare");
     camera.updateFrustum();
 
-    if (_objectsDirtyFrames > 0) {
-        _renderList.clear();
-        for (auto& item : _renderables) {
-            ende::math::Vec4f pos{ item.second->pos().x(), item.second->pos().y(), item.second->pos().z(), 1 };
-            auto a = camera.viewProjection().transform(pos);
-            a = a / a.w();
-            f32 depth = a.z();
-            u32 index = *reinterpret_cast<u32*>(&depth);
-//        u32 index = depth * 10000000;
-            _renderList.push(std::make_pair(index, item));
+    u32 objectCount = _renderables.size();
+    // resize buffers to fit and update persistent mappings
+    if (objectCount * sizeof(MeshData) >= _meshDataBuffer[frame]->size()) {
+        _meshDataBuffer[frame] = _engine->resizeBuffer(_meshDataBuffer[frame], objectCount * sizeof(MeshData) * 2);
+        _mappedMesh[frame] = _meshDataBuffer[frame]->map();
+    }
+    if (objectCount * sizeof(ende::math::Mat4f) >= _modelBuffer[frame]->size()) {
+        _modelBuffer[frame] = _engine->resizeBuffer(_modelBuffer[frame], objectCount * sizeof(ende::math::Mat4f) * 2);
+        _mappedModel[frame] = _modelBuffer[frame]->map();
+    }
+
+    for (u32 i = 0; i < _renderables.size(); i++) {
+        auto& f = _renderables[i].first;
+        auto& renderable = _renderables[i].second.first;
+        auto& transform = _renderables[i].second.second;
+        if (!transform)
+            continue;
+        if (transform->isDirty()) {
+            f = 2;
+            transform->setDirty(false);
         }
+        if (f > 0) {
+            u32 meshOffset = i * sizeof(MeshData);
+            MeshData mesh{ renderable.firstIndex, renderable.indexCount, static_cast<u32>(renderable.materialInstance->getOffset() / renderable.materialInstance->material()->_setSize), 0, renderable.aabb.min, renderable.aabb.max };
+            assignMemory(_mappedMesh[frame].address, meshOffset, mesh);
 
-//        std::sort(_renderList.begin(), _renderList.end(), [](const std::pair<u32, std::pair<Renderable, Transform*>>& lhs, const std::pair<u32, std::pair<Renderable, Transform*>>& rhs) {
-//            return lhs.first < rhs.first;
-//        });
-
-        _meshData.clear();
-        _modelTransforms.clear();
-        for (auto& renderablePair : _renderList) {
-            auto& renderable = renderablePair.second.first;
-            auto& transform = renderablePair.second.second;
-            _meshData.push({ renderable.firstIndex, renderable.indexCount, static_cast<u32>(renderable.materialInstance->getOffset() / renderable.materialInstance->material()->_setSize), 0, renderable.aabb.min, renderable.aabb.max });
-            _modelTransforms.push(transform->toMat());
+            u32 transformOffset = i * sizeof(ende::math::Mat4f);
+            auto model = transform->toMat();
+            assignMemory(_mappedModel[frame].address, transformOffset, model);
+            f--;
         }
-        if (_meshData.size() * sizeof(MeshData) >= _meshDataBuffer[frame]->size())
-            _meshDataBuffer[frame] = _engine->resizeBuffer(_meshDataBuffer[frame], _meshData.size() * sizeof(MeshData) * 2);
-        _meshDataBuffer[frame]->data({_meshData.data(), static_cast<u32>(_meshData.size() * sizeof(MeshData))});
+    }
 
-        if (_modelTransforms.size() * sizeof(ende::math::Mat4f) >= _modelBuffer[frame]->size())
-            _modelBuffer[frame] = _engine->resizeBuffer(_modelBuffer[frame], _modelTransforms.size() * sizeof(ende::math::Mat4f) * 2);
-        _modelBuffer[frame]->data({_modelTransforms.data(), static_cast<u32>(_modelTransforms.size() * sizeof(ende::math::Mat4f))});
-
-        _objectsDirtyFrames--;
+    for (auto& light : _lights) {
+        if (light.isDirty()) {
+            _lightsDirtyFrame = 2;
+            light.setDirty(false);
+        }
     }
 
 
@@ -133,64 +150,16 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
 
             _lightData.push(data);
         }
-        if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame]->size())
+        if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame]->size()) {
             _lightBuffer[frame] = _engine->resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(Light::Data) * 2);
+            _mappedLight[frame] = _lightBuffer[frame]->map();
+        }
         u32 lightCount[3] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount), *reinterpret_cast<u32*>(&shadowBias) };
         _lightCountBuffer[frame]->data({ lightCount, sizeof(u32) * 3 });
-        _lightBuffer[frame]->data({_lightData.data(), static_cast<u32>(_lightData.size() * sizeof(Light::Data))});
+        std::memcpy(_mappedLight[frame].address, _lightData.data(), static_cast<u32>(_lightData.size() * sizeof(Light::Data)));
 
         _lightsDirtyFrame--;
     }
 
     _engine->updateMaterialdata();
-}
-
-void cala::Scene::render(backend::vulkan::CommandBuffer& cmd) {
-
-    Material* material = nullptr;
-    MaterialInstance* materialInstance = nullptr;
-
-    u32 lightCount = _lightData.empty() ? 1 : _lightData.size();
-
-    for (u32 light = 0; light < lightCount; light++) {
-        if (!_lightData.empty())
-            cmd.bindBuffer(3, 0, *_lightBuffer[0], light * sizeof(Light::Data), sizeof(Light::Data));
-
-        for (u32 i = 0; i < _renderList.size(); i++) {
-            auto& renderable = _renderList[i].second.first;
-            auto& transform = _renderList[i].second.second;
-
-            cmd.bindBindings(renderable.bindings);
-            cmd.bindAttributes(renderable.attributes);
-
-            if (materialInstance != renderable.materialInstance) {
-                materialInstance = renderable.materialInstance;
-                if (materialInstance) {
-                    if (materialInstance->material() != material) {
-                        material = materialInstance->material();
-                    }
-                    materialInstance->bind(cmd);
-                }
-            }
-            if (material) {
-                cmd.bindProgram(*material->getProgram());
-                cmd.bindRasterState(material->_rasterState);
-                cmd.bindDepthState(material->_depthState);
-            }
-
-            cmd.bindBuffer(1, 0, *_modelBuffer[0], i * sizeof(ende::math::Mat4f), sizeof(ende::math::Mat4f));
-
-            cmd.bindPipeline();
-            cmd.bindDescriptors();
-
-            cmd.bindVertexBuffer(0, renderable.vertex->buffer());
-            if (renderable.index)
-                cmd.bindIndexBuffer(*renderable.index);
-
-            if (renderable.index)
-                cmd.draw(renderable.index->size() / sizeof(u32), 1, 0, 0);
-            else
-                cmd.draw(renderable.vertex->size() / (4 * 14), 1, 0, 0);
-        }
-    }
 }

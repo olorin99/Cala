@@ -75,7 +75,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _cameraBuffer->data({ &cameraData, sizeof(cameraData) });
     {
         auto mapped = _drawCountBuffer->map(sizeof(u32), sizeof(u32));
-        *static_cast<u32*>(mapped.address) = scene._renderList.size();
+        *static_cast<u32*>(mapped.address) = scene._renderables.size();
     }
 
     backend::vulkan::CommandBuffer& cmd = *_frameInfo.cmd;
@@ -111,7 +111,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     meshDataResource.usage = scene._meshDataBuffer[frameIndex()]->usage();
 
     BufferResource drawCommandsResource;
-    drawCommandsResource.size = sizeof(VkDrawIndexedIndirectCommand) * std::max(scene._renderList.size(), (u64)1);
+    drawCommandsResource.size = sizeof(VkDrawIndexedIndirectCommand) * std::max(scene._renderables.size(), (u64)1);
     drawCommandsResource.usage = backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT;
 
     _graph.setBackbuffer("backbuffer");
@@ -169,7 +169,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd.bindBuffer(2, 3, *_drawCountBuffer, true);
                     cmd.bindPipeline();
                     cmd.bindDescriptors();
-                    cmd.dispatchCompute(std::ceil(scene._renderList.size() / 16.f), 1, 1);
+                    cmd.dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
 
 
                     cmd.begin(*_shadowFramebuffer);
@@ -191,7 +191,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd.pushConstants({ &shadowData, sizeof(shadowData) });
                     shadowCam.updateFrustum();
 
-                    auto& renderable = scene._renderList[0].second.first;
+                    auto& renderable = scene._renderables[0].second.first;
                     cmd.bindBindings(renderable.bindings);
                     cmd.bindAttributes(renderable.attributes);
 
@@ -201,7 +201,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd.bindDescriptors();
                     cmd.bindVertexBuffer(0, _engine->activeVertexBuffer()->buffer());
                     cmd.bindIndexBuffer(*_engine->activeIndexBuffer());
-                    cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderList.size());
+                    cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderables.size());
 
                     cmd.end(*_shadowFramebuffer);
 
@@ -243,7 +243,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd.bindBuffer(2, 3, *_drawCountBuffer, true);
         cmd.bindPipeline();
         cmd.bindDescriptors();
-        cmd.dispatchCompute(std::ceil(scene._renderList.size() / 16.f), 1, 1);
+        cmd.dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
     });
 
 
@@ -256,7 +256,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             cmd.clearDescriptors();
             cmd.bindBuffer(1, 0, *_cameraBuffer);
-            auto& renderable = scene._renderList[0].second.first;
+            auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
             cmd.bindAttributes(renderable.attributes);
@@ -267,7 +267,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindDescriptors();
             cmd.bindVertexBuffer(0, _engine->activeVertexBuffer()->buffer());
             cmd.bindIndexBuffer(*_engine->activeIndexBuffer());
-            cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderList.size());
+            cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderables.size());
         });
     }
 
@@ -300,9 +300,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 cmd.bindBuffer(3, 1, *scene._lightCountBuffer[frameIndex()], true);
             }
 
-            if (scene._renderList.empty())
+            if (scene._renderables.empty())
                 return;
-            auto& renderable = scene._renderList[0].second.first;
+            auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
             cmd.bindAttributes(renderable.attributes);
@@ -330,7 +330,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
             cmd.bindVertexBuffer(0, _engine->activeVertexBuffer()->buffer());
             cmd.bindIndexBuffer(*_engine->activeIndexBuffer());
-            cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderList.size());
+            cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderables.size());
         });
     }
 

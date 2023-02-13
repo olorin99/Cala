@@ -69,11 +69,16 @@ namespace cala {
 
         Camera& camera() { return _camera; }
 
+        bool isDirty() const { return _dirty; }
+
+        void setDirty(bool dirty) { _dirty = dirty; }
+
     private:
         Transform* _transform;
         Camera _camera;
         LightType _type;
         bool _shadowing;
+        bool _dirty;
 
         ende::math::Vec3f _colour;
         f32 _intensity;
