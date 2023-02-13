@@ -383,7 +383,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindDescriptors();
             cmd.bindVertexBuffer(0, _engine->activeVertexBuffer()->buffer());
             cmd.bindIndexBuffer(*_engine->activeIndexBuffer());
-            cmd.draw(_engine->_cube->_primitives.front().indexCount, 1, _engine->_cube->_primitives.front().firstIndex, 0);
+            cmd.draw(_engine->_cube->indexCount, 1, _engine->_cube->firstIndex, 0);
         });
     }
 

@@ -26,19 +26,17 @@ void cala::Scene::addRenderable(cala::Scene::Renderable &&renderable, cala::Tran
 }
 
 void cala::Scene::addRenderable(cala::Mesh &mesh, cala::MaterialInstance *materialInstance, cala::Transform *transform, bool castShadow) {
-    for (auto& primitive : mesh._primitives) {
-        addRenderable({
-            mesh._vertex,
-            mesh._index,
-            primitive.firstIndex,
-            primitive.indexCount,
-            materialInstance,
-            { &mesh._binding, 1 },
-            mesh._attributes,
-            castShadow,
-            { { -1, -1, -1 }, { 1, 1, 1 } }
-        }, transform);
-    }
+    addRenderable({
+        mesh._vertex,
+        mesh._index,
+        mesh.firstIndex,
+        mesh.indexCount,
+        materialInstance,
+        { &mesh._binding, 1 },
+        mesh._attributes,
+        castShadow,
+        { { -1, -1, -1 }, { 1, 1, 1 } }
+    }, transform);
 }
 
 void cala::Scene::addRenderable(Model &model, Transform *transform, bool castShadow) {

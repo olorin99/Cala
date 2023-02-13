@@ -178,13 +178,13 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
     });
 
     f32 white[4] = { 1, 1, 1, 1 };
-    (_defaultAlbedo = createImage({1, 1, 1, backend::Format::RGBA8_UNORM, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST}))
+    (_defaultAlbedo = createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST, backend::ImageLayout::GENERAL, backend::ImageType::IMAGE2D}))
             ->data(_driver, {0, 1, 1, 1, 4 * 4, { white, sizeof(f32) * 4 }});
     f32 normalData[] = { 0.52, 0.52, 1, 1 };
-    (_defaultNormal = createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST}))
+    (_defaultNormal = createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST, backend::ImageLayout::GENERAL, backend::ImageType::IMAGE2D}))
             ->data(_driver, {0, 1, 1, 1, 4 * 4, { normalData, sizeof(f32) * 4 }});
     f32 metallicRoughnessData[] = { 0.f, 1.f, 0.f, 1.f };
-    (_defaultMetallicRoughness = createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST}))
+    (_defaultMetallicRoughness = createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST, backend::ImageLayout::GENERAL, backend::ImageType::IMAGE2D}))
             ->data(_driver, {0, 1, 1, 1, 4 * 4, { metallicRoughnessData, sizeof(f32) * 4 }});
 
 

@@ -8,34 +8,18 @@
 
 namespace cala {
 
-    class Mesh {
-    public:
-
-        Mesh(BufferHandle vertex, BufferHandle index, VkVertexInputBindingDescription binding, std::array<backend::Attribute, 4> attributes);
-
-    //private:
+    struct Mesh {
 
         BufferHandle _vertex;
         BufferHandle _index; // optional
 
-        struct Primitive {
-            u32 firstIndex;
-            u32 indexCount;
-        };
-        ende::Vector<Primitive> _primitives;
+        u32 firstIndex = 0;
+        u32 indexCount = 0;
 
         VkVertexInputBindingDescription _binding;
         std::array<backend::Attribute, 4> _attributes;
 
     };
-
-//    struct Mesh {
-//        BufferHandle vertexBuffer;
-//        BufferHandle indexBuffer;
-//        u32 firstIndex = 0;
-//        u32 indexCount = 0;
-//    };
-
 
 }
 

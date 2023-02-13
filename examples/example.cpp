@@ -369,11 +369,12 @@ int main() {
     material._depthState = { true, true, CompareOp::LESS_EQUAL };
 
     Transform sponzaTransform;
+    Mesh cube = cala::shapes::cube().mesh(&engine);
+    Mesh sphere = cala::shapes::sphereUV(1).mesh(&engine);
     auto sponza = loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf"_path);
     auto damagedHelmet = loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path);
 
 
-    Mesh cube = cala::shapes::cube().mesh(&engine);
 
     Transform cameraTransform({10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(-90)));
     Camera camera((f32)ende::math::rad(54.4), platform.windowSize().first, platform.windowSize().second, 0.1f, 1000.f, cameraTransform);
@@ -425,7 +426,7 @@ int main() {
     scene.addRenderable(sponza, &sponzaTransform, true);
     scene.addRenderable(damagedHelmet, &sponzaTransform, true);
 
-    scene.addRenderable(cube, &matInstance, &lightTransform, false);
+    scene.addRenderable(sphere, &matInstance, &lightTransform, false);
 
     f32 sceneSize = std::max(objectCount / 10, 20u);
 
