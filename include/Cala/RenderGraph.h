@@ -111,8 +111,9 @@ namespace cala {
         void reset();
 
         ende::Span<std::pair<const char*, backend::vulkan::Timer>> getTimers() {
-            assert(_orderedPasses.size() <= _timers.size());
-            return { _timers.data(), static_cast<u32>(_orderedPasses.size()) };
+            u32 offIndex = (_frameIndex + 1) % 2;
+            assert(_orderedPasses.size() <= _timers[offIndex].size());
+            return { _timers[offIndex].data(), static_cast<u32>(_orderedPasses.size()) };
         }
 
         template<class T>
@@ -129,7 +130,8 @@ namespace cala {
         Engine* _engine;
 
         ende::Vector<RenderPass> _passes;
-        ende::Vector<std::pair<const char*, backend::vulkan::Timer>> _timers;
+        ende::Vector<std::pair<const char*, backend::vulkan::Timer>> _timers[2];
+        u32 _frameIndex;
 
         tsl::robin_map<const char*, Resource*> _attachmentMap;
 
