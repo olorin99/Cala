@@ -431,26 +431,26 @@ int main() {
     f32 sceneSize = std::max(objectCount / 10, 20u);
 
 
-//    u32 width = 10;
-//    u32 height = 10;
-//    u32 depth = 10;
-//
-//    Transform transform;
-//    ende::Vector<Transform> transforms;
-//    transforms.reserve(width * height * depth);
-//    for (u32 i = 0; i < width; i++) {
-//        auto xpos = transform.pos();
-//        for (u32 j = 0; j < height; j++) {
-//            auto ypos = transform.pos();
-//            for (u32 k = 0; k < depth; k++) {
-//                transform.addPos({0, 0, 3});
-//                auto& t = transforms.push(transform);
-//                scene.addRenderable(cube, &matInstance, &t, false);
-//            }
-//            transform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
-//        }
-//        transform.setPos(xpos + ende::math::Vec3f{3, 0, 0});
-//    }
+    u32 width = 10;
+    u32 height = 10;
+    u32 depth = 10;
+
+    Transform transform;
+    ende::Vector<Transform> transforms;
+    transforms.reserve(width * height * depth);
+    for (u32 i = 0; i < width; i++) {
+        auto xpos = transform.pos();
+        for (u32 j = 0; j < height; j++) {
+            auto ypos = transform.pos();
+            for (u32 k = 0; k < depth; k++) {
+                transform.addPos({0, 0, 3});
+                auto& t = transforms.push(transform);
+                scene.addRenderable(cube, &matInstance, &t, false);
+            }
+            transform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
+        }
+        transform.setPos(xpos + ende::math::Vec3f{3, 0, 0});
+    }
 
 
     ende::Vector<Transform> lightTransforms;

@@ -57,6 +57,9 @@ namespace cala {
         ende::Vector<Light> _lights;
         u32 _directionalLightCount;
 
+        i32 _objectsDirtyFrames;
+        i32 _lightsDirtyFrame;
+
         BufferHandle _meshDataBuffer[2];
         BufferHandle _modelBuffer[2];
         BufferHandle _lightBuffer[2];

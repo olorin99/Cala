@@ -15,7 +15,9 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
                  engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE)},
     _lightCountBuffer{engine->createBuffer(sizeof(u32) * 2 + sizeof(f32), backend::BufferUsage::STORAGE),
                  engine->createBuffer(sizeof(u32) * 2 + sizeof(f32), backend::BufferUsage::STORAGE)},
-    _directionalLightCount(0)
+    _directionalLightCount(0),
+    _objectsDirtyFrames(2),
+    _lightsDirtyFrame(2)
 {}
 
 
@@ -23,6 +25,7 @@ void cala::Scene::addRenderable(cala::Scene::Renderable &&renderable, cala::Tran
     u32 key = 0;
 
     _renderables.push(std::make_pair(renderable, transform));
+    _objectsDirtyFrames = 2;
 }
 
 void cala::Scene::addRenderable(cala::Mesh &mesh, cala::MaterialInstance *materialInstance, cala::Transform *transform, bool castShadow) {
@@ -60,6 +63,7 @@ u32 cala::Scene::addLight(cala::Light &light) {
     if (light.type() == Light::DIRECTIONAL)
         ++_directionalLightCount;
     _lights.push(std::move(light));
+    _lightsDirtyFrame = 2;
     return _lights.size() - 1;
 }
 
@@ -75,68 +79,68 @@ void cala::Scene::addSkyLightMap(ImageHandle skyLightMap, bool equirectangular, 
 
 void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
     PROFILE_NAMED("Scene::prepare");
-//    std::sort(_lights.begin(), _lights.end(), [](const Light& lhs, const Light& rhs) {
-//        return !lhs.shadowing() and rhs.shadowing();
-//    });
-//
-//    std::sort(_renderables.begin(), _renderables.end(), [](const std::pair<u32, std::pair<Renderable, Transform*>>& lhs, const std::pair<u32, std::pair<Renderable, Transform*>>& rhs) {
-//        return lhs.first < rhs.first;
-//    });
-
     camera.updateFrustum();
 
-    _renderList.clear();
-    for (auto& item : _renderables) {
-        ende::math::Vec4f pos{ item.second->pos().x(), item.second->pos().y(), item.second->pos().z(), 1 };
-        auto a = camera.viewProjection().transform(pos);
-        a = a / a.w();
-        f32 depth = a.z();
-        u32 index = *reinterpret_cast<u32*>(&depth);
+    if (_objectsDirtyFrames > 0) {
+        _renderList.clear();
+        for (auto& item : _renderables) {
+            ende::math::Vec4f pos{ item.second->pos().x(), item.second->pos().y(), item.second->pos().z(), 1 };
+            auto a = camera.viewProjection().transform(pos);
+            a = a / a.w();
+            f32 depth = a.z();
+            u32 index = *reinterpret_cast<u32*>(&depth);
 //        u32 index = depth * 10000000;
-        _renderList.push(std::make_pair(index, item));
+            _renderList.push(std::make_pair(index, item));
+        }
+
+//        std::sort(_renderList.begin(), _renderList.end(), [](const std::pair<u32, std::pair<Renderable, Transform*>>& lhs, const std::pair<u32, std::pair<Renderable, Transform*>>& rhs) {
+//            return lhs.first < rhs.first;
+//        });
+
+        _meshData.clear();
+        _modelTransforms.clear();
+        for (auto& renderablePair : _renderList) {
+            auto& renderable = renderablePair.second.first;
+            auto& transform = renderablePair.second.second;
+            _meshData.push({ renderable.firstIndex, renderable.indexCount, static_cast<u32>(renderable.materialInstance->getOffset() / renderable.materialInstance->material()->_setSize), 0, renderable.aabb.min, renderable.aabb.max });
+            _modelTransforms.push(transform->toMat());
+        }
+        if (_meshData.size() * sizeof(MeshData) >= _meshDataBuffer[frame]->size())
+            _meshDataBuffer[frame] = _engine->resizeBuffer(_meshDataBuffer[frame], _meshData.size() * sizeof(MeshData) * 2);
+        _meshDataBuffer[frame]->data({_meshData.data(), static_cast<u32>(_meshData.size() * sizeof(MeshData))});
+
+        if (_modelTransforms.size() * sizeof(ende::math::Mat4f) >= _modelBuffer[frame]->size())
+            _modelBuffer[frame] = _engine->resizeBuffer(_modelBuffer[frame], _modelTransforms.size() * sizeof(ende::math::Mat4f) * 2);
+        _modelBuffer[frame]->data({_modelTransforms.data(), static_cast<u32>(_modelTransforms.size() * sizeof(ende::math::Mat4f))});
+
+        _objectsDirtyFrames--;
     }
 
-//    std::sort(_renderList.begin(), _renderList.end(), [](const std::pair<u32, std::pair<Renderable, Transform*>>& lhs, const std::pair<u32, std::pair<Renderable, Transform*>>& rhs) {
-//        return lhs.first < rhs.first;
-//    });
 
-    std::sort(_lightData.begin(), _lightData.end(), [](const Light::Data& lhs, const Light::Data& rhs) {
-        return lhs.type < rhs.type;
-    });
-    _lightData.clear();
-    u32 shadowIndex = 0;
-    for (u32 i = 0; i < _lights.size(); i++) {
-        auto& light = _lights[i];
-        auto data = light.data();
-        if (light.shadowing())
-            data.shadowIndex = _engine->getShadowMap(shadowIndex++).index();
-        else
-            data.shadowIndex = _engine->_defaultPointShadow.index();
+    if (_lightsDirtyFrame > 0) {
+        std::sort(_lightData.begin(), _lightData.end(), [](const Light::Data& lhs, const Light::Data& rhs) {
+            return lhs.type < rhs.type;
+        });
+        _lightData.clear();
+        u32 shadowIndex = 0;
+        for (u32 i = 0; i < _lights.size(); i++) {
+            auto& light = _lights[i];
+            auto data = light.data();
+            if (light.shadowing())
+                data.shadowIndex = _engine->getShadowMap(shadowIndex++).index();
+            else
+                data.shadowIndex = _engine->_defaultPointShadow.index();
 
-        _lightData.push(data);
+            _lightData.push(data);
+        }
+        if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame]->size())
+            _lightBuffer[frame] = _engine->resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(Light::Data) * 2);
+        u32 lightCount[3] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount), *reinterpret_cast<u32*>(&shadowBias) };
+        _lightCountBuffer[frame]->data({ lightCount, sizeof(u32) * 3 });
+        _lightBuffer[frame]->data({_lightData.data(), static_cast<u32>(_lightData.size() * sizeof(Light::Data))});
+
+        _lightsDirtyFrame--;
     }
-    if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame]->size())
-        _lightBuffer[frame] = _engine->resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(Light::Data) * 2);
-    u32 lightCount[3] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount), *reinterpret_cast<u32*>(&shadowBias) };
-    _lightCountBuffer[frame]->data({ lightCount, sizeof(u32) * 3 });
-    _lightBuffer[frame]->data({_lightData.data(), static_cast<u32>(_lightData.size() * sizeof(Light::Data))});
-
-
-    _meshData.clear();
-    _modelTransforms.clear();
-    for (auto& renderablePair : _renderList) {
-        auto& renderable = renderablePair.second.first;
-        auto& transform = renderablePair.second.second;
-        _meshData.push({ renderable.firstIndex, renderable.indexCount, static_cast<u32>(renderable.materialInstance->getOffset() / renderable.materialInstance->material()->_setSize), 0, renderable.aabb.min, renderable.aabb.max });
-        _modelTransforms.push(transform->toMat());
-    }
-    if (_meshData.size() * sizeof(MeshData) >= _meshDataBuffer[frame]->size())
-        _meshDataBuffer[frame] = _engine->resizeBuffer(_meshDataBuffer[frame], _meshData.size() * sizeof(MeshData) * 2);
-    _meshDataBuffer[frame]->data({_meshData.data(), static_cast<u32>(_meshData.size() * sizeof(MeshData))});
-
-    if (_modelTransforms.size() * sizeof(ende::math::Mat4f) >= _modelBuffer[frame]->size())
-        _modelBuffer[frame] = _engine->resizeBuffer(_modelBuffer[frame], _modelTransforms.size() * sizeof(ende::math::Mat4f) * 2);
-    _modelBuffer[frame]->data({_modelTransforms.data(), static_cast<u32>(_modelTransforms.size() * sizeof(ende::math::Mat4f))});
 
     _engine->updateMaterialdata();
 }
