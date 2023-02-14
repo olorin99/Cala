@@ -9,12 +9,12 @@
 
 namespace cala::backend::vulkan {
 
-    class Driver;
+    class Device;
 
     class Swapchain {
     public:
 
-        Swapchain(Driver& driver, Platform& platform, bool clear = true);
+        Swapchain(Device& driver, Platform& platform, bool clear = true);
 
         ~Swapchain();
 
@@ -64,7 +64,7 @@ namespace cala::backend::vulkan {
         bool createSemaphores();
 
 
-        Driver& _driver;
+        Device& _driver;
 
         VkSurfaceKHR _surface;
         VkSwapchainKHR _swapchain;

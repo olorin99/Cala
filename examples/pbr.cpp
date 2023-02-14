@@ -1,5 +1,5 @@
 #include <Cala/backend/vulkan/SDLPlatform.h>
-#include <Cala/backend/vulkan/Driver.h>
+#include <Cala/backend/vulkan/Device.h>
 #include <Cala/shapes.h>
 #include <Cala/Camera.h>
 #include <Cala/Light.h>
@@ -68,7 +68,7 @@ MeshData loadModel(const ende::fs::Path& path) {
     return data;
 }
 
-ShaderProgram loadShader(Driver& driver, const ende::fs::Path& vertex, const ende::fs::Path& fragment) {
+ShaderProgram loadShader(Device& driver, const ende::fs::Path& vertex, const ende::fs::Path& fragment) {
     ende::fs::File shaderFile;
     shaderFile.open(vertex, ende::fs::in | ende::fs::binary);
 
@@ -86,7 +86,7 @@ ShaderProgram loadShader(Driver& driver, const ende::fs::Path& vertex, const end
             .compile(driver);
 }
 
-Image loadImage(Driver& driver, const ende::fs::Path& path) {
+Image loadImage(Device& driver, const ende::fs::Path& path) {
     i32 width, height, channels;
     u8* data = stbi_load((*path).c_str(), &width, &height, &channels, STBI_rgb_alpha);
     if (!data) throw "unable load image";
@@ -98,7 +98,7 @@ Image loadImage(Driver& driver, const ende::fs::Path& path) {
     return image;
 }
 
-Image loadImageHDR(Driver& driver, const ende::fs::Path& path) {
+Image loadImageHDR(Device& driver, const ende::fs::Path& path) {
     stbi_set_flip_vertically_on_load(true);
     i32 width, height, channels;
     f32* data = stbi_loadf((*path).c_str(), &width, &height, &channels, STBI_rgb_alpha);
@@ -620,7 +620,7 @@ int main() {
         }
 
 
-        Driver::FrameInfo frameInfo = driver.beginFrame();
+        Device::FrameInfo frameInfo = driver.beginFrame();
         driver.waitFrame(frameInfo.frame);
         auto frame = driver.swapchain().nextImage();
         {

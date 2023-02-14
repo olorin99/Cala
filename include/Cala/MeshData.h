@@ -38,9 +38,9 @@ namespace cala {
 
         u32 indexCount() const { return _indices.size(); }
 
-        backend::vulkan::Buffer vertexBuffer(backend::vulkan::Driver& driver) const;
+        backend::vulkan::Buffer vertexBuffer(backend::vulkan::Device& driver) const;
 
-        backend::vulkan::Buffer indexBuffer(backend::vulkan::Driver& driver) const;
+        backend::vulkan::Buffer indexBuffer(backend::vulkan::Device& driver) const;
 
         Mesh mesh(Engine* engine);
 

@@ -1,6 +1,6 @@
 #include "Cala/backend/vulkan/SamplerArray.h"
 
-cala::backend::vulkan::SamplerArray::SamplerArray(Driver &driver)
+cala::backend::vulkan::SamplerArray::SamplerArray(Device &driver)
     : _driver(driver),
     _samplers{Sampler(driver, {}), Sampler(driver, {}), Sampler(driver, {}), Sampler(driver, {}), Sampler(driver, {})},
     _count(0)

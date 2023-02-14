@@ -1,7 +1,6 @@
 #include "Cala/Engine.h"
 #include <Ende/filesystem/File.h>
 #include <Cala/backend/vulkan/ShaderProgram.h>
-#include <Cala/Probe.h>
 #include <Cala/shapes.h>
 #include <Cala/Mesh.h>
 #include <Ende/profile/profile.h>
@@ -108,20 +107,6 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
                 .addStage(fragmentData, backend::ShaderStage::FRAGMENT)
                 .compile(_driver)));
     }
-//    {
-//        file.open("../../res/shaders/fullscreen.vert.spv"_path, ende::fs::in | ende::fs::binary);
-//        ende::Vector<u32> vertexData(file.size() / sizeof(u32));
-//        file.read({ reinterpret_cast<char*>(vertexData.data()), static_cast<u32>(vertexData.size() * sizeof(u32)) });
-//
-//        file.open("../../res/shaders/hdr.frag.spv"_path, ende::fs::in | ende::fs::binary);
-//        ende::Vector<u32> fragmentData(file.size() / sizeof(u32));
-//        file.read({ reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32)) });
-//
-//        _tonemapProgram = createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-//                .addStage(vertexData, backend::ShaderStage::VERTEX)
-//                .addStage(fragmentData, backend::ShaderStage::FRAGMENT)
-//                .compile(_driver)));
-//    }
     {
         file.open("../../res/shaders/hdr.comp.spv"_path, ende::fs::in | ende::fs::binary);
         ende::Vector<u32> computeData(file.size() / sizeof(u32));
@@ -356,7 +341,7 @@ void cala::Engine::destroyImage(ImageHandle handle) {
 
 cala::BufferHandle cala::Engine::resizeBuffer(BufferHandle handle, u32 size, bool transfer) {
     BufferHandle newBuffer = createBuffer(size, handle->usage());
-    if (transfer) { // TODO: implement buffer data transfer
+    if (transfer) {
 
         _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
             VkBufferCopy bufferCopy{};
@@ -366,13 +351,6 @@ cala::BufferHandle cala::Engine::resizeBuffer(BufferHandle handle, u32 size, boo
             vkCmdCopyBuffer(cmd.buffer(), handle->buffer(), newBuffer->buffer(), 1, &bufferCopy);
         });
 
-
-//        auto mapped = handle->map();
-//        auto newMapped = newBuffer->map();
-//        std::memcpy(newMapped.address, mapped.address, handle->size());
-//        _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
-//
-//        });
     }
     destroyBuffer(handle);
     return newBuffer;
@@ -398,20 +376,6 @@ cala::ImageHandle cala::Engine::getShadowMap(u32 index) {
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, 0, nullptr, { &cubeBarrier, 1 });
     });
     return map;
-}
-
-cala::Probe &cala::Engine::getShadowProbe(u32 index) {
-    if (index < _shadowProbes.size())
-        return _shadowProbes[index];
-
-    _shadowProbes.emplace_back(this, Probe::ProbeInfo{
-        1024, 1024,
-        backend::Format::D32_SFLOAT,
-        backend::ImageUsage::SAMPLED | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT,
-        &_shadowPass
-    });
-
-    return _shadowProbes[std::min((u64)index, _shadowProbes.size() - 1)];
 }
 
 void cala::Engine::updateMaterialdata() {

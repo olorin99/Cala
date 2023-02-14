@@ -9,7 +9,7 @@
 
 namespace cala::backend::vulkan {
 
-    class Driver;
+    class Device;
     class CommandBuffer;
 
     class Image {
@@ -38,7 +38,7 @@ namespace cala::backend::vulkan {
             u32 layer = 0; // move up in struct just here for backward compat
         };
 
-        Image(Driver& driver, CreateInfo info);
+        Image(Device& driver, CreateInfo info);
 
         ~Image();
 
@@ -46,7 +46,7 @@ namespace cala::backend::vulkan {
 
         Image& operator=(Image&& rhs) noexcept;
 
-        void data(Driver& driver, DataInfo info);
+        void data(Device& driver, DataInfo info);
 
         void* map(u32 format = 4);
 
@@ -102,7 +102,7 @@ namespace cala::backend::vulkan {
 
     private:
 
-        Driver& _driver;
+        Device& _driver;
         VkImage _image;
         VmaAllocation _allocation;
 

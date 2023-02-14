@@ -73,24 +73,6 @@ namespace cala::backend::vulkan {
 
         PipelineStatistics getPipelineStatistics() const;
 
-
-
-        //maybe deprecate
-        std::pair<VkBuffer, VkDeviceMemory> createBuffer(u32 size, u32 usage, MemoryProperties flags);
-
-        struct CreateImage {
-            VkImageType imageType;
-            VkFormat format;
-            VkImageUsageFlags usage;
-            u32 width = 1;
-            u32 height = 1;
-            u32 depth = 1;
-            u32 mipLevels = 1;
-            u32 arrayLayers = 1;
-        };
-
-        std::pair<VkImage, VkDeviceMemory> createImage(const CreateImage info);
-
     private:
 
         u32 memoryIndex(u32 filter, VkMemoryPropertyFlags properties);
@@ -105,6 +87,7 @@ namespace cala::backend::vulkan {
 
         VkQueue _graphicsQueue;
         VkQueue _computeQueue;
+        VkQueue _transferQueue;
 
         VkQueryPool _timestampQueryPool;
         VkQueryPool _pipelineStatistics;

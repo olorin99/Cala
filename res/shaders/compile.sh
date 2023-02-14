@@ -1,14 +1,28 @@
 #!/bin/bash
 
-for filename in *; do
+function compile_folder() {
+  cd "$1"
+  for filename in *; do
+    if [ -d "$filename" ]; then
+      compile_folder "$filename"
+      continue
+    fi
+
     if [[ $filename == *.spv ]] || [[ $filename == *.sh ]]
     then
-        continue
+      continue
     fi
-#    y=${filename%.*}
-#    echo ${y##*/}
+
+  #    y=${filename%.*}
+  #    echo ${y##*/}
 
     output="${filename}.spv"
 
+    echo "glslangValidator -V -o $output $filename"
+
     glslangValidator -V -o $output $filename
-done
+  done
+  cd ..
+}
+
+compile_folder "."

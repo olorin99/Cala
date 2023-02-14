@@ -17,7 +17,7 @@
 #include <vulkan/vulkan.h>
 
 #include <Cala/backend/vulkan/ShaderProgram.h>
-#include <Cala/backend/vulkan/Driver.h>
+#include <Cala/backend/vulkan/Device.h>
 
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include <Cala/backend/vulkan/Buffer.h>
@@ -41,7 +41,7 @@ using namespace cala;
 using namespace cala::backend;
 using namespace cala::backend::vulkan;
 
-ShaderProgram loadShader(Driver& driver, const ende::fs::Path& vertex, const ende::fs::Path& fragment) {
+ShaderProgram loadShader(Device& driver, const ende::fs::Path& vertex, const ende::fs::Path& fragment) {
     ende::fs::File shaderFile;
     shaderFile.open(vertex, ende::fs::in | ende::fs::binary);
 
@@ -59,7 +59,7 @@ ShaderProgram loadShader(Driver& driver, const ende::fs::Path& vertex, const end
             .compile(driver);
 }
 
-Image loadImage(Driver& driver, const ende::fs::Path& path) {
+Image loadImage(Device& driver, const ende::fs::Path& path) {
     i32 width, height, channels;
     u8* data = stbi_load((*path).c_str(), &width, &height, &channels, STBI_rgb_alpha);
     if (!data) throw "unable load image";
@@ -79,7 +79,7 @@ int main() {
 
     SDLPlatform platform("Hello", 800, 600);
 
-    Driver driver(platform);
+    Device driver(platform);
     ImGuiContext imGuiContext(driver, platform.window());
 
     Scene scene(driver, 10);

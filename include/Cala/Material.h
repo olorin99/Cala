@@ -1,7 +1,7 @@
 #ifndef CALA_MATERIAL_H
 #define CALA_MATERIAL_H
 
-#include <Cala/backend/vulkan/Driver.h>
+#include <Cala/backend/vulkan/Device.h>
 #include <Cala/backend/vulkan/ShaderProgram.h>
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include <Ende/Vector.h>

@@ -1,11 +1,11 @@
 #include "Cala/backend/vulkan/CommandBuffer.h"
 #include <Cala/backend/vulkan/primitives.h>
-#include <Cala/backend/vulkan/Driver.h>
+#include <Cala/backend/vulkan/Device.h>
 #include <Ende/profile/profile.h>
 
 #include <Ende/log/log.h>
 
-cala::backend::vulkan::CommandBuffer::CommandBuffer(Driver& driver, VkQueue queue, VkCommandBuffer buffer)
+cala::backend::vulkan::CommandBuffer::CommandBuffer(Device& driver, VkQueue queue, VkCommandBuffer buffer)
     : _driver(driver),
     _buffer(buffer),
     _signal(VK_NULL_HANDLE),

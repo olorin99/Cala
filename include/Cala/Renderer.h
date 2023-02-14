@@ -14,7 +14,7 @@ namespace cala {
     class Scene;
 
     namespace backend::vulkan {
-        class Driver;
+        class Device;
     }
 
     class Renderer {
@@ -68,7 +68,7 @@ namespace cala {
 
         RenderGraph _graph;
 
-        backend::vulkan::Driver::FrameInfo _frameInfo;
+        backend::vulkan::Device::FrameInfo _frameInfo;
 
         Stats _stats;
 

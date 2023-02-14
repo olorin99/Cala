@@ -74,6 +74,11 @@ void cala::Light::setPosition(const ende::math::Vec3f &pos) {
     _dirty = true;
 }
 
+void cala::Light::setShadowing(bool shadowing) {
+    _shadowing = shadowing;
+    _dirty = true;
+}
+
 void cala::Light::setColour(const ende::math::Vec3f &colour) {
     _colour = colour;
     _dirty = true;

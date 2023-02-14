@@ -6,7 +6,7 @@
 
 namespace cala::backend::vulkan {
 
-    class Driver;
+    class Device;
 
     class Sampler {
     public:
@@ -26,7 +26,7 @@ namespace cala::backend::vulkan {
             bool unnormalizedCoordinates = false;
         };
 
-        Sampler(Driver& driver, CreateInfo info);
+        Sampler(Device& driver, CreateInfo info);
 
         ~Sampler();
 
@@ -38,7 +38,7 @@ namespace cala::backend::vulkan {
 
     private:
 
-        Driver& _driver;
+        Device& _driver;
         VkSampler _sampler;
 
 

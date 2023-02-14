@@ -8,7 +8,7 @@
 
 namespace cala::backend::vulkan {
 
-    class Driver;
+    class Device;
 
     class RenderPass {
     public:
@@ -25,7 +25,7 @@ namespace cala::backend::vulkan {
             VkImageLayout internalLayout;
         };
 
-        RenderPass(Driver& driver, ende::Span<Attachment> attachments);
+        RenderPass(Device& driver, ende::Span<Attachment> attachments);
 
         ~RenderPass();
 

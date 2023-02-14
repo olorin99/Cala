@@ -1,10 +1,10 @@
 #include <cstring>
 #include <Cala/backend/vulkan/Buffer.h>
 #include <Cala/backend/vulkan/primitives.h>
-#include <Cala/backend/vulkan/Driver.h>
+#include <Cala/backend/vulkan/Device.h>
 
 
-cala::backend::vulkan::Buffer::Buffer(Driver &driver, u32 size, BufferUsage usage, MemoryProperties flags)
+cala::backend::vulkan::Buffer::Buffer(Device &driver, u32 size, BufferUsage usage, MemoryProperties flags)
     : _driver(driver),
     _buffer(VK_NULL_HANDLE),
     _allocation(nullptr),

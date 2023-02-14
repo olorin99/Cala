@@ -1,7 +1,7 @@
 #include <Ende/Vector.h>
 #include <Cala/backend/vulkan/primitives.h>
 #include "Cala/backend/vulkan/Swapchain.h"
-#include <Cala/backend/vulkan/Driver.h>
+#include <Cala/backend/vulkan/Device.h>
 #include <limits>
 #include <algorithm>
 
@@ -58,7 +58,7 @@ VkExtent2D getExtent(const VkSurfaceCapabilitiesKHR& capabilities, u32 width, u3
     return extent;
 }
 
-cala::backend::vulkan::Swapchain::Swapchain(Driver &driver, Platform& platform, bool clear)
+cala::backend::vulkan::Swapchain::Swapchain(Device &driver, Platform& platform, bool clear)
     : _driver(driver),
     _swapchain(VK_NULL_HANDLE),
     _frame(0),

@@ -258,6 +258,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     //cache queues for later use
     vkGetDeviceQueue(_device, queueIndex(QueueType::GRAPHICS), 0, &_graphicsQueue);
     vkGetDeviceQueue(_device, queueIndex(QueueType::COMPUTE), 0, &_computeQueue);
+    vkGetDeviceQueue(_device, queueIndex(QueueType::TRANSFER), 0, &_transferQueue);
 
     VkQueryPoolCreateInfo queryPoolCreateInfo{};
     queryPoolCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
@@ -356,6 +357,8 @@ VkQueue cala::backend::vulkan::Context::getQueue(QueueType type) const {
             return _graphicsQueue;
         case QueueType::COMPUTE:
             return _computeQueue;
+        case QueueType::TRANSFER:
+            return _transferQueue;
     }
     VkQueue queue;
     vkGetDeviceQueue(_device, queueIndex(type), 0, &queue);
@@ -384,56 +387,6 @@ VkDeviceMemory cala::backend::vulkan::Context::allocate(u32 size, u32 typeBits, 
     vkAllocateMemory(_device, &allocateInfo, nullptr, &memory);
     return memory;
 }
-
-
-std::pair<VkBuffer, VkDeviceMemory> cala::backend::vulkan::Context::createBuffer(u32 size, u32 usage, MemoryProperties flags) {
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = usage;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    VkBuffer buffer;
-    vkCreateBuffer(_device, &bufferInfo, nullptr, &buffer);
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(_device, buffer, &memRequirements);
-
-    VkDeviceMemory memory = allocate(memRequirements.size, memRequirements.memoryTypeBits, flags);
-    vkBindBufferMemory(_device, buffer, memory, 0);
-
-    return {buffer, memory};
-}
-
-std::pair <VkImage, VkDeviceMemory> cala::backend::vulkan::Context::createImage(const CreateImage info) {
-    VkImageCreateInfo imageInfo{};
-    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.imageType = info.imageType;
-    imageInfo.format = info.format;
-    imageInfo.extent.width = info.width;
-    imageInfo.extent.height = info.height;
-    imageInfo.extent.depth = info.depth;
-    imageInfo.mipLevels = info.mipLevels;
-    imageInfo.arrayLayers = info.arrayLayers;
-
-    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.usage = info.usage;
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-
-    VkImage image;
-    vkCreateImage(_device, &imageInfo, nullptr, &image);
-
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(_device, image, &memRequirements);
-
-    VkDeviceMemory memory = allocate(memRequirements.size, memRequirements.memoryTypeBits, MemoryProperties::DEVICE_LOCAL);
-
-    vkBindImageMemory(_device, image, memory, 0);
-    return {image, memory};
-}
-
 
 const char *cala::backend::vulkan::Context::deviceTypeString() const {
     switch (_deviceType) {

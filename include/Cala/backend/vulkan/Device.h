@@ -1,10 +1,9 @@
-#ifndef CALA_DRIVER_H
-#define CALA_DRIVER_H
+#ifndef CALA_DEVICE_H
+#define CALA_DEVICE_H
 
 #include <Cala/backend/vulkan/Context.h>
 #include <Cala/backend/vulkan/Swapchain.h>
 #include <Cala/backend/vulkan/CommandBuffer.h>
-#include <Cala/backend/vulkan/CommandBufferList.h>
 #include "Platform.h"
 
 #include <Ende/time/StopWatch.h>
@@ -13,12 +12,12 @@ namespace cala::backend::vulkan {
 
     const u32 FRAMES_IN_FLIGHT = 2;
 
-    class Driver {
+    class Device {
     public:
 
-        Driver(Platform& platform, bool clear = true); // change clear to options struct
+        Device(Platform& platform, bool clear = true); // change clear to options struct
 
-        ~Driver();
+        ~Device();
 
         struct FrameInfo {
             u64 frame = 0;
@@ -39,13 +38,13 @@ namespace cala::backend::vulkan {
         Buffer stagingBuffer(u32 size);
 
 
-        CommandBuffer beginSingleTimeCommands();
+        CommandBuffer beginSingleTimeCommands(QueueType queueType = QueueType::GRAPHICS);
 
         void endSingleTimeCommands(CommandBuffer& buffer);
 
         template <typename F>
-        void immediate(F func) {
-            auto cmd = beginSingleTimeCommands();
+        void immediate(F func, QueueType queueType = QueueType::GRAPHICS) {
+            auto cmd = beginSingleTimeCommands(queueType);
             func(cmd);
             endSingleTimeCommands(cmd);
         }
@@ -63,8 +62,8 @@ namespace cala::backend::vulkan {
 
         i32 getBindlessIndex() const { return _bindlessIndex; }
 
-        VkDescriptorSetLayout emptyLayout() const { return _emptySetLayout; }
-        VkDescriptorSet emptySet() const { return _emptySet; }
+//        VkDescriptorSetLayout emptyLayout() const { return _emptySetLayout; }
+//        VkDescriptorSet emptySet() const { return _emptySet; }
 
 
         RenderPass* getRenderPass(ende::Span<RenderPass::Attachment> attachments);
@@ -108,8 +107,8 @@ namespace cala::backend::vulkan {
             }
         };
         std::unordered_map<SetLayoutKey, VkDescriptorSetLayout, ende::util::MurmurHash<SetLayoutKey>> _setLayouts;
-        VkDescriptorSetLayout _emptySetLayout;
-        VkDescriptorSet _emptySet;
+//        VkDescriptorSetLayout _emptySetLayout;
+//        VkDescriptorSet _emptySet;
 
         VkDescriptorSetLayout _bindlessLayout;
         VkDescriptorSet _bindlessSet;
@@ -120,4 +119,4 @@ namespace cala::backend::vulkan {
 
 }
 
-#endif //CALA_DRIVER_H
+#endif //CALA_DEVICE_H

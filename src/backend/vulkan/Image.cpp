@@ -1,8 +1,8 @@
 #include "Cala/backend/vulkan/Image.h"
-#include <Cala/backend/vulkan/Driver.h>
+#include <Cala/backend/vulkan/Device.h>
 #include <Cala/backend/vulkan/primitives.h>
 
-cala::backend::vulkan::Image::Image(Driver& driver, CreateInfo info)
+cala::backend::vulkan::Image::Image(Device& driver, CreateInfo info)
     : _driver(driver),
     _image(VK_NULL_HANDLE),
     _allocation(nullptr),
@@ -138,7 +138,7 @@ cala::backend::vulkan::Image::View &cala::backend::vulkan::Image::View::operator
     return *this;
 }
 
-void cala::backend::vulkan::Image::data(cala::backend::vulkan::Driver& driver, DataInfo info) {
+void cala::backend::vulkan::Image::data(cala::backend::vulkan::Device& driver, DataInfo info) {
 
     auto staging = driver.stagingBuffer(info.width * info.height * info.depth * info.format);
     staging.data(info.data);

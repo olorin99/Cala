@@ -9,7 +9,7 @@ namespace cala::backend::vulkan {
     class SamplerArray {
     public:
 
-        SamplerArray(Driver& driver);
+        SamplerArray(Device& driver);
 
         SamplerArray(SamplerArray&& rhs) noexcept;
 
@@ -25,7 +25,7 @@ namespace cala::backend::vulkan {
 
     private:
 
-        Driver& _driver;
+        Device& _driver;
         std::array<Image::View, 5> _views;
         std::array<Sampler, 5> _samplers;
         u32 _count;

@@ -1,10 +1,10 @@
 #include "Cala/backend/vulkan/RenderPass.h"
-#include <Cala/backend/vulkan/Driver.h>
+#include <Cala/backend/vulkan/Device.h>
 #include <Cala/backend/vulkan/primitives.h>
 
 static u32 glob_id = 1;
 
-cala::backend::vulkan::RenderPass::RenderPass(Driver& driver, ende::Span<Attachment> attachments)
+cala::backend::vulkan::RenderPass::RenderPass(Device& driver, ende::Span<Attachment> attachments)
     : _device(driver.context().device()),
     _renderPass(VK_NULL_HANDLE),
     _colourAttachments(0),

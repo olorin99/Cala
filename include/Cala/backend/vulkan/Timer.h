@@ -8,7 +8,7 @@ namespace cala::backend::vulkan {
     class Timer {
     public:
 
-        Timer(Driver& driver, u32 index = 0);
+        Timer(Device& driver, u32 index = 0);
 
         void start(CommandBuffer& cmd);
 
@@ -18,7 +18,7 @@ namespace cala::backend::vulkan {
 
     private:
 
-        Driver* _driver;
+        Device* _driver;
 
         u32 _index;
         CommandBuffer* _cmdBuffer;

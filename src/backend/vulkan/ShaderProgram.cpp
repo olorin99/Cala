@@ -1,5 +1,5 @@
 #include "Cala/backend/vulkan/ShaderProgram.h"
-#include <Cala/backend/vulkan/Driver.h>
+#include <Cala/backend/vulkan/Device.h>
 #include <Cala/backend/vulkan/primitives.h>
 #include <SPIRV-Cross/spirv_cross.hpp>
 
@@ -12,7 +12,7 @@ cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProg
     return *this;
 }
 
-cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Builder::compile(Driver& driver) {
+cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Builder::compile(Device& driver) {
     ShaderProgram program(driver.context().device());
 
     bool hasPushConstant = false;

@@ -1,9 +1,9 @@
 #include "Cala/backend/vulkan/Timer.h"
-#include <Cala/backend/vulkan/Driver.h>
+#include <Cala/backend/vulkan/Device.h>
 
 static u32 indexCount = 0;
 
-cala::backend::vulkan::Timer::Timer(Driver &driver, u32 index)
+cala::backend::vulkan::Timer::Timer(Device &driver, u32 index)
     : _driver(&driver),
     _index(indexCount++),
     _cmdBuffer(nullptr),

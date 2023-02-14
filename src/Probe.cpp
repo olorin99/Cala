@@ -1,6 +1,6 @@
 #include "Cala/Probe.h"
 #include <Cala/backend/vulkan/CommandBuffer.h>
-#include <Cala/backend/vulkan/Driver.h>
+#include <Cala/backend/vulkan/Device.h>
 
 cala::Probe::Probe(cala::Engine* engine, ProbeInfo info) {
     //TODO: ownership belongs to engine object

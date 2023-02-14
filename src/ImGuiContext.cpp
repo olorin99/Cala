@@ -33,7 +33,7 @@ void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkDevice device, VkQue
 }
 
 
-ImGuiContext::ImGuiContext(cala::backend::vulkan::Driver &driver, SDL_Window* window)
+ImGuiContext::ImGuiContext(cala::backend::vulkan::Device &driver, SDL_Window* window)
     : _device(driver.context().device()),
     _window(window),
     _renderPass(nullptr),

@@ -2,13 +2,12 @@
 #define CALA_ENGINE_H
 
 #include <Ende/Vector.h>
-#include <vector>
 #include <Ende/Shared.h>
 #include <Cala/backend/vulkan/Buffer.h>
 #include <Cala/backend/vulkan/Image.h>
 
 #include <Cala/backend/vulkan/Platform.h>
-#include <Cala/backend/vulkan/Driver.h>
+#include <Cala/backend/vulkan/Device.h>
 
 namespace cala {
 
@@ -60,7 +59,7 @@ namespace cala {
 
         ~Engine();
 
-        backend::vulkan::Driver& driver() { return _driver; }
+        backend::vulkan::Device& driver() { return _driver; }
 
         ende::time::Duration getRunningTime() const { return _startTime.elapsed(); }
 
@@ -114,7 +113,7 @@ namespace cala {
         friend ImageHandle;
         friend ProgramHandle;
 
-        backend::vulkan::Driver _driver;
+        backend::vulkan::Device _driver;
 
         ende::time::SystemTime _startTime;
 
@@ -153,7 +152,6 @@ namespace cala {
         ende::Vector<backend::vulkan::Image*> _images;
         ende::Vector<backend::vulkan::Image::View> _imageViews;
         ende::Vector<backend::vulkan::ShaderProgram> _programs;
-        std::vector<Probe> _shadowProbes; //TODO: fix vectors in Ende, Optional implementation sucks
 
         ende::Vector<ImageHandle> _shadowMaps;
 
@@ -164,8 +162,6 @@ namespace cala {
         ende::Vector<u32> _freeImages;
 
         ImageHandle getShadowMap(u32 index);
-
-        Probe& getShadowProbe(u32 index);
 
         bool _materialDataDirty;
         ende::Vector<u8> _materialData;

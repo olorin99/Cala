@@ -19,7 +19,7 @@ namespace cala::backend::vulkan {
     class CommandBuffer {
     public:
 
-        CommandBuffer(Driver& driver, VkQueue queue, VkCommandBuffer buffer);
+        CommandBuffer(Device& driver, VkQueue queue, VkCommandBuffer buffer);
 
         ~CommandBuffer();
 
@@ -150,7 +150,7 @@ namespace cala::backend::vulkan {
 
         VkDescriptorSet getDescriptorSet(u32 set);
 
-        Driver& _driver;
+        Device& _driver;
         VkCommandBuffer _buffer;
         VkSemaphore _signal;
         VkQueue _queue;

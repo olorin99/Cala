@@ -37,7 +37,7 @@ namespace cala {
 
         bool shadowing() const { return _shadowing; }
 
-        void setShadowing(bool shadowing = false) { _shadowing = shadowing; }
+        void setShadowing(bool shadowing = false);
 
         void setDirection(const ende::math::Quaternion& dir);
 

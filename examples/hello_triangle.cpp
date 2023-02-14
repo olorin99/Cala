@@ -1,5 +1,5 @@
 #include <Cala/backend/vulkan/SDLPlatform.h>
-#include <Cala/backend/vulkan/Driver.h>
+#include <Cala/backend/vulkan/Device.h>
 #include <Cala/shapes.h>
 #include <Cala/Camera.h>
 #include <Ende/filesystem/File.h>
@@ -8,7 +8,7 @@ using namespace cala;
 using namespace cala::backend;
 using namespace cala::backend::vulkan;
 
-ShaderProgram loadShader(Driver& driver, const ende::fs::Path& vertex, const ende::fs::Path& fragment) {
+ShaderProgram loadShader(Device& driver, const ende::fs::Path& vertex, const ende::fs::Path& fragment) {
     ende::fs::File shaderFile;
     shaderFile.open(vertex, ende::fs::in | ende::fs::binary);
 
@@ -28,7 +28,7 @@ ShaderProgram loadShader(Driver& driver, const ende::fs::Path& vertex, const end
 
 int main() {
     SDLPlatform platform("hello_triangle", 800, 600);
-    Driver driver(platform);
+    Device driver(platform);
 
     //Shaders
     ShaderProgram program = loadShader(driver, "../../res/shaders/triangle.vert.spv"_path, "../../res/shaders/triangle.frag.spv"_path);
@@ -72,7 +72,7 @@ int main() {
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
         }
 
-        Driver::FrameInfo frameInfo = driver.beginFrame();
+        Device::FrameInfo frameInfo = driver.beginFrame();
         driver.waitFrame(frameInfo.frame);
         auto frame = driver.swapchain().nextImage();
         {

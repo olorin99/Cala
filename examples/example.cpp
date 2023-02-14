@@ -1,11 +1,9 @@
 #include <Cala/backend/vulkan/SDLPlatform.h>
-#include <Cala/backend/vulkan/Driver.h>
 #include <Cala/shapes.h>
 #include <Cala/Camera.h>
 #include <Cala/Light.h>
 #include <Ende/filesystem/File.h>
 #include <Cala/ImGuiContext.h>
-#include <Cala/backend/vulkan/Timer.h>
 #include <Cala/Material.h>
 #include <Cala/MaterialInstance.h>
 #include <Cala/Scene.h>
@@ -19,8 +17,6 @@
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
 #include <Ende/profile/ProfileManager.h>
-#include <iostream>
-#include <Ende/log/log.h>
 #include <Cala/Model.h>
 
 #define TINYGLTF_IMPLEMENTATION
@@ -333,7 +329,7 @@ MeshData loadModel(const ende::fs::Path& path) {
     return data;
 }
 
-ShaderProgram loadShader(Driver& driver, const ende::fs::Path& vertex, const ende::fs::Path& fragment) {
+ShaderProgram loadShader(Device& driver, const ende::fs::Path& vertex, const ende::fs::Path& fragment) {
     ende::fs::File shaderFile;
     shaderFile.open(vertex, ende::fs::in | ende::fs::binary);
 

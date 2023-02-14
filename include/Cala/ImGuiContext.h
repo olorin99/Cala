@@ -10,12 +10,12 @@
 //#include "imgui_impl_sdl.h"
 
 #include "Cala/backend/vulkan/RenderPass.h"
-#include "Cala/backend/vulkan/Driver.h"
+#include "Cala/backend/vulkan/Device.h"
 
 class ImGuiContext {
 public:
 
-    ImGuiContext(cala::backend::vulkan::Driver& driver, SDL_Window* window);
+    ImGuiContext(cala::backend::vulkan::Device& driver, SDL_Window* window);
 
     ~ImGuiContext();
 

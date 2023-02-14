@@ -1,7 +1,7 @@
 #include "Cala/backend/vulkan/Sampler.h"
-#include <Cala/backend/vulkan/Driver.h>
+#include <Cala/backend/vulkan/Device.h>
 
-cala::backend::vulkan::Sampler::Sampler(Driver& driver, CreateInfo info)
+cala::backend::vulkan::Sampler::Sampler(Device& driver, CreateInfo info)
     : _driver(driver)
 {
     VkSamplerCreateInfo samplerInfo{};
