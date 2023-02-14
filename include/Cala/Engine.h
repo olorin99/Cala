@@ -94,6 +94,17 @@ namespace cala {
 
         u32 uploadIndexData(ende::Span<u32> data);
 
+
+
+        struct Stats {
+            u32 buffersInUse = 0;
+            u32 allocatedBuffers = 0;
+            u32 imagesInUse = 0;
+            u32 allocatedImages = 0;
+        };
+
+        Stats stats() const;
+
     private:
         friend Renderer;
         friend Scene;

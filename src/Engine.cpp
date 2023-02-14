@@ -449,3 +449,16 @@ u32 cala::Engine::uploadIndexData(ende::Span<u32> data) {
     _stagingReady = true;
     return currentOffset;
 }
+
+cala::Engine::Stats cala::Engine::stats() const {
+    u32 allocatedBuffers = _buffers.size();
+    u32 buffersInUse = allocatedBuffers - _freeBuffers.size();
+    u32 allocatedImages = _images.size();
+    u32 imagesInUse = allocatedImages - _freeImages.size();
+    return {
+        buffersInUse,
+        allocatedBuffers,
+        imagesInUse,
+        allocatedImages
+    };
+}

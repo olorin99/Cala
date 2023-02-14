@@ -590,6 +590,12 @@ int main() {
                 ImGui::Text("\tAvailable: %lu mb", budget.budget / 1000000);
             }
 
+            auto engineStats = engine.stats();
+            ImGui::Text("Allocated Buffers: %d", engineStats.allocatedBuffers);
+            ImGui::Text("Buffers In Use: %d", engineStats.buffersInUse);
+            ImGui::Text("Allocated Images: %d", engineStats.allocatedImages);
+            ImGui::Text("Images In Use: %d", engineStats.imagesInUse);
+
             ImGui::End();
 
             ImGui::Begin("Render Settings");
