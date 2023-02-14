@@ -199,8 +199,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                     cmd.bindPipeline();
                     cmd.bindDescriptors();
-                    cmd.bindVertexBuffer(0, _engine->activeVertexBuffer()->buffer());
-                    cmd.bindIndexBuffer(*_engine->activeIndexBuffer());
+                    cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer->buffer());
+                    cmd.bindIndexBuffer(*_engine->_globalIndexBuffer);
                     cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderables.size());
 
                     cmd.end(*_shadowFramebuffer);
@@ -265,8 +265,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], true);
             cmd.bindPipeline();
             cmd.bindDescriptors();
-            cmd.bindVertexBuffer(0, _engine->activeVertexBuffer()->buffer());
-            cmd.bindIndexBuffer(*_engine->activeIndexBuffer());
+            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer->buffer());
+            cmd.bindIndexBuffer(*_engine->_globalIndexBuffer);
             cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderables.size());
         });
     }
@@ -328,8 +328,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindPipeline();
             cmd.bindDescriptors();
 
-            cmd.bindVertexBuffer(0, _engine->activeVertexBuffer()->buffer());
-            cmd.bindIndexBuffer(*_engine->activeIndexBuffer());
+            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer->buffer());
+            cmd.bindIndexBuffer(*_engine->_globalIndexBuffer);
             cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderables.size());
         });
     }
@@ -376,8 +376,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindImage(2, 0, scene._skyLightMapView, _engine->_defaultSampler);
             cmd.bindPipeline();
             cmd.bindDescriptors();
-            cmd.bindVertexBuffer(0, _engine->activeVertexBuffer()->buffer());
-            cmd.bindIndexBuffer(*_engine->activeIndexBuffer());
+            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer->buffer());
+            cmd.bindIndexBuffer(*_engine->_globalIndexBuffer);
             cmd.draw(_engine->_cube->indexCount, 1, _engine->_cube->firstIndex, 0);
         });
     }

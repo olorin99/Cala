@@ -369,11 +369,15 @@ int main() {
     material._depthState = { true, true, CompareOp::LESS_EQUAL };
 
     Transform sponzaTransform;
-    Mesh cube = cala::shapes::cube().mesh(&engine);
-    Mesh sphere = cala::shapes::sphereUV(1).mesh(&engine);
-    auto sponza = loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf"_path);
-    auto damagedHelmet = loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path);
 
+    Transform helmetTransform({0, 1, 0});
+
+    Mesh cube = cala::shapes::cube().mesh(&engine);
+    Mesh sphere = cala::shapes::sphereNormalized(1).mesh(&engine);
+    auto sponza = loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf"_path);
+//    auto damagedHelmet = loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path);
+    Model damagedHelmet;
+    bool addHelmet = false;
 
 
     Transform cameraTransform({10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(-90)));
@@ -424,7 +428,7 @@ int main() {
     scene.addSkyLightMap(background, true);
 
     scene.addRenderable(sponza, &sponzaTransform, true);
-    scene.addRenderable(damagedHelmet, &sponzaTransform, true);
+//    scene.addRenderable(damagedHelmet, &helmetTransform, true);
 
     scene.addRenderable(sphere, &matInstance, &lightTransform, false);
 
@@ -507,6 +511,11 @@ int main() {
                 cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(45) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_DOWN])
                 cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(-45) * dt);
+        }
+
+        if (addHelmet) {
+            scene.addRenderable(damagedHelmet, &helmetTransform, true);
+            addHelmet = false;
         }
 
         {
@@ -650,12 +659,18 @@ int main() {
             auto pos = camera.transform().pos();
             ImGui::Text("Position: { %f, %f, %f }", pos.x(), pos.y(), pos.z());
 
+            if (ImGui::Button("Load")) {
+                damagedHelmet = std::move(loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path));
+                addHelmet = true;
+//                scene.addRenderable(damagedHelmet, &helmetTransform, true);
+            }
+
             ImGui::End();
             ImGui::Render();
         }
 
         {
-//            modelTransform.rotate(ende::math::Vec3f{0, 1, 0}, ende::math::rad(45) * dt);
+            helmetTransform.rotate(ende::math::Vec3f{0, 1, 0}, ende::math::rad(45) * dt);
             lightTransform.rotate(ende::math::Vec3f{0, 1, 1}, ende::math::rad(45) * dt);
         }
         engine.gc();

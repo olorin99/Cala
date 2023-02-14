@@ -51,6 +51,8 @@ void cala::BufferResource::devirtualize(Engine *engine) {
     if (!handle) {
         handle = engine->createBuffer(size, usage);
     }
+    if (size > handle->size())
+        handle = engine->resizeBuffer(handle, size);
 }
 
 cala::RenderPass::RenderPass(RenderGraph *graph, const char *name, u32 index)
@@ -134,6 +136,8 @@ void cala::RenderPass::addBufferOutput(const char *label, BufferResource info) {
     auto it = _graph->_attachmentMap.find(label);
     if (it == _graph->_attachmentMap.end())
         _graph->_attachmentMap.emplace(label, new BufferResource(std::move(info)));
+    else if (auto bit = dynamic_cast<BufferResource*>(it->second); bit && bit->size != info.size)
+        bit->size = info.size;
     _outputs.emplace(label);
 }
 

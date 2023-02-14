@@ -4,6 +4,7 @@
 #include <Cala/Probe.h>
 #include <Cala/shapes.h>
 #include <Cala/Mesh.h>
+#include <Ende/profile/profile.h>
 
 template <>
 cala::backend::vulkan::Buffer &cala::BufferHandle::operator*() noexcept {
@@ -56,10 +57,9 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
           .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
       }),
       _materialDataDirty(true),
-      _activeVertexIndex(0),
       _vertexOffset(0),
       _indexOffset(0),
-      _switchActive(false)
+      _stagingReady(false)
 {
     ende::fs::File file;
     {
@@ -203,10 +203,10 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
 
     _materialBuffer = createBuffer(256, backend::BufferUsage::STORAGE | backend::BufferUsage::UNIFORM);
 
-    _globalVertexBuffers[0] = createBuffer(10000, backend::BufferUsage::VERTEX);
-    _globalVertexBuffers[1] = createBuffer(10000, backend::BufferUsage::VERTEX);
-    _globalIndexBuffers[0] = createBuffer(10000, backend::BufferUsage::INDEX);
-    _globalIndexBuffers[1] = createBuffer(10000, backend::BufferUsage::INDEX);
+    _globalVertexBuffer = createBuffer(10000, backend::BufferUsage::VERTEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE_LOCAL);
+    _vertexStagingBuffer = createBuffer(10000, backend::BufferUsage::TRANSFER_SRC);
+    _globalIndexBuffer = createBuffer(10000, backend::BufferUsage::INDEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE_LOCAL);
+    _indexStagingBuffer = createBuffer(10000, backend::BufferUsage::TRANSFER_SRC);
 
     _cube = new Mesh(shapes::cube().mesh(this));
 
@@ -220,6 +220,7 @@ cala::Engine::~Engine() {
 }
 
 bool cala::Engine::gc() {
+    PROFILE_NAMED("Engine::gc");
     for (auto it = _buffersToDestroy.begin(); it != _buffersToDestroy.end(); it++) {
         auto& frame = it->first;
         auto& handle = it->second;
@@ -248,16 +249,30 @@ bool cala::Engine::gc() {
             --frame;
     }
 
-    if (_switchActive) {
-        u32 inactive = (_activeVertexIndex + 1) % 2;
-        if (_globalVertexBuffers[inactive]->size() > _globalVertexBuffers[_activeVertexIndex]->size())
-            _globalVertexBuffers[_activeVertexIndex] = resizeBuffer(_globalVertexBuffers[_activeVertexIndex], _globalVertexBuffers[inactive]->size(), true);
-        if (_globalIndexBuffers[inactive]->size() > _globalIndexBuffers[_activeVertexIndex]->size())
-            _globalIndexBuffers[_activeVertexIndex] = resizeBuffer(_globalIndexBuffers[_activeVertexIndex], _globalIndexBuffers[inactive]->size(), true);
-        _activeVertexIndex = inactive;
-        _switchActive = false;
-    }
+    if (_stagingReady) {
 
+        if (_vertexStagingBuffer->size() > _globalVertexBuffer->size())
+            _globalVertexBuffer = resizeBuffer(_globalVertexBuffer, _vertexStagingBuffer->size(), true);
+        if (_indexStagingBuffer->size() > _globalIndexBuffer->size())
+            _globalIndexBuffer = resizeBuffer(_globalIndexBuffer, _indexStagingBuffer->size(), true);
+
+        _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) { //TODO: async transfer queue
+            VkBufferCopy vertexCopy{};
+            vertexCopy.dstOffset = 0;
+            vertexCopy.srcOffset = 0;
+            vertexCopy.size = _vertexStagingBuffer->size();
+            vkCmdCopyBuffer(cmd.buffer(), _vertexStagingBuffer->buffer(), _globalVertexBuffer->buffer(), 1, &vertexCopy);
+
+            VkBufferCopy indexCopy{};
+            indexCopy.dstOffset = 0;
+            indexCopy.srcOffset = 0;
+            indexCopy.size = _indexStagingBuffer->size();
+            vkCmdCopyBuffer(cmd.buffer(), _indexStagingBuffer->buffer(), _globalIndexBuffer->buffer(), 1, &indexCopy);
+        });
+
+        _stagingReady = false;
+
+    }
 
 
     return true;
@@ -342,9 +357,19 @@ void cala::Engine::destroyImage(ImageHandle handle) {
 cala::BufferHandle cala::Engine::resizeBuffer(BufferHandle handle, u32 size, bool transfer) {
     BufferHandle newBuffer = createBuffer(size, handle->usage());
     if (transfer) { // TODO: implement buffer data transfer
-        auto mapped = handle->map();
-        auto newMapped = newBuffer->map();
-        std::memcpy(newMapped.address, mapped.address, handle->size());
+
+        _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
+            VkBufferCopy bufferCopy{};
+            bufferCopy.dstOffset = 0;
+            bufferCopy.srcOffset = 0;
+            bufferCopy.size = handle->size();
+            vkCmdCopyBuffer(cmd.buffer(), handle->buffer(), newBuffer->buffer(), 1, &bufferCopy);
+        });
+
+
+//        auto mapped = handle->map();
+//        auto newMapped = newBuffer->map();
+//        std::memcpy(newMapped.address, mapped.address, handle->size());
 //        _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
 //
 //        });
@@ -402,27 +427,25 @@ void cala::Engine::updateMaterialdata() {
 
 u32 cala::Engine::uploadVertexData(ende::Span<f32> data) {
     u32 currentOffset = _vertexOffset;
-    u32 inactive = (_activeVertexIndex + 1) % 2;
-    if (currentOffset + data.size() >= _globalVertexBuffers[inactive]->size())
-        _globalVertexBuffers[inactive] = resizeBuffer(_globalVertexBuffers[inactive], currentOffset + data.size(), true);
+    if (currentOffset + data.size() >= _vertexStagingBuffer->size())
+        _vertexStagingBuffer = resizeBuffer(_vertexStagingBuffer, currentOffset + data.size(), true);
 
-    auto mapped = _globalVertexBuffers[inactive]->map(currentOffset, data.size());
+    auto mapped = _vertexStagingBuffer->map(currentOffset, data.size());
     std::memcpy(mapped.address, data.data(), data.size());
 
     _vertexOffset += data.size();
-    _switchActive = true;
+    _stagingReady = true;
     return currentOffset;
 }
 
 u32 cala::Engine::uploadIndexData(ende::Span<u32> data) {
     u32 currentOffset = _indexOffset;
-    u32 inactive = (_activeVertexIndex + 1) % 2;
-    if (currentOffset + data.size() >= _globalIndexBuffers[inactive]->size())
-        _globalIndexBuffers[inactive] = resizeBuffer(_globalIndexBuffers[inactive], currentOffset + data.size(), true);
+    if (currentOffset + data.size() >= _indexStagingBuffer->size())
+        _indexStagingBuffer = resizeBuffer(_indexStagingBuffer, currentOffset + data.size(), true);
 
-    auto mapped = _globalIndexBuffers[inactive]->map(currentOffset, data.size());
+    auto mapped = _indexStagingBuffer->map(currentOffset, data.size());
     std::memcpy(mapped.address, data.data(), data.size());
     _indexOffset += data.size();
-    _switchActive = true;
+    _stagingReady = true;
     return currentOffset;
 }
