@@ -7,10 +7,10 @@
 
 cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     : _engine(engine),
-    _meshDataBuffer{engine->createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE),
-                 engine->createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE)},
-    _modelBuffer{engine->createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE),
-                 engine->createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE)},
+    _meshDataBuffer{engine->createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE),
+                 engine->createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE)},
+    _modelBuffer{engine->createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE),
+                 engine->createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE)},
     _lightBuffer{engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE),
                  engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE)},
     _lightCountBuffer{engine->createBuffer(sizeof(u32) * 2 + sizeof(f32), backend::BufferUsage::STORAGE),

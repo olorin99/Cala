@@ -21,8 +21,12 @@ cala::backend::vulkan::Buffer::Buffer(Device &driver, u32 size, BufferUsage usag
     VmaAllocationCreateInfo allocInfo{};
     allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 
-    if ((flags & MemoryProperties::HOST_VISIBLE) == MemoryProperties::HOST_VISIBLE)
-        allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    if ((flags & MemoryProperties::HOST_VISIBLE) == MemoryProperties::HOST_VISIBLE) {
+        if ((flags & MemoryProperties::HOST_CACHED) == MemoryProperties::HOST_CACHED)
+            allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+        else
+            allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    }
 
     vmaCreateBuffer(_driver.context().allocator(), &bufferInfo, &allocInfo, &_buffer, &_allocation, nullptr);
 }
