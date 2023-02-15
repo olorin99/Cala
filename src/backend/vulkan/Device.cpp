@@ -186,6 +186,8 @@ void cala::backend::vulkan::Device::endSingleTimeCommands(CommandBuffer& buffer)
     auto res = vkWaitForFences(context().device(), 1, &fence, true, 1000000000) == VK_SUCCESS;
     if (res)
         vkResetFences(context().device(), 1, &fence);
+    else
+        ende::log::error("Failed waiting for immediate fence");
     vkDestroyFence(context().device(), fence, nullptr);
 
     vkFreeCommandBuffers(_context.device(), _commandPool, 1, &buf);

@@ -8,8 +8,12 @@
 
 cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings)
     : _engine(engine),
-      _cameraBuffer(engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
-      _drawCountBuffer(engine->createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
+      _cameraBuffer{engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT),
+                    engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)},
+      _drawCountBuffer{engine->createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT),
+                       engine->createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)},
+      _drawCommands{engine->createBuffer(sizeof(VkDrawIndexedIndirectCommand) * 100, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT),
+                       engine->createBuffer(sizeof(VkDrawIndexedIndirectCommand) * 100, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)},
       _globalDataBuffer(engine->createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _graph(engine),
       _renderSettings(settings),
@@ -72,9 +76,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     if (!_renderSettings.freezeFrustum)
         _cullingFrustum = camera.frustum();
     auto cameraData = camera.data();
-    _cameraBuffer->data({ &cameraData, sizeof(cameraData) });
+    _cameraBuffer[frameIndex()]->data({ &cameraData, sizeof(cameraData) });
     {
-        auto mapped = _drawCountBuffer->map(sizeof(u32), sizeof(u32));
+        auto mapped = _drawCountBuffer[frameIndex()]->map(sizeof(u32), sizeof(u32));
         *static_cast<u32*>(mapped.address) = scene._renderables.size();
     }
 
@@ -110,9 +114,15 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     meshDataResource.size = scene._meshDataBuffer[frameIndex()]->size();
     meshDataResource.usage = scene._meshDataBuffer[frameIndex()]->usage();
 
+    if (scene._renderables.size() * sizeof(VkDrawIndexedIndirectCommand) > _drawCommands[frameIndex()]->size())
+        _drawCommands[frameIndex()] = _engine->resizeBuffer(_drawCommands[frameIndex()], scene._renderables.size() * sizeof(VkDrawIndexedIndirectCommand), false);
+
     BufferResource drawCommandsResource;
-    drawCommandsResource.size = sizeof(VkDrawIndexedIndirectCommand) * std::max(scene._renderables.size(), (u64)1);
-    drawCommandsResource.usage = backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT;
+//    drawCommandsResource.size = sizeof(VkDrawIndexedIndirectCommand) * std::max(scene._renderables.size(), (u64)1);
+    drawCommandsResource.size = _drawCommands[frameIndex()]->size();
+//    drawCommandsResource.usage = backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT;
+    drawCommandsResource.usage = _drawCommands[frameIndex()]->usage();
+    drawCommandsResource.handle = _drawCommands[frameIndex()]; //TODO: have rendergraph automatically allocate double buffers for frames in flight
 
     _graph.setBackbuffer("backbuffer");
 
@@ -167,7 +177,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd.bindBuffer(2, 0, *transforms->handle, true);
                     cmd.bindBuffer(2, 1, *meshData->handle, true);
                     cmd.bindBuffer(2, 2, *drawCommands->handle, true);
-                    cmd.bindBuffer(2, 3, *_drawCountBuffer, true);
+                    cmd.bindBuffer(2, 3, *_drawCountBuffer[frameIndex()], true);
                     cmd.bindPipeline();
                     cmd.bindDescriptors();
                     cmd.dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
@@ -201,7 +211,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd.bindDescriptors();
                     cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer->buffer());
                     cmd.bindIndexBuffer(*_engine->_globalIndexBuffer);
-                    cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderables.size());
+                    cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer[frameIndex()], 0, scene._renderables.size());
 
                     cmd.end(*_shadowFramebuffer);
 
@@ -240,7 +250,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd.bindBuffer(2, 0, *transforms->handle, true);
         cmd.bindBuffer(2, 1, *meshData->handle, true);
         cmd.bindBuffer(2, 2, *drawCommands->handle, true);
-        cmd.bindBuffer(2, 3, *_drawCountBuffer, true);
+        cmd.bindBuffer(2, 3, *_drawCountBuffer[frameIndex()], true);
         cmd.bindPipeline();
         cmd.bindDescriptors();
         cmd.dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
@@ -255,7 +265,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         depthPrePass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, *_cameraBuffer);
+            cmd.bindBuffer(1, 0, *_cameraBuffer[frameIndex()]);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
@@ -267,7 +277,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindDescriptors();
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer->buffer());
             cmd.bindIndexBuffer(*_engine->_globalIndexBuffer);
-            cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderables.size());
+            cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer[frameIndex()], 0, scene._renderables.size());
         });
     }
 
@@ -289,7 +299,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto meshData = graph.getResource<BufferResource>("meshData");
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, *_cameraBuffer);
+            cmd.bindBuffer(1, 0, *_cameraBuffer[frameIndex()]);
 //            cmd.bindBuffer(1, 1, *_globalDataBuffer);
 
             Material* material = nullptr;
@@ -330,7 +340,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer->buffer());
             cmd.bindIndexBuffer(*_engine->_globalIndexBuffer);
-            cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer, 0, scene._renderables.size());
+            cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer[frameIndex()], 0, scene._renderables.size());
         });
     }
 
@@ -346,7 +356,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindProgram(*_engine->_tonemapProgram);
             cmd.bindBindings(nullptr);
             cmd.bindAttributes(nullptr);
-            cmd.bindBuffer(1, 0, *_cameraBuffer);
+            cmd.bindBuffer(1, 0, *_cameraBuffer[frameIndex()]);
             cmd.bindBuffer(1, 1, *_globalDataBuffer);
             cmd.bindImage(2, 0, _engine->getImageView(hdrImage->handle), _engine->_defaultSampler, true);
             cmd.bindImage(2, 1, _engine->getImageView(backbuffer->handle), _engine->_defaultSampler, true);
@@ -372,7 +382,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
             cmd.bindBindings({ &_engine->_cube->_binding, 1 });
             cmd.bindAttributes(_engine->_cube->_attributes);
-            cmd.bindBuffer(1, 0, *_cameraBuffer);
+            cmd.bindBuffer(1, 0, *_cameraBuffer[frameIndex()]);
             cmd.bindImage(2, 0, scene._skyLightMapView, _engine->_defaultSampler);
             cmd.bindPipeline();
             cmd.bindDescriptors();

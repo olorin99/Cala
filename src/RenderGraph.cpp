@@ -52,7 +52,7 @@ void cala::BufferResource::devirtualize(Engine *engine) {
         handle = engine->createBuffer(size, usage);
     }
     if (size > handle->size())
-        handle = engine->resizeBuffer(handle, size);
+        handle = engine->resizeBuffer(handle, size * 2);
 }
 
 cala::RenderPass::RenderPass(RenderGraph *graph, const char *name, u32 index)
@@ -402,5 +402,11 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
 
 void cala::RenderGraph::reset() {
     _passes.clear();
+    for (auto& attachment : _attachmentMap) {
+        if (dynamic_cast<BufferResource*>(attachment.second)) {
+            delete attachment.second;
+            _attachmentMap.erase(attachment.first);
+        }
+    }
 //    _attachmentMap.clear();
 }

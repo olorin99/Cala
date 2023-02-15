@@ -59,9 +59,11 @@ namespace cala {
 
         Engine* _engine;
 
-        BufferHandle _cameraBuffer;
-        BufferHandle _drawCountBuffer;
+        BufferHandle _cameraBuffer[2];
+        BufferHandle _drawCountBuffer[2];
         BufferHandle _globalDataBuffer;
+
+        BufferHandle _drawCommands[2];
 
         ImageHandle _shadowTarget;
         backend::vulkan::Framebuffer* _shadowFramebuffer;

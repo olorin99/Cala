@@ -380,8 +380,8 @@ cala::ImageHandle cala::Engine::getShadowMap(u32 index) {
 
 void cala::Engine::updateMaterialdata() {
     if (_materialDataDirty) {
-        if (_materialData.size() >= _materialBuffer->size()) {
-            _materialBuffer = createBuffer(_materialData.size(), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE);
+        if (_materialData.size() > _materialBuffer->size()) {
+            _materialBuffer = resizeBuffer(_materialBuffer, _materialData.size(), true);
         }
         _materialBuffer->data(_materialData);
     }
