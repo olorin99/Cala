@@ -156,6 +156,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                             shadowTransform.rotate({0, 1, 0}, ende::math::rad(180));
                             break;
                     }
+                    shadowCam.updateFrustum();
                     ende::math::Frustum shadowFrustum = shadowCam.frustum();
 
                     cmd.clearDescriptors();
@@ -189,7 +190,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                     auto shadowData = shadowCam.data();
                     cmd.pushConstants({ &shadowData, sizeof(shadowData) });
-                    shadowCam.updateFrustum();
 
                     auto& renderable = scene._renderables[0].second.first;
                     cmd.bindBindings(renderable.bindings);

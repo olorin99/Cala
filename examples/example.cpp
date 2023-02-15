@@ -371,9 +371,9 @@ int main() {
     Mesh cube = cala::shapes::cube().mesh(&engine);
     Mesh sphere = cala::shapes::sphereNormalized(1).mesh(&engine);
     auto sponza = loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf"_path);
-//    auto damagedHelmet = loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path);
-    Model damagedHelmet;
-    bool addHelmet = false;
+    auto damagedHelmet = loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path);
+//    Model damagedHelmet;
+//    bool addHelmet = false;
 
 
     Transform cameraTransform({10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(-90)));
@@ -424,7 +424,7 @@ int main() {
     scene.addSkyLightMap(background, true);
 
     scene.addRenderable(sponza, &sponzaTransform, true);
-//    scene.addRenderable(damagedHelmet, &helmetTransform, true);
+    scene.addRenderable(damagedHelmet, &helmetTransform, true);
 
     scene.addRenderable(sphere, &matInstance, &lightTransform, false);
 
@@ -509,10 +509,10 @@ int main() {
                 cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(-45) * dt);
         }
 
-        if (addHelmet) {
-            scene.addRenderable(damagedHelmet, &helmetTransform, true);
-            addHelmet = false;
-        }
+//        if (addHelmet) {
+//            scene.addRenderable(damagedHelmet, &helmetTransform, true);
+//            addHelmet = false;
+//        }
 
         {
             imGuiContext.newFrame();
@@ -661,11 +661,11 @@ int main() {
             auto pos = camera.transform().pos();
             ImGui::Text("Position: { %f, %f, %f }", pos.x(), pos.y(), pos.z());
 
-            if (ImGui::Button("Load")) {
-                damagedHelmet = std::move(loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path));
-                addHelmet = true;
-//                scene.addRenderable(damagedHelmet, &helmetTransform, true);
-            }
+//            if (ImGui::Button("Load")) {
+//                damagedHelmet = std::move(loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path));
+//                addHelmet = true;
+////                scene.addRenderable(damagedHelmet, &helmetTransform, true);
+//            }
 
             ImGui::End();
             ImGui::Render();
