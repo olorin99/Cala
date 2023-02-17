@@ -66,6 +66,8 @@ namespace cala {
         BufferHandle _lightCountBuffer[2];
         ImageHandle _skyLightMap;
         backend::vulkan::Image::View _skyLightMapView;
+        ImageHandle _skyLightIrradiance;
+        ImageHandle _skyLightPrefilter;
         bool _hdrSkyLight;
         u32 _skyLight;
 

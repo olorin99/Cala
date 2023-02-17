@@ -100,6 +100,8 @@ namespace cala::backend::vulkan {
 
         u32 depth() const { return _depth; }
 
+        u32 mips() const { return _mips; }
+
     private:
 
         Device& _driver;

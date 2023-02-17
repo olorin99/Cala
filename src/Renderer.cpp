@@ -139,7 +139,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         u32 shadowIndex = 0;
         for (u32 i = 0; i < scene._lights.size(); i++) {
             auto& light = scene._lights[i];
-            if (light.shadowing()) {
+            if (light.shadowing() && light.type() == Light::LightType::POINT) {
                 Transform shadowTransform(light.transform().pos());
                 Camera shadowCam(ende::math::rad(90.f), 1024.f, 1024.f, light.getNear(), light.getFar(), shadowTransform);
                 auto shadowMap = _engine->getShadowMap(shadowIndex++);
@@ -229,6 +229,41 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             }
         }
     });
+
+//    auto& directShadow = _graph.addPass("direct_shadow");
+//    directShadow.addBufferInput("transforms");
+//    directShadow.addBufferInput("meshData");
+//    directShadow.addBufferOutput("drawCommands");
+//
+//    directShadow.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+//        for (u32 i = 0; i < scene._lights.size(); i++) {
+//            auto& light = scene._lights[i];
+//            if (light.shadowing() && light.type() == Light::LightType::DIRECTIONAL) {
+//                f32 cascadeSplits[3];
+//                f32 nearClip = light.getNear();
+//                f32 farClip = light.getFar();
+//                f32 clipRange = farClip - nearClip;
+//
+//                f32 minZ = nearClip;
+//                f32 maxZ = nearClip + clipRange;
+//                f32 range = maxZ - minZ;
+//                f32 ratio = maxZ / minZ;
+//
+//                for (u32 j = 0; j < 3; j++) {
+//                    f32 p = (j + 1) / 3.f;
+//                    f32 log = minZ * std::pow(ratio, p);
+//                    f32 uniform = minZ + range * p;
+//                    f32 d = 0.95 * (log - uniform) + uniform;
+//                    cascadeSplits[j] = (d - nearClip) / clipRange;
+//                }
+//
+//                f32 lastSplitDist = 0.0;
+//
+//            }
+//        }
+//
+//
+//    });
 
 
     auto& cullPass = _graph.addPass("cull");
@@ -334,6 +369,14 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindBuffer(2, 0, *_engine->_materialBuffer, true);
             cmd.bindBuffer(2, 1, *meshData->handle, true);
             cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], true);
+
+            if (_renderSettings.ibl) {
+                u32 IBLData[3] = { (u32)scene._skyLightIrradiance.index(), (u32)scene._skyLightPrefilter.index(), (u32)_engine->_brdfImage.index() };
+                cmd.pushConstants({ IBLData, sizeof(u32) * 3 });
+            } else {
+                u32 IBLData[3] = { (u32)_engine->_defaultIrradiance.index(), (u32)_engine->_defaultPrefilter.index(), (u32)_engine->_brdfImage.index() };
+                cmd.pushConstants({ IBLData, sizeof(u32) * 3 });
+            }
 
             cmd.bindPipeline();
             cmd.bindDescriptors();

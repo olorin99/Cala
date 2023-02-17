@@ -15,6 +15,12 @@ layout (location = 0) out vec4 FragColour;
 layout (set = 0, binding = 0) uniform samplerCube pointShadows[];
 layout (set = 0, binding = 0) uniform sampler2D directShadows[];
 
+layout (push_constant) uniform IBLData {
+    uint irradianceIndex;
+    uint prefilteredIndex;
+    uint brdfIndex;
+};
+
 struct MaterialData {
     uint albedoIndex;
     uint normalIndex;
@@ -37,14 +43,6 @@ struct Mesh {
 layout (set = 2, binding = 1) readonly buffer MeshData {
     Mesh meshData[];
 };
-
-//layout (set = 2, binding = 0) readonly buffer MatData {
-//    MaterialData materials[];
-//};
-
-//layout (set = 2, binding = 5) uniform samplerCube irradianceMap;
-//layout (set = 2, binding = 6) uniform samplerCube prefilterMap;
-//layout (set = 2, binding = 7) uniform sampler2D brdfLUT;
 
 struct Light {
     vec3 position;
@@ -102,7 +100,7 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0) {
 }
 
 vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
-    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
 float calcShadows(uint index, vec3 viewDir, vec3 offset, float bias, float range) {
@@ -138,12 +136,12 @@ void main() {
     Mesh mesh = meshData[fsIn.drawID];
     MaterialData materialData = material[mesh.materialIndex];
 
-    vec4 a = texture(directShadows[materialData.albedoIndex], fsIn.TexCoords);
+    vec4 albedaRGBA = texture(directShadows[materialData.albedoIndex], fsIn.TexCoords);
 
-    if (a.a < 0.5)
+    if (albedaRGBA.a < 0.5)
         discard;
 
-    vec3 albedo = a.rgb;
+    vec3 albedo = albedaRGBA.rgb;
     vec3 normal = texture(directShadows[materialData.normalIndex], fsIn.TexCoords).rgb;
     float metallic = texture(directShadows[materialData.metallicRoughnessIndex], fsIn.TexCoords).b;
     float roughness = texture(directShadows[materialData.metallicRoughnessIndex], fsIn.TexCoords).g;
@@ -151,7 +149,8 @@ void main() {
     normal = normalize(normal * 2.0 - 1.0);
     normal = normalize(fsIn.TBN * normal);
 
-    vec3 viewPos = fsIn.ViewPos;
+//    vec3 viewPos = fsIn.ViewPos;
+    vec3 viewPos = fsIn.ViewPos * vec3(-1, 1, -1);
 
     vec3 V = normalize(viewPos - fsIn.FragPos);
     vec3 R = reflect(-V, normal);
@@ -199,8 +198,28 @@ void main() {
 
     }
 
-    vec3 ambient = vec3(0.03) * albedo;
+    vec3 F = fresnelSchlickRoughness(max(dot(normal, -V), 0.0), F0, roughness);
+    vec3 kD = vec3(1.0) - F;
+    kD *= 1.0 - metallic;
+
+    vec3 irradiance = texture(pointShadows[irradianceIndex], normal).rgb;
+    vec3 diffuse = irradiance * albedo;
+
+    const float MAX_REFLECTION_LOD = 4.0;
+    float lod = roughness * MAX_REFLECTION_LOD;
+    float lodf = floor(lod);
+    float lodc = clamp(ceil(lod), 0.0, MAX_REFLECTION_LOD);
+    vec3 a = textureLod(pointShadows[prefilteredIndex], R, lodf).rgb;
+    vec3 b = textureLod(pointShadows[prefilteredIndex], R, lodc).rgb;
+    vec3 prefilteredColour = mix(a, b, lod - lodf);
+
+    vec2 brdf = texture(directShadows[brdfIndex], vec2(max(dot(normal, V), 0.0), roughness)).rg;
+    vec3 specular = prefilteredColour * (F * brdf.x + brdf.y);
+
+
+    vec3 ambient = kD * diffuse + specular;
     vec3 colour = (ambient + Lo);
 
     FragColour = vec4(colour, 1.0);
+//    FragColour = vec4(vec3(roughness), 1.0);
 }

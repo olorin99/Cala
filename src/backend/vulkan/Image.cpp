@@ -250,8 +250,6 @@ void cala::backend::vulkan::Image::generateMips() {
 }
 
 void cala::backend::vulkan::Image::generateMips(CommandBuffer &cmd) {
-    i32 mipWidth = _width;
-    i32 mipHeight = _height;
 
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -263,6 +261,8 @@ void cala::backend::vulkan::Image::generateMips(CommandBuffer &cmd) {
     barrier.subresourceRange.levelCount = 1;
 
     for (u32 layer = 0; layer < _layers; layer++) {
+        i32 mipWidth = _width;
+        i32 mipHeight = _height;
         barrier.subresourceRange.baseArrayLayer = layer;
 
         for (u32 mip = 1; mip < _mips; mip++) {

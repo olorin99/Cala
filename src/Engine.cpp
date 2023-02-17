@@ -50,6 +50,14 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
       _startTime(ende::time::SystemTime::now()),
       _shadowPass(_driver, { &shadowPassAttachment, 1 }),
       _defaultSampler(_driver, {}),
+      _lodSampler(_driver, {
+          .maxLod = 10
+      }),
+      _irradianceSampler(_driver, {
+          .filter = VK_FILTER_LINEAR,
+          .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+          .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
+      }),
       _shadowSampler(_driver, {
           .filter = VK_FILTER_NEAREST,
           .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
@@ -90,6 +98,33 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
         file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
 
         _equirectangularToCubeMap = createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
+                .addStage(computeData, backend::ShaderStage::COMPUTE)
+                .compile(_driver)));
+    }
+    {
+        file.open("../../res/shaders/irradiance.comp.spv"_path, ende::fs::in | ende::fs::binary);
+        ende::Vector<u32> computeData(file.size() / sizeof(u32));
+        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
+
+        _irradianceProgram = createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
+                .addStage(computeData, backend::ShaderStage::COMPUTE)
+                .compile(_driver)));
+    }
+    {
+        file.open("../../res/shaders/prefilter.comp.spv"_path, ende::fs::in | ende::fs::binary);
+        ende::Vector<u32> computeData(file.size() / sizeof(u32));
+        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
+
+        _prefilterProgram = createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
+                .addStage(computeData, backend::ShaderStage::COMPUTE)
+                .compile(_driver)));
+    }
+    {
+        file.open("../../res/shaders/brdf.comp.spv"_path, ende::fs::in | ende::fs::binary);
+        ende::Vector<u32> computeData(file.size() / sizeof(u32));
+        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
+
+        _brdfProgram = createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
                 .addStage(computeData, backend::ShaderStage::COMPUTE)
                 .compile(_driver)));
     }
@@ -173,7 +208,43 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
             ->data(_driver, {0, 1, 1, 1, 4 * 4, { metallicRoughnessData, sizeof(f32) * 4 }});
 
 
+    _brdfImage = createImage({ 512, 512, 1, backend::Format::RG16_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE });
+
+    _defaultIrradiance = createImage({
+        1, 1, 1,
+        backend::Format::RGBA32_SFLOAT,
+        1, 6,
+        backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST,
+        backend::ImageLayout::UNDEFINED,
+        backend::ImageType::IMAGE2D
+        }, &_irradianceSampler);
+
+    f32 irradianceData[4];
+    std::memset(irradianceData, 0, sizeof(f32) * 4);
+    for (u32 i = 0; i < 6; i++)
+        _defaultIrradiance->data(_driver, { 0, 1, 1, 1, 4 * 4, { irradianceData, sizeof(f32) * 4 }, i });
+
+
+    _defaultPrefilter = createImage({
+        512, 512, 1,
+        backend::Format::RGBA32_SFLOAT,
+        5, 6,
+        backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST | backend::ImageUsage::TRANSFER_SRC,
+        backend::ImageLayout::UNDEFINED,
+        backend::ImageType::IMAGE2D
+        }, &_lodSampler);
+
+    f32 prefilterData[4 * 512 * 512];
+    std::memset(prefilterData, 0, sizeof(f32) * 4 * 512 * 512);
+    for (u32 i = 0; i < 6; i++)
+        _defaultPrefilter->data(_driver, { 0, 512, 512, 1, 4 * 4, { prefilterData, sizeof(f32) * 4 * 512 * 512 }, i });
+
     _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
+        auto prefilterBarrier = _defaultPrefilter->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::TRANSFER_DST);
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::BOTTOM, 0, nullptr, { &prefilterBarrier, 1 });
+        _defaultPrefilter->generateMips(cmd);
+
+
         VkImageMemoryBarrier barriers[5];
         barriers[0] = _defaultPointShadow->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
         barriers[1] = _defaultDirectionalShadow->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
@@ -181,6 +252,19 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
         barriers[3] = _defaultNormal->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
         barriers[4] = _defaultMetallicRoughness->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER | backend::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { barriers, 5 });
+
+        auto brdfBarrier = _brdfImage->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::GENERAL);
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &brdfBarrier, 1 });
+
+        cmd.bindProgram(*_brdfProgram);
+        cmd.bindImage(1, 0, getImageView(_brdfImage), _defaultSampler, true);
+        cmd.bindPipeline();
+        cmd.bindDescriptors();
+        cmd.dispatchCompute(512 / 32, 512 / 32, 1);
+
+        brdfBarrier = _brdfImage->barrier(backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::GENERAL, backend::ImageLayout::SHADER_READ_ONLY);
+        cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, 0, nullptr, { &brdfBarrier, 1 });
+
     });
 
     _defaultPointShadowView = _defaultPointShadow->newView();
@@ -263,41 +347,6 @@ bool cala::Engine::gc() {
     return true;
 }
 
-cala::BufferHandle cala::Engine::createBuffer(u32 size, backend::BufferUsage usage, backend::MemoryProperties flags) {
-    u32 index = 0;
-    if (!_freeBuffers.empty()) {
-        index = _freeBuffers.pop().value();
-        _buffers[index] = new backend::vulkan::Buffer(_driver, size, usage, flags);
-    } else {
-        index = _buffers.size();
-        _buffers.emplace(new backend::vulkan::Buffer(_driver, size, usage, flags));
-    }
-    return { this, index };
-}
-
-
-cala::ImageHandle cala::Engine::createImage(backend::vulkan::Image::CreateInfo info) {
-    u32 index = 0;
-    if (!_freeImages.empty()) {
-        index = _freeImages.pop().value();
-        _images[index] = new backend::vulkan::Image(_driver, info);
-        _imageViews[index] = std::move(_images[index]->newView());
-    } else {
-        index = _images.size();
-        _images.emplace(new backend::vulkan::Image(_driver, info));
-        _imageViews.emplace(_images.back()->newView());
-    }
-    assert(_images.size() == _imageViews.size());
-    _driver.updateBindlessImage(index, _imageViews[index], backend::isDepthFormat(info.format) ? _shadowSampler : _defaultSampler);
-    return { this, index };
-}
-
-cala::ProgramHandle cala::Engine::createProgram(backend::vulkan::ShaderProgram &&program) {
-    u32 index = _programs.size();
-    _programs.push(std::move(program));
-    return { this, index };
-}
-
 cala::ImageHandle cala::Engine::convertToCubeMap(ImageHandle equirectangular) {
     auto cubeMap = createImage({
         512, 512, 1,
@@ -310,12 +359,12 @@ cala::ImageHandle cala::Engine::convertToCubeMap(ImageHandle equirectangular) {
     _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
         auto envBarrier = cubeMap->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::GENERAL);
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &envBarrier, 1 });
-        auto hdrBarrier = equirectangular->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
-        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &hdrBarrier, 1 });
+//        auto hdrBarrier = equirectangular->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY, backend::ImageLayout::SHADER_READ_ONLY);
+//        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &hdrBarrier, 1 });
 
 
         cmd.bindProgram(*_equirectangularToCubeMap);
-        cmd.bindImage(1, 0, equirectangularView, _defaultSampler);
+        cmd.bindImage(1, 0, equirectangularView, _lodSampler);
         cmd.bindImage(1, 1, cubeView, _defaultSampler, true);
 
         cmd.bindPipeline();
@@ -327,8 +376,119 @@ cala::ImageHandle cala::Engine::convertToCubeMap(ImageHandle equirectangular) {
         envBarrier = cubeMap->barrier(backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::GENERAL, backend::ImageLayout::TRANSFER_DST);
         cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, 0, nullptr, { &envBarrier, 1 });
         cubeMap->generateMips(cmd);
+//        envBarrier = cubeMap->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::TRANSFER_DST, backend::ImageLayout::SHADER_READ_ONLY);
+//        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { &envBarrier, 1 });
     });
     return cubeMap;
+}
+
+cala::ImageHandle cala::Engine::generateIrradianceMap(ImageHandle cubeMap) {
+    auto irradianceMap = createImage({
+        64, 64, 1,
+        backend::Format::RGBA32_SFLOAT,
+        1, 6,
+        backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
+    }, &_irradianceSampler);
+    _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
+        auto irradianceBarrier = irradianceMap->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::GENERAL);
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &irradianceBarrier, 1 });
+        auto cubeBarrier = cubeMap->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY, backend::ImageLayout::GENERAL);
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &cubeBarrier, 1 });
+
+        cmd.bindProgram(*_irradianceProgram);
+        cmd.bindImage(1, 0, getImageView(cubeMap), _lodSampler, true);
+        cmd.bindImage(1, 1, getImageView(irradianceMap), _defaultSampler, true);
+        cmd.bindPipeline();
+        cmd.bindDescriptors();
+        cmd.dispatchCompute(irradianceMap->width() / 32, irradianceMap->height() / 32, 6);
+
+        irradianceBarrier = irradianceMap->barrier(backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::GENERAL, backend::ImageLayout::SHADER_READ_ONLY);
+        cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, 0, nullptr, { &irradianceBarrier, 1 });
+        cubeBarrier = cubeMap->barrier(backend::Access::SHADER_READ, backend::Access::NONE, backend::ImageLayout::GENERAL, backend::ImageLayout::SHADER_READ_ONLY);
+        cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, 0, nullptr, { &cubeBarrier, 1 });
+    });
+    return irradianceMap;
+}
+
+cala::ImageHandle cala::Engine::generatePrefilteredIrradiance(ImageHandle cubeMap) {
+    f32 roughnessData[] = { 0 / 4.f, 1.f / 4.f, 2.f / 4.f, 3.f / 4.f, 4.f / 4.f };
+//    BufferHandle roughnessBuffer = createBuffer(sizeof(f32) * 5, backend::BufferUsage::UNIFORM);
+//    roughnessBuffer->data({ roughnessData, sizeof(f32) * 5 });
+
+    ImageHandle prefilteredMap = createImage({
+        512, 512, 1,
+        backend::Format::RGBA32_SFLOAT,
+        5, 6,
+        backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
+    }, &_lodSampler);
+    backend::vulkan::Image::View mipViews[5] = {
+            prefilteredMap->newView(0),
+            prefilteredMap->newView(1),
+            prefilteredMap->newView(2),
+            prefilteredMap->newView(3),
+            prefilteredMap->newView(4)
+    };
+
+
+    _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
+        auto prefilterBarrier = prefilteredMap->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::GENERAL);
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &prefilterBarrier, 1 });
+
+        for (u32 mip = 0; mip < 5; mip++) {
+            cmd.bindProgram(*_prefilterProgram);
+            cmd.bindImage(1, 0, getImageView(cubeMap), _lodSampler);
+            cmd.bindImage(1, 1, mipViews[mip], _defaultSampler, true);
+            cmd.pushConstants({ &roughnessData[mip], sizeof(f32) });
+//            cmd.bindBuffer(2, 2, *roughnessBuffer, sizeof(f32) * mip, sizeof(f32));
+            cmd.bindPipeline();
+            cmd.bindDescriptors();
+            cmd.dispatchCompute(512 * std::pow(0.5, mip) / 32, 512 * std::pow(0.5, mip) / 32, 6);
+        }
+
+        prefilterBarrier = prefilteredMap->barrier(backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::GENERAL, backend::ImageLayout::SHADER_READ_ONLY);
+        cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, 0, nullptr, { &prefilterBarrier, 1 });
+    });
+//    destroyBuffer(roughnessBuffer);
+    return prefilteredMap;
+}
+
+
+cala::BufferHandle cala::Engine::createBuffer(u32 size, backend::BufferUsage usage, backend::MemoryProperties flags) {
+    u32 index = 0;
+    if (!_freeBuffers.empty()) {
+        index = _freeBuffers.pop().value();
+        _buffers[index] = new backend::vulkan::Buffer(_driver, size, usage, flags);
+    } else {
+        index = _buffers.size();
+        _buffers.emplace(new backend::vulkan::Buffer(_driver, size, usage, flags));
+    }
+    return { this, index };
+}
+
+cala::ImageHandle cala::Engine::createImage(backend::vulkan::Image::CreateInfo info, backend::vulkan::Sampler* sampler) {
+    u32 index = 0;
+    if (!_freeImages.empty()) {
+        index = _freeImages.pop().value();
+        _images[index] = new backend::vulkan::Image(_driver, info);
+        _imageViews[index] = std::move(_images[index]->newView(0, _images[index]->mips()));
+    } else {
+        index = _images.size();
+        _images.emplace(new backend::vulkan::Image(_driver, info));
+        _imageViews.emplace(_images.back()->newView(0, _images.back()->mips()));
+    }
+    assert(_images.size() == _imageViews.size());
+    backend::vulkan::Sampler* chosenSampler = sampler;
+    if (!chosenSampler)
+        chosenSampler = backend::isDepthFormat(info.format) ? &_shadowSampler : &_defaultSampler;
+
+    _driver.updateBindlessImage(index, _imageViews[index], *chosenSampler);
+    return { this, index };
+}
+
+cala::ProgramHandle cala::Engine::createProgram(backend::vulkan::ShaderProgram &&program) {
+    u32 index = _programs.size();
+    _programs.push(std::move(program));
+    return { this, index };
 }
 
 void cala::Engine::destroyBuffer(BufferHandle handle) {

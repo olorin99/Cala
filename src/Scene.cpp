@@ -80,6 +80,8 @@ void cala::Scene::addSkyLightMap(ImageHandle skyLightMap, bool equirectangular, 
         _skyLightMap = skyLightMap;
 
     _skyLightMapView = _skyLightMap->newView(0, 10);
+    _skyLightIrradiance = _engine->generateIrradianceMap(_skyLightMap);
+    _skyLightPrefilter = _engine->generatePrefilteredIrradiance(_skyLightMap);
     _hdrSkyLight = hdr;
 }
 

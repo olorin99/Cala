@@ -52,6 +52,8 @@ namespace cala::backend {
 
         RG16_SFLOAT = 83,
 
+        RGBA16_SFLOAT = 97,
+
         R32_SFLOAT = 100,
         RG32_SFLOAT = 103,
         RGB32_SFLOAT = 106,

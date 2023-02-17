@@ -27,9 +27,10 @@ namespace cala {
             bool depthPre = false;
             bool skybox = true;
             bool freezeFrustum = false;
+            bool ibl = true;
         };
 
-        Renderer(Engine* engine, Settings settings = {true, true, true, false, true, true});
+        Renderer(Engine* engine, Settings settings);
 
         bool beginFrame();
 

@@ -369,7 +369,8 @@ int main() {
     Transform helmetTransform({0, 1, 0});
 
     Mesh cube = cala::shapes::cube().mesh(&engine);
-    Mesh sphere = cala::shapes::sphereNormalized(1).mesh(&engine);
+//    Mesh sphere = cala::shapes::sphereNormalized(1).mesh(&engine);
+    Mesh sphere = loadModel("../../res/models/sphere.obj"_path).mesh(&engine);;
     auto sponza = loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf"_path);
 //    auto damagedHelmet = loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path);
     Model damagedHelmet;
@@ -420,7 +421,9 @@ int main() {
 //    u32 l2 = scene.addLight(light2);
 //    u32 l3 = scene.addLight(light3);
 
-    ImageHandle background = loadImageHDR(engine, "../../res/textures/TropicalRuins_3k.hdr"_path);
+//    ImageHandle background = loadImageHDR(engine, "../../res/textures/TropicalRuins_3k.hdr"_path);
+    ImageHandle background = loadImageHDR(engine, "../../res/textures/brown_photostudio_02_4k.hdr"_path);
+//    ImageHandle background = loadImageHDR(engine, "../../res/textures/dresden_station_night_4k.hdr"_path);
     scene.addSkyLightMap(background, true);
 
     scene.addRenderable(sponza, &sponzaTransform, true);
@@ -429,6 +432,33 @@ int main() {
     scene.addRenderable(sphere, &matInstance, &lightTransform, false);
 
     f32 sceneSize = std::max(objectCount / 10, 20u);
+
+    MaterialInstance instances[10] = {
+            material.instance(),
+            material.instance(),
+            material.instance(),
+            material.instance(),
+            material.instance(),
+            material.instance(),
+            material.instance(),
+            material.instance(),
+            material.instance(),
+            material.instance()
+    };
+    ImageHandle roughnessImages[10];
+    for (u32 i = 0; i < 10; i++) {
+        roughnessImages[i] = engine.createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST, backend::ImageLayout::GENERAL, backend::ImageType::IMAGE2D});
+        f32 metallicRoughnessData[] = { 0.f, static_cast<f32>(i) / 10.f, 0.f, 1.f };
+        roughnessImages[i]->data(engine.driver(), { 0, 1, 1, 1, 4 * 4, { metallicRoughnessData, sizeof(f32) * 4 } });
+
+        MaterialData materialData1 {
+                static_cast<u32>(engine.defaultAlbedo().index()),
+                static_cast<u32>(engine.defaultNormal().index()),
+                static_cast<u32>(roughnessImages[i].index())
+        };
+
+        instances[i].setData(materialData1);
+    }
 
 
     u32 width = 10;
@@ -445,7 +475,7 @@ int main() {
             for (u32 k = 0; k < depth; k++) {
                 transform.addPos({0, 0, 3});
                 auto& t = transforms.push(transform);
-                scene.addRenderable(cube, &matInstance, &t, false);
+                scene.addRenderable(sphere, &instances[k], &t, false);
             }
             transform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
         }
@@ -601,6 +631,7 @@ int main() {
             ImGui::Checkbox("Skybox Pass", &renderSettings.skybox);
             ImGui::Checkbox("Tonemap Pass", &renderSettings.tonemap);
             ImGui::Checkbox("Freeze Frustum,", &renderSettings.freezeFrustum);
+            ImGui::Checkbox("IBL,", &renderSettings.ibl);
             bool vsync = engine.driver().swapchain().getVsync();
             if (ImGui::Checkbox("Vsync", &vsync)) {
                 engine.driver().wait();

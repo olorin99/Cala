@@ -65,14 +65,17 @@ namespace cala {
 
         bool gc();
 
+        ImageHandle convertToCubeMap(ImageHandle equirectangular);
+
+        ImageHandle generateIrradianceMap(ImageHandle cubeMap);
+
+        ImageHandle generatePrefilteredIrradiance(ImageHandle cubeMap);
 
         BufferHandle createBuffer(u32 size, backend::BufferUsage usage, backend::MemoryProperties flags = backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT);
 
-        ImageHandle createImage(backend::vulkan::Image::CreateInfo info);
+        ImageHandle createImage(backend::vulkan::Image::CreateInfo info, backend::vulkan::Sampler* sampler = nullptr);
 
         ProgramHandle createProgram(backend::vulkan::ShaderProgram&& program);
-
-        ImageHandle convertToCubeMap(ImageHandle equirectangular);
 
         void destroyBuffer(BufferHandle handle);
 
@@ -118,12 +121,17 @@ namespace cala {
         ende::time::SystemTime _startTime;
 
         backend::vulkan::Sampler _defaultSampler;
+        backend::vulkan::Sampler _lodSampler;
+        backend::vulkan::Sampler _irradianceSampler;
 
         backend::vulkan::RenderPass _shadowPass;
         ProgramHandle _pointShadowProgram;
         ProgramHandle _directShadowProgram;
 
         ProgramHandle _equirectangularToCubeMap;
+        ProgramHandle _irradianceProgram;
+        ProgramHandle _prefilterProgram;
+        ProgramHandle _brdfProgram;
         ProgramHandle _skyboxProgram;
         ProgramHandle _tonemapProgram;
         ProgramHandle _cullProgram;
@@ -137,6 +145,10 @@ namespace cala {
         ImageHandle _defaultAlbedo;
         ImageHandle _defaultNormal;
         ImageHandle _defaultMetallicRoughness;
+
+        ImageHandle _brdfImage;
+        ImageHandle _defaultIrradiance;
+        ImageHandle _defaultPrefilter;
 
         BufferHandle _globalVertexBuffer;
         BufferHandle _vertexStagingBuffer;
