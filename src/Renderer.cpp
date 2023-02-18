@@ -371,10 +371,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], true);
 
             if (_renderSettings.ibl) {
-                u32 IBLData[3] = { (u32)scene._skyLightIrradiance.index(), (u32)scene._skyLightPrefilter.index(), (u32)_engine->_brdfImage.index() };
+                i32 IBLData[3] = { scene._skyLightIrradiance.index(), scene._skyLightPrefilter.index(), _engine->_brdfImage.index() };
                 cmd.pushConstants({ IBLData, sizeof(u32) * 3 });
             } else {
-                u32 IBLData[3] = { (u32)_engine->_defaultIrradiance.index(), (u32)_engine->_defaultPrefilter.index(), (u32)_engine->_brdfImage.index() };
+                i32 IBLData[3] = { -1, -1, -1 };
                 cmd.pushConstants({ IBLData, sizeof(u32) * 3 });
             }
 

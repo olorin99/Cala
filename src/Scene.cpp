@@ -148,7 +148,7 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
             if (light.shadowing())
                 data.shadowIndex = _engine->getShadowMap(shadowIndex++).index();
             else
-                data.shadowIndex = _engine->_defaultPointShadow.index();
+                data.shadowIndex = -1;
 
             _lightData.push(data);
         }

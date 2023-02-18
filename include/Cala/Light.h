@@ -26,9 +26,9 @@ namespace cala {
             ende::math::Vec3f colour;
             f32 intensity;
             f32 range;
-            f32 linear;
+            f32 radius;
             f32 quadratic;
-            u32 shadowIndex = 0;
+            i32 shadowIndex = -1;
         };
 
         Data data() const;
@@ -83,7 +83,6 @@ namespace cala {
         ende::math::Vec3f _colour;
         f32 _intensity;
         f32 _constant;
-        f32 _linear;
         f32 _quadratic;
         f32 _radius;
         f32 _near;

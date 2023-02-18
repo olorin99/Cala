@@ -8,7 +8,7 @@ function compile_folder() {
       continue
     fi
 
-    if [[ $filename == *.spv ]] || [[ $filename == *.sh ]]
+    if [[ $filename == *.spv ]] || [[ $filename == *.sh ]] || [[ $filename == *.glsl ]]
     then
       continue
     fi

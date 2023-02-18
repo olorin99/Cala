@@ -97,9 +97,9 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
 
     ende::Vector<MaterialInstance> materials;
     struct PbrMat {
-        u32 albedoIndex = 0;
-        u32 normalIndex = 0;
-        u32 metallicRoughnessIndex = 0;
+        i32 albedoIndex = 0;
+        i32 normalIndex = 0;
+        i32 metallicRoughnessIndex = 0;
     };
 
     for (u32 i = 0; i < model.materials.size(); i++) {
@@ -386,14 +386,14 @@ int main() {
     auto matInstance = material.instance();
 
     struct MaterialData {
-        u32 albedoIndex;
-        u32 normalIndex;
-        u32 metallicRoughness;
+        i32 albedoIndex;
+        i32 normalIndex;
+        i32 metallicRoughness;
     };
     MaterialData materialData {
-            static_cast<u32>(engine.defaultAlbedo().index()),
-            static_cast<u32>(engine.defaultNormal().index()),
-            static_cast<u32>(engine.defaultMetallicRoughness().index())
+            engine.defaultAlbedo().index(),
+            engine.defaultNormal().index(),
+            engine.defaultMetallicRoughness().index()
     };
     matInstance.setData(materialData);
 
@@ -453,9 +453,9 @@ int main() {
         roughnessImages[i]->data(engine.driver(), { 0, 1, 1, 1, 4 * 4, { metallicRoughnessData, sizeof(f32) * 4 } });
 
         MaterialData materialData1 {
-                static_cast<u32>(engine.defaultAlbedo().index()),
-                static_cast<u32>(engine.defaultNormal().index()),
-                static_cast<u32>(roughnessImages[i].index())
+                engine.defaultAlbedo().index(),
+                engine.defaultNormal().index(),
+                roughnessImages[i].index()
         };
 
         instances[i].setData(materialData1);
@@ -641,6 +641,7 @@ int main() {
             ImGui::EndTable();
 
             ImGui::Text("Total GPU: %f", totalGPUTime / 1e6);
+            ImGui::Text("CPU/GPU: %f", engine.driver().milliseconds() / (totalGPUTime / 1e6));
 
             Renderer::Stats rendererStats = renderer.stats();
             ImGui::Text("Descriptors: %d", rendererStats.descriptorCount);
