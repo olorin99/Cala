@@ -146,11 +146,13 @@ void main() {
     float metallic = texture(directShadows[materialData.metallicRoughnessIndex], fsIn.TexCoords).b;
     float roughness = texture(directShadows[materialData.metallicRoughnessIndex], fsIn.TexCoords).g;
 
+//    vec3 normal = fsIn.Normal;
+
     normal = normalize(normal * 2.0 - 1.0);
     normal = normalize(fsIn.TBN * normal);
 
-//    vec3 viewPos = fsIn.ViewPos;
-    vec3 viewPos = fsIn.ViewPos * vec3(-1, 1, -1);
+    vec3 viewPos = fsIn.ViewPos;
+//    vec3 viewPos = fsIn.ViewPos * vec3(-1, 1, -1);
 
     vec3 V = normalize(viewPos - fsIn.FragPos);
     vec3 R = reflect(-V, normal);
@@ -198,14 +200,14 @@ void main() {
 
     }
 
-    vec3 F = fresnelSchlickRoughness(max(dot(normal, -V), 0.0), F0, roughness);
+    vec3 F = fresnelSchlickRoughness(max(dot(normal, V), 0.0), F0, roughness);
     vec3 kD = vec3(1.0) - F;
     kD *= 1.0 - metallic;
 
     vec3 irradiance = texture(pointShadows[irradianceIndex], normal).rgb;
     vec3 diffuse = irradiance * albedo;
 
-    const float MAX_REFLECTION_LOD = 4.0;
+    const float MAX_REFLECTION_LOD = 9.0;
     float lod = roughness * MAX_REFLECTION_LOD;
     float lodf = floor(lod);
     float lodc = clamp(ceil(lod), 0.0, MAX_REFLECTION_LOD);
@@ -221,5 +223,10 @@ void main() {
     vec3 colour = (ambient + Lo);
 
     FragColour = vec4(colour, 1.0);
+//    FragColour = vec4(normal, 1.0);
+//    FragColour = vec4(0.0, roughness, metallic, 1.0);
+//    FragColour = vec4(F0, 1.0);
+//    FragColour = vec4(F, 1.0);
+//    FragColour = vec4(vec3(metallic), 1.0);
 //    FragColour = vec4(vec3(roughness), 1.0);
 }

@@ -78,7 +78,7 @@ void cala::Camera::setExposure(f32 exposure) {
 
 cala::Camera::Data cala::Camera::data() const {
     auto viewPos = _transform.pos();
-    viewPos = viewPos * ende::math::Vec3f({-1.f, 1.f, -1.f});
+//    viewPos = viewPos * ende::math::Vec3f({-1.f, 1.f, -1.f});
 
     return  {
         _projection,

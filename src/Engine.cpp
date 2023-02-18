@@ -411,22 +411,23 @@ cala::ImageHandle cala::Engine::generateIrradianceMap(ImageHandle cubeMap) {
 }
 
 cala::ImageHandle cala::Engine::generatePrefilteredIrradiance(ImageHandle cubeMap) {
-    f32 roughnessData[] = { 0 / 4.f, 1.f / 4.f, 2.f / 4.f, 3.f / 4.f, 4.f / 4.f };
-//    BufferHandle roughnessBuffer = createBuffer(sizeof(f32) * 5, backend::BufferUsage::UNIFORM);
-//    roughnessBuffer->data({ roughnessData, sizeof(f32) * 5 });
-
     ImageHandle prefilteredMap = createImage({
         512, 512, 1,
         backend::Format::RGBA32_SFLOAT,
-        5, 6,
+        10, 6,
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
     }, &_lodSampler);
-    backend::vulkan::Image::View mipViews[5] = {
+    backend::vulkan::Image::View mipViews[10] = {
             prefilteredMap->newView(0),
             prefilteredMap->newView(1),
             prefilteredMap->newView(2),
             prefilteredMap->newView(3),
-            prefilteredMap->newView(4)
+            prefilteredMap->newView(4),
+            prefilteredMap->newView(5),
+            prefilteredMap->newView(6),
+            prefilteredMap->newView(7),
+            prefilteredMap->newView(8),
+            prefilteredMap->newView(9)
     };
 
 
@@ -434,21 +435,21 @@ cala::ImageHandle cala::Engine::generatePrefilteredIrradiance(ImageHandle cubeMa
         auto prefilterBarrier = prefilteredMap->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::GENERAL);
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &prefilterBarrier, 1 });
 
-        for (u32 mip = 0; mip < 5; mip++) {
+        for (u32 mip = 0; mip < prefilteredMap->mips(); mip++) {
             cmd.bindProgram(*_prefilterProgram);
             cmd.bindImage(1, 0, getImageView(cubeMap), _lodSampler);
             cmd.bindImage(1, 1, mipViews[mip], _defaultSampler, true);
-            cmd.pushConstants({ &roughnessData[mip], sizeof(f32) });
-//            cmd.bindBuffer(2, 2, *roughnessBuffer, sizeof(f32) * mip, sizeof(f32));
+            f32 roughness = (f32)mip / (f32)prefilteredMap->mips();
+            cmd.pushConstants({ &roughness, sizeof(f32) });
             cmd.bindPipeline();
             cmd.bindDescriptors();
-            cmd.dispatchCompute(512 * std::pow(0.5, mip) / 32, 512 * std::pow(0.5, mip) / 32, 6);
+            f32 computeDim = 512.f * std::pow(0.5, mip);
+            cmd.dispatchCompute(std::ceil(computeDim / 32.f), std::ceil(computeDim / 32.f), 6);
         }
 
         prefilterBarrier = prefilteredMap->barrier(backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::GENERAL, backend::ImageLayout::SHADER_READ_ONLY);
         cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, 0, nullptr, { &prefilterBarrier, 1 });
     });
-//    destroyBuffer(roughnessBuffer);
     return prefilteredMap;
 }
 
