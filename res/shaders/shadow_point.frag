@@ -20,12 +20,10 @@ layout (set = 3, binding = 0) readonly buffer LightData {
 };
 
 struct CameraData {
-    mat4 projection;
-    mat4 view;
+    mat4 viewProjection;
     vec3 position;
     float near;
     float far;
-    float exposure;
 };
 
 layout (push_constant) uniform PushConstants {

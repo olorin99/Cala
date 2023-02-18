@@ -44,6 +44,10 @@ namespace cala {
 
         Data data() const;
 
+        f32 near() const { return _near; }
+
+        f32 far() const { return _far; }
+
     private:
 
         ende::math::Frustum _frustum;

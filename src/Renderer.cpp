@@ -198,7 +198,18 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                     cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()], sizeof(Light::Data) * i, sizeof(Light::Data), true);
 
-                    auto shadowData = shadowCam.data();
+                    struct ShadowData {
+                        ende::math::Mat4f viewProjection;
+                        ende::math::Vec3f position;
+                        f32 near;
+                        f32 far;
+                    };
+                    ShadowData shadowData {
+                        shadowCam.viewProjection(),
+                        shadowCam.transform().pos(),
+                        shadowCam.near(),
+                        shadowCam.far()
+                    };
                     cmd.pushConstants({ &shadowData, sizeof(shadowData) });
 
                     auto& renderable = scene._renderables[0].second.first;

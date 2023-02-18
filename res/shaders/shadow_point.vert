@@ -10,12 +10,10 @@ layout (location = 0) out VsOut {
 } vsOut;
 
 struct CameraData {
-    mat4 projection;
-    mat4 view;
+    mat4 viewProjection;
     vec3 position;
     float near;
     float far;
-    float exposure;
 };
 
 layout (push_constant) uniform PushConstants {
@@ -29,5 +27,5 @@ layout (set = 1, binding = 0) readonly buffer ModelData {
 void main() {
     mat4 model = transforms[gl_BaseInstance];
     vsOut.FragPos = (model * vec4(inPosition, 1.0)).xyz;
-    gl_Position = camera.projection * camera.view * model * vec4(inPosition, 1.0);
+    gl_Position = camera.viewProjection * model * vec4(inPosition, 1.0);
 }
