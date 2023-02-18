@@ -496,6 +496,10 @@ int main() {
 
     i32 lightIndex = 0;
 
+    std::array<f32, 60> frameTimes{};
+
+    tsl::robin_map<const char*, std::array<f32, 60>> funcFrameTimes;
+
     f64 dt = 1.f / 60.f;
     bool running = true;
     SDL_Event event;
@@ -550,8 +554,26 @@ int main() {
 
             ImGui::Begin("Stats");
             ImGui::Text("FPS: %f", engine.driver().fps());
+
+
+            ImGui::BeginTable("Times", 2);
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+
             ImGui::Text("Milliseconds: %f", engine.driver().milliseconds());
-            ImGui::Text("Delta Time: %f", dt);
+
+            ImGui::TableNextColumn();
+
+            std::rotate(frameTimes.begin(), frameTimes.begin() + 1, frameTimes.end());
+            frameTimes.back() = engine.driver().milliseconds();
+            ImGui::PlotLines("Milliseconds", &frameTimes[0], frameTimes.size());
+
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+
+            ImGui::Text("CPU Times:");
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
 
 #ifdef ENDE_PROFILE
             {
@@ -579,19 +601,45 @@ int main() {
                     return lhs.first > rhs.first;
                 });
                 for (auto& func : dataVec) {
-                    ImGui::Text("\t%s ms: %f, avg: %f", func.first, func.second.first, func.second.first / func.second.second);
+                    ImGui::Text("\t%s ms", func.first);
+                    auto it = funcFrameTimes.find(func.first);
+                    if (it == funcFrameTimes.end()) {
+                        funcFrameTimes.insert(std::make_pair(func.first, std::array<f32, 60>{}));
+                        it = funcFrameTimes.find(func.first);
+                    }
+                    std::rotate(it.value().begin(), it.value().begin() + 1, it.value().end());
+                    it.value().back() = func.second.first;
+                    ImGui::TableNextColumn();
+                    ImGui::PlotLines(std::to_string(func.second.first).c_str(), &it.value()[0], it.value().size());
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
                 }
             }
 #endif
 
             ImGui::Text("GPU Times:");
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
             auto passTimers = renderer.timers();
             u64 totalGPUTime = 0;
             for (auto& timer : passTimers) {
                 u64 time = timer.second.result();
                 totalGPUTime += time;
-                ImGui::Text("\t%s ms: %f", timer.first, time / 1e6);
+                ImGui::Text("\t%s ms", timer.first);
+                auto it = funcFrameTimes.find(timer.first);
+                if (it == funcFrameTimes.end()) {
+                    funcFrameTimes.insert(std::make_pair(timer.first, std::array<f32, 60>{}));
+                    it = funcFrameTimes.find(timer.first);
+                }
+                std::rotate(it.value().begin(), it.value().begin() + 1, it.value().end());
+                it.value().back() = time / 1e6;
+                ImGui::TableNextColumn();
+                ImGui::PlotLines(std::to_string(time / 1e6).c_str(), &it.value()[0], it.value().size());
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
             }
+            ImGui::EndTable();
+
             ImGui::Text("Total GPU: %f", totalGPUTime / 1e6);
 
             Renderer::Stats rendererStats = renderer.stats();
