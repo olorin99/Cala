@@ -314,7 +314,7 @@ MeshData loadModel(const ende::fs::Path& path) {
             if (mesh->HasTangentsAndBitangents()) {
                 const aiVector3D tangent = mesh->mTangents[j];
 //                const aiVector3D bitangent = mesh->mBitangents[j];
-                vertex.tangent = { tangent.x, tangent.y, tangent.z };
+                vertex.tangent = { tangent.x, tangent.y, tangent.z, 1 };
             }
 
             data.addVertex(vertex);

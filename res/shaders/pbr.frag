@@ -224,6 +224,8 @@ void main() {
 
     FragColour = vec4(colour, 1.0);
 //    FragColour = vec4(normal, 1.0);
+//    FragColour = vec4(fsIn.TBN[0], 1.0);
+//    FragColour = vec4(fsIn.FragPos, 1.0);
 //    FragColour = vec4(0.0, roughness, metallic, 1.0);
 //    FragColour = vec4(F0, 1.0);
 //    FragColour = vec4(F, 1.0);

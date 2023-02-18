@@ -32,10 +32,10 @@ layout (set = 4, binding = 0) readonly buffer ModelData {
 
 void main() {
     mat4 model = transforms[gl_BaseInstance];
-    vec3 T = normalize(mat3(model) * inTangent.xyz);
+    vec3 T = normalize(mat3(model) * inTangent.xyz) * inTangent.w;
     vec3 N = normalize(mat3(model) * inNormal);
     T = normalize(T - dot(T, N) * N);
-    vec3 B = cross(N, T) * inTangent.w; //TODO: seems wrong, alternates panels
+    vec3 B = cross(N, T);
 
     vsOut.FragPos = (model * vec4(inPosition, 1.0)).xyz;
     vsOut.TexCoords = inTexCoords;
