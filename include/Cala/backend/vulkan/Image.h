@@ -23,7 +23,6 @@ namespace cala::backend::vulkan {
             u32 mipLevels = 1;
             u32 arrayLayers = 1;
             ImageUsage usage = ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST;
-            ImageLayout initialLayout = ImageLayout::GENERAL;
             ImageType type = ImageType::AUTO;
             Format aliasFormat = Format::UNDEFINED;
         };
@@ -84,7 +83,18 @@ namespace cala::backend::vulkan {
 
         VkImageMemoryBarrier barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer = 0);
 
-        void setLayout(VkImageMemoryBarrier barrier);
+        struct Barrier {
+            Image* image;
+            Access srcAccess;
+            Access dstAccess;
+            ImageLayout srcLayout;
+            ImageLayout dstLayout;
+            VkImageSubresourceRange subresourceRange;
+        };
+
+        Barrier barrier(Access srcAccess, Access dstAccess, ImageLayout dstLayout, u32 layer = 0);
+
+        void setLayout(VkImageLayout layout);
 
         VkImage image() const { return _image; }
 

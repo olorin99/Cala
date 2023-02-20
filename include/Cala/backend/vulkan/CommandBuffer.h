@@ -122,6 +122,8 @@ namespace cala::backend::vulkan {
 
         void pipelineBarrier(PipelineStage srcStage, PipelineStage dstStage, VkDependencyFlags dependencyFlags, ende::Span<VkBufferMemoryBarrier> bufferBarriers, ende::Span<VkImageMemoryBarrier> imageBarriers);
 
+        void pipelineBarrier(PipelineStage srcStage, PipelineStage dstStage, ende::Span<Image::Barrier> imageBarriers);
+
         void pushDebugLabel(std::string_view label, std::array<f32, 4> colour = {0, 1, 0, 1});
 
         void popDebugLabel();

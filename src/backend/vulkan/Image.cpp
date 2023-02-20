@@ -6,7 +6,7 @@ cala::backend::vulkan::Image::Image(Device& driver, CreateInfo info)
     : _driver(driver),
     _image(VK_NULL_HANDLE),
     _allocation(nullptr),
-    _layout(info.initialLayout)
+    _layout(ImageLayout::UNDEFINED)
 {
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -379,6 +379,22 @@ VkImageMemoryBarrier cala::backend::vulkan::Image::barrier(Access srcAccess, Acc
     return memoryBarrier;
 }
 
-void cala::backend::vulkan::Image::setLayout(VkImageMemoryBarrier barrier) {
-    _layout = static_cast<ImageLayout>(barrier.newLayout);
+cala::backend::vulkan::Image::Barrier cala::backend::vulkan::Image::barrier(Access srcAccess, Access dstAccess, ImageLayout dstLayout, u32 layer) {
+    Barrier b{};
+    b.subresourceRange.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    b.subresourceRange.baseMipLevel = 0;
+    b.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+    b.subresourceRange.baseArrayLayer = layer;
+    b.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+    b.srcAccess = srcAccess;
+    b.dstAccess = dstAccess;
+    b.srcLayout = layout();
+    b.dstLayout = dstLayout;
+    b.image = this;
+    return b;
+}
+
+void cala::backend::vulkan::Image::setLayout(VkImageLayout layout) {
+    _layout = static_cast<ImageLayout>(layout);
 }

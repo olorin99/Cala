@@ -448,7 +448,7 @@ int main() {
     };
     ImageHandle roughnessImages[10];
     for (u32 i = 0; i < 10; i++) {
-        roughnessImages[i] = engine.createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST, backend::ImageLayout::GENERAL, backend::ImageType::IMAGE2D});
+        roughnessImages[i] = engine.createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST, backend::ImageType::IMAGE2D});
         f32 metallicRoughnessData[] = { 0.f, static_cast<f32>(i) / 10.f, 0.f, 1.f };
         roughnessImages[i]->data(engine.driver(), { 0, 1, 1, 1, 4 * 4, { metallicRoughnessData, sizeof(f32) * 4 } });
 
