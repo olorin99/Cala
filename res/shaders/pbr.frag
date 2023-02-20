@@ -84,8 +84,8 @@ vec3 pointLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 al
     if (shadow == 0)
         return vec3(0.0);
 
-    float distance = length(lightVec);
-    float attenuation = 1.0 / (distance * distance);
+    float distanceSqared = dot(lightVec, lightVec);
+    float attenuation = 1.0 / max(distanceSqared, 0.1);
     vec3 H = normalize(V + L);
     vec3 radiance = light.colour * light.intensity * attenuation;
 

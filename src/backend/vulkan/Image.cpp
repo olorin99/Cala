@@ -150,15 +150,8 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Device& driver, D
         range.baseArrayLayer = info.layer;
         range.layerCount = 1;
 
-        VkImageMemoryBarrier imageBarrier{};
-        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier.image = _image;
-        imageBarrier.subresourceRange = range;
-        imageBarrier.srcAccessMask = 0;
-        imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        vkCmdPipelineBarrier(buffer.buffer(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+        Barrier imageBarrier = barrier(Access::NONE, Access::TRANSFER_WRITE, ImageLayout::TRANSFER_DST);
+        buffer.pipelineBarrier(PipelineStage::TOP, PipelineStage::TRANSFER, { &imageBarrier, 1 });
 
         VkBufferImageCopy copyRegion{};
         copyRegion.bufferOffset = 0;
@@ -175,14 +168,8 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Device& driver, D
 
         vkCmdCopyBufferToImage(buffer.buffer(), staging.buffer(), _image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
-//        VkImageMemoryBarrier imageBarrier1{}
-        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        vkCmdPipelineBarrier(buffer.buffer(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
-
+        imageBarrier = barrier(Access::TRANSFER_WRITE, Access::SHADER_READ, ImageLayout::SHADER_READ_ONLY);
+        buffer.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::FRAGMENT_SHADER, { &imageBarrier, 1 });
     });
 
     _layout = ImageLayout::SHADER_READ_ONLY;
@@ -251,11 +238,8 @@ void cala::backend::vulkan::Image::generateMips() {
 
 void cala::backend::vulkan::Image::generateMips(CommandBuffer &cmd) {
 
-    VkImageMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.image = _image;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    Barrier barrier{};
+    barrier.image = this;
     barrier.subresourceRange.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.layerCount = 1;
     barrier.subresourceRange.levelCount = 1;
@@ -267,12 +251,12 @@ void cala::backend::vulkan::Image::generateMips(CommandBuffer &cmd) {
 
         for (u32 mip = 1; mip < _mips; mip++) {
             barrier.subresourceRange.baseMipLevel = mip - 1;
-            barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            barrier.srcLayout = ImageLayout::TRANSFER_DST;
+            barrier.dstLayout = ImageLayout::TRANSFER_SRC;
+            barrier.srcAccess = Access::TRANSFER_WRITE;
+            barrier.dstAccess = Access::TRANSFER_READ;
 
-            cmd.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::TRANSFER, 0, nullptr, { &barrier, 1});
+            cmd.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::TRANSFER, { &barrier, 1});
 
             VkImageBlit blit{};
             blit.srcOffsets[0] = {0, 0, 0};
@@ -294,19 +278,19 @@ void cala::backend::vulkan::Image::generateMips(CommandBuffer &cmd) {
 
             vkCmdBlitImage(cmd.buffer(), _image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 
-            barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-            barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            barrier.srcLayout = ImageLayout::TRANSFER_SRC;
+            barrier.dstLayout = ImageLayout::SHADER_READ_ONLY;
+            barrier.srcAccess = Access::TRANSFER_WRITE;
+            barrier.dstAccess = Access::SHADER_READ;
 
-            cmd.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::FRAGMENT_SHADER, 0, nullptr, { &barrier, 1});
+            cmd.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::FRAGMENT_SHADER, { &barrier, 1});
         }
         barrier.subresourceRange.baseMipLevel = _mips - 1;
-        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        cmd.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::FRAGMENT_SHADER, 0, nullptr, { &barrier, 1});
+        barrier.srcLayout = ImageLayout::TRANSFER_DST;
+        barrier.dstLayout = ImageLayout::SHADER_READ_ONLY;
+        barrier.srcAccess = Access::TRANSFER_WRITE;
+        barrier.dstAccess = Access::SHADER_READ;
+        cmd.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::FRAGMENT_SHADER, { &barrier, 1});
     }
 }
 

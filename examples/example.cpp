@@ -201,8 +201,13 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
                             vertex.position = {positions[v * 3], positions[v * 3 + 1], positions[v * 3 + 2]};
                         if (normals)
                             vertex.normal = {normals[v * 3], normals[v * 3 + 1], normals[v * 3 + 2]};
-                        if (texCoords)
+                        if (texCoords) {
                             vertex.texCoords = {texCoords[v * 2], texCoords[v * 2 + 1]};
+//                            if (vertex.texCoords[0] > 1)
+//                                vertex.texCoords[0] -= 1;
+//                            if (vertex.texCoords[1] > 1)
+//                                vertex.texCoords[1] -= 1;
+                        }
                         if (tangents)
                             vertex.tangent = { tangents[v * 4], tangents[v * 4 + 1], tangents[v * 4 + 2], tangents[v * 4 + 3] };
                         vertices.push(vertex);
@@ -754,6 +759,8 @@ int main() {
 
             if (ImGui::Button("Load")) {
                 damagedHelmet = std::move(loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path));
+//                damagedHelmet = std::move(loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf"_path));
+//                damagedHelmet = std::move(loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/FlightHelmet/glTF/FlightHelmet.gltf"_path));
 //                addHelmet = true;
                 scene.addRenderable(damagedHelmet, &helmetTransform, true);
             }
@@ -763,7 +770,7 @@ int main() {
         }
 
         {
-            helmetTransform.rotate(ende::math::Vec3f{0, 1, 0}, ende::math::rad(45) * dt);
+//            helmetTransform.rotate(ende::math::Vec3f{0, 1, 0}, ende::math::rad(45) * dt);
             lightTransform.rotate(ende::math::Vec3f{0, 1, 1}, ende::math::rad(45) * dt);
         }
         engine.gc();

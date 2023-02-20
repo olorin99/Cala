@@ -236,21 +236,21 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
         _defaultPrefilter->data(_driver, { 0, 512, 512, 1, 4 * 4, { prefilterData, sizeof(f32) * 4 * 512 * 512 }, i });
 
     _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
-        auto prefilterBarrier = _defaultPrefilter->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::TRANSFER_DST);
-        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::BOTTOM, 0, nullptr, { &prefilterBarrier, 1 });
+        auto prefilterBarrier = _defaultPrefilter->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::TRANSFER_DST);
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::BOTTOM, { &prefilterBarrier, 1 });
         _defaultPrefilter->generateMips(cmd);
 
 
-        VkImageMemoryBarrier barriers[5];
-        barriers[0] = _defaultPointShadow->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
-        barriers[1] = _defaultDirectionalShadow->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
-        barriers[2] = _defaultAlbedo->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
-        barriers[3] = _defaultNormal->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
-        barriers[4] = _defaultMetallicRoughness->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
-        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER | backend::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { barriers, 5 });
+        backend::vulkan::Image::Barrier barriers[5];
+        barriers[0] = _defaultPointShadow->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::SHADER_READ_ONLY);
+        barriers[1] = _defaultDirectionalShadow->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::SHADER_READ_ONLY);
+        barriers[2] = _defaultAlbedo->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
+        barriers[3] = _defaultNormal->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
+        barriers[4] = _defaultMetallicRoughness->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER | backend::PipelineStage::FRAGMENT_SHADER, { barriers, 5 });
 
-        auto brdfBarrier = _brdfImage->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::GENERAL);
-        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &brdfBarrier, 1 });
+        auto brdfBarrier = _brdfImage->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, { &brdfBarrier, 1 });
 
         cmd.bindProgram(*_brdfProgram);
         cmd.bindImage(1, 0, getImageView(_brdfImage), _defaultSampler, true);
@@ -258,8 +258,8 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
         cmd.bindDescriptors();
         cmd.dispatchCompute(512 / 32, 512 / 32, 1);
 
-        brdfBarrier = _brdfImage->barrier(backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::GENERAL, backend::ImageLayout::SHADER_READ_ONLY);
-        cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, 0, nullptr, { &brdfBarrier, 1 });
+        brdfBarrier = _brdfImage->barrier(backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::SHADER_READ_ONLY);
+        cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, { &brdfBarrier, 1 });
 
     });
 
@@ -353,8 +353,8 @@ cala::ImageHandle cala::Engine::convertToCubeMap(ImageHandle equirectangular) {
     auto equirectangularView = equirectangular->newView();
     auto cubeView = cubeMap->newView(0, 10);
     _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
-        auto envBarrier = cubeMap->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::GENERAL);
-        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &envBarrier, 1 });
+        auto envBarrier = cubeMap->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, { &envBarrier, 1 });
 //        auto hdrBarrier = equirectangular->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY, backend::ImageLayout::SHADER_READ_ONLY);
 //        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &hdrBarrier, 1 });
 
@@ -369,8 +369,8 @@ cala::ImageHandle cala::Engine::convertToCubeMap(ImageHandle equirectangular) {
         cmd.dispatchCompute(512 / 32, 512 / 32, 6);
 
 
-        envBarrier = cubeMap->barrier(backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::GENERAL, backend::ImageLayout::TRANSFER_DST);
-        cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, 0, nullptr, { &envBarrier, 1 });
+        envBarrier = cubeMap->barrier(backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::TRANSFER_DST);
+        cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, { &envBarrier, 1 });
         cubeMap->generateMips(cmd);
 //        envBarrier = cubeMap->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::TRANSFER_DST, backend::ImageLayout::SHADER_READ_ONLY);
 //        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { &envBarrier, 1 });
@@ -386,10 +386,10 @@ cala::ImageHandle cala::Engine::generateIrradianceMap(ImageHandle cubeMap) {
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
     }, &_irradianceSampler);
     _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
-        auto irradianceBarrier = irradianceMap->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::GENERAL);
-        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &irradianceBarrier, 1 });
-        auto cubeBarrier = cubeMap->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY, backend::ImageLayout::GENERAL);
-        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &cubeBarrier, 1 });
+        auto irradianceBarrier = irradianceMap->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, { &irradianceBarrier, 1 });
+        auto cubeBarrier = cubeMap->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::GENERAL);
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, { &cubeBarrier, 1 });
 
         cmd.bindProgram(*_irradianceProgram);
         cmd.bindImage(1, 0, getImageView(cubeMap), _lodSampler, true);
@@ -398,10 +398,10 @@ cala::ImageHandle cala::Engine::generateIrradianceMap(ImageHandle cubeMap) {
         cmd.bindDescriptors();
         cmd.dispatchCompute(irradianceMap->width() / 32, irradianceMap->height() / 32, 6);
 
-        irradianceBarrier = irradianceMap->barrier(backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::GENERAL, backend::ImageLayout::SHADER_READ_ONLY);
-        cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, 0, nullptr, { &irradianceBarrier, 1 });
-        cubeBarrier = cubeMap->barrier(backend::Access::SHADER_READ, backend::Access::NONE, backend::ImageLayout::GENERAL, backend::ImageLayout::SHADER_READ_ONLY);
-        cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, 0, nullptr, { &cubeBarrier, 1 });
+        irradianceBarrier = irradianceMap->barrier(backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::SHADER_READ_ONLY);
+        cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, { &irradianceBarrier, 1 });
+        cubeBarrier = cubeMap->barrier(backend::Access::SHADER_READ, backend::Access::NONE, backend::ImageLayout::SHADER_READ_ONLY);
+        cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, { &cubeBarrier, 1 });
     });
     return irradianceMap;
 }
@@ -428,8 +428,8 @@ cala::ImageHandle cala::Engine::generatePrefilteredIrradiance(ImageHandle cubeMa
 
 
     _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
-        auto prefilterBarrier = prefilteredMap->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::GENERAL);
-        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &prefilterBarrier, 1 });
+        auto prefilterBarrier = prefilteredMap->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, { &prefilterBarrier, 1 });
 
         for (u32 mip = 0; mip < prefilteredMap->mips(); mip++) {
             cmd.bindProgram(*_prefilterProgram);
@@ -443,8 +443,8 @@ cala::ImageHandle cala::Engine::generatePrefilteredIrradiance(ImageHandle cubeMa
             cmd.dispatchCompute(std::ceil(computeDim / 32.f), std::ceil(computeDim / 32.f), 6);
         }
 
-        prefilterBarrier = prefilteredMap->barrier(backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::GENERAL, backend::ImageLayout::SHADER_READ_ONLY);
-        cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, 0, nullptr, { &prefilterBarrier, 1 });
+        prefilterBarrier = prefilteredMap->barrier(backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::SHADER_READ_ONLY);
+        cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, { &prefilterBarrier, 1 });
     });
     return prefilteredMap;
 }
@@ -529,8 +529,8 @@ cala::ImageHandle cala::Engine::getShadowMap(u32 index) {
     });
     _shadowMaps.push(map);
     _driver.immediate([&](backend::vulkan::CommandBuffer& cmd) {
-        auto cubeBarrier = map->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
-        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, 0, nullptr, { &cubeBarrier, 1 });
+        auto cubeBarrier = map->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::SHADER_READ_ONLY);
+        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, { &cubeBarrier, 1 });
     });
     return map;
 }
