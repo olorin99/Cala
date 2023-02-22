@@ -384,7 +384,7 @@ int main() {
 
 
     Transform cameraTransform({10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(-90)));
-    Camera camera((f32)ende::math::rad(54.4), platform.windowSize().first, platform.windowSize().second, 0.1f, 1000.f, cameraTransform);
+    Camera camera((f32)ende::math::rad(54.4), platform.windowSize().first, platform.windowSize().second, 0.1f, 100.f, cameraTransform);
 
     Sampler sampler(engine.driver(), {});
 
@@ -438,6 +438,8 @@ int main() {
     scene.addRenderable(sphere, &matInstance, &lightTransform, false);
 
     f32 sceneSize = std::max(objectCount / 10, 20u);
+
+    f32 sceneBounds = 10;
 
     MaterialInstance instances[10] = {
             material.instance(),
@@ -737,9 +739,10 @@ int main() {
                 camera.setExposure(exposure);
 
             if (ImGui::Button("Add Light")) {
-                auto& t = lightTransforms.push(Transform({ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f)}));
+                auto& t = lightTransforms.push(Transform({ende::math::rand(-sceneBounds, sceneBounds), ende::math::rand(0.f, sceneBounds), ende::math::rand(-sceneBounds, sceneBounds)}));
                 Light l(Light::LightType::POINT, false, t);
-                l.setIntensity(ende::math::rand(1.f, 20.f));
+                l.setIntensity(ende::math::rand(0.1f, 5.f));
+//                l.setIntensity(0.1f);
                 l.setColour({ ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f) });
                 scene.addLight(l);
             }

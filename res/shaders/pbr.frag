@@ -16,7 +16,22 @@ layout (location = 0) out vec4 FragColour;
 layout (set = 0, binding = 0) uniform samplerCube cubeMaps[];
 layout (set = 0, binding = 0) uniform sampler2D textureMaps[];
 
+struct CameraData {
+    mat4 projection;
+    mat4 view;
+    vec3 position;
+    float near;
+    float far;
+    float exposure;
+};
+
+layout (set = 1, binding = 0) uniform FrameData {
+    CameraData camera;
+};
+
 layout (push_constant) uniform IBLData {
+    uvec4 tileSizes;
+    uvec2 screenSize;
     int irradianceIndex;
     int prefilteredIndex;
     int brdfIndex;
@@ -45,13 +60,26 @@ layout (set = 2, binding = 1) readonly buffer MeshData {
     Mesh meshData[];
 };
 
+struct LightGrid {
+    uint offset;
+    uint count;
+};
+
+layout (set = 2, binding = 2) buffer LightGridSSBO {
+    LightGrid lightGrid[];
+};
+
+layout (set = 2, binding = 3) buffer LightIndices {
+    uint globalLightIndices[];
+};
+
 struct Light {
     vec3 position;
     uint type;
     vec3 colour;
     float intensity;
-    float range;
-    float linear;
+    float shadowRange;
+    float radius;
     float quadratic;
     int shadowIndex;
 };
@@ -69,6 +97,11 @@ layout (set = 3, binding = 1) readonly buffer LightCount {
 #include "pbr.glsl"
 #include "shadow.glsl"
 
+float linearDepth(float depth) {
+    float depthRange = 2.0 * depth - 1.0;
+    return 2.0 * camera.near * camera.far / (camera.far + camera.near - depthRange * (camera.far - camera.near));
+}
+
 vec3 pointLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 albedo, float roughness, float metallic) {
     vec3 lightVec = light.position - fsIn.FragPos;
     vec3 L = normalize(lightVec);
@@ -78,7 +111,7 @@ vec3 pointLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 al
 
     if (light.shadowIndex >= 0) {
         float bias = max(shadowBias * (1.0 - dot(normal, L)), 0.0001);
-        shadow = filterPCF(light.shadowIndex, light.position, bias, light.range);
+        shadow = filterPCF(light.shadowIndex, light.position, bias, light.shadowRange);
     }
 
     if (shadow == 0)
@@ -127,9 +160,18 @@ void main() {
     F0 = mix(F0, albedo, metallic);
     vec3 Lo = vec3(0.0);
 
-    uint lightNum = min(directLightCount + pointLightCount, 1000);
-    for (uint i = 0; i < lightNum; i++) {
-        Light light = lights[i];
+    uvec2 tileSize = screenSize / tileSizes.xy;
+    float scale = 24.0 / log2(camera.far / camera.near);
+    float bias = -(24.0 * log2(camera.near) / log2(camera.far / camera.near));
+    uint zTile = uint(max(log2(linearDepth(gl_FragCoord.z)) * scale + bias, 0.0));
+    uvec3 tiles = uvec3(uvec2(gl_FragCoord.xy / tileSize), zTile);
+    uint tileIndex = tiles.x + tileSizes.x * tiles.y + (tileSizes.x * tileSizes.y) * tiles.z;
+
+    uint lightCount = lightGrid[tileIndex].count;
+    uint lightOffset = lightGrid[tileIndex].offset;
+
+    for (uint i = 0; i < lightCount; i++) {
+        Light light = lights[globalLightIndices[lightOffset + i]];
         Lo += pointLight(light, normal, viewPos, V, F0, albedo, roughness, metallic);
     }
 

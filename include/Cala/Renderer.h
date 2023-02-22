@@ -27,7 +27,7 @@ namespace cala {
             bool depthPre = false;
             bool skybox = true;
             bool freezeFrustum = false;
-            bool ibl = true;
+            bool ibl = false;
         };
 
         Renderer(Engine* engine, Settings settings);

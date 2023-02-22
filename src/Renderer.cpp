@@ -120,11 +120,103 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     BufferResource drawCommandsResource;
 //    drawCommandsResource.size = sizeof(VkDrawIndexedIndirectCommand) * std::max(scene._renderables.size(), (u64)1);
     drawCommandsResource.size = _drawCommands[frameIndex()]->size();
+    drawCommandsResource.transient = false;
 //    drawCommandsResource.usage = backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT;
     drawCommandsResource.usage = _drawCommands[frameIndex()]->usage();
     drawCommandsResource.handle = _drawCommands[frameIndex()]; //TODO: have rendergraph automatically allocate double buffers for frames in flight
 
+    BufferResource clustersResource;
+    clustersResource.size = sizeof(ende::math::Vec4f) * 2 * 16 * 9 * 24;
+    clustersResource.usage = backend::BufferUsage::STORAGE;
+    clustersResource.transient = false;
+
     _graph.setBackbuffer("backbuffer");
+
+    if (camera.isDirty()) {
+        auto& createClusters = _graph.addPass("create_clusters");
+        createClusters.addBufferOutput("clusters", clustersResource);
+
+        createClusters.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            auto clusters = graph.getResource<BufferResource>("clusters");
+            cmd.clearDescriptors();
+            cmd.bindProgram(*_engine->_createClustersProgram);
+            cmd.bindBindings(nullptr);
+            cmd.bindAttributes(nullptr);
+            struct ClusterPush {
+                ende::math::Mat4f inverseProjection;
+                ende::math::Vec<4, u32> tileSizes;
+                ende::math::Vec<2, u32> screenSize;
+                f32 near;
+                f32 far;
+            } push;
+            push.inverseProjection = camera.projection().inverse();
+            push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->driver().swapchain().extent().width / (f32)16.f) };
+            push.screenSize = { _engine->driver().swapchain().extent().width, _engine->driver().swapchain().extent().height };
+            push.near = camera.near();
+            push.far = camera.far();
+
+            cmd.pushConstants({ &push, sizeof(push) });
+            cmd.bindBuffer(1, 0, *clusters->handle, true);
+            cmd.bindPipeline();
+            cmd.bindDescriptors();
+            cmd.dispatchCompute(16, 9, 24);
+        });
+    }
+
+    BufferResource lightGridResource;
+    lightGridResource.size = sizeof(u32) * 2 * 16 * 9 * 24;
+    lightGridResource.usage = backend::BufferUsage::STORAGE;
+    lightGridResource.transient = false;
+    BufferResource lightIndicesResource;
+    lightIndicesResource.size = sizeof(u32) * 16 * 9 * 24 * 100;
+    lightIndicesResource.usage = backend::BufferUsage::STORAGE;
+    lightIndicesResource.transient = false;
+    BufferResource lightGlobalIndexResource;
+    lightGlobalIndexResource.size = sizeof(u32);
+    lightGlobalIndexResource.transient = false;
+    lightGlobalIndexResource.usage = backend::BufferUsage::STORAGE;
+
+    auto& cullLights = _graph.addPass("cull_lights");
+    cullLights.addBufferInput("clusters", clustersResource);
+    cullLights.addBufferOutput("lightGrid", lightGridResource);
+    cullLights.addBufferOutput("lightIndices", lightIndicesResource);
+    cullLights.addBufferOutput("lightGlobalResource", lightGlobalIndexResource);
+
+    cullLights.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+        auto clusters = graph.getResource<BufferResource>("clusters");
+        auto lightGrid = graph.getResource<BufferResource>("lightGrid");
+        auto lightIndices = graph.getResource<BufferResource>("lightIndices");
+        auto lightGlobalIndex = graph.getResource<BufferResource>("lightGlobalResource");
+        cmd.clearDescriptors();
+        cmd.bindProgram(*_engine->_cullLightsProgram);
+        cmd.bindBindings(nullptr);
+        cmd.bindAttributes(nullptr);
+        struct ClusterPush {
+            ende::math::Mat4f inverseProjection;
+            ende::math::Vec<4, u32> tileSizes;
+            ende::math::Vec<2, u32> screenSize;
+            f32 near;
+            f32 far;
+        } push;
+        push.inverseProjection = camera.projection().inverse();
+        push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->driver().swapchain().extent().width / (f32)16.f) };
+        push.screenSize = { _engine->driver().swapchain().extent().width, _engine->driver().swapchain().extent().height };
+        push.near = camera.near();
+        push.far = camera.far();
+
+        cmd.pushConstants({ &push, sizeof(push) });
+        cmd.bindBuffer(1, 0, *_cameraBuffer[frameIndex()], false);
+        cmd.bindBuffer(1, 1, *clusters->handle, true);
+        cmd.bindBuffer(1, 2, *scene._lightBuffer[frameIndex()], true);
+        cmd.bindBuffer(1, 3, *lightGrid->handle, true);
+        cmd.bindBuffer(1, 4, *lightGlobalIndex->handle, true);
+        cmd.bindBuffer(1, 5, *lightIndices->handle, true);
+        cmd.bindBuffer(1, 6, *scene._lightCountBuffer[frameIndex()], true);
+        cmd.bindPipeline();
+        cmd.bindDescriptors();
+        cmd.dispatchCompute(1, 1, 6);
+    });
+
 
     auto& pointShadows = _graph.addPass("point_shadows");
     pointShadows.addImageOutput("point_depth", pointDepth);
@@ -339,11 +431,15 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             forwardPass.setDepthOutput("depth", depthAttachment);
         forwardPass.addImageInput("point_depth");
         forwardPass.addBufferInput("drawCommands");
+        forwardPass.addBufferInput("lightIndices");
+        forwardPass.addBufferInput("lightGrid");
         forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
 
         forwardPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
             auto meshData = graph.getResource<BufferResource>("meshData");
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
+            auto lightGrid = graph.getResource<BufferResource>("lightGrid");
+            auto lightIndices = graph.getResource<BufferResource>("lightIndices");
             cmd.clearDescriptors();
             cmd.bindBuffer(1, 0, *_cameraBuffer[frameIndex()]);
 //            cmd.bindBuffer(1, 1, *_globalDataBuffer);
@@ -379,15 +475,36 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
             cmd.bindBuffer(2, 0, *_engine->_materialBuffer, true);
             cmd.bindBuffer(2, 1, *meshData->handle, true);
+            cmd.bindBuffer(2, 2, *lightGrid->handle, true);
+            cmd.bindBuffer(2, 3, *lightIndices->handle, true);
             cmd.bindBuffer(4, 0, *scene._modelBuffer[frameIndex()], true);
 
+            struct ForwardPush {
+                ende::math::Vec<4, u32> tileSizes;
+                ende::math::Vec<2, u32> screenSize;
+                i32 irradianceIndex;
+                i32 prefilterIndex;
+                i32 brdfIndex;
+            } push;
+            push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->driver().swapchain().extent().width / (f32)16.f) };
+            push.screenSize = { _engine->driver().swapchain().extent().width, _engine->driver().swapchain().extent().height };
+
+
             if (_renderSettings.ibl) {
-                i32 IBLData[3] = { scene._skyLightIrradiance.index(), scene._skyLightPrefilter.index(), _engine->_brdfImage.index() };
-                cmd.pushConstants({ IBLData, sizeof(u32) * 3 });
+                push.irradianceIndex = scene._skyLightIrradiance.index();
+                push.prefilterIndex = scene._skyLightPrefilter.index();
+                push.brdfIndex = _engine->_brdfImage.index();
+//                i32 IBLData[3] = { scene._skyLightIrradiance.index(), scene._skyLightPrefilter.index(), _engine->_brdfImage.index() };
+//                cmd.pushConstants({ IBLData, sizeof(u32) * 3 });
             } else {
-                i32 IBLData[3] = { -1, -1, -1 };
-                cmd.pushConstants({ IBLData, sizeof(u32) * 3 });
+//                i32 IBLData[3] = { -1, -1, -1 };
+//                cmd.pushConstants({ IBLData, sizeof(u32) * 3 });
+                push.irradianceIndex = -1;
+                push.prefilterIndex = -1;
+                push.brdfIndex = -1;
             }
+
+            cmd.pushConstants({ &push, sizeof(push) });
 
             cmd.bindPipeline();
             cmd.bindDescriptors();

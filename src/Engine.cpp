@@ -160,6 +160,24 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
                 .addStage(computeData, backend::ShaderStage::COMPUTE)
                 .compile(_driver)));
     }
+    {
+        file.open("../../res/shaders/create_clusters.comp.spv"_path, ende::fs::in | ende::fs::binary);
+        ende::Vector<u32> computeData(file.size() / sizeof(u32));
+        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
+
+        _createClustersProgram = createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
+                .addStage(computeData, backend::ShaderStage::COMPUTE)
+                .compile(_driver)));
+    }
+    {
+        file.open("../../res/shaders/cull_lights.comp.spv"_path, ende::fs::in | ende::fs::binary);
+        ende::Vector<u32> computeData(file.size() / sizeof(u32));
+        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
+
+        _cullLightsProgram = createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
+                .addStage(computeData, backend::ShaderStage::COMPUTE)
+                .compile(_driver)));
+    }
 
 
     _defaultPointShadow = createImage({

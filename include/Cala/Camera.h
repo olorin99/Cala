@@ -48,6 +48,8 @@ namespace cala {
 
         f32 far() const { return _far; }
 
+        bool isDirty() const { return _dirty; }
+
     private:
 
         ende::math::Frustum _frustum;
@@ -60,6 +62,8 @@ namespace cala {
         f32 _near;
         f32 _far;
         f32 _exposure;
+
+        bool _dirty;
 
     };
 

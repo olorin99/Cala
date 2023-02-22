@@ -1,0 +1,117 @@
+#version 460
+
+layout (local_size_x = 16, local_size_y = 9, local_size_z = 4) in;
+
+layout (push_constant) uniform ScreenViewInfo {
+    mat4 inverseProjection;
+    uvec4 tileSizes;
+    uvec2 screenSize;
+    float near;
+    float far;
+};
+
+struct CameraData {
+    mat4 projection;
+    mat4 view;
+    vec3 position;
+    float near;
+    float far;
+    float exposure;
+};
+
+layout (set = 1, binding = 0) uniform FrameData {
+    CameraData camera;
+};
+
+struct Cluster {
+    vec4 minPoint;
+    vec4 maxPoint;
+};
+
+layout (set = 1, binding = 1) buffer ClusterSSBO {
+    Cluster clusters[];
+};
+
+struct Light {
+    vec3 position;
+    uint type;
+    vec3 colour;
+    float intensity;
+    float shadowRange;
+    float radius;
+    float quadratic;
+    int shadowIndex;
+};
+
+layout (set = 1, binding = 2) readonly buffer LightData {
+    Light lights[];
+};
+
+struct LightGrid {
+    uint offset;
+    uint count;
+};
+
+layout (set = 1, binding = 3) buffer LightGridSSBO {
+    LightGrid lightGrid[];
+};
+
+layout (set = 1, binding = 4) buffer GlobalIndex {
+    uint globalIndexCount;
+};
+
+layout (set = 1, binding = 5) buffer LightIndices {
+    uint globalLightIndices[];
+};
+
+layout (set = 1, binding = 6) readonly buffer LightCount {
+    uint directLightCount;
+    uint pointLightCount;
+    float shadowBias;
+};
+
+shared Light sharedLights[16 * 9 * 4];
+
+bool intersect(Light light, Cluster cluster) {
+    vec4 lightPos = (camera.view * vec4(light.position, 1.0));
+
+    vec4 closest = max(cluster.minPoint, min(lightPos, cluster.maxPoint));
+    vec3 dist = closest.xyz - lightPos.xyz;
+    return dot(dist, dist) <= (light.radius * light.radius);
+}
+
+void main() {
+    globalIndexCount = 0;
+    uint threadCount = gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z;
+    uint lightCount = directLightCount + pointLightCount;
+    uint tileIndex = gl_LocalInvocationIndex + gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z * gl_WorkGroupID.z;
+    uint visibleLightCount = 0;
+    uint visibleLightIndices[100];
+
+    uint lightOffset = 0;
+    while (lightOffset < lightCount) {
+        uint batchSize = min(threadCount, lightCount - lightOffset);
+        if (uint(gl_LocalInvocationIndex) < batchSize) {
+            uint lightIndex = lightOffset + gl_LocalInvocationIndex;
+            sharedLights[gl_LocalInvocationIndex] = lights[lightIndex];
+        }
+        barrier();
+
+        for (uint light = 0; light < batchSize; light++) {
+            if (visibleLightCount < 100 && intersect(sharedLights[light], clusters[tileIndex])) {
+                visibleLightIndices[visibleLightCount] = lightOffset + light;
+                visibleLightCount++;
+            }
+        }
+        lightOffset += batchSize;
+    }
+    barrier();
+
+    uint offset = atomicAdd(globalIndexCount, visibleLightCount);
+    for (uint i = 0; i < visibleLightCount; i++) {
+        globalLightIndices[offset + i] = visibleLightIndices[i];
+    }
+
+    lightGrid[tileIndex].offset = offset;
+    lightGrid[tileIndex].count = visibleLightCount;
+}

@@ -390,7 +390,7 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
 void cala::RenderGraph::reset() {
     _passes.clear();
     for (auto& attachment : _attachmentMap) {
-        if (dynamic_cast<BufferResource*>(attachment.second)) {
+        if (attachment.second->transient && dynamic_cast<BufferResource*>(attachment.second)) {
             delete attachment.second;
             _attachmentMap.erase(attachment.first);
         }

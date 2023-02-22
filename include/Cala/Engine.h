@@ -135,6 +135,8 @@ namespace cala {
         ProgramHandle _skyboxProgram;
         ProgramHandle _tonemapProgram;
         ProgramHandle _cullProgram;
+        ProgramHandle _createClustersProgram;
+        ProgramHandle _cullLightsProgram;
 
         ImageHandle _defaultPointShadow;
         backend::vulkan::Image::View _defaultPointShadowView;

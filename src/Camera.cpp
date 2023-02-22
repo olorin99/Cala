@@ -9,7 +9,8 @@ cala::Camera::Camera(f32 fov, f32 width, f32 height, f32 near, f32 far, Transfor
     _height(height),
     _near(near),
     _far(far),
-    _exposure(1.0)
+    _exposure(1.0),
+    _dirty(true)
 {
     auto proj = projection();
     ende::math::Mat4f translation = ende::math::translation<4, f32>(_transform.pos());
@@ -22,7 +23,8 @@ cala::Camera::Camera(f32 fov, f32 width, f32 height, f32 near, f32 far, Transfor
 cala::Camera::Camera(const ende::math::Mat4f &projection, Transform &transform)
     : _projection(projection),
       _frustum(projection),
-    _transform(transform)
+    _transform(transform),
+    _dirty(true)
 {
     auto proj = this->projection();
     ende::math::Mat4f translation = ende::math::translation<4, f32>(_transform.pos());
@@ -42,6 +44,7 @@ cala::Camera &cala::Camera::operator=(const cala::Camera &rhs) {
     _height = rhs._height;
     _near = rhs._near;
     _far = rhs._far;
+    _dirty = rhs._dirty;
     return *this;
 }
 
@@ -49,6 +52,7 @@ void cala::Camera::resize(f32 width, f32 height) {
     _width = width;
     _height = height;
     _projection = ende::math::perspective(_fov, _width / _height, _near, _far);
+    _dirty = true;
 }
 
 ende::math::Mat4f cala::Camera::view() const {
