@@ -77,8 +77,45 @@ bool intersect(Light light, Cluster cluster) {
 
     vec4 closest = max(cluster.minPoint, min(lightPos, cluster.maxPoint));
     vec3 dist = closest.xyz - lightPos.xyz;
-    return dot(dist, dist) <= (light.radius * light.radius);
+    return dot(dist, dist) <= (light.shadowRange * light.shadowRange);
 }
+
+//bool intersect(Light light, Cluster cluster) {
+//    vec4 lightPos = (camera.view * vec4(light.position, 1.0));
+//    vec4 e = max(cluster.minPoint - lightPos, 0);
+//    e += max(lightPos - cluster.maxPoint, 0);
+//    float d = dot(e.xyz, e.xyz);
+//    return d <= light.shadowRange * light.shadowRange;
+//}
+
+//float sqDistPointAABB(vec3 point, Cluster cluster) {
+//    float sqDistance = 0.0;
+//    for (int i = 0; i < 3; i++) {
+//        float v = point[i];
+//        if (v < cluster.minPoint[i])
+//        sqDistance += (cluster.minPoint[i] - v) * (cluster.minPoint[i] - v);
+//        if (v > cluster.maxPoint[i])
+//        sqDistance += (v - cluster.maxPoint[i]) * (v - cluster.maxPoint[i]);
+//    }
+//    return sqDistance;
+//}
+//
+//bool intersect(Light light, Cluster cluster) {
+//    vec3 center = vec3(camera.view * vec4(light.position, 1.0));
+//    float distanceSquared = sqDistPointAABB(center, cluster);
+//    return distanceSquared <= (light.shadowRange * light.shadowRange);
+//}
+
+//bool intersect(Light light, Cluster cluster) {
+//    vec3 center = (cluster.maxPoint.xyz + cluster.minPoint.xyz) * 0.5;
+//    vec3 halfExtent = (cluster.maxPoint.xyz - cluster.minPoint.xyz) * 0.5;
+//
+//    vec3 lightPos = (camera.view * vec4(light.position, 1.0)).xyz;
+//
+//    vec3 cl = center - lightPos;
+//    float dist = dot(cl, cl);
+//    return dist <= (light.shadowRange * light.shadowRange) + length(halfExtent);
+//}
 
 void main() {
     globalIndexCount = 0;
@@ -114,4 +151,5 @@ void main() {
 
     lightGrid[tileIndex].offset = offset;
     lightGrid[tileIndex].count = visibleLightCount;
+//    lightGrid[tileIndex].count = tileIndex;
 }

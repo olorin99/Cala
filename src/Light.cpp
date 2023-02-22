@@ -11,8 +11,7 @@ cala::Light::Light(LightType type, bool shadows, Transform &transform)
       _constant(1),
       _quadratic(0.0075),
       _radius(std::sqrt(_intensity / 0.01)),
-      _near(0.1),
-      _far(100),
+      _range(_radius),
       _dirty(true)
 {
     switch (_type) {
@@ -33,8 +32,7 @@ cala::Light &cala::Light::operator=(const cala::Light &rhs) {
     _constant = rhs._constant;
     _quadratic = rhs._quadratic;
     _radius = rhs._radius;
-    _near = rhs._near;
-    _far = rhs._far;
+    _range = rhs._range;
     return *this;
 }
 
@@ -46,7 +44,7 @@ cala::Light::Data cala::Light::data() const {
         _type,
         _colour,
         _intensity,
-        _far - _near,
+        _range,
         _radius,
         _quadratic,
         0
@@ -88,12 +86,7 @@ void cala::Light::setIntensity(f32 intensity) {
     _dirty = true;
 }
 
-void cala::Light::setNear(f32 near) {
-    _near = near;
-    _dirty = true;
-}
-
-void cala::Light::setFar(f32 far) {
-    _far = far;
+void cala::Light::setRange(f32 range) {
+    _range = range;
     _dirty = true;
 }

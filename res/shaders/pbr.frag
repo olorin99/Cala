@@ -118,7 +118,11 @@ vec3 pointLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 al
         return vec3(0.0);
 
     float distanceSqared = dot(lightVec, lightVec);
-    float attenuation = 1.0 / max(distanceSqared, 0.1);
+    float rangeSquared = light.shadowRange * light.shadowRange;
+    float dpr = distanceSqared / max(0.0001, rangeSquared);
+    dpr *= dpr;
+    float attenuation = clamp(1 - dpr, 0, 1.0) / max(0.0001, distanceSqared);
+
     vec3 H = normalize(V + L);
     vec3 radiance = light.colour * light.intensity * attenuation;
 
@@ -179,4 +183,5 @@ void main() {
     vec3 colour = (ambient + Lo);
 
     FragColour = vec4(colour, 1.0);
+//    FragColour = vec4(tiles, 1.0);
 }

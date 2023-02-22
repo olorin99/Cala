@@ -178,6 +178,20 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
                 .addStage(computeData, backend::ShaderStage::COMPUTE)
                 .compile(_driver)));
     }
+    {
+        file.open("../../res/shaders/fullscreen.vert.spv"_path, ende::fs::in | ende::fs::binary);
+        ende::Vector<u32> vertexData(file.size() / sizeof(u32));
+        file.read({ reinterpret_cast<char*>(vertexData.data()), static_cast<u32>(vertexData.size() * sizeof(u32)) });
+
+        file.open("../../res/shaders/clusters_debug.frag.spv"_path, ende::fs::in | ende::fs::binary);
+        ende::Vector<u32> fragmentData(file.size() / sizeof(u32));
+        file.read({ reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32)) });
+
+        _clusterDebugProgram = createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
+                .addStage(vertexData, backend::ShaderStage::VERTEX)
+                .addStage(fragmentData, backend::ShaderStage::FRAGMENT)
+                .compile(_driver)));
+    }
 
 
     _defaultPointShadow = createImage({

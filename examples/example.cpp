@@ -694,6 +694,7 @@ int main() {
                 engine.driver().wait();
                 engine.driver().swapchain().setVsync(vsync);
             }
+            ImGui::Checkbox("Debug Clusters", &renderSettings.debugClusters);
 
             f32 gamma = renderer.getGamma();
             if (ImGui::SliderFloat("Gamma", &gamma, 0, 5))
@@ -710,8 +711,7 @@ int main() {
             ende::math::Vec3f position = lightRef.transform().pos();
             ende::math::Vec3f colour = lightRef.getColour();
             f32 intensity = lightRef.getIntensity();
-            f32 near = lightRef.getNear();
-            f32 far = lightRef.getFar();
+            f32 range = lightRef.getFar();
             bool shadowing = lightRef.shadowing();
 
             if (lightRef.type() == cala::Light::POINT) {
@@ -724,12 +724,10 @@ int main() {
             }
             if (ImGui::ColorEdit3("Colour", &colour[0]))
                 lightRef.setColour(colour);
-            if (ImGui::SliderFloat("Intensity", &intensity, 1, 1000))
+            if (ImGui::SliderFloat("Intensity", &intensity, 1, 100))
                 lightRef.setIntensity(intensity);
-            if (ImGui::SliderFloat("Near", &near, 0, 5))
-                lightRef.setNear(near);
-            if (ImGui::SliderFloat("Far", &far, 0, 1000))
-                lightRef.setFar(far);
+            if (ImGui::SliderFloat("Range", &range, 0, 100))
+                lightRef.setRange(range);
             ImGui::DragFloat("Shadow Bias", &scene.shadowBias, 0.001, -1, 1);
             if (ImGui::Checkbox("Shadowing", &shadowing))
                 lightRef.setShadowing(shadowing);
@@ -741,8 +739,9 @@ int main() {
             if (ImGui::Button("Add Light")) {
                 auto& t = lightTransforms.push(Transform({ende::math::rand(-sceneBounds, sceneBounds), ende::math::rand(0.f, sceneBounds), ende::math::rand(-sceneBounds, sceneBounds)}));
                 Light l(Light::LightType::POINT, false, t);
-                l.setIntensity(ende::math::rand(0.1f, 5.f));
+//                l.setIntensity(ende::math::rand(0.1f, 5.f));
 //                l.setIntensity(0.1f);
+                l.setRange(1);
                 l.setColour({ ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f) });
                 scene.addLight(l);
             }

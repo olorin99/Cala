@@ -28,6 +28,8 @@ namespace cala {
             bool skybox = true;
             bool freezeFrustum = false;
             bool ibl = false;
+
+            bool debugClusters = false;
         };
 
         Renderer(Engine* engine, Settings settings);

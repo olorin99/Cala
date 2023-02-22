@@ -138,6 +138,8 @@ namespace cala {
         ProgramHandle _createClustersProgram;
         ProgramHandle _cullLightsProgram;
 
+        ProgramHandle _clusterDebugProgram;
+
         ImageHandle _defaultPointShadow;
         backend::vulkan::Image::View _defaultPointShadowView;
         ImageHandle _defaultDirectionalShadow;

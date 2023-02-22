@@ -36,11 +36,11 @@ vec3 lineIntersection(vec3 A, vec3 B, float distance) {
 
 void main() {
     const vec3 eyePos = vec3(0.0);
-    uvec2 tileSize = tileSizes.xy / screenSize;
+    uvec2 tileSize = screenSize / tileSizes.xy;
     uint tileIndex = gl_WorkGroupID.x + gl_WorkGroupID.y * gl_NumWorkGroups.x + gl_WorkGroupID.z * (gl_NumWorkGroups.x * gl_NumWorkGroups.y);
 
-    vec4 maxPointScreenSpace = vec4(vec2(gl_WorkGroupID.x + 1, gl_WorkGroupID.y + 1) * tileSize, -1.0, 1.0);
-    vec4 minPointScreenSpace = vec4(gl_WorkGroupID.xy * tileSize, -1.0, 1.0);
+    vec4 maxPointScreenSpace = vec4(vec2(gl_WorkGroupID.x + 1, gl_WorkGroupID.y + 1) * tileSize, 1.0, 1.0);
+    vec4 minPointScreenSpace = vec4(gl_WorkGroupID.xy * tileSize, 1.0, 1.0);
 
     vec3 maxPointViewSpace = screenToView(maxPointScreenSpace).xyz;
     vec3 minPointViewSpace = screenToView(minPointScreenSpace).xyz;

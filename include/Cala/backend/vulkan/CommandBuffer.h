@@ -111,7 +111,7 @@ namespace cala::backend::vulkan {
         void bindIndexBuffer(Buffer& buffer, u32 offset = 0);
 
 
-        void draw(u32 count, u32 instanceCount, u32 first, u32 firstInstance);
+        void draw(u32 count, u32 instanceCount, u32 first, u32 firstInstance, bool indexed = true);
 
         void drawIndirect(Buffer& buffer, u32 offset, u32 drawCount, u32 stride = 0);
 

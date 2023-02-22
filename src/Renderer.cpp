@@ -217,6 +217,36 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd.dispatchCompute(1, 1, 6);
     });
 
+    if (_renderSettings.debugClusters) {
+        auto& debugClusters = _graph.addPass("debug_clusters");
+
+        debugClusters.addBufferInput("lightGrid");
+        debugClusters.addColourOutput("hdr");
+        debugClusters.addImageInput("depth");
+
+        debugClusters.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            auto lightGrid = graph.getResource<BufferResource>("lightGrid");
+            auto depthBuffer = graph.getResource<ImageResource>("depth");
+            cmd.clearDescriptors();
+            cmd.bindBuffer(1, 0, *_cameraBuffer[frameIndex()]);
+            cmd.bindBindings(nullptr);
+            cmd.bindAttributes(nullptr);
+            cmd.bindProgram(*_engine->_clusterDebugProgram);
+            struct ClusterPush {
+                ende::math::Vec<4, u32> tileSizes;
+                ende::math::Vec<2, u32> screenSize;
+            } push;
+            push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->driver().swapchain().extent().width / (f32)16.f) };
+            push.screenSize = { _engine->driver().swapchain().extent().width, _engine->driver().swapchain().extent().height };
+            cmd.pushConstants({ &push, sizeof(push) });
+            cmd.bindBuffer(1, 1, *lightGrid->handle, true);
+            cmd.bindImage(1, 2, _engine->getImageView(depthBuffer->handle), _engine->_shadowSampler);
+            cmd.bindPipeline();
+            cmd.bindDescriptors();
+            cmd.draw(3, 1, 0, 0, false);
+        });
+    }
+
 
     auto& pointShadows = _graph.addPass("point_shadows");
     pointShadows.addImageOutput("point_depth", pointDepth);

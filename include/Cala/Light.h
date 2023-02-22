@@ -57,13 +57,11 @@ namespace cala {
 
         f32 getRadius() const { return _radius; }
 
-        void setNear(f32 near);
+        void setRange(f32 range);
 
-        f32 getNear() const { return _near; }
+        f32 getNear() const { return 0.1f; }
 
-        void setFar(f32 far);
-
-        f32 getFar() const { return _far; }
+        f32 getFar() const { return getNear() + _range; }
 
         Transform& transform() const { return *_transform; }
 
@@ -85,8 +83,7 @@ namespace cala {
         f32 _constant;
         f32 _quadratic;
         f32 _radius;
-        f32 _near;
-        f32 _far;
+        f32 _range;
     };
 
 }

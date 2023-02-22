@@ -326,9 +326,9 @@ void cala::backend::vulkan::CommandBuffer::bindIndexBuffer(Buffer& buffer, u32 o
 }
 
 
-void cala::backend::vulkan::CommandBuffer::draw(u32 count, u32 instanceCount, u32 first, u32 firstInstance) {
+void cala::backend::vulkan::CommandBuffer::draw(u32 count, u32 instanceCount, u32 first, u32 firstInstance, bool indexed) {
     if (_computeBound) throw std::runtime_error("Trying to draw when compute pipeline is bound");
-    if (_indexBuffer)
+    if (indexed && _indexBuffer)
         vkCmdDrawIndexed(_buffer, count, instanceCount, first, 0, firstInstance);
     else
         vkCmdDraw(_buffer, count, instanceCount, first, firstInstance);
