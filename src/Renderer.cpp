@@ -161,6 +161,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindDescriptors();
             cmd.dispatchCompute(16, 9, 24);
         });
+        camera.setDirty(false);
     }
 
     BufferResource lightGridResource;

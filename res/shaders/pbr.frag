@@ -137,6 +137,8 @@ vec3 pointLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 al
     vec3 kS = F;
     vec3 kD = vec3(1.0) - kS;
     kD *= 1.0 - metallic;
+//    return vec3(NdotL);
+//    return L;
     return (kD * albedo / PI + specular) * radiance * NdotL * shadow;
 }
 
@@ -183,4 +185,6 @@ void main() {
     vec3 colour = (ambient + Lo);
 
     FragColour = vec4(colour, 1.0);
+//    FragColour = vec4(fsIn.FragPos, 1.0);
+//    FragColour = vec4(normal, 1.0);
 }

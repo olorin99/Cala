@@ -312,6 +312,9 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
 cala::Engine::~Engine() {
     for (auto& buffer : _buffers)
         delete buffer;
+    _imageViews.clear();
+    _defaultPointShadowView = backend::vulkan::Image::View();
+    _defaultDirectionalShadowView = backend::vulkan::Image::View();
     for (auto& image : _images)
         delete image;
 }
@@ -516,7 +519,7 @@ cala::ImageHandle cala::Engine::createImage(backend::vulkan::Image::CreateInfo i
 
 cala::ProgramHandle cala::Engine::createProgram(backend::vulkan::ShaderProgram &&program) {
     u32 index = _programs.size();
-    _programs.push(std::move(program));
+    _programs.push_back(std::move(program));
     return { this, index };
 }
 

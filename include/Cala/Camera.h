@@ -50,6 +50,8 @@ namespace cala {
 
         bool isDirty() const { return _dirty; }
 
+        void setDirty(bool dirty) { _dirty = dirty; }
+
     private:
 
         ende::math::Frustum _frustum;

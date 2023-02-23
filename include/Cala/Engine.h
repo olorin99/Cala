@@ -167,7 +167,7 @@ namespace cala {
         ende::Vector<backend::vulkan::Buffer*> _buffers;
         ende::Vector<backend::vulkan::Image*> _images;
         ende::Vector<backend::vulkan::Image::View> _imageViews;
-        ende::Vector<backend::vulkan::ShaderProgram> _programs;
+        std::vector<backend::vulkan::ShaderProgram> _programs;
 
         ende::Vector<ImageHandle> _shadowMaps;
 

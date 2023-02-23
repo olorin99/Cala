@@ -376,9 +376,8 @@ int main() {
     Mesh cube = cala::shapes::cube().mesh(&engine);
 //    Mesh sphere = cala::shapes::sphereNormalized(1).mesh(&engine);
     Mesh sphere = loadModel("../../res/models/sphere.obj"_path).mesh(&engine);;
-    auto sponza = loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf"_path);
-//    auto sponza = loadGLTF(&engine, &material, "/home/christian/Downloads/Main.1_Sponza/NewSponza_Main_glTF_002.gltf"_path);
-//    auto damagedHelmet = loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path);
+    auto sponza = loadGLTF(&engine, &material, "../../res/models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf"_path);
+//    auto damagedHelmet = loadGLTF(&engine, &material, "../../res/models/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path);
     Model damagedHelmet;
 //    bool addHelmet = false;
 

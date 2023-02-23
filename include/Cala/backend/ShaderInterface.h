@@ -15,6 +15,8 @@ namespace cala::backend {
     class ShaderInterface {
     public:
 
+        ~ShaderInterface();
+
         i32 getUniformOffset(u32 set, u32 binding, const char* name) const;
 
         i32 getUniformSize(u32 set, u32 binding, const char* name) const;

@@ -1,5 +1,13 @@
 #include "Cala/backend/ShaderInterface.h"
 
+cala::backend::ShaderInterface::~ShaderInterface() {
+    for (auto& set : sets) {
+        for (auto& binding : set.bindings) {
+            binding.members.clear();
+        }
+    }
+}
+
 i32 cala::backend::ShaderInterface::getUniformOffset(u32 set, u32 binding, const char *name) const {
     auto it = getMemberList(set, binding).find(name);
     if (it == getMemberList(set, binding).end())
