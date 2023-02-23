@@ -231,6 +231,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindBuffer(1, 0, *_cameraBuffer[frameIndex()]);
             cmd.bindBindings(nullptr);
             cmd.bindAttributes(nullptr);
+            cmd.bindBlendState({ true });
             cmd.bindProgram(*_engine->_clusterDebugProgram);
             struct ClusterPush {
                 ende::math::Vec<4, u32> tileSizes;
@@ -244,6 +245,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindPipeline();
             cmd.bindDescriptors();
             cmd.draw(3, 1, 0, 0, false);
+            cmd.bindBlendState({ false });
         });
     }
 

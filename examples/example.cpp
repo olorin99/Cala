@@ -492,7 +492,7 @@ int main() {
 
 
     ende::Vector<Transform> lightTransforms;
-    lightTransforms.reserve(100);
+    lightTransforms.reserve(10000);
     for (u32 i = 0; i < 0; i++) {
         lightTransforms.push(Transform({ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f)}));
         Light l(cala::Light::POINT, false, lightTransforms.back());
@@ -506,6 +506,8 @@ int main() {
     std::array<f32, 60> frameTimes{};
 
     tsl::robin_map<const char*, std::array<f32, 60>> funcFrameTimes;
+
+    i32 newLights = 10;
 
     f64 dt = 1.f / 60.f;
     bool running = true;
@@ -736,14 +738,17 @@ int main() {
             if (ImGui::SliderFloat("Exposure", &exposure, 0, 10))
                 camera.setExposure(exposure);
 
-            if (ImGui::Button("Add Light")) {
-                auto& t = lightTransforms.push(Transform({ende::math::rand(-sceneBounds, sceneBounds), ende::math::rand(0.f, sceneBounds), ende::math::rand(-sceneBounds, sceneBounds)}));
-                Light l(Light::LightType::POINT, false, t);
+            ImGui::SliderInt("New Lights", &newLights, 0, 100);
+            if (ImGui::Button("Add Lights")) {
+                for (u32 i = 0; i < newLights; i++) {
+                    auto& t = lightTransforms.push(Transform({ende::math::rand(-sceneBounds, sceneBounds), ende::math::rand(0.f, sceneBounds), ende::math::rand(-sceneBounds, sceneBounds)}));
+                    Light l(Light::LightType::POINT, false, t);
 //                l.setIntensity(ende::math::rand(0.1f, 5.f));
 //                l.setIntensity(0.1f);
-                l.setRange(1);
-                l.setColour({ ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f) });
-                scene.addLight(l);
+                    l.setRange(1);
+                    l.setColour({ ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f) });
+                    scene.addLight(l);
+                }
             }
 
             auto pos = camera.transform().pos();
