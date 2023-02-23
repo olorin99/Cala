@@ -39,7 +39,7 @@ layout (set = 1, binding = 1) buffer LightGridSSBO {
 layout (set = 1, binding = 2) uniform sampler2D depthMap;
 
 float linearDepth(float depth) {
-    float depthRange = 2.0 * depth - 1.0;
+    float depthRange = depth;
     return 2.0 * camera.near * camera.far / (camera.far + camera.near - depthRange * (camera.far - camera.near));
 }
 
@@ -55,16 +55,14 @@ void main() {
 
     float depth = texture(depthMap, fsIn.TexCoords).r;
 
-//    for (uint z = 0; z < 24; z++) {
-        uint zTile = uint(max(log2(linearDepth(depth)) * scale + bias, 0.0));
-        uvec3 tiles = uvec3(uvec2(gl_FragCoord.xy / tileSize), zTile);
-        uint tileIndex = tiles.x + tileSizes.x * tiles.y + (tileSizes.x * tileSizes.y) * tiles.z;
-        lightCount += lightGrid[tileIndex].count;
-//    }
+    uint zTile = uint(max(log2(linearDepth(depth)) * scale + bias, 0.0));
+    uvec3 tiles = uvec3(uvec2(gl_FragCoord.xy / tileSize), zTile);
+    uint tileIndex = tiles.x + tileSizes.x * tiles.y + (tileSizes.x * tileSizes.y) * tiles.z;
+    lightCount += lightGrid[tileIndex].count;
 
     float fullness = lightCount / maxLightCount;
 
-//    FragColour = vec4(fullness, 1.0 - fullness, 0.0, 1.0);
+    FragColour = vec4(fullness, 1.0 - fullness, 0.0, 1.0);
 //    FragColour = vec4(gl_FragCoord.xy, depth, 1.0);
-    FragColour = vec4(tiles, tileIndex);
+//    FragColour = vec4(tiles, tileIndex);
 }

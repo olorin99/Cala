@@ -98,7 +98,7 @@ layout (set = 3, binding = 1) readonly buffer LightCount {
 #include "shadow.glsl"
 
 float linearDepth(float depth) {
-    float depthRange = 2.0 * depth - 1.0;
+    float depthRange = depth;
     return 2.0 * camera.near * camera.far / (camera.far + camera.near - depthRange * (camera.far - camera.near));
 }
 
@@ -183,5 +183,4 @@ void main() {
     vec3 colour = (ambient + Lo);
 
     FragColour = vec4(colour, 1.0);
-//    FragColour = vec4(tiles, 1.0);
 }
