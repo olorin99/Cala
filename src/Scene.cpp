@@ -13,8 +13,8 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
                  engine->createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE)},
     _lightBuffer{engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE),
                  engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE)},
-    _lightCountBuffer{engine->createBuffer(sizeof(u32) * 2 + sizeof(f32), backend::BufferUsage::STORAGE),
-                 engine->createBuffer(sizeof(u32) * 2 + sizeof(f32), backend::BufferUsage::STORAGE)},
+    _lightCountBuffer{engine->createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE),
+                 engine->createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE)},
     _directionalLightCount(0),
     _lightsDirtyFrame(2)
 {
@@ -156,8 +156,8 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
             _lightBuffer[frame] = _engine->resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(Light::Data) * 2);
             _mappedLight[frame] = _lightBuffer[frame]->map();
         }
-        u32 lightCount[3] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount), *reinterpret_cast<u32*>(&shadowBias) };
-        _lightCountBuffer[frame]->data({ lightCount, sizeof(u32) * 3 });
+        u32 lightCount[2] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount) };
+        _lightCountBuffer[frame]->data({ lightCount, sizeof(u32) * 2 });
         std::memcpy(_mappedLight[frame].address, _lightData.data(), static_cast<u32>(_lightData.size() * sizeof(Light::Data)));
 
         _lightsDirtyFrame--;

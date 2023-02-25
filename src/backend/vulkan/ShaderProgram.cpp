@@ -226,7 +226,7 @@ cala::backend::vulkan::ShaderProgram::ShaderProgram(VkDevice device)
     : _device(device),
     _layout(VK_NULL_HANDLE),
     _setLayout{},
-    _interface{},
+    _interface(),
     _stageFlags(ShaderStage::NONE)
 {}
 
@@ -239,9 +239,12 @@ cala::backend::vulkan::ShaderProgram::~ShaderProgram() {
     vkDestroyPipelineLayout(_device, _layout, nullptr);
 }
 
-cala::backend::vulkan::ShaderProgram::ShaderProgram(ShaderProgram &&rhs)
+cala::backend::vulkan::ShaderProgram::ShaderProgram(ShaderProgram &&rhs) noexcept
     : _device(VK_NULL_HANDLE),
-    _layout(VK_NULL_HANDLE)
+    _layout(VK_NULL_HANDLE),
+    _setLayout{},
+    _interface(),
+    _stageFlags(ShaderStage::NONE)
 {
     if (this == &rhs)
         return;

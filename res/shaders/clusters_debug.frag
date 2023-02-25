@@ -45,7 +45,7 @@ float linearDepth(float depth) {
 
 void main() {
 
-    const float maxLightCount = 100;
+    const float maxLightCount = 250;
 
     uvec2 tileSize = screenSize / tileSizes.xy;
     float scale = 24.0 / log2(camera.far / camera.near);

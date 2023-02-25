@@ -482,7 +482,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
             if (!scene._lightData.empty()) {
                 cmd.bindBuffer(3, 0, *scene._lightBuffer[frameIndex()], true);
-                cmd.bindBuffer(3, 1, *scene._lightCountBuffer[frameIndex()], true);
             }
 
             if (scene._renderables.empty())

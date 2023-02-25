@@ -27,7 +27,7 @@ namespace cala {
             f32 intensity;
             f32 range;
             f32 radius;
-            f32 quadratic;
+            f32 shadowBias;
             i32 shadowIndex = -1;
         };
 
@@ -71,6 +71,10 @@ namespace cala {
 
         void setDirty(bool dirty) { _dirty = dirty; }
 
+        f32 getShadowBias() const { return _shadowBias; }
+
+        void setShadowBias(f32 bias);
+
     private:
         Transform* _transform;
         Camera _camera;
@@ -81,7 +85,7 @@ namespace cala {
         ende::math::Vec3f _colour;
         f32 _intensity;
         f32 _constant;
-        f32 _quadratic;
+        f32 _shadowBias;
         f32 _radius;
         f32 _range;
     };

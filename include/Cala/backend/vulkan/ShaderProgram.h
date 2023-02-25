@@ -36,7 +36,7 @@ namespace cala::backend::vulkan {
 
         ShaderProgram(const ShaderProgram& rhs) = delete;
 
-        ShaderProgram(ShaderProgram&& rhs);
+        ShaderProgram(ShaderProgram&& rhs) noexcept;
 
         ShaderProgram& operator=(const ShaderProgram& rhs) = delete;
 

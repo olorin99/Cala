@@ -83,8 +83,6 @@ namespace cala {
         ende::Vector<ende::math::Mat4f> _modelTransforms;
         ende::Vector<Light::Data> _lightData;
 
-        f32 shadowBias = 0.01;
-
     };
 
 }

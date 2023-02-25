@@ -19,6 +19,11 @@
 #include <Ende/profile/ProfileManager.h>
 #include <Cala/Model.h>
 
+#include <Cala/ui/ProfileWindow.h>
+#include <Cala/ui/StatisticsWindow.h>
+#include <Cala/ui/RendererSettingsWindow.h>
+#include <Cala/ui/LightWindow.h>
+
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../../third_party/tiny_gltf.h"
@@ -361,10 +366,13 @@ int main() {
 
     ImGuiContext imGuiContext(engine.driver(), platform.window());
 
+    ui::ProfileWindow profileWindow(&engine, &renderer);
+    ui::StatisticsWindow statisticsWindow(&engine, &renderer);
+    ui::RendererSettingsWindow rendererSettingsWindow(&engine, &renderer);
+
 
     //Shaders
     ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
-//    ProgramHandle directionalLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/direct_shadow.vert.spv"_path, "../../res/shaders/direct_pbr.frag.spv"_path));
 
     Material material(&engine, pointLightProgram, sizeof(u32) * 3);
     material._depthState = { true, true, CompareOp::LESS_EQUAL };
@@ -403,6 +411,8 @@ int main() {
 
     u32 objectCount = 20;
     Scene scene(&engine, objectCount);
+
+    ui::LightWindow lightWindow(&scene);
 
     Transform lightTransform({-10, 1, 0}, {0, 0, 0, 1}, {0.1, 0.1, 0.1});
     Light light(cala::Light::POINT, true, lightTransform);
@@ -543,9 +553,9 @@ int main() {
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_SPACE])
                 cameraTransform.addPos(cameraTransform.rot().invertY().up() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LEFT])
-                cameraTransform.rotate({0, 1, 0}, ende::math::rad(-45) * dt);
+                cameraTransform.rotate({0, 1, 0}, ende::math::rad(-90) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_RIGHT])
-                cameraTransform.rotate({0, 1, 0}, ende::math::rad(45) * dt);
+                cameraTransform.rotate({0, 1, 0}, ende::math::rad(90) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_UP])
                 cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(45) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_DOWN])
@@ -560,178 +570,12 @@ int main() {
         {
             imGuiContext.newFrame();
 
-            ImGui::Begin("Stats");
-            ImGui::Text("FPS: %f", engine.driver().fps());
+            profileWindow.render();
+            statisticsWindow.render();
+            rendererSettingsWindow.render();
+            lightWindow.render();
 
 
-            ImGui::BeginTable("Times", 2);
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-
-            ImGui::Text("Milliseconds: %f", engine.driver().milliseconds());
-
-            ImGui::TableNextColumn();
-
-            std::rotate(frameTimes.begin(), frameTimes.begin() + 1, frameTimes.end());
-            frameTimes.back() = engine.driver().milliseconds();
-            ImGui::PlotLines("Milliseconds", &frameTimes[0], frameTimes.size());
-
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-
-            ImGui::Text("CPU Times:");
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-
-#ifdef ENDE_PROFILE
-            {
-                PROFILE_NAMED("show_profile");
-                u32 currentProfileFrame = ende::profile::ProfileManager::getCurrentFrame();
-                auto f = ende::profile::ProfileManager::getFrameData(currentProfileFrame);
-                tsl::robin_map<const char*, std::pair<f64, u32>> data;
-                for (auto& profileData : f) {
-                    f64 diff = (profileData.end.nanoseconds() - profileData.start.nanoseconds()) / 1e6;
-                    auto it = data.find(profileData.label);
-                    if (it == data.end())
-                        data.emplace(std::make_pair(profileData.label, std::make_pair(diff, 1)));
-                    else {
-                        it.value().first += diff;
-                        it.value().second++;
-                    }
-                }
-
-                ende::Vector<std::pair<const char*, std::pair<f64, u32>>> dataVec;
-
-                for (auto& func : data) {
-                    dataVec.push(std::make_pair(func.first, std::make_pair(func.second.first, func.second.second)));
-                }
-                std::sort(dataVec.begin(), dataVec.end(), [](std::pair<const char*, std::pair<f64, u32>> lhs, std::pair<const char*, std::pair<f64, u32>> rhs) -> bool {
-                    return lhs.first > rhs.first;
-                });
-                for (auto& func : dataVec) {
-                    ImGui::Text("\t%s ms", func.first);
-                    auto it = funcFrameTimes.find(func.first);
-                    if (it == funcFrameTimes.end()) {
-                        funcFrameTimes.insert(std::make_pair(func.first, std::array<f32, 60>{}));
-                        it = funcFrameTimes.find(func.first);
-                    }
-                    std::rotate(it.value().begin(), it.value().begin() + 1, it.value().end());
-                    it.value().back() = func.second.first;
-                    ImGui::TableNextColumn();
-                    ImGui::PlotLines(std::to_string(func.second.first).c_str(), &it.value()[0], it.value().size());
-                    ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0);
-                }
-            }
-#endif
-
-            ImGui::Text("GPU Times:");
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            auto passTimers = renderer.timers();
-            u64 totalGPUTime = 0;
-            for (auto& timer : passTimers) {
-                u64 time = timer.second.result();
-                totalGPUTime += time;
-                ImGui::Text("\t%s ms", timer.first);
-                auto it = funcFrameTimes.find(timer.first);
-                if (it == funcFrameTimes.end()) {
-                    funcFrameTimes.insert(std::make_pair(timer.first, std::array<f32, 60>{}));
-                    it = funcFrameTimes.find(timer.first);
-                }
-                std::rotate(it.value().begin(), it.value().begin() + 1, it.value().end());
-                it.value().back() = time / 1e6;
-                ImGui::TableNextColumn();
-                ImGui::PlotLines(std::to_string(time / 1e6).c_str(), &it.value()[0], it.value().size());
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-            }
-            ImGui::EndTable();
-
-            ImGui::Text("Total GPU: %f", totalGPUTime / 1e6);
-            ImGui::Text("CPU/GPU: %f", engine.driver().milliseconds() / (totalGPUTime / 1e6));
-
-            Renderer::Stats rendererStats = renderer.stats();
-            ImGui::Text("Descriptors: %d", rendererStats.descriptorCount);
-            ImGui::Text("Pipelines: %d", rendererStats.pipelineCount);
-            ImGui::Text("Draw Calls: %d", rendererStats.drawCallCount);
-
-            auto pipelineStats = engine.driver().context().getPipelineStatistics();
-            ImGui::Text("Input Assembly Vertices: %lu", pipelineStats.inputAssemblyVertices);
-            ImGui::Text("Input Assembly Primitives: %lu", pipelineStats.inputAssemblyPrimitives);
-            ImGui::Text("Vertex Shader Invocations: %lu", pipelineStats.vertexShaderInvocations);
-            ImGui::Text("Clipping Invocations: %lu", pipelineStats.clippingInvocations);
-            ImGui::Text("Clipping Primitives: %lu", pipelineStats.clippingPrimitives);
-            ImGui::Text("Fragment Shader Invocations: %lu", pipelineStats.fragmentShaderInvocations);
-
-            ImGui::Text("Memory Usage: ");
-            VmaBudget budgets[10]{};
-            vmaGetHeapBudgets(engine.driver().context().allocator(), budgets);
-            for (auto & budget : budgets) {
-                if (budget.usage == 0)
-                    break;
-                ImGui::Text("\tUsed: %lu mb", budget.usage / 1000000);
-                ImGui::Text("\tAvailable: %lu mb", budget.budget / 1000000);
-            }
-
-            auto engineStats = engine.stats();
-            ImGui::Text("Allocated Buffers: %d", engineStats.allocatedBuffers);
-            ImGui::Text("Buffers In Use: %d", engineStats.buffersInUse);
-            ImGui::Text("Allocated Images: %d", engineStats.allocatedImages);
-            ImGui::Text("Images In Use: %d", engineStats.imagesInUse);
-
-            ImGui::End();
-
-            ImGui::Begin("Render Settings");
-            auto& renderSettings = renderer.settings();
-            ImGui::Checkbox("Forward Pass", &renderSettings.forward);
-            ImGui::Checkbox("Depth Pre Pass", &renderSettings.depthPre);
-            ImGui::Checkbox("Skybox Pass", &renderSettings.skybox);
-            ImGui::Checkbox("Tonemap Pass", &renderSettings.tonemap);
-            ImGui::Checkbox("Freeze Frustum,", &renderSettings.freezeFrustum);
-            ImGui::Checkbox("IBL,", &renderSettings.ibl);
-            bool vsync = engine.driver().swapchain().getVsync();
-            if (ImGui::Checkbox("Vsync", &vsync)) {
-                engine.driver().wait();
-                engine.driver().swapchain().setVsync(vsync);
-            }
-            ImGui::Checkbox("Debug Clusters", &renderSettings.debugClusters);
-
-            f32 gamma = renderer.getGamma();
-            if (ImGui::SliderFloat("Gamma", &gamma, 0, 5))
-                renderer.setGamma(gamma);
-
-            ImGui::End();
-
-            ImGui::Begin("Lights");
-            ImGui::Text("Lights: %lu", scene._lights.size());
-            ImGui::SliderInt("Light", &lightIndex, 0, scene._lights.size() - 1);
-
-            auto& lightRef = scene._lights[lightIndex];
-
-            ende::math::Vec3f position = lightRef.transform().pos();
-            ende::math::Vec3f colour = lightRef.getColour();
-            f32 intensity = lightRef.getIntensity();
-            f32 range = lightRef.getFar();
-            bool shadowing = lightRef.shadowing();
-
-            if (lightRef.type() == cala::Light::POINT) {
-                if (ImGui::DragFloat3("Position", &position[0], 0.1, -sceneSize, sceneSize))
-                    lightRef.setPosition(position);
-            } else {
-                ende::math::Quaternion direction = lightRef.transform().rot();
-                if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1))
-                    lightRef.setDirection(direction);
-            }
-            if (ImGui::ColorEdit3("Colour", &colour[0]))
-                lightRef.setColour(colour);
-            if (ImGui::SliderFloat("Intensity", &intensity, 1, 100))
-                lightRef.setIntensity(intensity);
-            if (ImGui::SliderFloat("Range", &range, 0, 100))
-                lightRef.setRange(range);
-            ImGui::DragFloat("Shadow Bias", &scene.shadowBias, 0.001, -1, 1);
-            if (ImGui::Checkbox("Shadowing", &shadowing))
-                lightRef.setShadowing(shadowing);
 
             f32 exposure = camera.getExposure();
             if (ImGui::SliderFloat("Exposure", &exposure, 0, 10))

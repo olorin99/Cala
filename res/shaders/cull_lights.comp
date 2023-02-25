@@ -39,7 +39,7 @@ struct Light {
     float intensity;
     float shadowRange;
     float radius;
-    float quadratic;
+    float shadowBias;
     int shadowIndex;
 };
 
@@ -67,7 +67,6 @@ layout (set = 1, binding = 5) buffer LightIndices {
 layout (set = 1, binding = 6) readonly buffer LightCount {
     uint directLightCount;
     uint pointLightCount;
-    float shadowBias;
 };
 
 shared Light sharedLights[16 * 9 * 4];
@@ -86,7 +85,8 @@ void main() {
     uint lightCount = directLightCount + pointLightCount;
     uint tileIndex = gl_LocalInvocationIndex + gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z * gl_WorkGroupID.z;
     uint visibleLightCount = 0;
-    uint visibleLightIndices[100];
+    const uint maxVisibleLights = 250;
+    uint visibleLightIndices[maxVisibleLights];
 
     uint lightOffset = 0;
     while (lightOffset < lightCount) {
@@ -98,7 +98,7 @@ void main() {
         barrier();
 
         for (uint light = 0; light < batchSize; light++) {
-            if (visibleLightCount < 100 && intersect(sharedLights[light], clusters[tileIndex])) {
+            if (visibleLightCount < maxVisibleLights && intersect(sharedLights[light], clusters[tileIndex])) {
                 visibleLightIndices[visibleLightCount] = lightOffset + light;
                 visibleLightCount++;
             }

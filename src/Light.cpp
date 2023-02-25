@@ -9,7 +9,7 @@ cala::Light::Light(LightType type, bool shadows, Transform &transform)
       _colour({1, 1, 1}),
       _intensity(1),
       _constant(1),
-      _quadratic(0.0075),
+      _shadowBias(0.1),
       _radius(std::sqrt(_intensity / 0.01)),
       _range(_radius),
       _dirty(true)
@@ -30,7 +30,7 @@ cala::Light &cala::Light::operator=(const cala::Light &rhs) {
     _colour = rhs._colour;
     _intensity = rhs._intensity;
     _constant = rhs._constant;
-    _quadratic = rhs._quadratic;
+    _shadowBias = rhs._shadowBias;
     _radius = rhs._radius;
     _range = rhs._range;
     return *this;
@@ -46,7 +46,7 @@ cala::Light::Data cala::Light::data() const {
         _intensity,
         _range,
         _radius,
-        _quadratic,
+        _shadowBias,
         0
     };
 
@@ -88,5 +88,10 @@ void cala::Light::setIntensity(f32 intensity) {
 
 void cala::Light::setRange(f32 range) {
     _range = range;
+    _dirty = true;
+}
+
+void cala::Light::setShadowBias(f32 bias) {
+    _shadowBias = bias;
     _dirty = true;
 }
