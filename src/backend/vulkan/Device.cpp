@@ -1,6 +1,7 @@
 #include "Cala/backend/vulkan/Device.h"
+#include "Cala/backend/vulkan/primitives.h"
 #include <vulkan/vulkan.h>
-
+#include <Ende/profile/profile.h>
 #include <Ende/log/log.h>
 
 template <>
@@ -36,7 +37,7 @@ cala::backend::vulkan::ShaderProgram *cala::backend::vulkan::ProgramHandle ::ope
 cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, bool clear)
     : _context(platform),
       _swapchain(nullptr),
-      _commandPool(VK_NULL_HANDLE),
+      _commandPools{VK_NULL_HANDLE},
       _frameCommands{
           CommandBuffer(*this, _context.getQueue(QueueType::GRAPHICS), VK_NULL_HANDLE),
           CommandBuffer(*this, _context.getQueue(QueueType::GRAPHICS), VK_NULL_HANDLE)
@@ -55,11 +56,12 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, bool cl
     createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     createInfo.queueFamilyIndex = _context.queueIndex(QueueType::GRAPHICS);
     createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(_context.device(), &createInfo, nullptr, &_commandPool);
+    for (auto& pool : _commandPools)
+        vkCreateCommandPool(_context.device(), &createInfo, nullptr, &pool);
 
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = _commandPool;
+    allocInfo.commandPool = _commandPools[0];
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = FRAMES_IN_FLIGHT;
 
@@ -127,6 +129,21 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, bool cl
     bindlessAllocate.pNext = &countInfo;
 
     vkAllocateDescriptorSets(_context.device(), &bindlessAllocate, &_bindlessSet);
+
+    VkDescriptorPoolSize poolSizes2[] = {
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10000},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000}
+    };
+
+    VkDescriptorPoolCreateInfo descriptorPoolCreateInfo{};
+    descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descriptorPoolCreateInfo.flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
+    descriptorPoolCreateInfo.poolSizeCount = 4;
+    descriptorPoolCreateInfo.pPoolSizes = poolSizes2;
+    descriptorPoolCreateInfo.maxSets = 10000;
+    vkCreateDescriptorPool(context().device(), &descriptorPoolCreateInfo, nullptr, &_descriptorPool);
 }
 
 cala::backend::vulkan::Device::~Device() {
@@ -147,15 +164,20 @@ cala::backend::vulkan::Device::~Device() {
     for (auto& renderPass : _renderPasses)
         delete renderPass.second;
 
+    for (auto& pipeline : _pipelines)
+        vkDestroyPipeline(_context.device(), pipeline.second, nullptr);
+
     vkDestroyDescriptorSetLayout(_context.device(), _bindlessLayout, nullptr);
 
+    vkDestroyDescriptorPool(_context.device(), _descriptorPool, nullptr);
     vkDestroyDescriptorPool(_context.device(), _bindlessPool, nullptr);
 
     for (u32 i = 0; i < FRAMES_IN_FLIGHT; i++) {
         vkDestroyFence(_context.device(), _frameFences[i], nullptr);
     }
 
-    vkDestroyCommandPool(_context.device(), _commandPool, nullptr);
+    for (auto& pool : _commandPools)
+        vkDestroyCommandPool(_context.device(), pool, nullptr);
 
     for (auto& setLayout : _setLayouts)
         vkDestroyDescriptorSetLayout(_context.device(), setLayout.second, nullptr);
@@ -199,8 +221,8 @@ bool cala::backend::vulkan::Device::wait(u64 timeout) {
     return res;
 }
 
-cala::backend::vulkan::Buffer cala::backend::vulkan::Device::stagingBuffer(u32 size) {
-    return {*this, size, BufferUsage::TRANSFER_SRC, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT};
+cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::stagingBuffer(u32 size) {
+    return createBuffer(size, BufferUsage::TRANSFER_SRC, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_CACHED | MemoryProperties::HOST_COHERENT);
 }
 
 
@@ -208,7 +230,7 @@ cala::backend::vulkan::CommandBuffer cala::backend::vulkan::Device::beginSingleT
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = _commandPool;
+    allocInfo.commandPool = _commandPools[FRAMES_IN_FLIGHT];
     allocInfo.commandBufferCount = 1;
 
     VkCommandBuffer commandBuffer;
@@ -236,7 +258,20 @@ void cala::backend::vulkan::Device::endSingleTimeCommands(CommandBuffer& buffer)
         ende::log::error("Failed waiting for immediate fence");
     vkDestroyFence(context().device(), fence, nullptr);
 
-    vkFreeCommandBuffers(_context.device(), _commandPool, 1, &buf);
+    vkFreeCommandBuffers(_context.device(), _commandPools[FRAMES_IN_FLIGHT], 1, &buf);
+}
+
+cala::backend::vulkan::CommandBuffer cala::backend::vulkan::Device::getCommandBuffer(u32 frame, QueueType queueType) {
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = _commandPools[frame];
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(_context.device(), &allocInfo, &commandBuffer);
+    VkQueue queue = _context.getQueue(queueType);
+    return {*this, queue, commandBuffer};
 }
 
 
@@ -337,11 +372,6 @@ cala::backend::vulkan::ProgramHandle cala::backend::vulkan::Device::createProgra
     return { this, index };
 }
 
-VkDeviceMemory cala::backend::vulkan::Device::allocate(u32 size, u32 typeBits, MemoryProperties flags) {
-    return _context.allocate(size, typeBits, flags);
-}
-
-
 
 
 
@@ -433,15 +463,260 @@ void cala::backend::vulkan::Device::clearFramebuffers() {
     _framebuffers.clear();
 }
 
+VkDescriptorSet cala::backend::vulkan::Device::getDescriptorSet(CommandBuffer::DescriptorKey key) {
+    PROFILE_NAMED("Device::getDescriptorSet");
+
+    if (key.setLayout == VK_NULL_HANDLE)
+        return VK_NULL_HANDLE;
+
+    auto it = _descriptorSets.find(key);
+    if (it != _descriptorSets.end()) {
+        return it->second;
+    }
+
+
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = _descriptorPool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &key.setLayout;
+
+    VkDescriptorSet descriptorSet;
+    vkAllocateDescriptorSets(_context.device(), &allocInfo, &descriptorSet);
+
+    for (u32 i = 0; i < MAX_BINDING_PER_SET; i++) {
+
+        if (key.buffers[i].buffer != nullptr) {
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = key.buffers[i].buffer->buffer();
+            bufferInfo.offset = key.buffers[i].offset;
+            bufferInfo.range = key.buffers[i].range;
+
+            VkWriteDescriptorSet descriptorWrite{};
+            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite.dstSet = descriptorSet;
+            descriptorWrite.dstBinding = i;
+            descriptorWrite.dstArrayElement = 0;
+            descriptorWrite.descriptorType = key.buffers[i].storage ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite.descriptorCount = 1;
+            descriptorWrite.pBufferInfo = &bufferInfo;
+            descriptorWrite.pImageInfo = nullptr;
+            descriptorWrite.pTexelBufferView = nullptr;
+
+            //TODO: batch writes
+            vkUpdateDescriptorSets(context().device(), 1, &descriptorWrite, 0, nullptr);
+        } else if (key.images[i].image != nullptr) {
+            VkDescriptorImageInfo imageInfo{};
+            imageInfo.imageLayout = key.images[i].storage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfo.imageView = key.images[i].view;
+            imageInfo.sampler = key.images[i].sampler;
+
+            VkWriteDescriptorSet descriptorWrite{};
+            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite.dstSet = descriptorSet;
+            descriptorWrite.dstBinding = i;
+            descriptorWrite.dstArrayElement = 0;
+            descriptorWrite.descriptorType = key.images[i].storage ? VK_DESCRIPTOR_TYPE_STORAGE_IMAGE : VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrite.descriptorCount = 1;
+            descriptorWrite.pBufferInfo = nullptr;
+            descriptorWrite.pImageInfo = &imageInfo;
+            descriptorWrite.pTexelBufferView = nullptr;
+
+            //TODO: batch writes
+            vkUpdateDescriptorSets(context().device(), 1, &descriptorWrite, 0, nullptr);
+        }
+    }
+
+    _descriptorSets.emplace(std::make_pair(key, descriptorSet));
+    return descriptorSet;
+}
+
+VkPipeline cala::backend::vulkan::Device::getPipeline(CommandBuffer::PipelineKey key) {
+    PROFILE_NAMED("Device::getPipeline");
+    // check if exists in cache
+    auto it = _pipelines.find(key);
+    if (it != _pipelines.end())
+        return it->second;
+
+    // create new pipeline
+    VkPipeline pipeline;
+    if (!key.compute) {
+
+        VkGraphicsPipelineCreateInfo pipelineInfo{};
+        pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+
+        pipelineInfo.stageCount = key.shaderCount;
+        pipelineInfo.pStages = key.shaders;
+
+        assert(key.framebuffer);
+        pipelineInfo.renderPass = key.framebuffer->renderPass().renderPass();
+        pipelineInfo.subpass = 0;
+
+        u32 countVertexBinding = 0;
+        u32 countVertexAttribute = 0;
+        for (u32 binding = 0; binding < key.bindingCount; binding++) {
+            if (key.bindings[binding].stride > 0)
+                countVertexBinding++;
+        }
+        for (u32 attribute = 0; attribute < key.attributeCount; attribute++) {
+            if (key.attributes[attribute].format > 0)
+                countVertexAttribute++;
+        }
+
+        VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+        vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        vertexInputInfo.vertexBindingDescriptionCount = key.bindingCount;
+        vertexInputInfo.pVertexBindingDescriptions = key.bindings;
+        vertexInputInfo.vertexAttributeDescriptionCount = key.attributeCount;
+        vertexInputInfo.pVertexAttributeDescriptions = key.attributes;
+
+        VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+        inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+        auto frameSize = key.framebuffer->extent();
+
+        VkViewport viewport{};
+
+        //default viewport
+        if (key.viewPort.x == 0 &&
+                key.viewPort.y == 0 &&
+                key.viewPort.width == 0 &&
+                key.viewPort.height == 0 &&
+                key.viewPort.minDepth == 0.f &&
+                key.viewPort.maxDepth == 1.f) {
+            viewport.x = 0.f;
+            viewport.y = 0.f;
+            viewport.width = frameSize.first;
+            viewport.height = frameSize.second;
+            viewport.minDepth = 0.f;
+            viewport.maxDepth = 1.f;
+        } else { //custom viewport
+            viewport.x = key.viewPort.x;
+            viewport.y = key.viewPort.y;
+            viewport.width = key.viewPort.width;
+            viewport.height = key.viewPort.height;
+            viewport.minDepth = key.viewPort.minDepth;
+            viewport.maxDepth = key.viewPort.maxDepth;
+        }
+
+        VkRect2D scissor{};
+        scissor.offset = {0, 0};
+        scissor.extent = {.width=frameSize.first, .height=frameSize.second};
+
+        VkPipelineViewportStateCreateInfo viewportState{};
+        viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        viewportState.viewportCount = 1;
+        viewportState.pViewports = &viewport;
+        viewportState.scissorCount = 1;
+        viewportState.pScissors = &scissor;
+
+        VkPipelineRasterizationStateCreateInfo rasterizer{};
+        rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        rasterizer.depthClampEnable = key.raster.depthClamp;
+        rasterizer.rasterizerDiscardEnable = key.raster.rasterDiscard;
+        rasterizer.polygonMode = getPolygonMode(key.raster.polygonMode);
+        rasterizer.lineWidth = key.raster.lineWidth;
+        rasterizer.cullMode = getCullMode(key.raster.cullMode);
+        rasterizer.frontFace = getFrontFace(key.raster.frontFace);
+        rasterizer.depthBiasEnable = key.raster.depthBias;
+        rasterizer.depthBiasConstantFactor = 0.f;
+        rasterizer.depthBiasClamp = 0.f;
+        rasterizer.depthBiasSlopeFactor = 0.f;
+
+        VkPipelineMultisampleStateCreateInfo multisample{};
+        multisample.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        multisample.sampleShadingEnable = VK_FALSE;
+        multisample.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        multisample.minSampleShading = 1.f;
+        multisample.pSampleMask = nullptr;
+        multisample.alphaToCoverageEnable = VK_FALSE;
+        multisample.alphaToOneEnable = VK_FALSE;
+
+        VkPipelineDepthStencilStateCreateInfo depthStencil{};
+        depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        depthStencil.depthTestEnable = key.depth.test;
+        depthStencil.depthWriteEnable = key.depth.write;
+        depthStencil.depthCompareOp = getCompareOp(key.depth.compareOp);
+        depthStencil.depthBoundsTestEnable = VK_FALSE;
+        depthStencil.minDepthBounds = 0.f;
+        depthStencil.maxDepthBounds = 1.f;
+        depthStencil.stencilTestEnable = VK_FALSE;
+        depthStencil.front = {};
+        depthStencil.back = {};
+
+        //TODO: set up so can be configured by user
+        VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+        colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        colorBlendAttachment.blendEnable = key.blend.blend;
+        colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+        colorBlendAttachment.srcColorBlendFactor = getBlendFactor(key.blend.srcFactor);
+        colorBlendAttachment.dstColorBlendFactor = getBlendFactor(key.blend.dstFactor);
+        colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+        colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
+
+        VkPipelineColorBlendAttachmentState colourBlendAttachments[3] {};
+        for (auto& attachment : colourBlendAttachments)
+            attachment = colorBlendAttachment;
+
+        VkPipelineColorBlendStateCreateInfo colorBlending{};
+        colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        colorBlending.logicOpEnable = VK_FALSE;
+        colorBlending.logicOp = VK_LOGIC_OP_COPY;
+        colorBlending.attachmentCount = key.framebuffer->renderPass().colourAttachmentCount();
+        colorBlending.pAttachments = colourBlendAttachments;
+        colorBlending.blendConstants[0] = 0.f;
+        colorBlending.blendConstants[1] = 0.f;
+        colorBlending.blendConstants[2] = 0.f;
+        colorBlending.blendConstants[3] = 0.f;
+
+        pipelineInfo.pVertexInputState = &vertexInputInfo;
+        pipelineInfo.pInputAssemblyState = &inputAssembly;
+        pipelineInfo.pViewportState = &viewportState;
+        pipelineInfo.pRasterizationState = &rasterizer;
+        pipelineInfo.pMultisampleState = &multisample;
+        pipelineInfo.pDepthStencilState = &depthStencil;
+        pipelineInfo.pColorBlendState = &colorBlending;
+        pipelineInfo.layout = key.layout;
+
+        pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+        pipelineInfo.basePipelineIndex = -1;
+
+//        VkPipeline pipeline;
+        if (vkCreateGraphicsPipelines(context().device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS)
+            throw std::runtime_error("Error creating pipeline");
+    } else {
+        VkComputePipelineCreateInfo pipelineInfo{};
+        pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+        pipelineInfo.stage = key.shaders[0];
+        pipelineInfo.layout = key.layout;
+        pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+        pipelineInfo.basePipelineIndex = -1;
+
+        if (vkCreateComputePipelines(context().device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS)
+            throw std::runtime_error("Error creating compute pipeline");
+    }
+
+    _pipelines.emplace(std::make_pair(key, pipeline));
+
+    return pipeline;
+}
+
 cala::backend::vulkan::Device::Stats cala::backend::vulkan::Device::stats() const {
     u32 allocatedBuffers = _buffers.size();
     u32 buffersInUse = allocatedBuffers - _freeBuffers.size();
     u32 allocatedImages = _images.size();
     u32 imagesInUse = allocatedImages - _freeImages.size();
+    u32 descriptorSetCount = _descriptorSets.size();
+    u32 pipelineCount = _pipelines.size();
     return {
-            buffersInUse,
-            allocatedBuffers,
-            imagesInUse,
-            allocatedImages
+        buffersInUse,
+        allocatedBuffers,
+        imagesInUse,
+        allocatedImages,
+        descriptorSetCount,
+        pipelineCount
     };
 }

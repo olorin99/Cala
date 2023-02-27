@@ -45,8 +45,6 @@ namespace cala {
         u32 frameIndex() const { return _frameInfo.frame % backend::vulkan::FRAMES_IN_FLIGHT; }
 
         struct Stats {
-            u32 pipelineCount = 0;
-            u32 descriptorCount = 0;
             u32 drawCallCount = 0;
         };
 

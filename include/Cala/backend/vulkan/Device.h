@@ -70,7 +70,7 @@ namespace cala::backend::vulkan {
         bool wait(u64 timeout = 1000000000); // waits for all frames
 
 
-        Buffer stagingBuffer(u32 size);
+        BufferHandle stagingBuffer(u32 size);
 
 
         CommandBuffer beginSingleTimeCommands(QueueType queueType = QueueType::GRAPHICS);
@@ -83,6 +83,8 @@ namespace cala::backend::vulkan {
             func(cmd);
             endSingleTimeCommands(cmd);
         }
+
+        CommandBuffer getCommandBuffer(u32 frame, QueueType queueType = QueueType::GRAPHICS);
 
         bool gc();
 
@@ -106,8 +108,6 @@ namespace cala::backend::vulkan {
         Sampler& defaultShadowSampler() { return _defaultShadowSampler; }
 
 
-        VkDeviceMemory allocate(u32 size, u32 typeBits, MemoryProperties flags);
-
         VkDescriptorSetLayout getSetLayout(ende::Span<VkDescriptorSetLayoutBinding> bindings);
 
         void updateBindlessImage(u32 index, Image::View& image, Sampler& sampler);
@@ -126,6 +126,10 @@ namespace cala::backend::vulkan {
 
         void clearFramebuffers();
 
+        VkDescriptorSet getDescriptorSet(CommandBuffer::DescriptorKey key);
+
+        VkPipeline getPipeline(CommandBuffer::PipelineKey key);
+
 
         const Context& context() const { return _context; }
 
@@ -142,6 +146,8 @@ namespace cala::backend::vulkan {
             u32 allocatedBuffers = 0;
             u32 imagesInUse = 0;
             u32 allocatedImages = 0;
+            u32 descriptorSetCount = 0;
+            u32 pipelineCount = 0;
         };
 
         Stats stats() const;
@@ -153,7 +159,7 @@ namespace cala::backend::vulkan {
 
         Context _context;
         Swapchain* _swapchain;
-        VkCommandPool _commandPool;
+        VkCommandPool _commandPools[FRAMES_IN_FLIGHT + 1];
         CommandBuffer _frameCommands[FRAMES_IN_FLIGHT];
         VkFence _frameFences[FRAMES_IN_FLIGHT];
         u64 _frameCount;
@@ -190,6 +196,11 @@ namespace cala::backend::vulkan {
         Sampler _defaultShadowSampler;
 
         ende::Vector<ShaderProgram*> _programs;
+
+        tsl::robin_map<CommandBuffer::DescriptorKey, VkDescriptorSet, ende::util::MurmurHash<CommandBuffer::DescriptorKey>> _descriptorSets;
+        VkDescriptorPool _descriptorPool;
+
+        tsl::robin_map<CommandBuffer::PipelineKey, VkPipeline, ende::util::MurmurHash<CommandBuffer::PipelineKey>, CommandBuffer::PipelineEqual> _pipelines;
 
     };
 

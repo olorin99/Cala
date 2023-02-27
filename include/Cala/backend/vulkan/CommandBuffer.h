@@ -57,9 +57,6 @@ namespace cala::backend::vulkan {
         void bindVertexArray(ende::Span<VkVertexInputBindingDescription> bindings, ende::Span<VkVertexInputAttributeDescription> attributes);
 
 
-        void bindRenderPass(RenderPass& renderPass);
-
-
         void bindViewPort(const ViewPort& viewport);
 
         struct RasterState {
@@ -140,17 +137,10 @@ namespace cala::backend::vulkan {
         bool active() const { return _active; }
 
 
-        u32 pipelineCount() const { return _pipelines.size(); }
-
-        u32 descriptorCount() const { return _descriptorSets.size(); }
-
         u32 drawCalls() const { return _drawCallCount; }
 
     private:
-
-        VkPipeline getPipeline();
-
-        VkDescriptorSet getDescriptorSet(u32 set);
+        friend Device;
 
         Device& _device;
         VkCommandBuffer _buffer;
@@ -158,20 +148,18 @@ namespace cala::backend::vulkan {
         VkQueue _queue;
         bool _active;
 
-        RenderPass* _renderPass;
-        Framebuffer* _framebuffer;
         Buffer* _indexBuffer;
         const ShaderInterface* _boundInterface;
-        bool _computeBound;
 
         struct PipelineKey {
             u32 shaderCount = 0;
             VkPipelineShaderStageCreateInfo shaders[2] = {};
+            bool compute = false;
             u32 bindingCount = 0;
             u32 attributeCount = 0;
             VkVertexInputBindingDescription bindings[MAX_VERTEX_INPUT_BINDINGS]{};
             VkVertexInputAttributeDescription attributes[MAX_VERTEX_INPUT_ATTRIBUTES]{};
-            VkRenderPass renderPass = VK_NULL_HANDLE;
+            Framebuffer* framebuffer = nullptr;
             VkPipelineLayout layout = VK_NULL_HANDLE;
             ViewPort viewPort = {};
             RasterState raster = {};
@@ -185,7 +173,6 @@ namespace cala::backend::vulkan {
         };
 
         VkPipeline _currentPipeline;
-        tsl::robin_map<PipelineKey, VkPipeline, ende::util::MurmurHash<PipelineKey>, PipelineEqual> _pipelines;
 
         struct DescriptorKey {
             VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
@@ -210,10 +197,7 @@ namespace cala::backend::vulkan {
 
         //TODO: cull descriptors every now and again
         VkDescriptorSet _currentSets[MAX_SET_COUNT];
-        tsl::robin_map<DescriptorKey, VkDescriptorSet, ende::util::MurmurHash<DescriptorKey>> _descriptorSets;
-//        robin_hood::unordered_map<DescriptorKey, VkDescriptorSet> _descriptorSets;
 
-        VkDescriptorPool _descriptorPool;
         u32 _drawCallCount;
 
 #ifndef NDEBUG

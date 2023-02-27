@@ -65,8 +65,6 @@ f64 cala::Renderer::endFrame() {
     _engine->device().swapchain().present(_frameInfo.swapchainInfo, _frameInfo.cmd->signal());
     _engine->device().endFrame();
 
-    _stats.pipelineCount = _frameInfo.cmd->pipelineCount();
-    _stats.descriptorCount = _frameInfo.cmd->descriptorCount();
     _stats.drawCallCount = _frameInfo.cmd->drawCalls();
 
     return static_cast<f64>(_engine->device().milliseconds()) / 1000.f;

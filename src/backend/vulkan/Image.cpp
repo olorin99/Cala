@@ -141,7 +141,7 @@ cala::backend::vulkan::Image::View &cala::backend::vulkan::Image::View::operator
 void cala::backend::vulkan::Image::data(cala::backend::vulkan::Device& driver, DataInfo info) {
 
     auto staging = driver.stagingBuffer(info.width * info.height * info.depth * info.format);
-    staging.data(info.data);
+    staging->data(info.data);
     driver.immediate([&](CommandBuffer& buffer) {
         VkImageSubresourceRange range;
         range.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
@@ -166,12 +166,12 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Device& driver, D
         copyRegion.imageExtent.height = info.height;
         copyRegion.imageExtent.depth = info.depth;
 
-        vkCmdCopyBufferToImage(buffer.buffer(), staging.buffer(), _image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+        vkCmdCopyBufferToImage(buffer.buffer(), staging->buffer(), _image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
         imageBarrier = barrier(Access::TRANSFER_WRITE, Access::SHADER_READ, ImageLayout::SHADER_READ_ONLY);
         buffer.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::FRAGMENT_SHADER, { &imageBarrier, 1 });
     });
-
+    driver.destroyBuffer(staging);
     _layout = ImageLayout::SHADER_READ_ONLY;
 }
 
