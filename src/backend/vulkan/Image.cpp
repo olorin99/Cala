@@ -60,7 +60,7 @@ cala::backend::vulkan::Image::Image(Device& driver, CreateInfo info)
 
     vmaCreateImage(driver.context().allocator(), &imageInfo, &allocInfo, &_image, &_allocation, nullptr);
 
-//    driver.immediate([&](CommandBuffer& cmd) {
+//    device.immediate([&](CommandBuffer& cmd) {
 //        auto b = barrier(Access::NONE, Access::NONE, ImageLayout::UNDEFINED, info.initialLayout);
 //        cmd.pipelineBarrier(PipelineStage::TOP, PipelineStage::TOP, 0, nullptr, { &b, 1 });
 //    });
@@ -329,7 +329,7 @@ cala::backend::vulkan::Image::View cala::backend::vulkan::Image::newView(u32 mip
     viewCreateInfo.format = format == Format::UNDEFINED ? getFormat(_format) : getFormat(format);
 
     viewCreateInfo.subresourceRange.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-//    viewCreateInfo.subresourceRange.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+//    viewCreateInfo.subresourceRange.aspectMask = _format == _device.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     viewCreateInfo.subresourceRange.baseMipLevel = mipLevel;
     viewCreateInfo.subresourceRange.levelCount = levelCount;
     viewCreateInfo.subresourceRange.baseArrayLayer = arrayLayer;

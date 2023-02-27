@@ -32,16 +32,16 @@ namespace cala {
 
         void draw(backend::vulkan::CommandBuffer& cmd, std::function<void(backend::vulkan::CommandBuffer& cmd, u32 face)> perFace);
 
-        ImageHandle map() const { return _cubeMap; }
+        backend::vulkan::ImageHandle map() const { return _cubeMap; }
 
         backend::vulkan::Image::View& view() { return _cubeView; }
 
     private:
 
         backend::vulkan::Framebuffer* _drawBuffer;
-        ImageHandle _renderTarget;
+        backend::vulkan::ImageHandle _renderTarget;
         backend::vulkan::Image::View _view;
-        ImageHandle _cubeMap;
+        backend::vulkan::ImageHandle _cubeMap;
         backend::vulkan::Image::View _cubeView;
 
 

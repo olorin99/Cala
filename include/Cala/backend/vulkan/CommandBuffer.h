@@ -152,7 +152,7 @@ namespace cala::backend::vulkan {
 
         VkDescriptorSet getDescriptorSet(u32 set);
 
-        Device& _driver;
+        Device& _device;
         VkCommandBuffer _buffer;
         VkSemaphore _signal;
         VkQueue _queue;

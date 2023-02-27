@@ -10,18 +10,18 @@ cala::ui::ProfileWindow::ProfileWindow(Engine* engine, Renderer *renderer)
 void cala::ui::ProfileWindow::render() {
     ImGui::Begin("Profiling");
 
-    ImGui::Text("FPS: %f", _engine->driver().fps());
+    ImGui::Text("FPS: %f", _engine->device().fps());
 
     if (ImGui::BeginTable("Timings", 2)) {
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
 
-        ImGui::Text("Milliseconds: %f", _engine->driver().milliseconds());
+        ImGui::Text("Milliseconds: %f", _engine->device().milliseconds());
 
         ImGui::TableNextColumn();
 
         std::rotate(_globalTime.begin(), _globalTime.begin() + 1, _globalTime.end());
-        _globalTime.back() = _engine->driver().milliseconds();
+        _globalTime.back() = _engine->device().milliseconds();
         ImGui::PlotLines("Milliseconds", &_globalTime[0], _globalTime.size());
 
         ImGui::TableNextRow();
@@ -97,7 +97,7 @@ void cala::ui::ProfileWindow::render() {
         ImGui::EndTable();
 
         ImGui::Text("Total GPU: %f", totalGPUTime / 1e6);
-        ImGui::Text("CPU/GPU: %f", _engine->driver().milliseconds() / (totalGPUTime / 1e6));
+        ImGui::Text("CPU/GPU: %f", _engine->device().milliseconds() / (totalGPUTime / 1e6));
     }
 
     ImGui::End();

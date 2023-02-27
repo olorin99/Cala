@@ -5,8 +5,8 @@
 
 #include <Ende/log/log.h>
 
-cala::backend::vulkan::CommandBuffer::CommandBuffer(Device& driver, VkQueue queue, VkCommandBuffer buffer)
-    : _driver(driver),
+cala::backend::vulkan::CommandBuffer::CommandBuffer(Device& device, VkQueue queue, VkCommandBuffer buffer)
+    : _device(device),
     _buffer(buffer),
     _signal(VK_NULL_HANDLE),
     _queue(queue),
@@ -23,7 +23,7 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(Device& driver, VkQueue queu
 {
     VkSemaphoreCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    vkCreateSemaphore(_driver.context().device(), &createInfo, nullptr, &_signal);
+    vkCreateSemaphore(_device.context().device(), &createInfo, nullptr, &_signal);
 
     VkDescriptorPoolSize poolSizes[] = {
             {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10000},
@@ -38,20 +38,20 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(Device& driver, VkQueue queu
     descriptorPoolCreateInfo.poolSizeCount = 4;
     descriptorPoolCreateInfo.pPoolSizes = poolSizes;
     descriptorPoolCreateInfo.maxSets = 10000;
-    vkCreateDescriptorPool(_driver.context().device(), &descriptorPoolCreateInfo, nullptr, &_descriptorPool);
+    vkCreateDescriptorPool(_device.context().device(), &descriptorPoolCreateInfo, nullptr, &_descriptorPool);
 
     memset(&_pipelineKey, 0, sizeof(PipelineKey));
     _pipelineKey.viewPort.maxDepth = 1.f;
 }
 
 cala::backend::vulkan::CommandBuffer::~CommandBuffer() {
-    vkDestroySemaphore(_driver.context().device(), _signal, nullptr);
+    vkDestroySemaphore(_device.context().device(), _signal, nullptr);
 
     for (auto& pipeline : _pipelines) {
-        vkDestroyPipeline(_driver.context().device(), pipeline.second, nullptr);
+        vkDestroyPipeline(_device.context().device(), pipeline.second, nullptr);
     }
 
-    vkDestroyDescriptorPool(_driver.context().device(), _descriptorPool, nullptr);
+    vkDestroyDescriptorPool(_device.context().device(), _descriptorPool, nullptr);
 }
 
 bool cala::backend::vulkan::CommandBuffer::begin() {
@@ -287,7 +287,7 @@ void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
     // find descriptors with key
     for (u32 i = 0; i < MAX_SET_COUNT; i++) {
         if (_bindlessIndex == i)
-            _currentSets[i] = _driver.bindlessSet();
+            _currentSets[i] = _device.bindlessSet();
         else {
             auto descriptor = getDescriptorSet(i);
             _currentSets[i] = descriptor;
@@ -392,24 +392,24 @@ void cala::backend::vulkan::CommandBuffer::pipelineBarrier(PipelineStage srcStag
 void cala::backend::vulkan::CommandBuffer::pushDebugLabel(std::string_view label, std::array<f32, 4> colour) {
 #ifndef NDEBUG
     _debugLabels.push(label);
-    _driver.context().beginDebugLabel(_buffer, label, colour);
+    _device.context().beginDebugLabel(_buffer, label, colour);
 #endif
 }
 
 void cala::backend::vulkan::CommandBuffer::popDebugLabel() {
 #ifndef NDEBUG
-    _driver.context().endDebugLabel(_buffer);
+    _device.context().endDebugLabel(_buffer);
     _debugLabels.pop();
 #endif
 }
 
 void cala::backend::vulkan::CommandBuffer::startPipelineStatistics() {
-    vkCmdResetQueryPool(_buffer, _driver.context().pipelineStatisticsPool(),0, 6);
-    vkCmdBeginQuery(_buffer, _driver.context().pipelineStatisticsPool(), 0, 0);
+    vkCmdResetQueryPool(_buffer, _device.context().pipelineStatisticsPool(),0, 6);
+    vkCmdBeginQuery(_buffer, _device.context().pipelineStatisticsPool(), 0, 0);
 }
 
 void cala::backend::vulkan::CommandBuffer::stopPipelineStatistics() {
-    vkCmdEndQuery(_buffer, _driver.context().pipelineStatisticsPool(), 0);
+    vkCmdEndQuery(_buffer, _device.context().pipelineStatisticsPool(), 0);
 }
 
 
@@ -599,7 +599,7 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
         pipelineInfo.basePipelineIndex = -1;
 
 //        VkPipeline pipeline;
-        if (vkCreateGraphicsPipelines(_driver.context().device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS)
+        if (vkCreateGraphicsPipelines(_device.context().device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS)
             throw std::runtime_error("Error creating pipeline");
     } else {
         VkComputePipelineCreateInfo pipelineInfo{};
@@ -609,7 +609,7 @@ VkPipeline cala::backend::vulkan::CommandBuffer::getPipeline() {
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex = -1;
 
-        if (vkCreateComputePipelines(_driver.context().device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS)
+        if (vkCreateComputePipelines(_device.context().device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS)
             throw std::runtime_error("Error creating compute pipeline");
     }
 
@@ -624,7 +624,7 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
     auto key = _descriptorKey[set];
 
     if (set == _bindlessIndex)
-        return _driver.bindlessSet();
+        return _device.bindlessSet();
 
     if (key.setLayout == VK_NULL_HANDLE)
         return VK_NULL_HANDLE;
@@ -642,7 +642,7 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
     allocInfo.pSetLayouts = &key.setLayout;
 
     VkDescriptorSet descriptorSet;
-    vkAllocateDescriptorSets(_driver.context().device(), &allocInfo, &descriptorSet);
+    vkAllocateDescriptorSets(_device.context().device(), &allocInfo, &descriptorSet);
 
     for (u32 i = 0; i < MAX_BINDING_PER_SET; i++) {
 
@@ -665,7 +665,7 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
             descriptorWrite.pTexelBufferView = nullptr;
 
             //TODO: batch writes
-            vkUpdateDescriptorSets(_driver.context().device(), 1, &descriptorWrite, 0, nullptr);
+            vkUpdateDescriptorSets(_device.context().device(), 1, &descriptorWrite, 0, nullptr);
         } else if (key.images[i].image != nullptr) {
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = key.images[i].storage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -684,7 +684,7 @@ VkDescriptorSet cala::backend::vulkan::CommandBuffer::getDescriptorSet(u32 set) 
             descriptorWrite.pTexelBufferView = nullptr;
 
             //TODO: batch writes
-            vkUpdateDescriptorSets(_driver.context().device(), 1, &descriptorWrite, 0, nullptr);
+            vkUpdateDescriptorSets(_device.context().device(), 1, &descriptorWrite, 0, nullptr);
         }
     }
 

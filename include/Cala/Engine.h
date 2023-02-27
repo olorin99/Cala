@@ -13,40 +13,6 @@ namespace cala {
 
     class Probe;
     class Scene;
-
-    class Engine;
-    template <typename T>
-    class Handle {
-    public:
-
-        Handle() = default;
-
-        T& operator*() noexcept;
-
-        T* operator->() noexcept;
-
-        operator bool() const noexcept {
-            return _engine && _index != -1;
-        }
-
-        i32 index() const { return _index; }
-
-    private:
-        friend Engine;
-
-        Handle(Engine* engine, u32 index)
-                : _engine(engine),
-                  _index(index)
-        {}
-
-        Engine* _engine = nullptr;
-        i32 _index = -1;
-
-    };
-    using BufferHandle = Handle<backend::vulkan::Buffer>;
-    using ImageHandle = Handle<backend::vulkan::Image>;
-    using ProgramHandle = Handle<backend::vulkan::ShaderProgram>;
-
     class Renderer;
     class Material;
     class MaterialInstance;
@@ -57,131 +23,84 @@ namespace cala {
 
         Engine(backend::Platform& platform, bool clear = true);
 
-        ~Engine();
-
-        backend::vulkan::Device& driver() { return _driver; }
+        backend::vulkan::Device& device() { return _device; }
 
         ende::time::Duration getRunningTime() const { return _startTime.elapsed(); }
 
         bool gc();
 
-        ImageHandle convertToCubeMap(ImageHandle equirectangular);
+        backend::vulkan::ImageHandle convertToCubeMap(backend::vulkan::ImageHandle equirectangular);
 
-        ImageHandle generateIrradianceMap(ImageHandle cubeMap);
+        backend::vulkan::ImageHandle generateIrradianceMap(backend::vulkan::ImageHandle cubeMap);
 
-        ImageHandle generatePrefilteredIrradiance(ImageHandle cubeMap);
-
-        BufferHandle createBuffer(u32 size, backend::BufferUsage usage, backend::MemoryProperties flags = backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT);
-
-        ImageHandle createImage(backend::vulkan::Image::CreateInfo info, backend::vulkan::Sampler* sampler = nullptr);
-
-        ProgramHandle createProgram(backend::vulkan::ShaderProgram&& program);
-
-        void destroyBuffer(BufferHandle handle);
-
-        void destroyImage(ImageHandle handle);
-
-        BufferHandle resizeBuffer(BufferHandle handle, u32 size, bool transfer = false);
+        backend::vulkan::ImageHandle generatePrefilteredIrradiance(backend::vulkan::ImageHandle cubeMap);
 
 
-        backend::vulkan::Image::View& getImageView(ImageHandle handle);
+        backend::vulkan::ImageHandle defaultAlbedo() const { return _defaultAlbedo; }
 
-        ImageHandle defaultAlbedo() const { return _defaultAlbedo; }
+        backend::vulkan::ImageHandle defaultNormal() const { return _defaultNormal; }
 
-        ImageHandle defaultNormal() const { return _defaultNormal; }
-
-        ImageHandle defaultMetallicRoughness() const { return _defaultMetallicRoughness; }
+        backend::vulkan::ImageHandle defaultMetallicRoughness() const { return _defaultMetallicRoughness; }
 
         u32 uploadVertexData(ende::Span<f32> data);
 
         u32 uploadIndexData(ende::Span<u32> data);
-
-
-
-        struct Stats {
-            u32 buffersInUse = 0;
-            u32 allocatedBuffers = 0;
-            u32 imagesInUse = 0;
-            u32 allocatedImages = 0;
-        };
-
-        Stats stats() const;
 
     private:
         friend Renderer;
         friend Scene;
         friend Material;
         friend MaterialInstance;
-        friend BufferHandle;
-        friend ImageHandle;
-        friend ProgramHandle;
 
-        backend::vulkan::Device _driver;
+        backend::vulkan::Device _device;
 
         ende::time::SystemTime _startTime;
 
-        backend::vulkan::Sampler _defaultSampler;
         backend::vulkan::Sampler _lodSampler;
         backend::vulkan::Sampler _irradianceSampler;
 
         backend::vulkan::RenderPass _shadowPass;
-        ProgramHandle _pointShadowProgram;
-        ProgramHandle _directShadowProgram;
 
-        ProgramHandle _equirectangularToCubeMap;
-        ProgramHandle _irradianceProgram;
-        ProgramHandle _prefilterProgram;
-        ProgramHandle _brdfProgram;
-        ProgramHandle _skyboxProgram;
-        ProgramHandle _tonemapProgram;
-        ProgramHandle _cullProgram;
-        ProgramHandle _createClustersProgram;
-        ProgramHandle _cullLightsProgram;
+        backend::vulkan::ProgramHandle _pointShadowProgram;
+        backend::vulkan::ProgramHandle _directShadowProgram;
 
-        ProgramHandle _clusterDebugProgram;
+        backend::vulkan::ProgramHandle _equirectangularToCubeMap;
+        backend::vulkan::ProgramHandle _irradianceProgram;
+        backend::vulkan::ProgramHandle _prefilterProgram;
+        backend::vulkan::ProgramHandle _brdfProgram;
+        backend::vulkan::ProgramHandle _skyboxProgram;
+        backend::vulkan::ProgramHandle _tonemapProgram;
+        backend::vulkan::ProgramHandle _cullProgram;
+        backend::vulkan::ProgramHandle _createClustersProgram;
+        backend::vulkan::ProgramHandle _cullLightsProgram;
 
-        ImageHandle _defaultPointShadow;
-        backend::vulkan::Image::View _defaultPointShadowView;
-        ImageHandle _defaultDirectionalShadow;
-        backend::vulkan::Image::View _defaultDirectionalShadowView;
-        backend::vulkan::Sampler _shadowSampler;
+        backend::vulkan::ProgramHandle _clusterDebugProgram;
 
-        ImageHandle _defaultAlbedo;
-        ImageHandle _defaultNormal;
-        ImageHandle _defaultMetallicRoughness;
+        backend::vulkan::ImageHandle _defaultAlbedo;
+        backend::vulkan::ImageHandle _defaultNormal;
+        backend::vulkan::ImageHandle _defaultMetallicRoughness;
 
-        ImageHandle _brdfImage;
-        ImageHandle _defaultIrradiance;
-        ImageHandle _defaultPrefilter;
+        backend::vulkan::ImageHandle _brdfImage;
+        backend::vulkan::ImageHandle _defaultIrradiance;
+        backend::vulkan::ImageHandle _defaultPrefilter;
 
-        BufferHandle _globalVertexBuffer;
-        BufferHandle _vertexStagingBuffer;
-        BufferHandle _globalIndexBuffer;
-        BufferHandle _indexStagingBuffer;
+        backend::vulkan::BufferHandle _globalVertexBuffer;
+        backend::vulkan::BufferHandle _vertexStagingBuffer;
+        backend::vulkan::BufferHandle _globalIndexBuffer;
+        backend::vulkan::BufferHandle _indexStagingBuffer;
         u32 _vertexOffset;
         u32 _indexOffset;
         bool _stagingReady;
 
         Mesh* _cube;
 
-        ende::Vector<backend::vulkan::Buffer*> _buffers;
-        ende::Vector<backend::vulkan::Image*> _images;
-        ende::Vector<backend::vulkan::Image::View> _imageViews;
-        std::vector<backend::vulkan::ShaderProgram> _programs;
+        ende::Vector<backend::vulkan::ImageHandle> _shadowMaps;
 
-        ende::Vector<ImageHandle> _shadowMaps;
-
-        ende::Vector<std::pair<i32, BufferHandle>> _buffersToDestroy;
-        ende::Vector<u32> _freeBuffers;
-
-        ende::Vector<std::pair<i32, ImageHandle>> _imagesToDestroy;
-        ende::Vector<u32> _freeImages;
-
-        ImageHandle getShadowMap(u32 index);
+        backend::vulkan::ImageHandle getShadowMap(u32 index);
 
         bool _materialDataDirty;
         ende::Vector<u8> _materialData;
-        BufferHandle _materialBuffer;
+        backend::vulkan::BufferHandle _materialBuffer;
 
         void updateMaterialdata();
 

@@ -4,7 +4,7 @@
 #include <vulkan/vulkan.h>
 #include <Cala/backend/primitives.h>
 #include <Ende/Span.h>
-#include <Cala/backend/vulkan/vk_mem_alloc.h>
+#include "../../third_party/vk_mem_alloc.h"
 
 namespace cala::backend::vulkan {
 
@@ -81,6 +81,8 @@ namespace cala::backend::vulkan {
         u32 size() const { return _size; }
 
         BufferUsage usage() const { return _usage; }
+
+        MemoryProperties flags() const { return _flags; }
 
     private:
 

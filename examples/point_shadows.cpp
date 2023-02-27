@@ -81,7 +81,7 @@ int main() {
     SDLPlatform platform("hello_triangle", 800, 600);
 
     Engine engine(platform);
-    auto& driver = engine.driver();
+    auto& driver = engine.device();
 
     ImGuiContext imGuiContext(driver, platform.window());
 
@@ -107,7 +107,7 @@ int main() {
 
 
     ProgramHandle shadowProgram = engine.createProgram(loadShader(driver, "../../res/shaders/shadow_point.vert.spv"_path, "../../res/shaders/shadow_point.frag.spv"_path));
-//    ShaderProgram shadowProgram = loadShader(driver, "../../res/shaders/shadow.vert.spv"_path);
+//    ShaderProgram shadowProgram = loadShader(device, "../../res/shaders/shadow.vert.spv"_path);
 
     Material shadowMaterial(&engine, shadowProgram);
     shadowMaterial._rasterState = {
@@ -197,7 +197,7 @@ int main() {
     RenderPass shadowPass(driver, {&shadowPassAttachment, 1});
 
 
-//    Buffer shadowCameraBuffer(driver, sizeof(Camera::Data) * 6, BufferUsage::UNIFORM);
+//    Buffer shadowCameraBuffer(device, sizeof(Camera::Data) * 6, BufferUsage::UNIFORM);
 //    {
 //        Transform shadowCameraTransform;
 //        Camera shadowCamera(ende::math::perspective((f32)ende::math::rad(90.f), 512.f / 512.f, 0.1f, 100.f), shadowCameraTransform);

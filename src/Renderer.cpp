@@ -8,26 +8,26 @@
 
 cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings)
     : _engine(engine),
-      _cameraBuffer{engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT),
-                    engine->createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)},
-      _drawCountBuffer{engine->createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT),
-                       engine->createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)},
-      _drawCommands{engine->createBuffer(sizeof(VkDrawIndexedIndirectCommand) * 100, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT),
-                       engine->createBuffer(sizeof(VkDrawIndexedIndirectCommand) * 100, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)},
-      _globalDataBuffer(engine->createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
+      _cameraBuffer{engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT),
+                    engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)},
+      _drawCountBuffer{engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT),
+                       engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)},
+      _drawCommands{engine->device().createBuffer(sizeof(VkDrawIndexedIndirectCommand) * 100, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT),
+                       engine->device().createBuffer(sizeof(VkDrawIndexedIndirectCommand) * 100, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)},
+      _globalDataBuffer(engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
       _graph(engine),
       _renderSettings(settings),
       _cullingFrustum(ende::math::perspective(45.f, 1920.f / 1080.f, 0.1f, 1000.f, true))
 {
-    _engine->driver().setBindlessSetIndex(0);
+    _engine->device().setBindlessSetIndex(0);
 
-    _shadowTarget = _engine->createImage({
+    _shadowTarget = _engine->device().createImage({
         1024, 1024, 1,
         backend::Format::D32_SFLOAT,
         1, 1,
         backend::ImageUsage::SAMPLED | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT | backend::ImageUsage::TRANSFER_SRC
     });
-    _engine->driver().immediate([&](backend::vulkan::CommandBuffer& cmd) {
+    _engine->device().immediate([&](backend::vulkan::CommandBuffer& cmd) {
         auto targetBarrier = _shadowTarget->barrier(backend::Access::NONE, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
 
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::EARLY_FRAGMENT, { &targetBarrier, 1 });
@@ -43,14 +43,14 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
     };
-    auto shadowRenderPass = _engine->driver().getRenderPass({ &shadowAttachment, 1 });
+    auto shadowRenderPass = _engine->device().getRenderPass({&shadowAttachment, 1 });
     u32 h = _shadowTarget.index();
-    _shadowFramebuffer = _engine->driver().getFramebuffer(shadowRenderPass, { &_engine->getImageView(_shadowTarget).view, 1 }, { &h, 1 }, 1024, 1024);
+    _shadowFramebuffer = _engine->device().getFramebuffer(shadowRenderPass, {&_engine->device().getImageView(_shadowTarget).view, 1 }, {&h, 1 }, 1024, 1024);
 }
 
 bool cala::Renderer::beginFrame() {
-    _frameInfo = _engine->driver().beginFrame();
-    _engine->driver().waitFrame(_frameInfo.frame);
+    _frameInfo = _engine->device().beginFrame();
+    _engine->device().waitFrame(_frameInfo.frame);
     _frameInfo.cmd->begin();
     _globalData.time = _engine->getRunningTime().milliseconds();
     auto mapped = _globalDataBuffer->map(0, sizeof(RendererGlobal));
@@ -62,14 +62,14 @@ f64 cala::Renderer::endFrame() {
     _frameInfo.cmd->end();
     _frameInfo.cmd->submit({ &_frameInfo.swapchainInfo.imageAquired, 1 }, _frameInfo.fence);
 
-    _engine->driver().swapchain().present(_frameInfo.swapchainInfo, _frameInfo.cmd->signal());
-    _engine->driver().endFrame();
+    _engine->device().swapchain().present(_frameInfo.swapchainInfo, _frameInfo.cmd->signal());
+    _engine->device().endFrame();
 
     _stats.pipelineCount = _frameInfo.cmd->pipelineCount();
     _stats.descriptorCount = _frameInfo.cmd->descriptorCount();
     _stats.drawCallCount = _frameInfo.cmd->drawCalls();
 
-    return static_cast<f64>(_engine->driver().milliseconds()) / 1000.f;
+    return static_cast<f64>(_engine->device().milliseconds()) / 1000.f;
 }
 
 void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiContext* imGui) {
@@ -115,7 +115,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     meshDataResource.usage = scene._meshDataBuffer[frameIndex()]->usage();
 
     if (scene._renderables.size() * sizeof(VkDrawIndexedIndirectCommand) > _drawCommands[frameIndex()]->size())
-        _drawCommands[frameIndex()] = _engine->resizeBuffer(_drawCommands[frameIndex()], scene._renderables.size() * sizeof(VkDrawIndexedIndirectCommand), false);
+        _drawCommands[frameIndex()] = _engine->device().resizeBuffer(_drawCommands[frameIndex()], scene._renderables.size() * sizeof(VkDrawIndexedIndirectCommand), false);
 
     BufferResource drawCommandsResource;
 //    drawCommandsResource.size = sizeof(VkDrawIndexedIndirectCommand) * std::max(scene._renderables.size(), (u64)1);
@@ -150,8 +150,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 f32 far;
             } push;
             push.inverseProjection = camera.projection().inverse();
-            push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->driver().swapchain().extent().width / (f32)16.f) };
-            push.screenSize = { _engine->driver().swapchain().extent().width, _engine->driver().swapchain().extent().height };
+            push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->device().swapchain().extent().width / (f32)16.f) };
+            push.screenSize = {_engine->device().swapchain().extent().width, _engine->device().swapchain().extent().height };
             push.near = camera.near();
             push.far = camera.far();
 
@@ -200,8 +200,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             f32 far;
         } push;
         push.inverseProjection = camera.projection().inverse();
-        push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->driver().swapchain().extent().width / (f32)16.f) };
-        push.screenSize = { _engine->driver().swapchain().extent().width, _engine->driver().swapchain().extent().height };
+        push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->device().swapchain().extent().width / (f32)16.f) };
+        push.screenSize = {_engine->device().swapchain().extent().width, _engine->device().swapchain().extent().height };
         push.near = camera.near();
         push.far = camera.far();
 
@@ -238,11 +238,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 ende::math::Vec<4, u32> tileSizes;
                 ende::math::Vec<2, u32> screenSize;
             } push;
-            push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->driver().swapchain().extent().width / (f32)16.f) };
-            push.screenSize = { _engine->driver().swapchain().extent().width, _engine->driver().swapchain().extent().height };
+            push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->device().swapchain().extent().width / (f32)16.f) };
+            push.screenSize = {_engine->device().swapchain().extent().width, _engine->device().swapchain().extent().height };
             cmd.pushConstants({ &push, sizeof(push) });
             cmd.bindBuffer(1, 1, *lightGrid->handle, true);
-            cmd.bindImage(1, 2, _engine->getImageView(depthBuffer->handle), _engine->_shadowSampler);
+            cmd.bindImage(1, 2, _engine->device().getImageView(depthBuffer->handle), _engine->device().defaultShadowSampler());
             cmd.bindPipeline();
             cmd.bindDescriptors();
             cmd.draw(3, 1, 0, 0, false);
@@ -518,8 +518,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 i32 prefilterIndex;
                 i32 brdfIndex;
             } push;
-            push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->driver().swapchain().extent().width / (f32)16.f) };
-            push.screenSize = { _engine->driver().swapchain().extent().width, _engine->driver().swapchain().extent().height };
+            push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->device().swapchain().extent().width / (f32)16.f) };
+            push.screenSize = {_engine->device().swapchain().extent().width, _engine->device().swapchain().extent().height };
 
 
             if (_renderSettings.ibl) {
@@ -561,8 +561,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindAttributes(nullptr);
             cmd.bindBuffer(1, 0, *_cameraBuffer[frameIndex()]);
             cmd.bindBuffer(1, 1, *_globalDataBuffer);
-            cmd.bindImage(2, 0, _engine->getImageView(hdrImage->handle), _engine->_defaultSampler, true);
-            cmd.bindImage(2, 1, _engine->getImageView(backbuffer->handle), _engine->_defaultSampler, true);
+            cmd.bindImage(2, 0, _engine->device().getImageView(hdrImage->handle), _engine->device().defaultSampler(), true);
+            cmd.bindImage(2, 1, _engine->device().getImageView(backbuffer->handle), _engine->device().defaultSampler(), true);
             cmd.bindPipeline();
             cmd.bindDescriptors();
             cmd.dispatchCompute(std::ceil(backbuffer->width / 32.f), std::ceil(backbuffer->height / 32.f), 1);
@@ -586,7 +586,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindBindings({ &_engine->_cube->_binding, 1 });
             cmd.bindAttributes(_engine->_cube->_attributes);
             cmd.bindBuffer(1, 0, *_cameraBuffer[frameIndex()]);
-            cmd.bindImage(2, 0, scene._skyLightMapView, _engine->_defaultSampler);
+            cmd.bindImage(2, 0, scene._skyLightMapView, _engine->device().defaultSampler());
             cmd.bindPipeline();
             cmd.bindDescriptors();
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer->buffer());

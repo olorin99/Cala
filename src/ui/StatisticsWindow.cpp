@@ -14,7 +14,7 @@ void cala::ui::StatisticsWindow::render() {
     ImGui::Text("Pipelines: %d", rendererStats.pipelineCount);
     ImGui::Text("Draw Calls: %d", rendererStats.drawCallCount);
 
-    auto pipelineStats = _engine->driver().context().getPipelineStatistics();
+    auto pipelineStats = _engine->device().context().getPipelineStatistics();
 
     ImGui::Text("Input Assembly Vertices: %lu", pipelineStats.inputAssemblyVertices);
     ImGui::Text("Input Assembly Primitives: %lu", pipelineStats.inputAssemblyPrimitives);
@@ -25,7 +25,7 @@ void cala::ui::StatisticsWindow::render() {
 
     ImGui::Text("Memory Usage: ");
     VmaBudget budgets[10]{};
-    vmaGetHeapBudgets(_engine->driver().context().allocator(), budgets);
+    vmaGetHeapBudgets(_engine->device().context().allocator(), budgets);
     for (auto & budget : budgets) {
         if (budget.usage == 0)
             break;
@@ -33,7 +33,7 @@ void cala::ui::StatisticsWindow::render() {
         ImGui::Text("\tAvailable: %lu mb", budget.budget / 1000000);
     }
 
-    auto engineStats = _engine->stats();
+    auto engineStats = _engine->device().stats();
     ImGui::Text("Allocated Buffers: %d", engineStats.allocatedBuffers);
     ImGui::Text("Buffers In Use: %d", engineStats.buffersInUse);
     ImGui::Text("Allocated Images: %d", engineStats.allocatedImages);

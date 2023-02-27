@@ -5,12 +5,47 @@
 #include <Cala/backend/vulkan/Swapchain.h>
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include "Platform.h"
+#include <Ende/Vector.h>
 
 #include <Ende/time/StopWatch.h>
 
 namespace cala::backend::vulkan {
 
     const u32 FRAMES_IN_FLIGHT = 2;
+
+    class Device;
+    template <typename T>
+    class Handle {
+    public:
+
+        Handle() = default;
+
+        T& operator*() noexcept;
+
+        T* operator->() noexcept;
+
+        explicit operator bool() const noexcept {
+            return _device && _index != -1;
+        }
+
+        i32 index() const { return _index; }
+
+    private:
+        friend Device;
+
+        Handle(Device* device, u32 index)
+                : _device(device),
+                  _index(index)
+        {}
+
+        Device* _device = nullptr;
+        i32 _index = -1;
+
+    };
+
+    using BufferHandle = Handle<backend::vulkan::Buffer>;
+    using ImageHandle = Handle<backend::vulkan::Image>;
+    using ProgramHandle = Handle<backend::vulkan::ShaderProgram>;
 
     class Device {
     public:
@@ -49,6 +84,28 @@ namespace cala::backend::vulkan {
             endSingleTimeCommands(cmd);
         }
 
+        bool gc();
+
+        BufferHandle createBuffer(u32 size, BufferUsage usage, backend::MemoryProperties flags = backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT);
+
+        void destroyBuffer(BufferHandle handle);
+
+        BufferHandle resizeBuffer(BufferHandle handle, u32 size, bool transfer = false);
+
+        ImageHandle createImage(Image::CreateInfo info, Sampler* sampler = nullptr);
+
+        void destroyImage(ImageHandle handle);
+
+        Image::View& getImageView(ImageHandle handle);
+
+        ProgramHandle createProgram(ShaderProgram&& program);
+
+
+        Sampler& defaultSampler() { return _defaultSampler; }
+
+        Sampler& defaultShadowSampler() { return _defaultShadowSampler; }
+
+
         VkDeviceMemory allocate(u32 size, u32 typeBits, MemoryProperties flags);
 
         VkDescriptorSetLayout getSetLayout(ende::Span<VkDescriptorSetLayoutBinding> bindings);
@@ -62,18 +119,12 @@ namespace cala::backend::vulkan {
 
         i32 getBindlessIndex() const { return _bindlessIndex; }
 
-//        VkDescriptorSetLayout emptyLayout() const { return _emptySetLayout; }
-//        VkDescriptorSet emptySet() const { return _emptySet; }
-
 
         RenderPass* getRenderPass(ende::Span<RenderPass::Attachment> attachments);
 
         Framebuffer* getFramebuffer(RenderPass* renderPass, ende::Span<VkImageView> attachments, ende::Span<u32> attachmentHashes, u32 width, u32 height);
 
         void clearFramebuffers();
-
-
-//        RenderPass* getRenderPass(ende::Span<);
 
 
         const Context& context() const { return _context; }
@@ -86,7 +137,19 @@ namespace cala::backend::vulkan {
 
         f64 milliseconds() const { return static_cast<f64>(_lastFrameTime.microseconds()) / 1000.f; }
 
+        struct Stats {
+            u32 buffersInUse = 0;
+            u32 allocatedBuffers = 0;
+            u32 imagesInUse = 0;
+            u32 allocatedImages = 0;
+        };
+
+        Stats stats() const;
+
     private:
+        friend BufferHandle;
+        friend ImageHandle;
+        friend ProgramHandle;
 
         Context _context;
         Swapchain* _swapchain;
@@ -107,13 +170,26 @@ namespace cala::backend::vulkan {
             }
         };
         std::unordered_map<SetLayoutKey, VkDescriptorSetLayout, ende::util::MurmurHash<SetLayoutKey>> _setLayouts;
-//        VkDescriptorSetLayout _emptySetLayout;
-//        VkDescriptorSet _emptySet;
 
         VkDescriptorSetLayout _bindlessLayout;
         VkDescriptorSet _bindlessSet;
         VkDescriptorPool _bindlessPool;
         i32 _bindlessIndex;
+
+
+        ende::Vector<Buffer*> _buffers;
+        ende::Vector<u32> _freeBuffers;
+        ende::Vector<std::pair<i32, BufferHandle>> _buffersToDestroy;
+
+        ende::Vector<Image*> _images;
+        ende::Vector<Image::View> _imageViews;
+        ende::Vector<u32> _freeImages;
+        ende::Vector<std::pair<i32, ImageHandle>> _imagesToDestroy;
+
+        Sampler _defaultSampler;
+        Sampler _defaultShadowSampler;
+
+        ende::Vector<ShaderProgram*> _programs;
 
     };
 

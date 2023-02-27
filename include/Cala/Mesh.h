@@ -10,8 +10,8 @@ namespace cala {
 
     struct Mesh {
 
-        BufferHandle _vertex;
-        BufferHandle _index; // optional
+        backend::vulkan::BufferHandle _vertex;
+        backend::vulkan::BufferHandle _index; // optional
 
         u32 firstIndex = 0;
         u32 indexCount = 0;

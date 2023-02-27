@@ -3,7 +3,7 @@
 #include <Ende/profile/profile.h>
 
 void cala::ImageResource::devirtualize(cala::Engine* engine) {
-    auto extent = engine->driver().swapchain().extent();
+    auto extent = engine->device().swapchain().extent();
     if (transient)
         clear = true;
     if (!handle) {
@@ -11,10 +11,10 @@ void cala::ImageResource::devirtualize(cala::Engine* engine) {
             width = extent.width;
             height = extent.height;
         }
-        handle = engine->createImage({
+        handle = engine->device().createImage({
             width, height, 1, format, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST | (backend::isDepthFormat(format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT)
         });
-        engine->driver().immediate([&](backend::vulkan::CommandBuffer& cmd) {
+        engine->device().immediate([&](backend::vulkan::CommandBuffer& cmd) {
             if (backend::isDepthFormat(format)) {
                 auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
                 cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, { &b, 1 });
@@ -27,11 +27,11 @@ void cala::ImageResource::devirtualize(cala::Engine* engine) {
     if (matchSwapchain && (handle->width() != extent.width || handle->height() != extent.height)) {
         width = extent.width;
         height = extent.height;
-        engine->destroyImage(handle);
-        handle = engine->createImage({
+        engine->device().destroyImage(handle);
+        handle = engine->device().createImage({
             width, height, 1, format, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST | (backend::isDepthFormat(format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT)
         });
-        engine->driver().immediate([&](backend::vulkan::CommandBuffer& cmd) {
+        engine->device().immediate([&](backend::vulkan::CommandBuffer& cmd) {
             if (backend::isDepthFormat(format)) {
                 auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
                 cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP,{ &b, 1 });
@@ -45,10 +45,10 @@ void cala::ImageResource::devirtualize(cala::Engine* engine) {
 
 void cala::BufferResource::devirtualize(Engine *engine) {
     if (!handle) {
-        handle = engine->createBuffer(size, usage);
+        handle = engine->device().createBuffer(size, usage);
     }
     if (size > handle->size())
-        handle = engine->resizeBuffer(handle, size * 2);
+        handle = engine->device().resizeBuffer(handle, size * 2);
 }
 
 cala::RenderPass::RenderPass(RenderGraph *graph, const char *name, u32 index)
@@ -175,7 +175,7 @@ cala::RenderGraph::~RenderGraph() {
 cala::RenderPass &cala::RenderGraph::addPass(const char *name) {
     u32 index = _passes.size();
     while (_timers[_frameIndex].size() <= index)
-        _timers[_frameIndex].push(std::make_pair("", backend::vulkan::Timer(_engine->driver())));
+        _timers[_frameIndex].push(std::make_pair("", backend::vulkan::Timer(_engine->device())));
     _passes.push(RenderPass(this, name, index));
     _timers[_frameIndex][index].first = name;
     assert(_passes.size() <= _timers[_frameIndex].size());
@@ -262,18 +262,18 @@ bool cala::RenderGraph::compile() {
                 attachments.push(attachmentRenderPass);
 
                 if (resource->matchSwapchain) {
-                    auto extent = _engine->driver().swapchain().extent();
+                    auto extent = _engine->device().swapchain().extent();
                     width = extent.width;
                     height = extent.height;
                 } else {
                     width = resource->width;
                     height = resource->height;
                 }
-                attachmentImages.push(_engine->getImageView(resource->handle).view);
+                attachmentImages.push(_engine->device().getImageView(resource->handle).view);
                 attachmentHashes.push(resource->handle.index());
             }
-            renderPass = _engine->driver().getRenderPass(attachments);
-            pass->_framebuffer = _engine->driver().getFramebuffer(renderPass, attachmentImages, attachmentHashes, width, height);
+            renderPass = _engine->device().getRenderPass(attachments);
+            pass->_framebuffer = _engine->device().getFramebuffer(renderPass, attachmentImages, attachmentHashes, width, height);
         } else if (!pass->_framebuffer) {
             for (auto& output : pass->_outputs) {
                 if (auto resource = getResource<ImageResource>(output); resource) {
@@ -378,7 +378,7 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
     auto barrier = backbuffer->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::TRANSFER_READ, backend::ImageLayout::TRANSFER_SRC);
     cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::PipelineStage::TRANSFER, { &barrier, 1 });
 
-    _engine->driver().swapchain().blitImageToFrame(index, cmd, *backbuffer->handle);
+    _engine->device().swapchain().blitImageToFrame(index, cmd, *backbuffer->handle);
 
     barrier = backbuffer->handle->barrier(backend::Access::TRANSFER_READ, backend::Access::COLOUR_ATTACHMENT_WRITE, backend::ImageLayout::COLOUR_ATTACHMENT);
     cmd.pipelineBarrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, { &barrier, 1 });

@@ -22,8 +22,8 @@ namespace cala {
         };
 
         struct Renderable {
-            BufferHandle vertex;
-            BufferHandle index;
+            backend::vulkan::BufferHandle vertex;
+            backend::vulkan::BufferHandle index;
             u32 firstIndex = 0;
             u32 indexCount = 0;
             MaterialInstance* materialInstance = nullptr;
@@ -43,7 +43,7 @@ namespace cala {
 
         u32 addLight(Light& light);
 
-        void addSkyLightMap(ImageHandle skyLightMap, bool equirectangular = false, bool hdr = true);
+        void addSkyLightMap(backend::vulkan::ImageHandle skyLightMap, bool equirectangular = false, bool hdr = true);
 
         void prepare(u32 frame, Camera& camera);
 
@@ -57,17 +57,17 @@ namespace cala {
 
         i32 _lightsDirtyFrame;
 
-        BufferHandle _meshDataBuffer[2];
+        backend::vulkan::BufferHandle _meshDataBuffer[2];
         backend::vulkan::Buffer::Mapped _mappedMesh[2];
-        BufferHandle _modelBuffer[2];
+        backend::vulkan::BufferHandle _modelBuffer[2];
         backend::vulkan::Buffer::Mapped _mappedModel[2];
-        BufferHandle _lightBuffer[2];
+        backend::vulkan::BufferHandle _lightBuffer[2];
         backend::vulkan::Buffer::Mapped _mappedLight[2];
-        BufferHandle _lightCountBuffer[2];
-        ImageHandle _skyLightMap;
+        backend::vulkan::BufferHandle _lightCountBuffer[2];
+        backend::vulkan::ImageHandle _skyLightMap;
         backend::vulkan::Image::View _skyLightMapView;
-        ImageHandle _skyLightIrradiance;
-        ImageHandle _skyLightPrefilter;
+        backend::vulkan::ImageHandle _skyLightIrradiance;
+        backend::vulkan::ImageHandle _skyLightPrefilter;
         bool _hdrSkyLight;
         u32 _skyLight;
 

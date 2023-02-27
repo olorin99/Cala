@@ -3,6 +3,36 @@
 
 #include <Ende/log/log.h>
 
+template <>
+cala::backend::vulkan::Buffer &cala::backend::vulkan::BufferHandle::operator*() noexcept {
+    return *_device->_buffers[_index];
+}
+
+template <>
+cala::backend::vulkan::Buffer *cala::backend::vulkan::BufferHandle::operator->() noexcept {
+    return _device->_buffers[_index];
+}
+
+template <>
+cala::backend::vulkan::Image &cala::backend::vulkan::ImageHandle::operator*() noexcept {
+    return *_device->_images[_index];
+}
+
+template <>
+cala::backend::vulkan::Image *cala::backend::vulkan::ImageHandle ::operator->() noexcept {
+    return _device->_images[_index];
+}
+
+template <>
+cala::backend::vulkan::ShaderProgram &cala::backend::vulkan::ProgramHandle::operator*() noexcept {
+    return *_device->_programs[_index];
+}
+
+template <>
+cala::backend::vulkan::ShaderProgram *cala::backend::vulkan::ProgramHandle ::operator->() noexcept {
+    return _device->_programs[_index];
+}
+
 cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, bool clear)
     : _context(platform),
       _swapchain(nullptr),
@@ -12,7 +42,13 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, bool cl
           CommandBuffer(*this, _context.getQueue(QueueType::GRAPHICS), VK_NULL_HANDLE)
       },
       _frameCount(0),
-      _bindlessIndex(-1)
+      _bindlessIndex(-1),
+      _defaultSampler(*this, {}),
+      _defaultShadowSampler(*this, {
+          .filter = VK_FILTER_NEAREST,
+          .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+          .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
+      })
 {
     _swapchain = new Swapchain(*this, platform, clear);
     VkCommandPoolCreateInfo createInfo{};
@@ -95,6 +131,16 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, bool cl
 
 cala::backend::vulkan::Device::~Device() {
     vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS)); //ensures last frame finished before destroying stuff
+
+    for (auto& buffer : _buffers)
+        delete buffer;
+
+    _imageViews.clear();
+    for (auto* image : _images)
+        delete image;
+
+    for (auto* program : _programs)
+        delete program;
 
     clearFramebuffers();
 
@@ -193,6 +239,104 @@ void cala::backend::vulkan::Device::endSingleTimeCommands(CommandBuffer& buffer)
     vkFreeCommandBuffers(_context.device(), _commandPool, 1, &buf);
 }
 
+
+bool cala::backend::vulkan::Device::gc() {
+    for (auto it = _buffersToDestroy.begin(); it != _buffersToDestroy.end(); it++) {
+        auto& frame = it->first;
+        auto& handle = it->second;
+        if (frame <= 0) {
+            u32 index = handle.index();
+            delete _buffers[index];
+            _buffers[index] = nullptr;
+            _freeBuffers.push(index);
+            _buffersToDestroy.erase(it--);
+        } else
+            --frame;
+    }
+
+    for (auto it = _imagesToDestroy.begin(); it != _imagesToDestroy.end(); it++) {
+        auto& frame = it->first;
+        auto& handle = it->second;
+        if (frame <= 0) {
+            u32 index = handle.index();
+            _imageViews[index] = backend::vulkan::Image::View();
+            updateBindlessImage(index, _imageViews[0], _defaultSampler);
+            delete _images[index];
+            _images[index] = nullptr;
+            _freeImages.push(index);
+            _imagesToDestroy.erase(it--);
+        } else
+            --frame;
+    }
+    return true;
+}
+
+cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(u32 size, BufferUsage usage, backend::MemoryProperties flags) {
+    u32 index = 0;
+    if (!_freeBuffers.empty()) {
+        index = _freeBuffers.pop().value();
+        _buffers[index] = new backend::vulkan::Buffer(*this, size, usage, flags);
+    } else {
+        index = _buffers.size();
+        _buffers.emplace(new backend::vulkan::Buffer(*this, size, usage, flags));
+    }
+    return { this, index };
+}
+
+void cala::backend::vulkan::Device::destroyBuffer(BufferHandle handle) {
+    _buffersToDestroy.push(std::make_pair(10, handle));
+}
+
+cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::resizeBuffer(BufferHandle handle, u32 size, bool transfer) {
+    auto newHandle = createBuffer(size, handle->usage(), handle->flags());
+    if (transfer) {
+        immediate([&](backend::vulkan::CommandBuffer& cmd) {
+            VkBufferCopy bufferCopy{};
+            bufferCopy.dstOffset = 0;
+            bufferCopy.srcOffset = 0;
+            bufferCopy.size = handle->size();
+            vkCmdCopyBuffer(cmd.buffer(), handle->buffer(), newHandle->buffer(), 1, &bufferCopy);
+        });
+    }
+    destroyBuffer(handle);
+    return newHandle;
+}
+
+cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Image::CreateInfo info, Sampler *sampler) {
+    u32 index = 0;
+    if (!_freeImages.empty()) {
+        index = _freeImages.pop().value();
+        _images[index] = new backend::vulkan::Image(*this, info);
+        _imageViews[index] = std::move(_images[index]->newView(0, _images[index]->mips()));
+    } else {
+        index = _images.size();
+        _images.emplace(new backend::vulkan::Image(*this, info));
+        _imageViews.emplace(_images.back()->newView(0, _images.back()->mips()));
+    }
+    assert(_images.size() == _imageViews.size());
+    backend::vulkan::Sampler* chosenSampler = sampler;
+    if (!chosenSampler)
+        chosenSampler = backend::isDepthFormat(info.format) ? &_defaultShadowSampler : &_defaultSampler;
+
+    updateBindlessImage(index, _imageViews[index], *chosenSampler);
+    return { this, index };
+}
+
+void cala::backend::vulkan::Device::destroyImage(ImageHandle handle) {
+    _imagesToDestroy.push(std::make_pair(10, handle));
+}
+
+cala::backend::vulkan::Image::View &cala::backend::vulkan::Device::getImageView(ImageHandle handle) {
+    assert(handle);
+    return _imageViews[handle.index()];
+}
+
+cala::backend::vulkan::ProgramHandle cala::backend::vulkan::Device::createProgram(ShaderProgram &&program) {
+    u32 index = _programs.size();
+    _programs.push(new ShaderProgram(std::move(program)));
+    return { this, index };
+}
+
 VkDeviceMemory cala::backend::vulkan::Device::allocate(u32 size, u32 typeBits, MemoryProperties flags) {
     return _context.allocate(size, typeBits, flags);
 }
@@ -255,14 +399,12 @@ cala::backend::vulkan::RenderPass* cala::backend::vulkan::Device::getRenderPass(
     u64 hash = 0;
     for (auto& attachment : attachments) {
         hash |= (((u64)attachment.format) * 0x100000001b3ull);
-//        ende::log::info("format:{}", (u32)attachment.format);
         hash |= ((u64)attachment.internalLayout << 40);
         hash |= ((u64)attachment.loadOp << 35);
         hash |= ((u64)attachment.storeOp << 30);
         hash |= ((u64)attachment.finalLayout << 20);
         hash |= ((u64)attachment.initialLayout << 10);
     }
-//    ende::log::info("end hash: {}", hash);
 
     auto it = _renderPasses.find(hash);
     if (it != _renderPasses.end())
@@ -289,4 +431,17 @@ void cala::backend::vulkan::Device::clearFramebuffers() {
     for (auto& framebuffer : _framebuffers)
         delete framebuffer.second;
     _framebuffers.clear();
+}
+
+cala::backend::vulkan::Device::Stats cala::backend::vulkan::Device::stats() const {
+    u32 allocatedBuffers = _buffers.size();
+    u32 buffersInUse = allocatedBuffers - _freeBuffers.size();
+    u32 allocatedImages = _images.size();
+    u32 imagesInUse = allocatedImages - _freeImages.size();
+    return {
+            buffersInUse,
+            allocatedBuffers,
+            imagesInUse,
+            allocatedImages
+    };
 }

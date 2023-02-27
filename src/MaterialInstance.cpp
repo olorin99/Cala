@@ -5,11 +5,11 @@
 cala::MaterialInstance::MaterialInstance(Material &material, u32 offset)
     : _material(&material),
       _offset(offset)
-//      _samplers(material._engine->driver())
+//      _samplers(material._engine->device())
 {}
 
 cala::MaterialInstance::MaterialInstance(MaterialInstance &&rhs) noexcept
-//    : _samplers(rhs._material->_engine->driver())
+//    : _samplers(rhs._material->_engine->device())
 {
     std::swap(_material, rhs._material);
     std::swap(_offset, rhs._offset);

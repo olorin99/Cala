@@ -5,8 +5,8 @@
 cala::Probe::Probe(cala::Engine* engine, ProbeInfo info) {
     //TODO: ownership belongs to engine object
 
-//    _renderTarget = new backend::vulkan::Image(driver, {
-    _renderTarget = engine->createImage({
+//    _renderTarget = new backend::vulkan::Image(device, {
+    _renderTarget = engine->device().createImage({
         info.width,
         info.height,
         1,
@@ -16,7 +16,7 @@ cala::Probe::Probe(cala::Engine* engine, ProbeInfo info) {
         info.targetUsage | backend::ImageUsage::TRANSFER_SRC
     });
 
-    _cubeMap = engine->createImage({
+    _cubeMap = engine->device().createImage({
         info.width,
         info.height,
         1,
@@ -26,7 +26,7 @@ cala::Probe::Probe(cala::Engine* engine, ProbeInfo info) {
         info.targetUsage | backend::ImageUsage::TRANSFER_DST
     });
 
-    engine->driver().immediate([&](backend::vulkan::CommandBuffer& cmd) {
+    engine->device().immediate([&](backend::vulkan::CommandBuffer& cmd) {
         auto targetBarrier = _renderTarget->barrier(backend::Access::NONE, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
         auto cubeBarrier = _cubeMap->barrier(backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
 
@@ -36,7 +36,7 @@ cala::Probe::Probe(cala::Engine* engine, ProbeInfo info) {
 
     _view = _renderTarget->newView();
     auto imageView = _view.view;
-    _drawBuffer = new backend::vulkan::Framebuffer(engine->driver().context().device(), *info.renderPass, { &imageView, 1 }, info.width, info.height);
+    _drawBuffer = new backend::vulkan::Framebuffer(engine->device().context().device(), *info.renderPass, {&imageView, 1 }, info.width, info.height);
     _cubeView = _cubeMap->newView(0, info.mipLevels);
 }
 

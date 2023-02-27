@@ -28,9 +28,9 @@ namespace cala {
         ende::Vector<Primitive> primitives;
         ende::Vector<MaterialInstance> materials;
 
-        BufferHandle vertexBuffer;
-        BufferHandle indexBuffer;
-        ende::Vector<ImageHandle> images;
+        backend::vulkan::BufferHandle vertexBuffer;
+        backend::vulkan::BufferHandle indexBuffer;
+        ende::Vector<backend::vulkan::ImageHandle> images;
 
         VkVertexInputBindingDescription _binding;
         std::array<backend::Attribute, 4> _attributes;

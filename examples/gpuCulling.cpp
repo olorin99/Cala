@@ -48,7 +48,7 @@ Image loadImage(Device& driver, const ende::fs::Path& path) {
 int main() {
     SDLPlatform platform("hello_triangle", 800, 600);
     Engine engine(platform);
-    Device& driver = engine.driver();
+    Device& driver = engine.device();
     ImGuiContext imGuiContext(driver, platform.window());
 
     //Shaders
@@ -79,7 +79,7 @@ int main() {
     //MeshData data
     MeshData vertices = cala::shapes::cube();
     Buffer vertexBuffer = vertices.vertexBuffer(driver);
-//    Buffer indexBuffer = vertices.indexBuffer(driver);
+//    Buffer indexBuffer = vertices.indexBuffer(device);
 
     Transform cameraTransform({0, 0, -10});
     Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);
@@ -135,7 +135,7 @@ int main() {
     brickwallMat.setSampler("specularMap", brickwall_specular.newView(), Sampler(driver, {}));
 
 
-//    CommandBufferList computeList(driver, QueueType::COMPUTE);
+//    CommandBufferList computeList(device, QueueType::COMPUTE);
 
     Timer computeTimer(driver);
     Timer rasterTimer(driver, 1);

@@ -95,7 +95,7 @@ int main() {
     Mesh sphereUV = shapes::sphereUV().mesh(driver);
     Mesh sphereNormalized = shapes::sphereNormalized().mesh(driver);
 
-    //scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
+    //scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(device))}, model});
 
 
 
@@ -131,7 +131,7 @@ int main() {
     scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
     vertices = cala::shapes::quad();
     model.addPos({-1.5, 0, 0});
-    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(driver)), std::move(vertices.indexBuffer(driver))}, model});
+    scene._renderables.push({Scene::Renderable{std::move(vertices.vertexBuffer(device)), std::move(vertices.indexBuffer(driver))}, model});
 
     // light marker
     vertices = cala::shapes::sphereNormalized(0.1);
@@ -148,7 +148,7 @@ int main() {
     //for (auto& transform : scene._renderables)
     //    models.push(transform.second.toMat());
 
-    //Buffer uniformBuffer(driver, sizeof(ende::math::Mat4f) * models.size(), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
+    //Buffer uniformBuffer(device, sizeof(ende::math::Mat4f) * models.size(), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
     //uniformBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});
 
     PointLight light;
@@ -309,7 +309,7 @@ int main() {
         }
 
         driver.swapchain().wait();
-        //driver.swapchain().copyFrameToImage(prevFrame, frameCopy);
+        //device.swapchain().copyFrameToImage(prevFrame, frameCopy);
 
         if (renderImGui) {
             imGuiContext.newFrame();

@@ -23,11 +23,11 @@ namespace cala {
     class Material {
     public:
 
-        Material(Engine* engine, ProgramHandle program, u32 size = 0);
+        Material(Engine* engine, backend::vulkan::ProgramHandle program, u32 size = 0);
 
         MaterialInstance instance();
 
-        ProgramHandle getProgram() const { return _program; };
+        backend::vulkan::ProgramHandle getProgram() const { return _program; };
 
         u32 shaderDataSize() { return _program->interface().setSize(2); }
 
@@ -35,7 +35,7 @@ namespace cala {
 
         Engine* _engine;
 
-        ProgramHandle _program;
+        backend::vulkan::ProgramHandle _program;
         backend::vulkan::CommandBuffer::RasterState _rasterState;
         backend::vulkan::CommandBuffer::DepthState _depthState;
 

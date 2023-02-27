@@ -33,6 +33,6 @@ u64 cala::backend::vulkan::Timer::result() {
         throw "query fail";
     }
 
-    //vkResetQueryPool(_driver.context().device(), _driver.context().timestampPool(), _index * 2, 2);
+    //vkResetQueryPool(_device.context().device(), _device.context().timestampPool(), _index * 2, 2);
     return _result;
 }

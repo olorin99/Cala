@@ -53,7 +53,7 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Device &driver, SDL_Window* wi
                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
             }
 //            cala::backend::vulkan::RenderPass::Attachment{
-//                    driver.context().depthFormat(),
+//                    device.context().depthFormat(),
 //                    VK_SAMPLE_COUNT_1_BIT,
 //                    VK_ATTACHMENT_LOAD_OP_CLEAR,
 //                    VK_ATTACHMENT_STORE_OP_STORE,

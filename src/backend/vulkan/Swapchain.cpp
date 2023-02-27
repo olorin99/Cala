@@ -107,14 +107,14 @@ cala::backend::vulkan::Swapchain::Swapchain(Device &driver, Platform& platform, 
             }
     };
 
-//    _renderPass = new RenderPass(_driver, attachments);
+//    _renderPass = new RenderPass(_device, attachments);
     _renderPass = _driver.getRenderPass(attachments);
 
     for (auto& view : _imageViews) {
         VkImageView framebufferAttachments[2] = { view, _depthView.view };
         u32 hashes[2] = { 0, 0 };
         _framebuffers.emplace(_driver.getFramebuffer(_renderPass, framebufferAttachments, hashes, _extent.width, _extent.height));
-//        _framebuffers.emplace(_driver.context().device(), *_renderPass, framebufferAttachments, _extent.width, _extent.height);
+//        _framebuffers.emplace(_device.context().device(), *_renderPass, framebufferAttachments, _extent.width, _extent.height);
     }
 }
 
@@ -183,7 +183,7 @@ bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {
         VkImageView framebufferAttachments[2] = { view, _depthView.view };
         u32 hashes[2] = { 0, 0 };
         _framebuffers.emplace(_driver.getFramebuffer(_renderPass, framebufferAttachments, hashes, _extent.width, _extent.height));
-//        _framebuffers.emplace(_driver.context().device(), *_renderPass, framebufferAttachments, _extent.width, _extent.height);
+//        _framebuffers.emplace(_device.context().device(), *_renderPass, framebufferAttachments, _extent.width, _extent.height);
     }
     return true;
 }

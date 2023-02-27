@@ -15,10 +15,10 @@ void cala::ui::RendererSettingsWindow::render() {
     ImGui::Checkbox("Tonemap Pass", &rendererSettings.tonemap);
     ImGui::Checkbox("Freeze Frustum,", &rendererSettings.freezeFrustum);
     ImGui::Checkbox("IBL,", &rendererSettings.ibl);
-    bool vsync = _engine->driver().swapchain().getVsync();
+    bool vsync = _engine->device().swapchain().getVsync();
     if (ImGui::Checkbox("Vsync", &vsync)) {
-        _engine->driver().wait();
-        _engine->driver().swapchain().setVsync(vsync);
+        _engine->device().wait();
+        _engine->device().swapchain().setVsync(vsync);
     }
     ImGui::Checkbox("Debug Clusters", &rendererSettings.debugClusters);
 

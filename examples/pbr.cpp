@@ -136,7 +136,7 @@ ende::math::Vec3f lerpPositions(ende::Span<ende::math::Vec3f> inputs, f32 factor
 int main() {
     SDLPlatform platform("hello_triangle", 800, 600);
     Engine engine(platform, false);
-    auto& driver = engine.driver();
+    auto& driver = engine.device();
 
     ImGuiContext imGuiContext(driver, platform.window());
 
@@ -151,10 +151,10 @@ int main() {
 
     auto matInstance = material.instance();
 
-//    Image brickwall_albedo = loadImage(driver, "../../res/textures/pbr_gold/lightgold_albedo.png"_path);
-//    Image brickwall_normal = loadImage(driver, "../../res/textures/pbr_gold/lightgold_normal-ogl.png"_path);
-//    Image brickwall_metallic = loadImage(driver, "../../res/textures/pbr_gold/lightgold_metallic.png"_path);
-//    Image brickwall_roughness = loadImage(driver, "../../res/textures/pbr_gold/lightgold_roughness.png"_path);
+//    Image brickwall_albedo = loadImage(device, "../../res/textures/pbr_gold/lightgold_albedo.png"_path);
+//    Image brickwall_normal = loadImage(device, "../../res/textures/pbr_gold/lightgold_normal-ogl.png"_path);
+//    Image brickwall_metallic = loadImage(device, "../../res/textures/pbr_gold/lightgold_metallic.png"_path);
+//    Image brickwall_roughness = loadImage(device, "../../res/textures/pbr_gold/lightgold_roughness.png"_path);
 
     Image brickwall_albedo = loadImage(driver, "../../res/textures/pbr_rusted_iron/rustediron2_basecolor.png"_path);
     Image brickwall_normal = loadImage(driver, "../../res/textures/pbr_rusted_iron/rustediron2_normal.png"_path);
@@ -167,7 +167,7 @@ int main() {
     matInstance.setSampler("roughnessMap", brickwall_roughness.newView(), Sampler(driver, {}));
     matInstance.setSampler("aoMap", brickwall_ao.newView(), Sampler(driver, {}));
 
-//    Image hdr = loadImageHDR(driver, "../../res/textures/Tropical_Beach_3k.hdr"_path);
+//    Image hdr = loadImageHDR(device, "../../res/textures/Tropical_Beach_3k.hdr"_path);
     Image hdr = loadImageHDR(driver, "../../res/textures/TropicalRuins_3k.hdr"_path);
     ende::fs::File shaderFile;
     if (!shaderFile.open("../../res/shaders/equirectangularToCubeMap.comp.spv"_path, ende::fs::in | ende::fs::binary))
@@ -216,11 +216,11 @@ int main() {
     Buffer cameraBuffer(driver, sizeof(Camera::Data), BufferUsage::UNIFORM);
 
     Scene scene(&engine, 10);
-//    Mesh cube = shapes::cube().mesh(driver);
-//    Mesh cube = shapes::sphereUV(1).mesh(driver);
+//    Mesh cube = shapes::cube().mesh(device);
+//    Mesh cube = shapes::sphereUV(1).mesh(device);
     Mesh cube = loadModel("../../res/models/sphere.obj"_path).mesh(driver);
-//    Mesh cube = shapes::sphereNormalized(1).mesh(driver);
-//    Mesh cube = shapes::sphereCube(1).mesh(driver);
+//    Mesh cube = shapes::sphereNormalized(1).mesh(device);
+//    Mesh cube = shapes::sphereCube(1).mesh(device);
 
     struct PBRMaterial {
         Image* albedo;

@@ -7,14 +7,14 @@
 
 cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     : _engine(engine),
-    _meshDataBuffer{engine->createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE),
-                 engine->createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE)},
-    _modelBuffer{engine->createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE),
-                 engine->createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE)},
-    _lightBuffer{engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE),
-                 engine->createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE)},
-    _lightCountBuffer{engine->createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE),
-                 engine->createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE)},
+    _meshDataBuffer{engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE),
+                 engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE)},
+    _modelBuffer{engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE),
+                 engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE)},
+    _lightBuffer{engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE),
+                 engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE)},
+    _lightCountBuffer{engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE),
+                 engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE)},
     _directionalLightCount(0),
     _lightsDirtyFrame(2)
 {
@@ -73,7 +73,7 @@ u32 cala::Scene::addLight(cala::Light &light) {
     return _lights.size() - 1;
 }
 
-void cala::Scene::addSkyLightMap(ImageHandle skyLightMap, bool equirectangular, bool hdr) {
+void cala::Scene::addSkyLightMap(backend::vulkan::ImageHandle skyLightMap, bool equirectangular, bool hdr) {
     if (equirectangular) {
         _skyLightMap = _engine->convertToCubeMap(skyLightMap);
     } else
@@ -98,11 +98,11 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
     u32 objectCount = _renderables.size();
     // resize buffers to fit and update persistent mappings
     if (objectCount * sizeof(MeshData) >= _meshDataBuffer[frame]->size()) {
-        _meshDataBuffer[frame] = _engine->resizeBuffer(_meshDataBuffer[frame], objectCount * sizeof(MeshData) * 2);
+        _meshDataBuffer[frame] = _engine->device().resizeBuffer(_meshDataBuffer[frame], objectCount * sizeof(MeshData) * 2);
         _mappedMesh[frame] = _meshDataBuffer[frame]->map();
     }
     if (objectCount * sizeof(ende::math::Mat4f) >= _modelBuffer[frame]->size()) {
-        _modelBuffer[frame] = _engine->resizeBuffer(_modelBuffer[frame], objectCount * sizeof(ende::math::Mat4f) * 2);
+        _modelBuffer[frame] = _engine->device().resizeBuffer(_modelBuffer[frame], objectCount * sizeof(ende::math::Mat4f) * 2);
         _mappedModel[frame] = _modelBuffer[frame]->map();
     }
 
@@ -153,7 +153,7 @@ void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
             _lightData.push(data);
         }
         if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame]->size()) {
-            _lightBuffer[frame] = _engine->resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(Light::Data) * 2);
+            _lightBuffer[frame] = _engine->device().resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(Light::Data) * 2);
             _mappedLight[frame] = _lightBuffer[frame]->map();
         }
         u32 lightCount[2] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount) };

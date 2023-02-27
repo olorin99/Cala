@@ -54,8 +54,8 @@ cala::backend::vulkan::Buffer cala::MeshData::indexBuffer(backend::vulkan::Devic
 }
 
 cala::Mesh cala::MeshData::mesh(cala::Engine* engine) {
-//    auto vertex = vertexBuffer(driver);
-//    auto index = indexBuffer(driver);
+//    auto vertex = vertexBuffer(device);
+//    auto index = indexBuffer(device);
 
 //    auto vertex = engine->createBuffer(_vertices.size() * sizeof(Vertex), backend::BufferUsage::VERTEX);
 //    auto index = engine->createBuffer(_indices.size() * sizeof(u32), backend::BufferUsage::INDEX);

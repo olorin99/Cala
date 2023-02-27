@@ -25,7 +25,7 @@ namespace cala {
         backend::Format format = backend::Format::RGBA8_UNORM;
         bool matchSwapchain = true;
         bool clear = true;
-        ImageHandle handle;
+        backend::vulkan::ImageHandle handle;
 
         void devirtualize(Engine* engine) override;
 
@@ -36,7 +36,7 @@ namespace cala {
         u32 size = 1;
         backend::BufferUsage usage = backend::BufferUsage::UNIFORM;
 
-        BufferHandle handle;
+        backend::vulkan::BufferHandle handle;
 
         void devirtualize(Engine* engine) override;
     };

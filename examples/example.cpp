@@ -38,9 +38,9 @@ ImageHandle loadImage(Engine& engine, const ende::fs::Path& path) {
     if (!data) throw "unable load image";
     u32 length = width * height * 4;
 
-    ImageHandle handle = engine.createImage({(u32)width, (u32)height, 1, backend::Format::RGBA8_UNORM});
+    ImageHandle handle = engine.device().createImage({(u32)width, (u32)height, 1, backend::Format::RGBA8_UNORM});
 
-    handle->data(engine.driver(), {0, (u32)width, (u32)height, 1, 4, {data, length}});
+    handle->data(engine.device(), {0, (u32)width, (u32)height, 1, 4, {data, length}});
     stbi_image_free(data);
     return handle;
 }
@@ -52,8 +52,8 @@ ImageHandle loadImageHDR(Engine& engine, const ende::fs::Path& path) {
     if (!data) throw "unable load image";
     u32 length = width * height * 4 * 4;
 
-    ImageHandle handle = engine.createImage({(u32)width, (u32)height, 1, backend::Format::RGBA32_SFLOAT});
-    handle->data(engine.driver(), {0, (u32)width, (u32)height, 1, (u32)4 * 4, {data, length}});
+    ImageHandle handle = engine.device().createImage({(u32)width, (u32)height, 1, backend::Format::RGBA32_SFLOAT});
+    handle->data(engine.device(), {0, (u32)width, (u32)height, 1, (u32)4 * 4, {data, length}});
     stbi_image_free(data);
     return handle;
 }
@@ -87,12 +87,12 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
             buf = &image.image[0];
             bufferSize = image.image.size();
         }
-        images.push(engine->createImage({
+        images.push(engine->device().createImage({
             (u32)image.width, (u32)image.height, 1,
             Format::RGBA8_SRGB,
             1, 1,
             ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST
-        }))->data(engine->driver(), {
+        }))->data(engine->device(), {
             0, (u32)image.width, (u32)image.height, 1, 4,
             { buf, bufferSize}
         });
@@ -362,9 +362,9 @@ int main() {
 
     Engine engine(platform);
     Renderer renderer(&engine, {});
-    engine.driver().swapchain().setVsync(true);
+    engine.device().swapchain().setVsync(true);
 
-    ImGuiContext imGuiContext(engine.driver(), platform.window());
+    ImGuiContext imGuiContext(engine.device(), platform.window());
 
     ui::ProfileWindow profileWindow(&engine, &renderer);
     ui::StatisticsWindow statisticsWindow(&engine, &renderer);
@@ -372,7 +372,7 @@ int main() {
 
 
     //Shaders
-    ProgramHandle pointLightProgram = engine.createProgram(loadShader(engine.driver(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
+    ProgramHandle pointLightProgram = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
 
     Material material(&engine, pointLightProgram, sizeof(u32) * 3);
     material._depthState = { true, true, CompareOp::LESS_EQUAL };
@@ -393,7 +393,7 @@ int main() {
     Transform cameraTransform({10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(-90)));
     Camera camera((f32)ende::math::rad(54.4), platform.windowSize().first, platform.windowSize().second, 0.1f, 100.f, cameraTransform);
 
-    Sampler sampler(engine.driver(), {});
+    Sampler sampler(engine.device(), {});
 
     auto matInstance = material.instance();
 
@@ -464,9 +464,9 @@ int main() {
     };
     ImageHandle roughnessImages[10];
     for (u32 i = 0; i < 10; i++) {
-        roughnessImages[i] = engine.createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST, backend::ImageType::IMAGE2D});
+        roughnessImages[i] = engine.device().createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST, backend::ImageType::IMAGE2D});
         f32 metallicRoughnessData[] = { 0.f, static_cast<f32>(i) / 10.f, 0.f, 1.f };
-        roughnessImages[i]->data(engine.driver(), { 0, 1, 1, 1, 4 * 4, { metallicRoughnessData, sizeof(f32) * 4 } });
+        roughnessImages[i]->data(engine.device(), {0, 1, 1, 1, 4 * 4, {metallicRoughnessData, sizeof(f32) * 4 } });
 
         MaterialData materialData1 {
                 engine.defaultAlbedo().index(),
@@ -530,8 +530,8 @@ int main() {
                 case SDL_WINDOWEVENT:
                     switch (event.window.event) {
                         case SDL_WINDOWEVENT_RESIZED:
-                            engine.driver().wait();
-                            engine.driver().swapchain().resize(event.window.data1, event.window.data2);
+                            engine.device().wait();
+                            engine.device().swapchain().resize(event.window.data1, event.window.data2);
                             camera.resize(event.window.data1, event.window.data2);
                             break;
                     }
@@ -635,5 +635,5 @@ int main() {
         ende::profile::ProfileManager::frame();
     }
 
-    engine.driver().wait();
+    engine.device().wait();
 }

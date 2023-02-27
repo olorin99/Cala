@@ -1,5 +1,5 @@
 #define VMA_IMPLEMENTATION
-#include <Cala/backend/vulkan/vk_mem_alloc.h>
+#include "vk_mem_alloc.h"
 
 #include <Cala/backend/vulkan/Context.h>
 #include <Cala/backend/vulkan/primitives.h>

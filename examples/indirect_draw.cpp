@@ -72,7 +72,7 @@ int main() {
     //MeshData data
     MeshData vertices = cala::shapes::cube();
     Buffer vertexBuffer = vertices.vertexBuffer(driver);
-//    Buffer indexBuffer = vertices.indexBuffer(driver);
+//    Buffer indexBuffer = vertices.indexBuffer(device);
 
     Transform cameraTransform({0, 0, -10});
     Camera camera(ende::math::perspective((f32)ende::math::rad(54.4), 800.f / -600.f, 0.1f, 1000.f), cameraTransform);

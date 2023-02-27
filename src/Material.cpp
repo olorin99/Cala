@@ -1,7 +1,7 @@
 #include "Cala/Material.h"
 
 
-cala::Material::Material(cala::Engine* engine, ProgramHandle program, u32 size)
+cala::Material::Material(cala::Engine* engine, backend::vulkan::ProgramHandle program, u32 size)
     : _engine(engine),
       _program(program),
       _setSize(size == 0 ? shaderDataSize() : size)
