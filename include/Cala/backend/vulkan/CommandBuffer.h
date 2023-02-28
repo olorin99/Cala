@@ -24,8 +24,12 @@ namespace cala::backend::vulkan {
         ~CommandBuffer();
 
         // non copyable
-//        CommandBuffer(const CommandBuffer& buf) = delete;
+        CommandBuffer(const CommandBuffer& buf) = delete;
         CommandBuffer& operator=(const CommandBuffer& buf) = delete;
+
+        CommandBuffer(CommandBuffer&& rhs) noexcept;
+
+        CommandBuffer& operator=(CommandBuffer&& rhs) noexcept;
 
 
         void setBuffer(VkCommandBuffer buffer) { _buffer = buffer; }
@@ -95,8 +99,6 @@ namespace cala::backend::vulkan {
 
         void pushConstants(ende::Span<const void> data, u32 offset = 0);
 
-        void setBindlessIndex(u32 index);
-
         void bindDescriptors();
         void clearDescriptors();
 
@@ -142,7 +144,7 @@ namespace cala::backend::vulkan {
     private:
         friend Device;
 
-        Device& _device;
+        Device* _device;
         VkCommandBuffer _buffer;
         VkSemaphore _signal;
         VkQueue _queue;
@@ -193,7 +195,6 @@ namespace cala::backend::vulkan {
                 return memcmp(this, &rhs, sizeof(DescriptorKey)) == 0;
             }
         } _descriptorKey[MAX_SET_COUNT] {};
-        i32 _bindlessIndex;
 
         //TODO: cull descriptors every now and again
         VkDescriptorSet _currentSets[MAX_SET_COUNT];

@@ -4,6 +4,7 @@
 #include <Cala/backend/vulkan/Context.h>
 #include <Cala/backend/vulkan/Swapchain.h>
 #include <Cala/backend/vulkan/CommandBuffer.h>
+#include <Cala/backend/vulkan/CommandPool.h>
 #include "Platform.h"
 #include <Ende/Vector.h>
 
@@ -65,6 +66,8 @@ namespace cala::backend::vulkan {
 
         ende::time::Duration endFrame();
 
+        u32 frameIndex() const { return _frameCount % FRAMES_IN_FLIGHT; }
+
         bool waitFrame(u64 frame, u64 timeout = 1000000000);
 
         bool wait(u64 timeout = 1000000000); // waits for all frames
@@ -73,18 +76,18 @@ namespace cala::backend::vulkan {
         BufferHandle stagingBuffer(u32 size);
 
 
-        CommandBuffer beginSingleTimeCommands(QueueType queueType = QueueType::GRAPHICS);
+        CommandBuffer& beginSingleTimeCommands(QueueType queueType = QueueType::GRAPHICS);
 
         void endSingleTimeCommands(CommandBuffer& buffer);
 
         template <typename F>
         void immediate(F func, QueueType queueType = QueueType::GRAPHICS) {
-            auto cmd = beginSingleTimeCommands(queueType);
+            auto& cmd = beginSingleTimeCommands(queueType);
             func(cmd);
             endSingleTimeCommands(cmd);
         }
 
-        CommandBuffer getCommandBuffer(u32 frame, QueueType queueType = QueueType::GRAPHICS);
+        CommandBuffer& getCommandBuffer(u32 frame, QueueType queueType = QueueType::GRAPHICS);
 
         bool gc();
 
@@ -159,8 +162,7 @@ namespace cala::backend::vulkan {
 
         Context _context;
         Swapchain* _swapchain;
-        VkCommandPool _commandPools[FRAMES_IN_FLIGHT + 1];
-        CommandBuffer _frameCommands[FRAMES_IN_FLIGHT];
+        CommandPool _commandPools[2][3]; // 0 = graphics, 1 = compute, 2 = transfer
         VkFence _frameFences[FRAMES_IN_FLIGHT];
         u64 _frameCount;
         ende::time::StopWatch _frameClock;

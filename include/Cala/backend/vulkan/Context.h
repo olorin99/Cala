@@ -88,6 +88,7 @@ namespace cala::backend::vulkan {
         VkQueue _graphicsQueue;
         VkQueue _computeQueue;
         VkQueue _transferQueue;
+        VkQueue _presentQueue;
 
         VkQueryPool _timestampQueryPool;
         VkQueryPool _pipelineStatistics;

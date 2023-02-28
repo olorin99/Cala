@@ -37,11 +37,10 @@ cala::backend::vulkan::ShaderProgram *cala::backend::vulkan::ProgramHandle ::ope
 cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, bool clear)
     : _context(platform),
       _swapchain(nullptr),
-      _commandPools{VK_NULL_HANDLE},
-      _frameCommands{
-          CommandBuffer(*this, _context.getQueue(QueueType::GRAPHICS), VK_NULL_HANDLE),
-          CommandBuffer(*this, _context.getQueue(QueueType::GRAPHICS), VK_NULL_HANDLE)
-      },
+      _commandPools{
+              {CommandPool(this, QueueType::GRAPHICS), CommandPool(this, QueueType::COMPUTE), CommandPool(this, QueueType::TRANSFER)},
+              {CommandPool(this, QueueType::GRAPHICS), CommandPool(this, QueueType::COMPUTE), CommandPool(this, QueueType::TRANSFER)}
+        },
       _frameCount(0),
       _bindlessIndex(-1),
       _defaultSampler(*this, {}),
@@ -52,31 +51,15 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, bool cl
       })
 {
     _swapchain = new Swapchain(*this, platform, clear);
-    VkCommandPoolCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    createInfo.queueFamilyIndex = _context.queueIndex(QueueType::GRAPHICS);
-    createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    for (auto& pool : _commandPools)
-        vkCreateCommandPool(_context.device(), &createInfo, nullptr, &pool);
 
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = _commandPools[0];
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = FRAMES_IN_FLIGHT;
-
-    VkCommandBuffer buffers[FRAMES_IN_FLIGHT];
-
-    vkAllocateCommandBuffers(_context.device(), &allocInfo, buffers);
 
     VkFenceCreateInfo fenceCreateInfo{};
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceCreateInfo.pNext = nullptr;
     fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (u32 i = 0; i < FRAMES_IN_FLIGHT; i++) {
-        _frameCommands[i].setBuffer(buffers[i]);
-        vkCreateFence(_context.device(), &fenceCreateInfo, nullptr, &_frameFences[i]);
+    for (auto& fence : _frameFences) {
+        vkCreateFence(_context.device(), &fenceCreateInfo, nullptr, &fence);
     }
 
     constexpr u32 maxBindless = 1000;
@@ -172,12 +155,9 @@ cala::backend::vulkan::Device::~Device() {
     vkDestroyDescriptorPool(_context.device(), _descriptorPool, nullptr);
     vkDestroyDescriptorPool(_context.device(), _bindlessPool, nullptr);
 
-    for (u32 i = 0; i < FRAMES_IN_FLIGHT; i++) {
-        vkDestroyFence(_context.device(), _frameFences[i], nullptr);
+    for (auto& fence : _frameFences) {
+        vkDestroyFence(_context.device(), fence, nullptr);
     }
-
-    for (auto& pool : _commandPools)
-        vkDestroyCommandPool(_context.device(), pool, nullptr);
 
     for (auto& setLayout : _setLayouts)
         vkDestroyDescriptorSetLayout(_context.device(), setLayout.second, nullptr);
@@ -186,15 +166,18 @@ cala::backend::vulkan::Device::~Device() {
 
 
 cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFrame() {
+    _frameCount++;
 
-    CommandBuffer* cmd = &_frameCommands[_frameCount % FRAMES_IN_FLIGHT];
-    VkFence fence = _frameFences[_frameCount % FRAMES_IN_FLIGHT];
+    VkFence fence = _frameFences[frameIndex()];
+
+    waitFrame(_frameCount);
 
     vmaSetCurrentFrameIndex(_context.allocator(), _frameCount);
+    _commandPools[0][frameIndex()].reset();
 
     return {
-        _frameCount++,
-        cmd,
+        _frameCount,
+        &getCommandBuffer(frameIndex()),
         fence,
         _swapchain->nextImage()
     };
@@ -210,7 +193,7 @@ bool cala::backend::vulkan::Device::waitFrame(u64 frame, u64 timeout) {
 
     auto res = vkWaitForFences(_context.device(), 1, &fence, true, timeout) == VK_SUCCESS;
     if (res)
-        vkResetFences(_context.device(), 1, &_frameFences[frame % FRAMES_IN_FLIGHT]);
+        vkResetFences(_context.device(), 1, &fence);
     return res;
 }
 
@@ -226,18 +209,9 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::stagingBuffer
 }
 
 
-cala::backend::vulkan::CommandBuffer cala::backend::vulkan::Device::beginSingleTimeCommands(QueueType queueType) {
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = _commandPools[FRAMES_IN_FLIGHT];
-    allocInfo.commandBufferCount = 1;
+cala::backend::vulkan::CommandBuffer& cala::backend::vulkan::Device::beginSingleTimeCommands(QueueType queueType) {
 
-    VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(_context.device(), &allocInfo, &commandBuffer);
-    VkQueue queue = _context.getQueue(queueType);
-    CommandBuffer buffer(*this, queue, commandBuffer);
-
+    auto& buffer = getCommandBuffer(_frameCount & FRAMES_IN_FLIGHT, queueType);
     buffer.begin();
     return buffer;
 }
@@ -257,21 +231,11 @@ void cala::backend::vulkan::Device::endSingleTimeCommands(CommandBuffer& buffer)
     else
         ende::log::error("Failed waiting for immediate fence");
     vkDestroyFence(context().device(), fence, nullptr);
-
-    vkFreeCommandBuffers(_context.device(), _commandPools[FRAMES_IN_FLIGHT], 1, &buf);
 }
 
-cala::backend::vulkan::CommandBuffer cala::backend::vulkan::Device::getCommandBuffer(u32 frame, QueueType queueType) {
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = _commandPools[frame];
-    allocInfo.commandBufferCount = 1;
-
-    VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(_context.device(), &allocInfo, &commandBuffer);
-    VkQueue queue = _context.getQueue(queueType);
-    return {*this, queue, commandBuffer};
+cala::backend::vulkan::CommandBuffer& cala::backend::vulkan::Device::getCommandBuffer(u32 frame, QueueType queueType) {
+    assert(frame < FRAMES_IN_FLIGHT && queueType <= QueueType::TRANSFER);
+    return _commandPools[frame][static_cast<u32>(queueType) - 1].getBuffer();
 }
 
 
@@ -419,8 +383,8 @@ void cala::backend::vulkan::Device::updateBindlessImage(u32 index, Image::View &
 }
 
 void cala::backend::vulkan::Device::setBindlessSetIndex(u32 index) {
-    for (auto& cmd : _frameCommands)
-        cmd.setBindlessIndex(index);
+//    for (auto& cmd : _frameCommands)
+//        cmd.setBindlessIndex(index);
     _bindlessIndex = index;
 }
 

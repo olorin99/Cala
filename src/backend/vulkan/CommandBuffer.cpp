@@ -6,7 +6,7 @@
 #include <Ende/log/log.h>
 
 cala::backend::vulkan::CommandBuffer::CommandBuffer(Device& device, VkQueue queue, VkCommandBuffer buffer)
-    : _device(device),
+    : _device(&device),
     _buffer(buffer),
     _signal(VK_NULL_HANDLE),
     _queue(queue),
@@ -14,27 +14,71 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(Device& device, VkQueue queu
     _indexBuffer(nullptr),
     _currentPipeline(VK_NULL_HANDLE),
     _currentSets{VK_NULL_HANDLE},
-    _drawCallCount(0),
-    _bindlessIndex(-1)
+    _drawCallCount(0)
 {
-    VkSemaphoreCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    vkCreateSemaphore(_device.context().device(), &createInfo, nullptr, &_signal);
-
     memset(&_pipelineKey, 0, sizeof(PipelineKey));
     _pipelineKey.viewPort.maxDepth = 1.f;
 }
 
 cala::backend::vulkan::CommandBuffer::~CommandBuffer() {
-    vkDestroySemaphore(_device.context().device(), _signal, nullptr);
+    vkDestroySemaphore(_device->context().device(), _signal, nullptr);
+}
+
+cala::backend::vulkan::CommandBuffer::CommandBuffer(CommandBuffer &&rhs) noexcept
+    : _device(nullptr),
+    _buffer(VK_NULL_HANDLE),
+    _signal(VK_NULL_HANDLE),
+    _queue(VK_NULL_HANDLE),
+    _active(false),
+    _indexBuffer(nullptr),
+    _boundInterface(nullptr),
+    _pipelineKey(),
+    _currentPipeline(VK_NULL_HANDLE)
+{
+    std::swap(_device, rhs._device);
+    std::swap(_buffer, rhs._buffer);
+    std::swap(_signal, rhs._signal);
+    std::swap(_queue, rhs._queue);
+    std::swap(_active, rhs._active);
+    std::swap(_indexBuffer, rhs._indexBuffer);
+    std::swap(_boundInterface, rhs._boundInterface);
+    std::swap(_pipelineKey, rhs._pipelineKey);
+    std::swap(_currentPipeline, rhs._currentPipeline);
+    for (u32 i = 0; i < MAX_SET_COUNT; i++) {
+        std::swap(_descriptorKey[i], rhs._descriptorKey[i]);
+        std::swap(_currentSets[i], rhs._currentSets[i]);
+    }
+    std::swap(_drawCallCount, rhs._drawCallCount);
+}
+
+cala::backend::vulkan::CommandBuffer &cala::backend::vulkan::CommandBuffer::operator=(CommandBuffer &&rhs) noexcept {
+    std::swap(_device, rhs._device);
+    std::swap(_buffer, rhs._buffer);
+    std::swap(_signal, rhs._signal);
+    std::swap(_queue, rhs._queue);
+    std::swap(_active, rhs._active);
+    std::swap(_indexBuffer, rhs._indexBuffer);
+    std::swap(_boundInterface, rhs._boundInterface);
+    std::swap(_pipelineKey, rhs._pipelineKey);
+    std::swap(_currentPipeline, rhs._currentPipeline);
+    for (u32 i = 0; i < MAX_SET_COUNT; i++) {
+        std::swap(_descriptorKey[i], rhs._descriptorKey[i]);
+        std::swap(_currentSets[i], rhs._currentSets[i]);
+    }
+    std::swap(_drawCallCount, rhs._drawCallCount);
+    return *this;
 }
 
 bool cala::backend::vulkan::CommandBuffer::begin() {
-    vkResetCommandBuffer(_buffer, 0);
+//    vkResetCommandBuffer(_buffer, 0);
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     _active = vkBeginCommandBuffer(_buffer, &beginInfo) == VK_SUCCESS;
+    vkDestroySemaphore(_device->context().device(), _signal, nullptr);
+    VkSemaphoreCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vkCreateSemaphore(_device->context().device(), &createInfo, nullptr, &_signal);
     _drawCallCount = 0;
     return _active;
 }
@@ -217,7 +261,7 @@ void cala::backend::vulkan::CommandBuffer::bindBlendState(BlendState state) {
 
 void cala::backend::vulkan::CommandBuffer::bindPipeline() {
     //TODO: add dirty check so dont have to search to check if bound
-    if (auto pipeline = _device.getPipeline(_pipelineKey); pipeline != _currentPipeline && pipeline != VK_NULL_HANDLE) {
+    if (auto pipeline = _device->getPipeline(_pipelineKey); pipeline != _currentPipeline && pipeline != VK_NULL_HANDLE) {
         vkCmdBindPipeline(_buffer, _pipelineKey.compute ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
         _currentPipeline = pipeline;
     }
@@ -243,18 +287,14 @@ void cala::backend::vulkan::CommandBuffer::pushConstants(ende::Span<const void> 
     vkCmdPushConstants(_buffer, _pipelineKey.layout, getShaderStage(_boundInterface->pushConstants.stage), offset, data.size(), data.data());
 }
 
-void cala::backend::vulkan::CommandBuffer::setBindlessIndex(u32 index) {
-    _bindlessIndex = index;
-}
-
 void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
 
     // find descriptors with key
     for (u32 i = 0; i < MAX_SET_COUNT; i++) {
-        if (_bindlessIndex == i)
-            _currentSets[i] = _device.bindlessSet();
+        if (_device->getBindlessIndex() == i)
+            _currentSets[i] = _device->bindlessSet();
         else {
-            auto descriptor = _device.getDescriptorSet(_descriptorKey[i]);
+            auto descriptor = _device->getDescriptorSet(_descriptorKey[i]);
             _currentSets[i] = descriptor;
         }
     }
@@ -357,24 +397,24 @@ void cala::backend::vulkan::CommandBuffer::pipelineBarrier(PipelineStage srcStag
 void cala::backend::vulkan::CommandBuffer::pushDebugLabel(std::string_view label, std::array<f32, 4> colour) {
 #ifndef NDEBUG
     _debugLabels.push(label);
-    _device.context().beginDebugLabel(_buffer, label, colour);
+    _device->context().beginDebugLabel(_buffer, label, colour);
 #endif
 }
 
 void cala::backend::vulkan::CommandBuffer::popDebugLabel() {
 #ifndef NDEBUG
-    _device.context().endDebugLabel(_buffer);
+    _device->context().endDebugLabel(_buffer);
     _debugLabels.pop();
 #endif
 }
 
 void cala::backend::vulkan::CommandBuffer::startPipelineStatistics() {
-    vkCmdResetQueryPool(_buffer, _device.context().pipelineStatisticsPool(),0, 6);
-    vkCmdBeginQuery(_buffer, _device.context().pipelineStatisticsPool(), 0, 0);
+    vkCmdResetQueryPool(_buffer, _device->context().pipelineStatisticsPool(),0, 6);
+    vkCmdBeginQuery(_buffer, _device->context().pipelineStatisticsPool(), 0, 0);
 }
 
 void cala::backend::vulkan::CommandBuffer::stopPipelineStatistics() {
-    vkCmdEndQuery(_buffer, _device.context().pipelineStatisticsPool(), 0);
+    vkCmdEndQuery(_buffer, _device->context().pipelineStatisticsPool(), 0);
 }
 
 

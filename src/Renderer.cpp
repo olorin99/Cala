@@ -50,7 +50,6 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
 
 bool cala::Renderer::beginFrame() {
     _frameInfo = _engine->device().beginFrame();
-    _engine->device().waitFrame(_frameInfo.frame);
     _frameInfo.cmd->begin();
     _globalData.time = _engine->getRunningTime().milliseconds();
     auto mapped = _globalDataBuffer->map(0, sizeof(RendererGlobal));
