@@ -68,7 +68,9 @@ cala::backend::vulkan::Swapchain::Swapchain(Device &driver, Platform& platform, 
 {
     _surface = platform.surface(_driver.context().instance());
     VkBool32 supported = VK_FALSE;
-    vkGetPhysicalDeviceSurfaceSupportKHR(_driver.context().physicalDevice(), _driver.context().queueIndex(QueueType::GRAPHICS), _surface, &supported);
+    u32 index = 0;
+    _driver.context().queueIndex(index, QueueType::GRAPHICS);
+    vkGetPhysicalDeviceSurfaceSupportKHR(_driver.context().physicalDevice(), index, _surface, &supported);
     auto windowSize = platform.windowSize();
     _extent = { windowSize.first, windowSize.second };
 

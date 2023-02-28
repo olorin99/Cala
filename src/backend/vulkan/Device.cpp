@@ -211,7 +211,7 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::stagingBuffer
 
 cala::backend::vulkan::CommandBuffer& cala::backend::vulkan::Device::beginSingleTimeCommands(QueueType queueType) {
 
-    auto& buffer = getCommandBuffer(_frameCount & FRAMES_IN_FLIGHT, queueType);
+    auto& buffer = getCommandBuffer(frameIndex(), queueType);
     buffer.begin();
     return buffer;
 }
@@ -235,7 +235,19 @@ void cala::backend::vulkan::Device::endSingleTimeCommands(CommandBuffer& buffer)
 
 cala::backend::vulkan::CommandBuffer& cala::backend::vulkan::Device::getCommandBuffer(u32 frame, QueueType queueType) {
     assert(frame < FRAMES_IN_FLIGHT && queueType <= QueueType::TRANSFER);
-    return _commandPools[frame][static_cast<u32>(queueType) - 1].getBuffer();
+    u32 index = 0;
+    switch (queueType) {
+        case QueueType::GRAPHICS:
+            index = 0;
+            break;
+        case QueueType::COMPUTE:
+            index = 1;
+            break;
+        case QueueType::TRANSFER:
+            index = 2;
+            break;
+    }
+    return _commandPools[frame][index].getBuffer();
 }
 
 

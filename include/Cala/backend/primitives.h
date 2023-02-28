@@ -23,6 +23,7 @@ namespace cala::backend {
     };
 
     enum class QueueType {
+        NONE = 0,
         GRAPHICS = 0x00000001,
         COMPUTE = 0x00000002,
         TRANSFER = 0x00000004,
@@ -261,6 +262,14 @@ namespace cala::backend {
         f32 maxDepth = 1.f;
     };
 
+}
+
+constexpr cala::backend::QueueType operator|(cala::backend::QueueType lhs, cala::backend::QueueType rhs) {
+    return static_cast<cala::backend::QueueType>(static_cast<std::underlying_type<cala::backend::QueueType>::type>(lhs) | static_cast<std::underlying_type<cala::backend::QueueType>::type>(rhs));
+}
+
+constexpr cala::backend::QueueType operator&(cala::backend::QueueType lhs, cala::backend::QueueType rhs) {
+    return static_cast<cala::backend::QueueType>(static_cast<std::underlying_type<cala::backend::QueueType>::type>(lhs) & static_cast<std::underlying_type<cala::backend::QueueType>::type>(rhs));
 }
 
 constexpr cala::backend::MemoryProperties operator|(cala::backend::MemoryProperties lhs, cala::backend::MemoryProperties rhs) {

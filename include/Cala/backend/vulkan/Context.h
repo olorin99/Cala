@@ -28,7 +28,7 @@ namespace cala::backend::vulkan {
 
 
         //internal objects
-        u32 queueIndex(QueueType type) const;
+        bool queueIndex(u32& index, QueueType type, QueueType rejectType = QueueType::NONE) const;
 
         VkQueue getQueue(QueueType type) const;
 

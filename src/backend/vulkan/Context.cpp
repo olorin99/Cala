@@ -256,10 +256,20 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     }
 
     //cache queues for later use
-    vkGetDeviceQueue(_device, queueIndex(QueueType::GRAPHICS), 0, &_graphicsQueue);
-    vkGetDeviceQueue(_device, queueIndex(QueueType::COMPUTE), 0, &_computeQueue);
-    vkGetDeviceQueue(_device, queueIndex(QueueType::TRANSFER), 0, &_transferQueue);
-    vkGetDeviceQueue(_device, queueIndex(QueueType::PRESENT), 0, &_presentQueue);
+    u32 queueIndices[4];
+    if (queueIndex(queueIndices[0], QueueType::GRAPHICS))
+        vkGetDeviceQueue(_device, queueIndices[0], 0, &_graphicsQueue);
+
+    if (queueIndex(queueIndices[1], QueueType::COMPUTE, QueueType::GRAPHICS | QueueType::TRANSFER) ||
+            queueIndex(queueIndices[1], QueueType::COMPUTE, QueueType::GRAPHICS))
+        vkGetDeviceQueue(_device, queueIndices[1], 0, &_computeQueue);
+
+    if (queueIndex(queueIndices[2], QueueType::TRANSFER, QueueType::GRAPHICS | QueueType::COMPUTE) ||
+            queueIndex(queueIndices[2], QueueType::TRANSFER, QueueType::GRAPHICS))
+        vkGetDeviceQueue(_device, queueIndices[2], 0, &_transferQueue);
+
+    if (queueIndex(queueIndices[3], QueueType::PRESENT))
+        vkGetDeviceQueue(_device, queueIndices[3], 0, &_presentQueue);
 
     VkQueryPoolCreateInfo queryPoolCreateInfo{};
     queryPoolCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
@@ -331,10 +341,13 @@ void cala::backend::vulkan::Context::endDebugLabel(VkCommandBuffer buffer) const
 
 
 
-u32 cala::backend::vulkan::Context::queueIndex(QueueType type) const {
+bool cala::backend::vulkan::Context::queueIndex(u32& index, QueueType type, QueueType rejectType) const {
     u32 flags = static_cast<u32>(type);
-    if (flags & 0x20)
-        return 0;
+    u32 rejected = static_cast<u32>(rejectType);
+    if (flags & 0x20) {
+        index = 0;
+        return true;
+    }
 
     u32 count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &count, nullptr);
@@ -342,14 +355,22 @@ u32 cala::backend::vulkan::Context::queueIndex(QueueType type) const {
     vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &count, familyProperties.data());
 
     u32 i = 0;
-    for (auto& queueFamily : familyProperties) { //TODO: ensure select different families for async compute/transfer
+    for (auto& queueFamily : familyProperties) {
+
+        if ((queueFamily.queueFlags & rejected) != 0) {
+            i++;
+            continue;
+        }
+
         if (queueFamily.queueCount > 0) {
-            if (queueFamily.queueFlags & flags)
-                return i;
+            if ((queueFamily.queueFlags & flags) == flags) {
+                index = i;
+                return true;
+            }
         }
         i++;
     }
-    return i;
+    return false;
 }
 
 VkQueue cala::backend::vulkan::Context::getQueue(QueueType type) const {
@@ -364,7 +385,9 @@ VkQueue cala::backend::vulkan::Context::getQueue(QueueType type) const {
             return _presentQueue;
     }
     VkQueue queue;
-    vkGetDeviceQueue(_device, queueIndex(type), 0, &queue);
+    u32 index = 0;
+    queueIndex(index, type);
+    vkGetDeviceQueue(_device, index, 0, &queue);
     return queue;
 }
 

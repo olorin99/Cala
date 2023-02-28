@@ -12,6 +12,10 @@ namespace cala::backend::vulkan {
 
         ~CommandPool();
 
+        CommandPool(const CommandPool&) = delete;
+
+        CommandPool& operator=(const CommandPool&)  = delete;
+
         void reset();
 
         CommandBuffer& getBuffer();

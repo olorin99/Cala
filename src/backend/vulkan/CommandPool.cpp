@@ -9,7 +9,9 @@ cala::backend::vulkan::CommandPool::CommandPool(Device *device, QueueType queueT
 {
     VkCommandPoolCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    createInfo.queueFamilyIndex = _device->context().queueIndex(QueueType::GRAPHICS);
+    u32 index = 0;
+    _device->context().queueIndex(index, queueType);
+    createInfo.queueFamilyIndex = index;
     vkCreateCommandPool(_device->context().device(), &createInfo, nullptr, &_pool);
 }
 
