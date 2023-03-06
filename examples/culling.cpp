@@ -100,7 +100,7 @@ int main() {
             for (i32 k = 0; k < depth; k++) {
                 modelTransform.addPos({0, 0, 3});
                 transforms.push(modelTransform);
-                models.push(modelTransform.toMat());
+                models.push(modelTransform.local());
             }
             modelTransform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
         }
@@ -191,7 +191,7 @@ int main() {
                         for (i32 k = 0; k < depth; k++) {
                             modelTransform.addPos({0, 0, 3});
                             transforms.push(modelTransform);
-                            models.push(modelTransform.toMat());
+                            models.push(modelTransform.local());
                         }
                         modelTransform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
                     }

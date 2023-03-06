@@ -146,7 +146,7 @@ int main() {
 
     //ende::Vector<ende::math::Mat4f> models;
     //for (auto& transform : scene._renderables)
-    //    models.push(transform.second.toMat());
+    //    models.push(transform.second.local());
 
     //Buffer uniformBuffer(device, sizeof(ende::math::Mat4f) * models.size(), BufferUsage::UNIFORM, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
     //uniformBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});
@@ -327,7 +327,7 @@ int main() {
             /*if (ImGui::SliderFloat("QuadDistance", &quadDistance, 0.f, 2.f)) {
                 auto q = scene._renderables.back().second;
                 q.setPos(cameraTransform.pos() + ende::math::Vec3f{0, 0, quadDistance});
-                auto data = q.toMat();
+                auto data = q.local();
                 uniformBuffer.data({&data, sizeof(ende::math::Mat4f)}, (scene._renderables.size() - 1) * sizeof(ende::math::Mat4f));
             }*/
 

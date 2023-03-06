@@ -113,6 +113,7 @@ void cala::Scene::prepare(cala::Camera& camera) {
         auto& transform = _renderables[i].second.second;
         if (!transform)
             continue;
+        transform->updateWorld();
         if (transform->isDirty()) {
             f = 2;
             transform->setDirty(false);
@@ -123,7 +124,7 @@ void cala::Scene::prepare(cala::Camera& camera) {
             assignMemory(_mappedMesh[frame].address, meshOffset, mesh);
 
             u32 transformOffset = i * sizeof(ende::math::Mat4f);
-            auto model = transform->toMat();
+            auto model = transform->world();
             assignMemory(_mappedModel[frame].address, transformOffset, model);
             f--;
         }

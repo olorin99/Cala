@@ -485,19 +485,26 @@ int main() {
     Transform transform;
     ende::Vector<Transform> transforms;
     transforms.reserve(width * height * depth * 10);
-    for (u32 i = 0; i < width; i++) {
-        auto xpos = transform.pos();
-        for (u32 j = 0; j < height; j++) {
-            auto ypos = transform.pos();
-            for (u32 k = 0; k < depth; k++) {
-                transform.addPos({0, 0, 3});
-                auto& t = transforms.push(transform);
-                scene.addRenderable(sphere, &instances[k], &t, false);
-            }
-            transform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
-        }
-        transform.setPos(xpos + ende::math::Vec3f{3, 0, 0});
-    }
+//    for (u32 i = 0; i < width; i++) {
+//        auto xpos = transform.pos();
+//        for (u32 j = 0; j < height; j++) {
+//            auto ypos = transform.pos();
+//            for (u32 k = 0; k < depth; k++) {
+//                transform.addPos({0, 0, 3});
+//                auto& t = transforms.push(transform);
+//                scene.addRenderable(sphere, &instances[k], &t, false);
+//            }
+//            transform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
+//        }
+//        transform.setPos(xpos + ende::math::Vec3f{3, 0, 0});
+//    }
+
+
+    Transform t1({ 0, 0, 0 });
+    Transform t2({ 2, 1, 0 }, {}, { 1, 1, 1 }, &t1);
+
+    scene.addRenderable(sphere, &instances[0], &t2, true);
+
 
 
     ende::Vector<Transform> lightTransforms;
@@ -509,12 +516,6 @@ int main() {
         l.setColour({ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f)});
         scene.addLight(l);
     }
-
-    i32 lightIndex = 0;
-
-    std::array<f32, 60> frameTimes{};
-
-    tsl::robin_map<const char*, std::array<f32, 60>> funcFrameTimes;
 
     i32 newLights = 10;
 
@@ -562,11 +563,6 @@ int main() {
                 cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(-45) * dt);
         }
 
-//        if (addHelmet) {
-//            scene.addRenderable(damagedHelmet, &helmetTransform, true);
-//            addHelmet = false;
-//        }
-
         {
             imGuiContext.newFrame();
 
@@ -596,6 +592,12 @@ int main() {
 
             auto pos = camera.transform().pos();
             ImGui::Text("Position: { %f, %f, %f }", pos.x(), pos.y(), pos.z());
+
+            {
+                auto parentPos = t2.parent()->pos();
+                if (ImGui::DragFloat3("parent", &parentPos[0], 0.1, -10, 10))
+                    t2.parent()->setPos(parentPos);
+            }
 
             if (ImGui::Button("Add 10")) {
                 transform.setPos({ (f32)width * 3, 0, 0 });

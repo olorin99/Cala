@@ -92,7 +92,7 @@ int main() {
     Buffer modelBuffer(driver, 10 * sizeof(ende::math::Mat4f), BufferUsage::STORAGE);
     ende::Vector<ende::math::Mat4f> models;
     for (u32 i = 0; i < 10; i++) {
-        models.push(modelTransform.toMat());
+        models.push(modelTransform.local());
         modelTransform.addPos({3, 0, 0});
     }
     modelBuffer.data({models.data(), static_cast<u32>(models.size() * sizeof(ende::math::Mat4f))});

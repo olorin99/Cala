@@ -199,10 +199,10 @@ int main() {
             auto cameraData = camera.data();
             cameraBuffer.data({&cameraData, sizeof(cameraData)});
 
-            auto modelData = model.toMat();
+            auto modelData = model.local();
             modelBuffer.data({&modelData, sizeof(modelData)});
 
-            auto model1Data = model1.toMat();
+            auto model1Data = model1.local();
             model1Buffer.data({&model1Data, sizeof(model1Data)});
         }
 
