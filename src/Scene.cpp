@@ -91,8 +91,9 @@ void assignMemory(void* start, u32 offset, T& data) {
     *reinterpret_cast<T*>(address) = data;
 }
 
-void cala::Scene::prepare(u32 frame, cala::Camera& camera) {
+void cala::Scene::prepare(cala::Camera& camera) {
     PROFILE_NAMED("Scene::prepare");
+    u32 frame = _engine->device().frameIndex();
     camera.updateFrustum();
 
     u32 objectCount = _renderables.size();

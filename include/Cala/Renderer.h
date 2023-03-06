@@ -42,8 +42,6 @@ namespace cala {
 
         ende::Span<std::pair<const char*, backend::vulkan::Timer>> timers() { return _graph.getTimers(); }
 
-        u32 frameIndex() const { return _frameInfo.frame % backend::vulkan::FRAMES_IN_FLIGHT; }
-
         struct Stats {
             u32 drawCallCount = 0;
         };

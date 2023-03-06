@@ -163,8 +163,7 @@ void cala::RenderPass::setDebugColour(std::array<f32, 4> colour) {
 
 
 cala::RenderGraph::RenderGraph(Engine *engine)
-    : _engine(engine),
-    _frameIndex(0)
+    : _engine(engine)
 {}
 
 cala::RenderGraph::~RenderGraph() {
@@ -174,11 +173,11 @@ cala::RenderGraph::~RenderGraph() {
 
 cala::RenderPass &cala::RenderGraph::addPass(const char *name) {
     u32 index = _passes.size();
-    while (_timers[_frameIndex].size() <= index)
-        _timers[_frameIndex].push(std::make_pair("", backend::vulkan::Timer(_engine->device())));
+    while (_timers[_engine->device().frameIndex()].size() <= index)
+        _timers[_engine->device().frameIndex()].push(std::make_pair("", backend::vulkan::Timer(_engine->device())));
     _passes.push(RenderPass(this, name, index));
-    _timers[_frameIndex][index].first = name;
-    assert(_passes.size() <= _timers[_frameIndex].size());
+    _timers[_engine->device().frameIndex()][index].first = name;
+    assert(_passes.size() <= _timers[_engine->device().frameIndex()].size());
     return _passes.back();
 }
 
@@ -345,7 +344,7 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
         }
 
 
-        _timers[_frameIndex][pass->_passTimer].second.start(cmd);
+        _timers[_engine->device().frameIndex()][pass->_passTimer].second.start(cmd);
         cmd.pushDebugLabel(pass->_passName, pass->_debugColour);
         if (pass->_framebuffer)
             cmd.begin(*pass->_framebuffer);
@@ -354,7 +353,7 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
         if (pass->_framebuffer)
             cmd.end(*pass->_framebuffer);
         cmd.popDebugLabel();
-        _timers[_frameIndex][pass->_passTimer].second.stop();
+        _timers[_engine->device().frameIndex()][pass->_passTimer].second.stop();
         for (auto& attachment : pass->_attachments) {
             auto it = _attachmentMap.find(attachment);
             if (it == _attachmentMap.end())
@@ -382,8 +381,6 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
 
     barrier = backbuffer->handle->barrier(backend::Access::TRANSFER_READ, backend::Access::COLOUR_ATTACHMENT_WRITE, backend::ImageLayout::COLOUR_ATTACHMENT);
     cmd.pipelineBarrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, { &barrier, 1 });
-
-    _frameIndex = (_frameIndex + 1) % 2;
     return true;
 }
 

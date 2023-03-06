@@ -626,7 +626,7 @@ int main() {
         engine.gc();
         renderer.beginFrame();
 
-        scene.prepare(renderer.frameIndex(), camera);
+        scene.prepare(camera);
 
         renderer.render(scene, camera, &imGuiContext);
 

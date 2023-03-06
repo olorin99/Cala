@@ -45,7 +45,7 @@ namespace cala {
 
         void addSkyLightMap(backend::vulkan::ImageHandle skyLightMap, bool equirectangular = false, bool hdr = true);
 
-        void prepare(u32 frame, Camera& camera);
+        void prepare(Camera& camera);
 
 //    private:
 
