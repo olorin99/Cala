@@ -160,18 +160,6 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
                 .compile(_device)));
     }
 
-
-    f32 white[4] = { 1, 1, 1, 1 };
-    (_defaultAlbedo = _device.createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST, backend::ImageType::IMAGE2D}))
-            ->data(_device, {0, 1, 1, 1, 4 * 4, {white, sizeof(f32) * 4 }});
-    f32 normalData[] = { 0.52, 0.52, 1, 1 };
-    (_defaultNormal = _device.createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST, backend::ImageType::IMAGE2D}))
-            ->data(_device, {0, 1, 1, 1, 4 * 4, {normalData, sizeof(f32) * 4 }});
-    f32 metallicRoughnessData[] = { 0.f, 1.f, 0.f, 1.f };
-    (_defaultMetallicRoughness = _device.createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST, backend::ImageType::IMAGE2D}))
-            ->data(_device, {0, 1, 1, 1, 4 * 4, {metallicRoughnessData, sizeof(f32) * 4 }});
-
-
     _brdfImage = _device.createImage({ 512, 512, 1, backend::Format::RG16_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE });
 
     _defaultIrradiance = _device.createImage({
@@ -205,13 +193,6 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
         auto prefilterBarrier = _defaultPrefilter->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::TRANSFER_DST);
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::BOTTOM, { &prefilterBarrier, 1 });
         _defaultPrefilter->generateMips(cmd);
-
-
-        backend::vulkan::Image::Barrier barriers[3];
-        barriers[0] = _defaultAlbedo->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
-        barriers[1] = _defaultNormal->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
-        barriers[2] = _defaultMetallicRoughness->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
-        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER | backend::PipelineStage::FRAGMENT_SHADER, { barriers, 3 });
 
         auto brdfBarrier = _brdfImage->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, { &brdfBarrier, 1 });

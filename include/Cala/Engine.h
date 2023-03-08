@@ -35,13 +35,6 @@ namespace cala {
 
         backend::vulkan::ImageHandle generatePrefilteredIrradiance(backend::vulkan::ImageHandle cubeMap);
 
-
-        backend::vulkan::ImageHandle defaultAlbedo() const { return _defaultAlbedo; }
-
-        backend::vulkan::ImageHandle defaultNormal() const { return _defaultNormal; }
-
-        backend::vulkan::ImageHandle defaultMetallicRoughness() const { return _defaultMetallicRoughness; }
-
         u32 uploadVertexData(ende::Span<f32> data);
 
         u32 uploadIndexData(ende::Span<u32> data);
@@ -75,10 +68,6 @@ namespace cala {
         backend::vulkan::ProgramHandle _cullLightsProgram;
 
         backend::vulkan::ProgramHandle _clusterDebugProgram;
-
-        backend::vulkan::ImageHandle _defaultAlbedo;
-        backend::vulkan::ImageHandle _defaultNormal;
-        backend::vulkan::ImageHandle _defaultMetallicRoughness;
 
         backend::vulkan::ImageHandle _brdfImage;
         backend::vulkan::ImageHandle _defaultIrradiance;

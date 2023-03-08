@@ -103,9 +103,9 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
 
     ende::Vector<MaterialInstance> materials;
     struct PbrMat {
-        i32 albedoIndex = 0;
-        i32 normalIndex = 0;
-        i32 metallicRoughnessIndex = 0;
+        i32 albedoIndex = -1;
+        i32 normalIndex = -1;
+        i32 metallicRoughnessIndex = -1;
     };
 
     for (u32 i = 0; i < model.materials.size(); i++) {
@@ -114,18 +114,14 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
         if (auto it = material1.values.find("baseColorTexture"); it != material1.values.end()) {
             images[model.textures[it->second.TextureIndex()].source].index();
             mat.albedoIndex = images[model.textures[it->second.TextureIndex()].source].index();
-        } else
-            mat.albedoIndex = engine->defaultAlbedo().index();
+        }
         if (auto it = material1.values.find("normalTexture"); it != material1.values.end()) {
             mat.normalIndex = images[model.textures[it->second.TextureIndex()].source].index();
         } else if (auto it1 = material1.additionalValues.find("normalTexture"); it1 != material1.additionalValues.end()) {
             mat.normalIndex = images[model.textures[it1->second.TextureIndex()].source].index();
-        } else
-            mat.normalIndex = engine->defaultNormal().index();
+        }
         if (auto it = material1.values.find("metallicRoughnessTexture"); it != material1.values.end()) {
             mat.metallicRoughnessIndex = images[model.textures[it->second.TextureIndex()].source].index();
-        } else {
-            mat.metallicRoughnessIndex = engine->defaultMetallicRoughness().index();
         }
         MaterialInstance instance = material->instance();
         instance.setData(mat);
@@ -404,12 +400,6 @@ int main() {
         i32 normalIndex;
         i32 metallicRoughness;
     };
-    MaterialData materialData {
-            engine.defaultAlbedo().index(),
-            engine.defaultNormal().index(),
-            engine.defaultMetallicRoughness().index()
-    };
-    matInstance.setData(materialData);
 
     u32 objectCount = 20;
     Scene scene(&engine, objectCount);
@@ -471,8 +461,8 @@ int main() {
         roughnessImages[i]->data(engine.device(), {0, 1, 1, 1, 4 * 4, {metallicRoughnessData, sizeof(f32) * 4 } });
 
         MaterialData materialData1 {
-                engine.defaultAlbedo().index(),
-                engine.defaultNormal().index(),
+                -1,
+                -1,
                 roughnessImages[i].index()
         };
 
@@ -487,19 +477,19 @@ int main() {
     Transform transform;
     ende::Vector<Transform> transforms;
     transforms.reserve(width * height * depth * 10);
-//    for (u32 i = 0; i < width; i++) {
-//        auto xpos = transform.pos();
-//        for (u32 j = 0; j < height; j++) {
-//            auto ypos = transform.pos();
-//            for (u32 k = 0; k < depth; k++) {
-//                transform.addPos({0, 0, 3});
-//                auto& t = transforms.push(transform);
-//                scene.addRenderable(sphere, &instances[k], &t, false);
-//            }
-//            transform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
-//        }
-//        transform.setPos(xpos + ende::math::Vec3f{3, 0, 0});
-//    }
+    for (u32 i = 0; i < width; i++) {
+        auto xpos = transform.pos();
+        for (u32 j = 0; j < height; j++) {
+            auto ypos = transform.pos();
+            for (u32 k = 0; k < depth; k++) {
+                transform.addPos({0, 0, 3});
+                auto& t = transforms.push(transform);
+                scene.addRenderable(sphere, &instances[k], &t, false);
+            }
+            transform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
+        }
+        transform.setPos(xpos + ende::math::Vec3f{3, 0, 0});
+    }
 
 
     Transform t1({ 0, 0, 0 });

@@ -86,28 +86,54 @@ float linearDepth(float depth) {
     return 2.0 * camera.near * camera.far / (camera.far + camera.near - depthRange * (camera.far - camera.near));
 }
 
+struct Material {
+    vec3 albedo;
+    vec3 normal;
+    float metallic;
+    float roughness;
+};
+
+Material loadMaterial(MaterialData data) {
+    Material material;
+    if (data.albedoIndex < 0) {
+        material.albedo = vec3(1.0);
+    } else {
+        vec4 albedaRGBA = texture(textureMaps[data.albedoIndex], fsIn.TexCoords);
+        if (albedaRGBA.a < 0.5)
+            discard;
+        material.albedo = albedaRGBA.rgb;
+    }
+
+    if (data.normalIndex < 0) {
+        material.normal = vec3(0.52, 0.52, 1);
+    } else {
+        material.normal = texture(textureMaps[data.normalIndex], fsIn.TexCoords).rgb;
+    }
+
+    if (data.metallicRoughnessIndex < 0) {
+        material.roughness = 1.0;
+        material.metallic = 0.0;
+    } else {
+        float metallic = texture(textureMaps[data.metallicRoughnessIndex], fsIn.TexCoords).b;
+        float roughness = texture(textureMaps[data.metallicRoughnessIndex], fsIn.TexCoords).g;
+    }
+    return material;
+}
+
 void main() {
     Mesh mesh = meshData[fsIn.drawID];
     MaterialData materialData = material[mesh.materialIndex];
 
-    vec4 albedaRGBA = texture(textureMaps[materialData.albedoIndex], fsIn.TexCoords);
+    Material material = loadMaterial(materialData);
 
-    if (albedaRGBA.a < 0.5)
-        discard;
-
-    vec3 albedo = albedaRGBA.rgb;
-    vec3 normal = texture(textureMaps[materialData.normalIndex], fsIn.TexCoords).rgb;
-    float metallic = texture(textureMaps[materialData.metallicRoughnessIndex], fsIn.TexCoords).b;
-    float roughness = texture(textureMaps[materialData.metallicRoughnessIndex], fsIn.TexCoords).g;
-
-    normal = normalize(normal * 2.0 - 1.0);
-    normal = normalize(fsIn.TBN * normal);
+    material.normal = normalize(material.normal * 2.0 - 1.0);
+    material.normal = normalize(fsIn.TBN * material.normal);
 
     vec3 viewPos = fsIn.ViewPos;
     vec3 V = normalize(viewPos - fsIn.FragPos);
 
     vec3 F0 = vec3(0.04);
-    F0 = mix(F0, albedo, metallic);
+    F0 = mix(F0, material.albedo, material.metallic);
     vec3 Lo = vec3(0.0);
 
     uvec2 tileSize = screenSize / tileSizes.xy;
@@ -122,10 +148,10 @@ void main() {
 
     for (uint i = 0; i < lightCount; i++) {
         Light light = lights[globalLightIndices[lightOffset + i]];
-        Lo += pointLight(light, normal, viewPos, V, F0, albedo, roughness, metallic);
+        Lo += pointLight(light, material.normal, viewPos, V, F0, material.albedo, material.roughness, material.metallic);
     }
 
-    vec3 ambient = getAmbient(irradianceIndex, prefilteredIndex, brdfIndex, normal, V, F0, albedo, roughness, metallic);
+    vec3 ambient = getAmbient(irradianceIndex, prefilteredIndex, brdfIndex, material.normal, V, F0, material.albedo, material.roughness, material.metallic);
     vec3 colour = (ambient + Lo);
 
     FragColour = vec4(colour, 1.0);
