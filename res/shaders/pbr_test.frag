@@ -41,6 +41,8 @@ struct MaterialData {
     int albedoIndex;
     int normalIndex;
     int metallicRoughnessIndex;
+    float metallness;
+    float roughness;
 };
 
 layout (set = 2, binding = 0) readonly buffer MatData {
@@ -117,6 +119,9 @@ Material loadMaterial(MaterialData data) {
         material.metallic = texture(textureMaps[data.metallicRoughnessIndex], fsIn.TexCoords).b;
         material.roughness = texture(textureMaps[data.metallicRoughnessIndex], fsIn.TexCoords).g;
     }
+    material.metallic += data.metallness;
+    material.roughness += data.roughness;
+
     return material;
 }
 
@@ -155,6 +160,7 @@ void main() {
     vec3 colour = (ambient + Lo);
 
     FragColour = vec4(colour, 1.0);
+//    FragColour = vec4(material.roughness, material.metallic, 0.0, 1.0);
 //    FragColour = vec4(fsIn.FragPos, 1.0);
 //    FragColour = vec4(normal, 1.0);
 }

@@ -23,7 +23,7 @@ namespace cala {
     class Material {
     public:
 
-        Material(Engine* engine, backend::vulkan::ProgramHandle program, u32 size = 0);
+        Material(Engine* engine, backend::vulkan::ProgramHandle program, u32 id, u32 size = 0);
 
         MaterialInstance instance();
 
@@ -31,7 +31,24 @@ namespace cala {
 
         u32 shaderDataSize() { return _program->interface().setSize(2); }
 
-//    private:
+        void setRasterState(backend::vulkan::CommandBuffer::RasterState state) { _rasterState = state; }
+
+        backend::vulkan::CommandBuffer::RasterState getRasterState() const { return _rasterState; }
+
+        void setDepthState(backend::vulkan::CommandBuffer::DepthState state) { _depthState = state; }
+
+        backend::vulkan::CommandBuffer::DepthState getDepthState() const { return _depthState; }
+
+        u32 size() const { return _setSize; }
+
+        u32 id() const { return _id; }
+
+        backend::vulkan::BufferHandle buffer() const { return _materialBuffer; }
+
+        void upload();
+
+    private:
+        friend MaterialInstance;
 
         Engine* _engine;
 
@@ -39,7 +56,13 @@ namespace cala {
         backend::vulkan::CommandBuffer::RasterState _rasterState;
         backend::vulkan::CommandBuffer::DepthState _depthState;
 
+        bool _dirty;
+        ende::Vector<u8> _data;
+        backend::vulkan::BufferHandle _materialBuffer;
+
         u32 _setSize;
+
+        u32 _id;
 
     };
 

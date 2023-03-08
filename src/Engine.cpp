@@ -4,6 +4,7 @@
 #include <Cala/shapes.h>
 #include <Cala/Mesh.h>
 #include <Ende/profile/profile.h>
+#include <Cala/Material.h>
 
 cala::backend::vulkan::RenderPass::Attachment shadowPassAttachment {
         cala::backend::Format::D32_SFLOAT,
@@ -30,7 +31,6 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
           .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
           .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
       }),
-      _materialDataDirty(true),
       _vertexOffset(0),
       _indexOffset(0),
       _stagingReady(false)
@@ -128,6 +128,15 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
                 .compile(_device)));
     }
     {
+        file.open("../../res/shaders/point_shadow_cull.comp.spv"_path, ende::fs::in | ende::fs::binary);
+        ende::Vector<u32> computeData(file.size() / sizeof(u32));
+        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
+
+        _pointShadowCullProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
+                .addStage(computeData, backend::ShaderStage::COMPUTE)
+                .compile(_device)));
+    }
+    {
         file.open("../../res/shaders/create_clusters.comp.spv"_path, ende::fs::in | ende::fs::binary);
         ende::Vector<u32> computeData(file.size() / sizeof(u32));
         file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
@@ -207,8 +216,6 @@ cala::Engine::Engine(backend::Platform &platform, bool clear)
         cmd.pipelineBarrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, { &brdfBarrier, 1 });
 
     });
-
-    _materialBuffer = _device.createBuffer(256, backend::BufferUsage::STORAGE | backend::BufferUsage::UNIFORM);
 
     _globalVertexBuffer = _device.createBuffer(10000, backend::BufferUsage::VERTEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE_LOCAL);
     _vertexStagingBuffer = _device.createBuffer(10000, backend::BufferUsage::TRANSFER_SRC);
@@ -376,13 +383,8 @@ cala::backend::vulkan::ImageHandle cala::Engine::getShadowMap(u32 index) {
 }
 
 void cala::Engine::updateMaterialdata() {
-    if (_materialDataDirty) {
-        if (_materialData.size() > _materialBuffer->size()) {
-            _materialBuffer = _device.resizeBuffer(_materialBuffer, _materialData.size(), true);
-        }
-        _materialBuffer->data(_materialData);
-    }
-    _materialDataDirty = false;
+    for (auto& material : _materials)
+        material.upload();
 }
 
 
@@ -409,4 +411,10 @@ u32 cala::Engine::uploadIndexData(ende::Span<u32> data) {
     _indexOffset += data.size();
     _stagingReady = true;
     return currentOffset;
+}
+
+cala::Material *cala::Engine::createMaterial(backend::vulkan::ProgramHandle handle, u32 size) {
+    u32 id = _materials.size();
+    _materials.emplace(this, handle, id, size);
+    return &_materials.back();
 }

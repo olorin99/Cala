@@ -11,10 +11,12 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
                  engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE)},
     _modelBuffer{engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE),
                  engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE)},
-    _lightBuffer{engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE),
-                 engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE)},
-    _lightCountBuffer{engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE),
-                 engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE)},
+    _lightBuffer{engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE),
+                 engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE)},
+    _lightCountBuffer{engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE),
+                 engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE)},
+    _materialCountBuffer{engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE),
+                 engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE)},
     _directionalLightCount(0),
     _lightsDirtyFrame(2)
 {
@@ -24,6 +26,8 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     _mappedModel[1] = _modelBuffer[1]->map();
     _mappedLight[0] = _lightBuffer[0]->map();
     _mappedLight[1] = _lightBuffer[1]->map();
+    _mappedMaterialCounts[0] = _materialCountBuffer[0]->map();
+    _mappedMaterialCounts[1] = _materialCountBuffer[1]->map();
 }
 
 
@@ -95,6 +99,9 @@ void cala::Scene::prepare(cala::Camera& camera) {
     PROFILE_NAMED("Scene::prepare");
     u32 frame = _engine->device().frameIndex();
     camera.updateFrustum();
+    _materialCounts.resize(_engine->materialCount());
+    for (auto& materialCount : _materialCounts)
+        materialCount.count = 0;
 
     u32 objectCount = _renderables.size();
     // resize buffers to fit and update persistent mappings
@@ -106,6 +113,10 @@ void cala::Scene::prepare(cala::Camera& camera) {
         _modelBuffer[frame] = _engine->device().resizeBuffer(_modelBuffer[frame], objectCount * sizeof(ende::math::Mat4f) * 2);
         _mappedModel[frame] = _modelBuffer[frame]->map();
     }
+    if (_materialCounts.size() * sizeof(MaterialCount) > _materialCountBuffer[frame]->size()) {
+        _materialCountBuffer[frame] = _engine->device().resizeBuffer(_materialCountBuffer[frame], _materialCounts.size() * sizeof(MaterialCount));
+        _mappedMaterialCounts[frame] = _materialCountBuffer[frame]->map();
+    }
 
     for (u32 i = 0; i < _renderables.size(); i++) {
         auto& f = _renderables[i].first;
@@ -113,6 +124,10 @@ void cala::Scene::prepare(cala::Camera& camera) {
         auto& transform = _renderables[i].second.second;
         if (!transform)
             continue;
+
+        auto material = renderable.materialInstance->material();
+        _materialCounts[material->id()].count++;
+
         transform->updateWorld();
         if (transform->isDirty()) {
             f = 2;
@@ -120,7 +135,7 @@ void cala::Scene::prepare(cala::Camera& camera) {
         }
         if (f > 0) {
             u32 meshOffset = i * sizeof(MeshData);
-            MeshData mesh{ renderable.firstIndex, renderable.indexCount, static_cast<u32>(renderable.materialInstance->getOffset() / renderable.materialInstance->material()->_setSize), 0, renderable.aabb.min, renderable.aabb.max };
+            MeshData mesh{ renderable.firstIndex, renderable.indexCount, material->id(), static_cast<u32>(renderable.materialInstance->getOffset() / renderable.materialInstance->material()->size()), renderable.aabb.min, renderable.aabb.max };
             assignMemory(_mappedMesh[frame].address, meshOffset, mesh);
 
             u32 transformOffset = i * sizeof(ende::math::Mat4f);
@@ -164,6 +179,13 @@ void cala::Scene::prepare(cala::Camera& camera) {
 
         _lightsDirtyFrame--;
     }
+
+    u32 offset = 0;
+    for (auto& count : _materialCounts) {
+        count.offset = offset;
+        offset += count.count;
+    }
+    std::memcpy(_mappedMaterialCounts[frame].address, _materialCounts.data(), _materialCounts.size() * sizeof(MaterialCount));
 
     _engine->updateMaterialdata();
 }

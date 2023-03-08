@@ -23,8 +23,8 @@ bool cala::MaterialInstance::setUniform(u32 set, const char *name, u8 *data, u32
 //    if (material()->_uniformData.size() < offset + size)
 //        return false;
 
-    std::memcpy(_material->_engine->_materialData.data() + _offset + offset, data, size);
-    _material->_engine->_materialDataDirty = true;
+    std::memcpy(_material->_data.data() + _offset + offset, data, size);
+    _material->_dirty = true;
 //    material()->_uniformBuffer.data({material()->_uniformData.data(), static_cast<u32>(material()->_uniformData.size())});
     return true;
 }
@@ -55,8 +55,8 @@ bool cala::MaterialInstance::setSampler(const char *name, backend::vulkan::Image
 
 void cala::MaterialInstance::setData(u8 *data, u32 size) {
     assert(size <= _material->_setSize);
-    std::memcpy(_material->_engine->_materialData.data() + _offset, data, size);
-    _material->_engine->_materialDataDirty = true;
+    std::memcpy(_material->_data.data() + _offset, data, size);
+    _material->_dirty = true;
 }
 
 void cala::MaterialInstance::bind(backend::vulkan::CommandBuffer &cmd, u32 set, u32 first) {
@@ -65,5 +65,5 @@ void cala::MaterialInstance::bind(backend::vulkan::CommandBuffer &cmd, u32 set, 
 //        cmd.bindImage(set, first + i, viewPair.first, viewPair.second);
 //    }
     if (_material->_setSize > 0)
-        cmd.bindBuffer(2, 0, *_material->_engine->_materialBuffer, _offset, _material->_setSize, false);
+        cmd.bindBuffer(2, 0, *_material->_materialBuffer, _offset, _material->_setSize, false);
 }

@@ -39,6 +39,10 @@ namespace cala {
 
         u32 uploadIndexData(ende::Span<u32> data);
 
+        Material* createMaterial(backend::vulkan::ProgramHandle handle, u32 size = 0);
+
+        u32 materialCount() const { return _materials.size(); }
+
     private:
         friend Renderer;
         friend Scene;
@@ -64,6 +68,7 @@ namespace cala {
         backend::vulkan::ProgramHandle _skyboxProgram;
         backend::vulkan::ProgramHandle _tonemapProgram;
         backend::vulkan::ProgramHandle _cullProgram;
+        backend::vulkan::ProgramHandle _pointShadowCullProgram;
         backend::vulkan::ProgramHandle _createClustersProgram;
         backend::vulkan::ProgramHandle _cullLightsProgram;
 
@@ -85,11 +90,9 @@ namespace cala {
 
         ende::Vector<backend::vulkan::ImageHandle> _shadowMaps;
 
-        backend::vulkan::ImageHandle getShadowMap(u32 index);
+        ende::Vector<Material> _materials;
 
-        bool _materialDataDirty;
-        ende::Vector<u8> _materialData;
-        backend::vulkan::BufferHandle _materialBuffer;
+        backend::vulkan::ImageHandle getShadowMap(u32 index);
 
         void updateMaterialdata();
 

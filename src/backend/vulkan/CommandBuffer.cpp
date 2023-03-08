@@ -351,15 +351,16 @@ void cala::backend::vulkan::CommandBuffer::drawIndirect(Buffer &buffer, u32 offs
 
 void cala::backend::vulkan::CommandBuffer::drawIndirectCount(Buffer &buffer, u32 bufferOffset, Buffer &countBuffer, u32 countOffset, u32 maxDrawCount, u32 stride) {
     if (_pipelineKey.compute) throw std::runtime_error("Trying to draw when compute pipeline is bound");
+    assert(countBuffer.size() > countOffset);
 
     if (_indexBuffer) {
         if (stride == 0)
-            stride = sizeof(u32) * 5;
+            stride = sizeof(VkDrawIndexedIndirectCommand);
         vkCmdDrawIndexedIndirectCount(_buffer, buffer.buffer(), bufferOffset, countBuffer.buffer(), countOffset, maxDrawCount, stride);
     }
     else {
         if (stride == 0)
-            stride = sizeof(u32) * 4;
+            stride = sizeof(VkDrawIndirectCommand);
         vkCmdDrawIndirectCount(_buffer, buffer.buffer(), bufferOffset, countBuffer.buffer(), countOffset, maxDrawCount, stride);
     }
     ++_drawCallCount;

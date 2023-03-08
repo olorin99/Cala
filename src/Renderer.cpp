@@ -112,6 +112,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     meshDataResource.size = scene._meshDataBuffer[_engine->device().frameIndex()]->size();
     meshDataResource.usage = scene._meshDataBuffer[_engine->device().frameIndex()]->usage();
 
+    BufferResource materialCountResource;
+    materialCountResource.handle = scene._materialCountBuffer[_engine->device().frameIndex()];
+//    materialCountResource.transient = false;
+    materialCountResource.size = scene._materialCountBuffer[_engine->device().frameIndex()]->size();
+    materialCountResource.usage = scene._materialCountBuffer[_engine->device().frameIndex()]->usage();
+
     if (scene._renderables.size() * sizeof(VkDrawIndexedIndirectCommand) > _drawCommands[_engine->device().frameIndex()]->size())
         _drawCommands[_engine->device().frameIndex()] = _engine->device().resizeBuffer(_drawCommands[_engine->device().frameIndex()], scene._renderables.size() * sizeof(VkDrawIndexedIndirectCommand), false);
 
@@ -251,11 +257,13 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     pointShadows.addImageOutput("point_depth", pointDepth);
     pointShadows.addBufferInput("transforms", transformsResource);
     pointShadows.addBufferInput("meshData", meshDataResource);
+    pointShadows.addBufferInput("materialCounts", materialCountResource);
 
     pointShadows.addBufferOutput("drawCommands", drawCommandsResource);
     pointShadows.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
         auto transforms = graph.getResource<BufferResource>("transforms");
         auto meshData = graph.getResource<BufferResource>("meshData");
+        auto materialCounts = graph.getResource<BufferResource>("materialCounts");
         auto drawCommands = graph.getResource<BufferResource>("drawCommands");
         u32 shadowIndex = 0;
         for (u32 i = 0; i < scene._lights.size(); i++) {
@@ -291,7 +299,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     ende::math::Frustum shadowFrustum = shadowCam.frustum();
 
                     cmd.clearDescriptors();
-                    cmd.bindProgram(*_engine->_cullProgram);
+                    cmd.bindProgram(*_engine->_pointShadowCullProgram);
                     cmd.bindBindings(nullptr);
                     cmd.bindAttributes(nullptr);
                     cmd.pushConstants({ &shadowFrustum, sizeof(shadowFrustum) });
@@ -391,6 +399,43 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 //
 //                f32 lastSplitDist = 0.0;
 //
+//                for (u32 j = 0; j < 3; j++) {
+//                    f32 splitDist = cascadeSplits[j];
+//                    ende::math::Vec3f frustumCorners[8] = {
+//                            {-1, 1, -1},
+//                            {1, 1, -1},
+//                            {1, -1, -1},
+//                            {-1, -1, -1},
+//                            {-1, 1, 1},
+//                            {1, 1, 1},
+//                            {1, -1, 1},
+//                            {-1, -1, 1}
+//                    };
+//                    auto camInv = camera.viewProjection().inverse();
+//                    for (u32 k = 0; k < 4; k++) {
+//                        auto dist = frustumCorners[k + 4] - frustumCorners[k];
+//                        frustumCorners[k + 4] = frustumCorners[k] + (dist * splitDist);
+//                        frustumCorners[k] = frustumCorners[k] + (dist * lastSplitDist);
+//                    }
+//
+//                    ende::math::Vec3f frustumCenter{0, 0, 0};
+//                    for (u32 k = 0; k < 8; k++) {
+//                        frustumCenter = frustumCenter + frustumCorners[k];
+//                    }
+//                    frustumCenter = frustumCenter / 8.f;
+//                    f32 radius = 0.;
+//                    for (u32 k = 0; k < 8; k++) {
+//                        f32 distance = (frustumCorners[k] - frustumCenter).length();
+//                        radius = std::max(radius, distance);
+//                    }
+//                    radius = std::ceil(radius * 16) / 16;
+//                    ende::math::Vec3f maxExtents{radius, radius, radius};
+//                    ende::math::Vec3f minExtents = maxExtents * -1;
+//
+//                    ende::math::Vec3f lightDir = light.transform().rot().front().unit();
+//
+//                }
+//
 //            }
 //        }
 //
@@ -401,13 +446,14 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     auto& cullPass = _graph.addPass("cull");
     cullPass.addBufferInput("transforms", transformsResource);
     cullPass.addBufferInput("meshData", meshDataResource);
-
+    cullPass.addBufferInput("materialCounts", materialCountResource);
     cullPass.addBufferOutput("drawCommands", drawCommandsResource);
     cullPass.setDebugColour({0.3, 0.3, 1, 1});
 
     cullPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
         auto transforms = graph.getResource<BufferResource>("transforms");
         auto meshData = graph.getResource<BufferResource>("meshData");
+        auto materialCounts = graph.getResource<BufferResource>("materialCounts");
         auto drawCommands = graph.getResource<BufferResource>("drawCommands");
         cmd.clearDescriptors();
         cmd.bindProgram(*_engine->_cullProgram);
@@ -418,6 +464,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd.bindBuffer(2, 1, *meshData->handle, true);
         cmd.bindBuffer(2, 2, *drawCommands->handle, true);
         cmd.bindBuffer(2, 3, *_drawCountBuffer[_engine->device().frameIndex()], true);
+        cmd.bindBuffer(2, 4, *materialCounts->handle, true);
         cmd.bindPipeline();
         cmd.bindDescriptors();
         cmd.dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
@@ -470,72 +517,63 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto lightGrid = graph.getResource<BufferResource>("lightGrid");
             auto lightIndices = graph.getResource<BufferResource>("lightIndices");
             cmd.clearDescriptors();
+            if (scene._renderables.empty())
+                return;
+
             cmd.bindBuffer(1, 0, *_cameraBuffer[_engine->device().frameIndex()]);
 //            cmd.bindBuffer(1, 1, *_globalDataBuffer);
-
-            Material* material = nullptr;
-            MaterialInstance* materialInstance = nullptr;
 
             if (!scene._lightData.empty()) {
                 cmd.bindBuffer(3, 0, *scene._lightBuffer[_engine->device().frameIndex()], true);
             }
 
-            if (scene._renderables.empty())
-                return;
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
             cmd.bindAttributes(renderable.attributes);
 
-            if (materialInstance != renderable.materialInstance) {
-                materialInstance = renderable.materialInstance;
-                if (materialInstance) {
-                    if (materialInstance->material() != material) {
-                        material = materialInstance->material();
-                    }
-                }
-            }
-            if (material) {
+            for (u32 i = 0; i < scene._materialCounts.size(); i++) {
+                Material* material = &_engine->_materials[i];
+                if (!material)
+                    continue;
                 cmd.bindProgram(*material->getProgram());
-                cmd.bindRasterState(material->_rasterState);
-                cmd.bindDepthState(material->_depthState);
+                cmd.bindRasterState(material->getRasterState());
+                cmd.bindDepthState(material->getDepthState());
+                cmd.bindBuffer(2, 0, *material->buffer(), true);
+                cmd.bindBuffer(2, 1, *meshData->handle, true);
+                cmd.bindBuffer(2, 2, *lightGrid->handle, true);
+                cmd.bindBuffer(2, 3, *lightIndices->handle, true);
+                cmd.bindBuffer(4, 0, *scene._modelBuffer[_engine->device().frameIndex()], true);
+
+                struct ForwardPush {
+                    ende::math::Vec<4, u32> tileSizes;
+                    ende::math::Vec<2, u32> screenSize;
+                    i32 irradianceIndex;
+                    i32 prefilterIndex;
+                    i32 brdfIndex;
+                } push;
+                push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->device().swapchain().extent().width / (f32)16.f) };
+                push.screenSize = {_engine->device().swapchain().extent().width, _engine->device().swapchain().extent().height };
+
+                if (_renderSettings.ibl) {
+                    push.irradianceIndex = scene._skyLightIrradiance.index();
+                    push.prefilterIndex = scene._skyLightPrefilter.index();
+                    push.brdfIndex = _engine->_brdfImage.index();
+                } else {
+                    push.irradianceIndex = -1;
+                    push.prefilterIndex = -1;
+                    push.brdfIndex = -1;
+                }
+
+                cmd.pushConstants({ &push, sizeof(push) });
+
+                cmd.bindPipeline();
+                cmd.bindDescriptors();
+
+                cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer->buffer());
+                cmd.bindIndexBuffer(*_engine->_globalIndexBuffer);
+                cmd.drawIndirectCount(*drawCommands->handle, scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand), *scene._materialCountBuffer[_engine->device().frameIndex()], i * (sizeof(u32) * 2), scene._materialCounts[i].count);
             }
-
-            cmd.bindBuffer(2, 0, *_engine->_materialBuffer, true);
-            cmd.bindBuffer(2, 1, *meshData->handle, true);
-            cmd.bindBuffer(2, 2, *lightGrid->handle, true);
-            cmd.bindBuffer(2, 3, *lightIndices->handle, true);
-            cmd.bindBuffer(4, 0, *scene._modelBuffer[_engine->device().frameIndex()], true);
-
-            struct ForwardPush {
-                ende::math::Vec<4, u32> tileSizes;
-                ende::math::Vec<2, u32> screenSize;
-                i32 irradianceIndex;
-                i32 prefilterIndex;
-                i32 brdfIndex;
-            } push;
-            push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->device().swapchain().extent().width / (f32)16.f) };
-            push.screenSize = {_engine->device().swapchain().extent().width, _engine->device().swapchain().extent().height };
-
-
-            if (_renderSettings.ibl) {
-                push.irradianceIndex = scene._skyLightIrradiance.index();
-                push.prefilterIndex = scene._skyLightPrefilter.index();
-                push.brdfIndex = _engine->_brdfImage.index();
-            } else {
-                push.irradianceIndex = -1;
-                push.prefilterIndex = -1;
-                push.brdfIndex = -1;
-            }
-
-            cmd.pushConstants({ &push, sizeof(push) });
-
-            cmd.bindPipeline();
-            cmd.bindDescriptors();
-
-            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer->buffer());
-            cmd.bindIndexBuffer(*_engine->_globalIndexBuffer);
-            cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer[_engine->device().frameIndex()], 0, scene._renderables.size());
         });
     }
 

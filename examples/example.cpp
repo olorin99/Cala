@@ -370,10 +370,14 @@ int main() {
 
 
     //Shaders
-    ProgramHandle pointLightProgram = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
+    ProgramHandle pbrProgram = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
+    ProgramHandle pbrTestProgram = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr_test.frag.spv"_path));
 
-    Material material(&engine, pointLightProgram, sizeof(u32) * 3);
-    material._depthState = { true, true, CompareOp::LESS_EQUAL };
+    Material* material = engine.createMaterial(pbrTestProgram, sizeof(u32) * 5);
+    material->setDepthState({ true, true, CompareOp::LESS_EQUAL });
+
+    Material* material1 = engine.createMaterial(pbrProgram, sizeof(u32) * 3);
+    material1->setDepthState({ true, true, CompareOp::LESS_EQUAL });
 
     Transform sponzaTransform;
 
@@ -382,7 +386,7 @@ int main() {
     Mesh cube = cala::shapes::cube().mesh(&engine);
 //    Mesh sphere = cala::shapes::sphereNormalized(1).mesh(&engine);
     Mesh sphere = loadModel("../../res/models/sphere.obj"_path).mesh(&engine);;
-    auto sponza = loadGLTF(&engine, &material, "../../res/models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf"_path);
+    auto sponza = loadGLTF(&engine, material1, "../../res/models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf"_path);
 //    auto damagedHelmet = loadGLTF(&engine, &material, "../../res/models/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path);
     Model damagedHelmet;
 //    bool addHelmet = false;
@@ -393,13 +397,17 @@ int main() {
 
     Sampler sampler(engine.device(), {});
 
-    auto matInstance = material.instance();
+    auto matInstance = material->instance();
 
     struct MaterialData {
-        i32 albedoIndex;
-        i32 normalIndex;
-        i32 metallicRoughness;
+        i32 albedoIndex = -1;
+        i32 normalIndex = -1;
+        i32 metallicRoughness = -1;
+        f32 metallness = 0;
+        f32 roughness = 0;
     };
+
+    matInstance.setData(MaterialData{});
 
     u32 objectCount = 20;
     Scene scene(&engine, objectCount);
@@ -443,16 +451,16 @@ int main() {
     f32 sceneBounds = 10;
 
     MaterialInstance instances[10] = {
-            material.instance(),
-            material.instance(),
-            material.instance(),
-            material.instance(),
-            material.instance(),
-            material.instance(),
-            material.instance(),
-            material.instance(),
-            material.instance(),
-            material.instance()
+            material->instance(),
+            material->instance(),
+            material->instance(),
+            material->instance(),
+            material->instance(),
+            material->instance(),
+            material->instance(),
+            material->instance(),
+            material->instance(),
+            material->instance()
     };
     ImageHandle roughnessImages[10];
     for (u32 i = 0; i < 10; i++) {
@@ -463,7 +471,9 @@ int main() {
         MaterialData materialData1 {
                 -1,
                 -1,
-                roughnessImages[i].index()
+                roughnessImages[i].index(),
+                1.0,
+                0.0
         };
 
         instances[i].setData(materialData1);
@@ -603,7 +613,7 @@ int main() {
             }
 
             if (ImGui::Button("Load")) {
-                damagedHelmet = std::move(loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path));
+                damagedHelmet = std::move(loadGLTF(&engine, material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path));
 //                damagedHelmet = std::move(loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf"_path));
 //                damagedHelmet = std::move(loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/FlightHelmet/glTF/FlightHelmet.gltf"_path));
 //                addHelmet = true;

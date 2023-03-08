@@ -64,6 +64,8 @@ namespace cala {
         backend::vulkan::BufferHandle _lightBuffer[2];
         backend::vulkan::Buffer::Mapped _mappedLight[2];
         backend::vulkan::BufferHandle _lightCountBuffer[2];
+        backend::vulkan::BufferHandle _materialCountBuffer[2];
+        backend::vulkan::Buffer::Mapped _mappedMaterialCounts[2];
         backend::vulkan::ImageHandle _skyLightMap;
         backend::vulkan::Image::View _skyLightMapView;
         backend::vulkan::ImageHandle _skyLightIrradiance;
@@ -74,14 +76,20 @@ namespace cala {
         struct MeshData {
             u32 firstIndex;
             u32 indexCount;
+            u32 materialID;
             u32 materialOffset;
-            uint _pad;
             ende::math::Vec4f min;
             ende::math::Vec4f max;
         };
         ende::Vector<MeshData> _meshData;
         ende::Vector<ende::math::Mat4f> _modelTransforms;
         ende::Vector<Light::Data> _lightData;
+
+        struct MaterialCount {
+            u32 count = 0;
+            u32 offset = 0;
+        };
+        ende::Vector<MaterialCount> _materialCounts;
 
     };
 

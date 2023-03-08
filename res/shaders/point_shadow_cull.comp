@@ -40,15 +40,6 @@ layout (set = 2, binding = 3) buffer Output {
     uint maxDrawCount;
 };
 
-struct MaterialCount {
-    uint count;
-    uint offset;
-};
-
-layout (set = 2, binding = 4) buffer MaterialCounts {
-    MaterialCount counts[];
-};
-
 bool frustumCheck(vec3 pos, float radius) {
     for (int i = 0; i < 6; i++) {
         if (dot(vec4(pos, 1.0), planes[i]) + radius < 0.0) {
@@ -61,15 +52,10 @@ bool frustumCheck(vec3 pos, float radius) {
 void main() {
     uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x;
     if (idx >= maxDrawCount)
-        return;
+    return;
 
     if (idx == 0) {
         atomicExchange(drawCount, 0);
-        for (uint i = 0; i < counts.length(); i++) {
-            atomicExchange(counts[i].count, 0);
-        }
-//        atomicExchange(counts[0].count, 0);
-//        atomicExchange(counts[1].count, 0);
     }
 
     Mesh mesh = meshData[idx];
@@ -79,14 +65,12 @@ void main() {
 
     if (frustumCheck(center, length(halfExtent))) {
         uint a = atomicAdd(drawCount, 1);
-        uint b = atomicAdd(counts[mesh.materialIndex].count, 1);
-        uint offset = counts[mesh.materialIndex].offset;
         IndexedIndirectCommand command;
         command.indexCount = mesh.indexCount;
         command.firstIndex = mesh.firstIndex;
         command.vertexOffset = 0;
         command.firstInstance = idx;
         command.instanceCount = 1;
-        commands[offset + b] = command;
+        commands[a] = command;
     }
 }
