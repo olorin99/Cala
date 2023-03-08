@@ -10,6 +10,10 @@
 
 #include <Ende/time/StopWatch.h>
 
+namespace cala::ui {
+    class ResourceViewer;
+}
+
 namespace cala::backend::vulkan {
 
     const u32 FRAMES_IN_FLIGHT = 2;
@@ -159,6 +163,7 @@ namespace cala::backend::vulkan {
         friend BufferHandle;
         friend ImageHandle;
         friend ProgramHandle;
+        friend ui::ResourceViewer;
 
         Context _context;
         Swapchain* _swapchain;

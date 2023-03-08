@@ -23,6 +23,7 @@
 #include <Cala/ui/StatisticsWindow.h>
 #include <Cala/ui/RendererSettingsWindow.h>
 #include <Cala/ui/LightWindow.h>
+#include <Cala/ui/ResourceViewer.h>
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -369,6 +370,7 @@ int main() {
     ui::ProfileWindow profileWindow(&engine, &renderer);
     ui::StatisticsWindow statisticsWindow(&engine, &renderer);
     ui::RendererSettingsWindow rendererSettingsWindow(&engine, &renderer);
+    ui::ResourceViewer resourceViewer(&engine.device());
 
 
     //Shaders
@@ -570,6 +572,7 @@ int main() {
             statisticsWindow.render();
             rendererSettingsWindow.render();
             lightWindow.render();
+            resourceViewer.render();
 
 
 

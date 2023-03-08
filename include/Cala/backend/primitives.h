@@ -262,6 +262,60 @@ namespace cala::backend {
         f32 maxDepth = 1.f;
     };
 
+#define _tostr(a) #a
+#define tostr(a) _tostr(a)
+
+    constexpr const char* formatToString(Format format) {
+        switch (format) {
+            case Format::UNDEFINED:
+                return tostr(Format::UNDEFINED);
+            case Format::RGB8_UNORM:
+                return tostr(Format::RGB8_UNORM);
+            case Format::RGB8_SNORM:
+                return tostr(Format::RGB8_SNORM);
+            case Format::RGB8_UINT:
+                return tostr(Format::RGB8_UINT);
+            case Format::RGB8_SINT:
+                return tostr(Format::RGB8_SINT);
+            case Format::RGB8_SRGB:
+                return tostr(Format::RGB8_SRGB);
+            case Format::RGBA8_UNORM:
+                return tostr(Format::RGBA8_UNORM);
+            case Format::RGBA8_SNORM:
+                return tostr(Format::RGBA8_SNORM);
+            case Format::RGBA8_UINT:
+                return tostr(Format::RGBA8_UINT);
+            case Format::RGBA8_SINT:
+                return tostr(Format::RGBA8_SINT);
+            case Format::RGBA8_SRGB:
+                return tostr(Format::RGBA8_SRGB);
+            case Format::RG16_SFLOAT:
+                return tostr(Format::RG16_SFLOAT);
+            case Format::RGBA16_SFLOAT:
+                return tostr(Format::RGBA16_SFLOAT);
+            case Format::R32_SFLOAT:
+                return tostr(Format::R32_SFLOAT);
+            case Format::RG32_SFLOAT:
+                return tostr(Format::RG32_SFLOAT);
+            case Format::RGB32_SFLOAT:
+                return tostr(Format::RGB32_SFLOAT);
+            case Format::RGBA32_UINT:
+                return tostr(Format::RGBA32_UINT);
+            case Format::RGBA32_SINT:
+                return tostr(Format::RGBA32_SINT);
+            case Format::RGBA32_SFLOAT:
+                return tostr(Format::RGBA32_SFLOAT);
+            case Format::D16_UNORM:
+                return tostr(Format::D16_UNORM);
+            case Format::D32_SFLOAT:
+                return tostr(Format::D32_SFLOAT);
+            case Format::D24_UNORM_S8_UINT:
+                return tostr(Format::D24_UNORM_S8_UINT);
+        }
+
+        return nullptr;
+    }
+
 }
 
 constexpr cala::backend::QueueType operator|(cala::backend::QueueType lhs, cala::backend::QueueType rhs) {
