@@ -44,6 +44,7 @@ struct Light {
 };
 
 layout (set = 1, binding = 2) readonly buffer LightData {
+//    uint count; // problems inserting light data at offset
     Light lights[];
 };
 

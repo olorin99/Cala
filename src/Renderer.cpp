@@ -267,7 +267,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         auto drawCommands = graph.getResource<BufferResource>("drawCommands");
         u32 shadowIndex = 0;
         for (u32 i = 0; i < scene._lights.size(); i++) {
-            auto& light = scene._lights[i];
+            auto& light = scene._lights[i].second;
             if (light.shadowing() && light.type() == Light::LightType::POINT) {
                 Transform shadowTransform(light.transform().pos());
                 Camera shadowCam(ende::math::rad(90.f), 1024.f, 1024.f, light.getNear(), light.getFar(), shadowTransform);

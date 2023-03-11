@@ -282,14 +282,14 @@ bool cala::backend::vulkan::Device::gc() {
     return true;
 }
 
-cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(u32 size, BufferUsage usage, backend::MemoryProperties flags) {
+cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(u32 size, BufferUsage usage, backend::MemoryProperties flags, bool persistentlyMapped) {
     u32 index = 0;
     if (!_freeBuffers.empty()) {
         index = _freeBuffers.pop().value();
-        _buffers[index] = new backend::vulkan::Buffer(*this, size, usage, flags);
+        _buffers[index] = new backend::vulkan::Buffer(*this, size, usage, flags, persistentlyMapped);
     } else {
         index = _buffers.size();
-        _buffers.emplace(new backend::vulkan::Buffer(*this, size, usage, flags));
+        _buffers.emplace(new backend::vulkan::Buffer(*this, size, usage, flags, persistentlyMapped));
     }
     return { this, index };
 }
@@ -299,7 +299,7 @@ void cala::backend::vulkan::Device::destroyBuffer(BufferHandle handle) {
 }
 
 cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::resizeBuffer(BufferHandle handle, u32 size, bool transfer) {
-    auto newHandle = createBuffer(size, handle->usage(), handle->flags());
+    auto newHandle = createBuffer(size, handle->usage(), handle->flags(), handle->persistentlyMapped());
     if (transfer) {
         immediate([&](backend::vulkan::CommandBuffer& cmd) {
             VkBufferCopy bufferCopy{};

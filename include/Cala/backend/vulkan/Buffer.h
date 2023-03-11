@@ -13,7 +13,7 @@ namespace cala::backend::vulkan {
     class Buffer {
     public:
 
-        Buffer(Device& driver, u32 size, BufferUsage usage, MemoryProperties flags = MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT);
+        Buffer(Device& driver, u32 size, BufferUsage usage, MemoryProperties flags = MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT, bool persistentlyMapped = false);
 
         ~Buffer();
 
@@ -44,8 +44,6 @@ namespace cala::backend::vulkan {
         void unmap();
 
         void data(ende::Span<const void> data, u32 offset = 0);
-
-        void resize(u32 capacity);
 
 
         class View {
@@ -84,6 +82,10 @@ namespace cala::backend::vulkan {
 
         MemoryProperties flags() const { return _flags; }
 
+        bool persistentlyMapped() const { return _mapped.address != nullptr; }
+
+        void* persistentMapping() { return _mapped.address; }
+
     private:
 
         Device& _driver;
@@ -92,6 +94,7 @@ namespace cala::backend::vulkan {
         u32 _size;
         BufferUsage _usage;
         MemoryProperties _flags;
+        Mapped _mapped;
 
     };
 

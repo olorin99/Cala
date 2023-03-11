@@ -4,31 +4,23 @@
 #include <Cala/Material.h>
 #include <Cala/Probe.h>
 #include <Ende/profile/profile.h>
+#include <Ende/log/log.h>
 
 cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     : _engine(engine),
-    _meshDataBuffer{engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE),
-                 engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE)},
-    _modelBuffer{engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE),
-                 engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE)},
-    _lightBuffer{engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE),
-                 engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE)},
-    _lightCountBuffer{engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE),
-                 engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE)},
-    _materialCountBuffer{engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE),
-                 engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE)},
+    _meshDataBuffer{engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE, true),
+                 engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE, true)},
+    _modelBuffer{engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE, true),
+                 engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE, true)},
+    _lightBuffer{engine->device().createBuffer(sizeof(u32) * 4 + lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE, true),
+                 engine->device().createBuffer(sizeof(u32) * 4 + lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE, true)},
+    _lightCountBuffer{engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE, true),
+                 engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE, true)},
+    _materialCountBuffer{engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE, true),
+                 engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE, true)},
     _directionalLightCount(0),
     _lightsDirtyFrame(2)
-{
-    _mappedMesh[0] = _meshDataBuffer[0]->map();
-    _mappedMesh[1] = _meshDataBuffer[1]->map();
-    _mappedModel[0] = _modelBuffer[0]->map();
-    _mappedModel[1] = _modelBuffer[1]->map();
-    _mappedLight[0] = _lightBuffer[0]->map();
-    _mappedLight[1] = _lightBuffer[1]->map();
-    _mappedMaterialCounts[0] = _materialCountBuffer[0]->map();
-    _mappedMaterialCounts[1] = _materialCountBuffer[1]->map();
-}
+{}
 
 
 void cala::Scene::addRenderable(cala::Scene::Renderable &&renderable, cala::Transform *transform) {
@@ -72,7 +64,7 @@ void cala::Scene::addRenderable(Model &model, Transform *transform, bool castSha
 u32 cala::Scene::addLight(cala::Light &light) {
     if (light.type() == Light::DIRECTIONAL)
         ++_directionalLightCount;
-    _lights.push(std::move(light));
+    _lights.push(std::make_pair(2, std::move(light)));
     _lightsDirtyFrame = 2;
     return _lights.size() - 1;
 }
@@ -90,9 +82,15 @@ void cala::Scene::addSkyLightMap(backend::vulkan::ImageHandle skyLightMap, bool 
 }
 
 template <typename T>
-void assignMemory(void* start, u32 offset, T& data) {
-    u8* address = static_cast<u8*>(start) + offset;
-    *reinterpret_cast<T*>(address) = data;
+void assignMemory(void* address, u32 offset, const T& data) {
+    u8* start = static_cast<u8*>(address) + offset;
+    *reinterpret_cast<T*>(start) = data;
+}
+
+template <typename T>
+void assignMemory(void* address, u32 offset, T* data, u32 count) {
+    u8* start = static_cast<u8*>(address) + offset;
+    std::memcpy(start, data, count * sizeof(T));
 }
 
 void cala::Scene::prepare(cala::Camera& camera) {
@@ -107,15 +105,15 @@ void cala::Scene::prepare(cala::Camera& camera) {
     // resize buffers to fit and update persistent mappings
     if (objectCount * sizeof(MeshData) >= _meshDataBuffer[frame]->size()) {
         _meshDataBuffer[frame] = _engine->device().resizeBuffer(_meshDataBuffer[frame], objectCount * sizeof(MeshData) * 2);
-        _mappedMesh[frame] = _meshDataBuffer[frame]->map();
     }
     if (objectCount * sizeof(ende::math::Mat4f) >= _modelBuffer[frame]->size()) {
         _modelBuffer[frame] = _engine->device().resizeBuffer(_modelBuffer[frame], objectCount * sizeof(ende::math::Mat4f) * 2);
-        _mappedModel[frame] = _modelBuffer[frame]->map();
     }
     if (_materialCounts.size() * sizeof(MaterialCount) > _materialCountBuffer[frame]->size()) {
         _materialCountBuffer[frame] = _engine->device().resizeBuffer(_materialCountBuffer[frame], _materialCounts.size() * sizeof(MaterialCount));
-        _mappedMaterialCounts[frame] = _materialCountBuffer[frame]->map();
+    }
+    if (sizeof(u32) * 4 + _lightData.size() * sizeof(Light::Data) > _lightBuffer[frame]->size()) {
+        _lightBuffer[frame] = _engine->device().resizeBuffer(_lightBuffer[frame], sizeof(u32) * 4 + _lightData.size() * sizeof(Light::Data) * 2);
     }
 
     for (u32 i = 0; i < _renderables.size(); i++) {
@@ -136,16 +134,39 @@ void cala::Scene::prepare(cala::Camera& camera) {
         if (f > 0) {
             u32 meshOffset = i * sizeof(MeshData);
             MeshData mesh{ renderable.firstIndex, renderable.indexCount, material->id(), static_cast<u32>(renderable.materialInstance->getOffset() / renderable.materialInstance->material()->size()), renderable.aabb.min, renderable.aabb.max };
-            assignMemory(_mappedMesh[frame].address, meshOffset, mesh);
+            assignMemory(_meshDataBuffer[frame]->persistentMapping(), meshOffset, mesh);
 
             u32 transformOffset = i * sizeof(ende::math::Mat4f);
             auto model = transform->world();
-            assignMemory(_mappedModel[frame].address, transformOffset, model);
+            assignMemory(_modelBuffer[frame]->persistentMapping(), transformOffset, model);
             f--;
         }
     }
 
-    for (auto& light : _lights) {
+//    u32 lightCount[2] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount) };
+//    _lightCountBuffer[frame]->data({ lightCount, sizeof(u32) * 2 });
+//    u32 shadowIndex = 0;
+//    for(u32 i = 0; i < _lights.size(); i++) {
+//        auto& f = _lights[i].first;
+//        auto& light = _lights[i].second;
+//
+//        if (light.isDirty()) {
+//            f = 2;
+//            light.setDirty(false);
+//        }
+//        if (f > 0) {
+//            u32 lightOffset = i * sizeof(Light::Data);
+//            auto lightData = light.data();
+//            if (light.shadowing())
+//                lightData.shadowIndex = _engine->getShadowMap(shadowIndex++).index();
+//            else
+//                lightData.shadowIndex = -1;
+//            assignMemory(_lightBuffer[frame]->persistentMapping(), lightOffset, lightData);
+//            f--;
+//        }
+//    }
+
+    for (auto& [f, light] : _lights) {
         if (light.isDirty()) {
             _lightsDirtyFrame = 2;
             light.setDirty(false);
@@ -160,7 +181,7 @@ void cala::Scene::prepare(cala::Camera& camera) {
         _lightData.clear();
         u32 shadowIndex = 0;
         for (u32 i = 0; i < _lights.size(); i++) {
-            auto& light = _lights[i];
+            auto& light = _lights[i].second;
             auto data = light.data();
             if (light.shadowing())
                 data.shadowIndex = _engine->getShadowMap(shadowIndex++).index();
@@ -169,13 +190,14 @@ void cala::Scene::prepare(cala::Camera& camera) {
 
             _lightData.push(data);
         }
-        if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame]->size()) {
-            _lightBuffer[frame] = _engine->device().resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(Light::Data) * 2);
-            _mappedLight[frame] = _lightBuffer[frame]->map();
-        }
         u32 lightCount[2] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount) };
         _lightCountBuffer[frame]->data({ lightCount, sizeof(u32) * 2 });
-        std::memcpy(_mappedLight[frame].address, _lightData.data(), static_cast<u32>(_lightData.size() * sizeof(Light::Data)));
+//        ende::log::info("lightData size: {}", _lightBuffer[frame]->size());
+        assert(_lightData.size() * sizeof(Light::Data) + sizeof(u32) * 4 < _lightBuffer[frame]->size());
+//        assignMemory(_lightBuffer[frame]->persistentMapping(), 0, _lights.size());
+        assignMemory(_lightBuffer[frame]->persistentMapping(), 0, _lightData.data(), _lightData.size());
+//        assignMemory(_lightBuffer[frame]->persistentMapping(), sizeof(u32) * 4, _lightData.data(), _lightData.size());
+        //TODO: find reason for crash when copying memory at offset into mapped lightbuffer memory
 
         _lightsDirtyFrame--;
     }
@@ -185,7 +207,7 @@ void cala::Scene::prepare(cala::Camera& camera) {
         count.offset = offset;
         offset += count.count;
     }
-    std::memcpy(_mappedMaterialCounts[frame].address, _materialCounts.data(), _materialCounts.size() * sizeof(MaterialCount));
+    std::memcpy(_materialCountBuffer[frame]->persistentMapping(), _materialCounts.data(), _materialCounts.size() * sizeof(MaterialCount));
 
     _engine->updateMaterialdata();
 }

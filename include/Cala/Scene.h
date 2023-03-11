@@ -52,20 +52,16 @@ namespace cala {
         Engine* _engine;
 
         ende::Vector<std::pair<i32, std::pair<Renderable, Transform*>>> _renderables;
-        ende::Vector<Light> _lights;
+        ende::Vector<std::pair<i32, Light>> _lights;
         u32 _directionalLightCount;
 
         i32 _lightsDirtyFrame;
 
         backend::vulkan::BufferHandle _meshDataBuffer[2];
-        backend::vulkan::Buffer::Mapped _mappedMesh[2];
         backend::vulkan::BufferHandle _modelBuffer[2];
-        backend::vulkan::Buffer::Mapped _mappedModel[2];
         backend::vulkan::BufferHandle _lightBuffer[2];
-        backend::vulkan::Buffer::Mapped _mappedLight[2];
         backend::vulkan::BufferHandle _lightCountBuffer[2];
         backend::vulkan::BufferHandle _materialCountBuffer[2];
-        backend::vulkan::Buffer::Mapped _mappedMaterialCounts[2];
         backend::vulkan::ImageHandle _skyLightMap;
         backend::vulkan::Image::View _skyLightMapView;
         backend::vulkan::ImageHandle _skyLightIrradiance;

@@ -4,7 +4,7 @@
 #include <Cala/backend/vulkan/Device.h>
 
 
-cala::backend::vulkan::Buffer::Buffer(Device &driver, u32 size, BufferUsage usage, MemoryProperties flags)
+cala::backend::vulkan::Buffer::Buffer(Device &driver, u32 size, BufferUsage usage, MemoryProperties flags, bool persistentlyMapped)
     : _driver(driver),
     _buffer(VK_NULL_HANDLE),
     _allocation(nullptr),
@@ -29,9 +29,12 @@ cala::backend::vulkan::Buffer::Buffer(Device &driver, u32 size, BufferUsage usag
     }
 
     vmaCreateBuffer(_driver.context().allocator(), &bufferInfo, &allocInfo, &_buffer, &_allocation, nullptr);
+    if (persistentlyMapped)
+        _mapped = map();
 }
 
 cala::backend::vulkan::Buffer::~Buffer() {
+    _mapped = Mapped();
     if (_allocation)
         vmaDestroyBuffer(_driver.context().allocator(), _buffer, _allocation);
 }
@@ -87,8 +90,8 @@ cala::backend::vulkan::Buffer::Mapped &cala::backend::vulkan::Buffer::Mapped::op
 }
 
 cala::backend::vulkan::Buffer::Mapped cala::backend::vulkan::Buffer::map(u32 offset, u32 size) {
-    if (size == 0 && offset == 0)
-        size = _size;
+    if (size == 0)
+        size = _size - offset;
 
     assert(_size >= size + offset);
     void* address = nullptr;
@@ -106,32 +109,12 @@ void cala::backend::vulkan::Buffer::unmap() {
 void cala::backend::vulkan::Buffer::data(ende::Span<const void> data, u32 offset) {
     if (data.size() == 0 || data.size() - offset == 0)
         return;
-    auto mapped = map(offset, data.size());
-    memcpy(mapped.address, data.data(), data.size());
-}
-
-void cala::backend::vulkan::Buffer::resize(u32 capacity) {
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = capacity;
-    bufferInfo.usage = getBufferUsage(_usage);
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    VmaAllocationCreateInfo allocInfo{};
-    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-
-    if ((_flags & MemoryProperties::HOST_VISIBLE) == MemoryProperties::HOST_VISIBLE)
-        allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-
-    VkBuffer buffer;
-    VmaAllocation allocation;
-    if (VK_SUCCESS == vmaCreateBuffer(_driver.context().allocator(), &bufferInfo, &allocInfo, &buffer, &allocation, nullptr)) {
-        vmaDestroyBuffer(_driver.context().allocator(), _buffer, _allocation);
-        _buffer = buffer;
-        _allocation = allocation;
-        _size = capacity;
+    if (_mapped.address)
+        std::memcpy(_mapped.address, data.data(), data.size());
+    else {
+        auto mapped = map(offset, data.size());
+        std::memcpy(mapped.address, data.data(), data.size());
     }
-
 }
 
 cala::backend::vulkan::Buffer::View::View()
