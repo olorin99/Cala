@@ -108,7 +108,8 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Device &driver, SDL_Window* wi
         ImGui::GetStyle().Colors[ImGuiCol_WindowBg].w = 1.f;
     }
 
-    ImGui_ImplSDL2_InitForVulkan(window);
+    if (_window)
+        ImGui_ImplSDL2_InitForVulkan(window);
     ImGui_ImplVulkan_InitInfo initInfo{};
     initInfo.Instance = driver.context().instance();
     initInfo.PhysicalDevice = driver.context().physicalDevice();
@@ -132,7 +133,8 @@ ImGuiContext::~ImGuiContext() {
     ImGui_ImplVulkan_DestroyFontUploadObjects();
     vkDestroyCommandPool(_device, _commandPool, nullptr);
     ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
+    if (_window)
+        ImGui_ImplSDL2_Shutdown();
 //    ImGui::DestroyContext();
     vkDestroyDescriptorPool(_device, _descriptorPool, nullptr);
 //    delete _renderPass;
@@ -140,16 +142,20 @@ ImGuiContext::~ImGuiContext() {
 
 
 void ImGuiContext::newFrame() {
-    ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplSDL2_NewFrame();
-    ImGui::NewFrame();
+    if (_window) {
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
+        ImGui::NewFrame();
+    }
 }
 
 void ImGuiContext::processEvent(void *event) {
-    ImGui_ImplSDL2_ProcessEvent((SDL_Event*)event);
+    if (_window)
+        ImGui_ImplSDL2_ProcessEvent((SDL_Event*)event);
 }
 
 void ImGuiContext::render(cala::backend::vulkan::CommandBuffer &buffer) {
 //    buffer.begin(*_renderPass);TODO: use own renderpass/framebuffers
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer.buffer());
+    if (_window)
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer.buffer());
 }

@@ -438,7 +438,13 @@ bool cala::backend::vulkan::CommandBuffer::submit(ende::Span<VkSemaphore> wait, 
 //    submitInfo.pWaitSemaphores = waitSemaphore;
     submitInfo.pWaitDstStageMask = waitDstStageMask;
 
-    submitInfo.waitSemaphoreCount = wait.size();
+    u32 waitCount = wait.size();
+    for (auto& semaphore : wait) {
+        if (semaphore == VK_NULL_HANDLE)
+            waitCount = 0;
+    }
+
+    submitInfo.waitSemaphoreCount = waitCount;
     submitInfo.pWaitSemaphores = wait.data();
 
     submitInfo.signalSemaphoreCount = 1;

@@ -60,11 +60,6 @@ cala::backend::vulkan::Image::Image(Device& driver, CreateInfo info)
 
     vmaCreateImage(driver.context().allocator(), &imageInfo, &allocInfo, &_image, &_allocation, nullptr);
 
-//    device.immediate([&](CommandBuffer& cmd) {
-//        auto b = barrier(Access::NONE, Access::NONE, ImageLayout::UNDEFINED, info.initialLayout);
-//        cmd.pipelineBarrier(PipelineStage::TOP, PipelineStage::TOP, 0, nullptr, { &b, 1 });
-//    });
-
     _width = info.width;
     _height = info.height;
     _depth = info.depth;

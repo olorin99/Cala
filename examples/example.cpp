@@ -17,6 +17,7 @@
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
 #include <Ende/profile/ProfileManager.h>
+#include <Cala/backend/vulkan/OfflinePlatform.h>
 #include <Cala/Model.h>
 
 #include <Cala/ui/ProfileWindow.h>
@@ -356,6 +357,7 @@ ShaderProgram loadShader(Device& driver, const ende::fs::Path& vertex, const end
 
 int main() {
     SDLPlatform platform("hello_triangle", 1920, 1080);
+//    OfflinePlatform platform(1920, 1080);
 
     Engine engine(platform);
     Renderer renderer(&engine, {});

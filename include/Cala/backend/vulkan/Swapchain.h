@@ -22,7 +22,7 @@ namespace cala::backend::vulkan {
             u64 id = 0;
             u32 index = 0;
             VkSemaphore imageAquired = VK_NULL_HANDLE;
-            Framebuffer* framebuffer;
+            Framebuffer* framebuffer = nullptr;
         };
 
         Frame nextImage();
@@ -75,6 +75,7 @@ namespace cala::backend::vulkan {
         ende::Vector<VkImage> _images;
         ende::Vector<VkImageView> _imageViews;
         ende::Vector<VkSemaphore> _semaphores;
+        ende::Vector<VmaAllocation> _allocations;
 
         Image* _depthImage;
         Image::View _depthView;

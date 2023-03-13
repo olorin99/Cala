@@ -67,10 +67,10 @@ cala::backend::vulkan::Swapchain::Swapchain(Device &driver, Platform& platform, 
     _vsync(false)
 {
     _surface = platform.surface(_driver.context().instance());
-    VkBool32 supported = VK_FALSE;
+//    VkBool32 supported = VK_FALSE;
     u32 index = 0;
     _driver.context().queueIndex(index, QueueType::GRAPHICS);
-    vkGetPhysicalDeviceSurfaceSupportKHR(_driver.context().physicalDevice(), index, _surface, &supported);
+//    vkGetPhysicalDeviceSurfaceSupportKHR(_driver.context().physicalDevice(), index, _surface, &supported);
     auto windowSize = platform.windowSize();
     _extent = { windowSize.first, windowSize.second };
 
@@ -138,11 +138,14 @@ cala::backend::vulkan::Swapchain::~Swapchain() {
 cala::backend::vulkan::Swapchain::Frame cala::backend::vulkan::Swapchain::nextImage() {
     auto image = _semaphores.pop().value();
     u32 index = 0;
-    VkResult result = vkAcquireNextImageKHR(_driver.context().device(), _swapchain, std::numeric_limits<u64>::max(), image, VK_NULL_HANDLE, &index);
-    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        resize(_depthImage->width(), _depthImage->height());
+    if (_surface != VK_NULL_HANDLE) {
+        VkResult result = vkAcquireNextImageKHR(_driver.context().device(), _swapchain, std::numeric_limits<u64>::max(), image, VK_NULL_HANDLE, &index);
+        if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+            resize(_depthImage->width(), _depthImage->height());
+        }
+    } else {
+        index = (index + 1) % 2;
     }
-
     return { _frame++, index, image, _framebuffers[index] };
 }
 
@@ -150,21 +153,24 @@ bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFi
     _semaphores.push(frame.imageAquired);
     std::rotate(_semaphores.begin(), _semaphores.end() - 1, _semaphores.end());
 
-    VkPresentInfoKHR presentInfo{};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    if (_surface != VK_NULL_HANDLE) {
+        VkPresentInfoKHR presentInfo{};
+        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &renderFinish;
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = &renderFinish;
 
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = &_swapchain;
+        presentInfo.swapchainCount = 1;
+        presentInfo.pSwapchains = &_swapchain;
 
-    presentInfo.pImageIndices = &frame.index;
-    presentInfo.pResults = nullptr;
+        presentInfo.pImageIndices = &frame.index;
+        presentInfo.pResults = nullptr;
 
-    auto res = vkQueuePresentKHR(_driver.context().getQueue(QueueType::PRESENT), &presentInfo) == VK_SUCCESS;
+        auto res = vkQueuePresentKHR(_driver.context().getQueue(QueueType::PRESENT), &presentInfo) == VK_SUCCESS;
 
-    return res;
+        return res;
+    }
+    return false;
 }
 
 bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {
@@ -328,50 +334,87 @@ void cala::backend::vulkan::Swapchain::setVsync(bool vsync) {
 
 
 bool cala::backend::vulkan::Swapchain::createSwapchain() {
-    VkSurfaceCapabilitiesKHR capabilities = getCapabilities(_driver.context().physicalDevice(), _surface);
-    VkSurfaceFormatKHR format = getSurfaceFormat(_driver.context().physicalDevice(), _surface);
-    VkPresentModeKHR mode = getPresentMode(_driver.context().physicalDevice(), _surface, _vsync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR);
-    VkExtent2D extent = getExtent(capabilities, _extent.width, _extent.height);
+    if (_surface != VK_NULL_HANDLE) {
+        VkSurfaceCapabilitiesKHR capabilities = getCapabilities(_driver.context().physicalDevice(), _surface);
+        VkSurfaceFormatKHR format = getSurfaceFormat(_driver.context().physicalDevice(), _surface);
+        VkPresentModeKHR mode = getPresentMode(_driver.context().physicalDevice(), _surface, _vsync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR);
+        VkExtent2D extent = getExtent(capabilities, _extent.width, _extent.height);
 
-    u32 imageCount = capabilities.minImageCount + 1;
-    if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount)
-        imageCount = capabilities.maxImageCount;
+        u32 imageCount = capabilities.minImageCount + 1;
+        if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount)
+            imageCount = capabilities.maxImageCount;
 
-    VkSwapchainCreateInfoKHR createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface = _surface;
+        VkSwapchainCreateInfoKHR createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        createInfo.surface = _surface;
 
-    createInfo.minImageCount = imageCount;
-    createInfo.imageFormat = format.format;
-    createInfo.imageColorSpace = format.colorSpace;
-    createInfo.imageExtent = extent;
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        createInfo.minImageCount = imageCount;
+        createInfo.imageFormat = format.format;
+        createInfo.imageColorSpace = format.colorSpace;
+        createInfo.imageExtent = extent;
+        createInfo.imageArrayLayers = 1;
+        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-    createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    createInfo.queueFamilyIndexCount = 0;
-    createInfo.pQueueFamilyIndices = nullptr;
+        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        createInfo.queueFamilyIndexCount = 0;
+        createInfo.pQueueFamilyIndices = nullptr;
 
-    createInfo.preTransform = capabilities.currentTransform;
-    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    createInfo.presentMode = mode;
-    createInfo.clipped = VK_TRUE;
-    createInfo.oldSwapchain = _swapchain;
+        createInfo.preTransform = capabilities.currentTransform;
+        createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        createInfo.presentMode = mode;
+        createInfo.clipped = VK_TRUE;
+        createInfo.oldSwapchain = _swapchain;
 
-    VkSwapchainKHR oldSwap = _swapchain;
+        VkSwapchainKHR oldSwap = _swapchain;
 
-    VkResult result = vkCreateSwapchainKHR(_driver.context().device(), &createInfo, nullptr, &_swapchain);
+        VkResult result = vkCreateSwapchainKHR(_driver.context().device(), &createInfo, nullptr, &_swapchain);
 
-    u32 count = 0;
-    vkGetSwapchainImagesKHR(_driver.context().device(), _swapchain, &count, nullptr);
-    _images.resize(count);
-    vkGetSwapchainImagesKHR(_driver.context().device(), _swapchain, &count, _images.data());
+        u32 count = 0;
+        vkGetSwapchainImagesKHR(_driver.context().device(), _swapchain, &count, nullptr);
+        _images.resize(count);
+        vkGetSwapchainImagesKHR(_driver.context().device(), _swapchain, &count, _images.data());
 
-    vkDestroySwapchainKHR(_driver.context().device(), oldSwap, nullptr);
+        vkDestroySwapchainKHR(_driver.context().device(), oldSwap, nullptr);
 
-    _extent = extent;
-    _format = static_cast<Format>(format.format);
-    return result == VK_SUCCESS;
+        _extent = extent;
+        _format = static_cast<Format>(format.format);
+        return result == VK_SUCCESS;
+    } else {
+        u32 imageCount = 2;
+        _images.resize(imageCount);
+        _allocations.resize(imageCount);
+        VkResult res = VK_SUCCESS;
+
+        for (u32 i = 0; i < imageCount; i++) {
+            VkImageCreateInfo imageInfo{};
+            imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+
+            imageInfo.imageType = VK_IMAGE_TYPE_2D;
+
+            imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+            imageInfo.extent.width = _extent.width;
+            imageInfo.extent.height = _extent.height;
+            imageInfo.extent.depth = 1;
+            imageInfo.mipLevels = 1;
+            imageInfo.arrayLayers = 1;
+
+            imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+            imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            imageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+            imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+
+            VmaAllocationCreateInfo allocInfo{};
+            allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+            allocInfo.flags = 0;
+
+            res = vmaCreateImage(_driver.context().allocator(), &imageInfo, &allocInfo, &_images[i], &_allocations[i], nullptr);
+            if (res != VK_SUCCESS)
+                return false;
+            _format = Format::RGBA8_UNORM;
+        }
+    }
+    return true;
 }
 
 bool cala::backend::vulkan::Swapchain::createImageViews() {
@@ -405,16 +448,21 @@ bool cala::backend::vulkan::Swapchain::createSemaphores() {
     if (!_semaphores.empty())
         return false;
 
-    VkSemaphoreCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    if (_surface != VK_NULL_HANDLE) {
+        VkSemaphoreCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    for (u32 i = 0; i < _imageViews.size(); i++) {
-        VkSemaphore imageAcquired;
+        for (u32 i = 0; i < _imageViews.size(); i++) {
+            VkSemaphore imageAcquired;
 
-        if (vkCreateSemaphore(_driver.context().device(), &createInfo, nullptr, &imageAcquired) != VK_SUCCESS)
-            return false;
+            if (vkCreateSemaphore(_driver.context().device(), &createInfo, nullptr, &imageAcquired) != VK_SUCCESS)
+                return false;
 
-        _semaphores.push(imageAcquired);
+            _semaphores.push(imageAcquired);
+        }
+    } else {
+        _semaphores.push(VK_NULL_HANDLE);
     }
+
     return true;
 }

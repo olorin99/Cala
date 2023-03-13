@@ -13,7 +13,7 @@ namespace cala::backend::vulkan {
 
         SDLPlatform(const char* windowTitle, u32 width, u32 height, u32 flags = 0);
 
-        ~SDLPlatform();
+        ~SDLPlatform() override;
 
         ende::Vector<const char *> requiredExtensions() override;
 
