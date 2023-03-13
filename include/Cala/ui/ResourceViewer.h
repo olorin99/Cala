@@ -11,6 +11,8 @@ namespace cala::ui {
 
         ResourceViewer(backend::vulkan::Device* device);
 
+        ~ResourceViewer();
+
         void render() override;
 
     private:
@@ -19,6 +21,17 @@ namespace cala::ui {
 
         i32 _bufferIndex;
         i32 _imageIndex;
+        bool _imageDirty;
+        VkDescriptorSet _imageSet;
+
+        i32 _mipIndex;
+        i32 _layerIndex;
+
+        backend::vulkan::ImageHandle _imageHandle;
+        backend::vulkan::Image::View _imageView;
+        backend::vulkan::Image::View _deleteView;
+
+        ende::Vector<std::pair<i32, std::pair<VkDescriptorSet, backend::vulkan::Image::View>>> _destroyQueue;
 
     };
 

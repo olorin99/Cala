@@ -30,10 +30,12 @@ namespace cala::backend::vulkan {
         T* operator->() noexcept;
 
         explicit operator bool() const noexcept {
-            return _device && _index != -1;
+            return _device && _index != -1 && isValid();
         }
 
         i32 index() const { return _index; }
+
+        bool isValid() const;
 
     private:
         friend Device;
@@ -105,7 +107,11 @@ namespace cala::backend::vulkan {
 
         void destroyImage(ImageHandle handle);
 
+        ImageHandle getImageHandle(u32 index);
+
         Image::View& getImageView(ImageHandle handle);
+
+        Image::View& getImageView(u32 index);
 
         ProgramHandle createProgram(ShaderProgram&& program);
 

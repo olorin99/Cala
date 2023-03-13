@@ -15,6 +15,11 @@ cala::backend::vulkan::Buffer *cala::backend::vulkan::BufferHandle::operator->()
 }
 
 template <>
+bool cala::backend::vulkan::BufferHandle::isValid() const {
+    return _device->_buffers[_index] != nullptr;
+}
+
+template <>
 cala::backend::vulkan::Image &cala::backend::vulkan::ImageHandle::operator*() noexcept {
     return *_device->_images[_index];
 }
@@ -25,6 +30,11 @@ cala::backend::vulkan::Image *cala::backend::vulkan::ImageHandle ::operator->() 
 }
 
 template <>
+bool cala::backend::vulkan::ImageHandle::isValid() const {
+    return _device->_images[_index] != nullptr;
+}
+
+template <>
 cala::backend::vulkan::ShaderProgram &cala::backend::vulkan::ProgramHandle::operator*() noexcept {
     return *_device->_programs[_index];
 }
@@ -32,6 +42,11 @@ cala::backend::vulkan::ShaderProgram &cala::backend::vulkan::ProgramHandle::oper
 template <>
 cala::backend::vulkan::ShaderProgram *cala::backend::vulkan::ProgramHandle ::operator->() noexcept {
     return _device->_programs[_index];
+}
+
+template <>
+bool cala::backend::vulkan::ProgramHandle ::isValid() const {
+    return _device->_programs[_index] != nullptr;
 }
 
 cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, bool clear)
@@ -337,9 +352,19 @@ void cala::backend::vulkan::Device::destroyImage(ImageHandle handle) {
     _imagesToDestroy.push(std::make_pair(10, handle));
 }
 
+cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::getImageHandle(u32 index) {
+    assert(index < _images.size());
+    return { this, index };
+}
+
 cala::backend::vulkan::Image::View &cala::backend::vulkan::Device::getImageView(ImageHandle handle) {
     assert(handle);
     return _imageViews[handle.index()];
+}
+
+cala::backend::vulkan::Image::View &cala::backend::vulkan::Device::getImageView(u32 index) {
+    assert(index < _images.size());
+    return _imageViews[index];
 }
 
 cala::backend::vulkan::ProgramHandle cala::backend::vulkan::Device::createProgram(ShaderProgram &&program) {

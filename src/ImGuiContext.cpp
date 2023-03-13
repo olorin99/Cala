@@ -64,7 +64,8 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Device &driver, SDL_Window* wi
 //                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
 //            }
     };
-    _renderPass = new cala::backend::vulkan::RenderPass(driver, attachments);
+//    _renderPass = new cala::backend::vulkan::RenderPass(driver, attachments);
+    _renderPass = driver.getRenderPass(attachments);
 
     VkDescriptorPoolSize poolSizes[] = {
             { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
@@ -84,7 +85,8 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Device &driver, SDL_Window* wi
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = 11;
     poolInfo.pPoolSizes = poolSizes;
-    poolInfo.maxSets = driver.swapchain().size();
+    poolInfo.maxSets = 1000;
+    poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
     vkCreateDescriptorPool(driver.context().device(), &poolInfo, nullptr, &_descriptorPool);
 
@@ -133,7 +135,7 @@ ImGuiContext::~ImGuiContext() {
     ImGui_ImplSDL2_Shutdown();
 //    ImGui::DestroyContext();
     vkDestroyDescriptorPool(_device, _descriptorPool, nullptr);
-    delete _renderPass;
+//    delete _renderPass;
 }
 
 

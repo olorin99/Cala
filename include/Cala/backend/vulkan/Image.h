@@ -79,7 +79,7 @@ namespace cala::backend::vulkan {
             Image* _image;
         };
 
-        View newView(u32 mipLevel = 0, u32 levelCount = 1, u32 arrayLayer = 0, u32 layerCount = 1, ImageViewType viewType = ImageViewType::AUTO, Format format = Format::UNDEFINED);
+        View newView(u32 mipLevel = 0, u32 levelCount = 1, u32 arrayLayer = 0, u32 layerCount = 0, ImageViewType viewType = ImageViewType::AUTO, Format format = Format::UNDEFINED);
 
         VkImageMemoryBarrier barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer = 0);
 
@@ -111,6 +111,8 @@ namespace cala::backend::vulkan {
         u32 depth() const { return _depth; }
 
         u32 mips() const { return _mips; }
+
+        u32 layers() const { return _layers; }
 
     private:
 

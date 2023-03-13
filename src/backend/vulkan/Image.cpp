@@ -333,7 +333,7 @@ cala::backend::vulkan::Image::View cala::backend::vulkan::Image::newView(u32 mip
     viewCreateInfo.subresourceRange.baseMipLevel = mipLevel;
     viewCreateInfo.subresourceRange.levelCount = levelCount;
     viewCreateInfo.subresourceRange.baseArrayLayer = arrayLayer;
-    viewCreateInfo.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+    viewCreateInfo.subresourceRange.layerCount = layerCount == 0 ? VK_REMAINING_ARRAY_LAYERS : layerCount;
 
     VkImageView view;
     vkCreateImageView(_driver.context().device(), &viewCreateInfo, nullptr, &view);
