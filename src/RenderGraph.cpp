@@ -2,8 +2,8 @@
 #include <Ende/log/log.h>
 #include <Ende/profile/profile.h>
 
-void cala::ImageResource::devirtualize(cala::Engine* engine) {
-    auto extent = engine->device().swapchain().extent();
+void cala::ImageResource::devirtualize(cala::Engine* engine, backend::vulkan::Swapchain* swapchain) {
+    auto extent = swapchain->extent();
     if (transient)
         clear = true;
     if (!handle) {
@@ -43,7 +43,7 @@ void cala::ImageResource::devirtualize(cala::Engine* engine) {
     }
 }
 
-void cala::BufferResource::devirtualize(Engine *engine) {
+void cala::BufferResource::devirtualize(Engine *engine, backend::vulkan::Swapchain* swapchain) {
     if (!handle) {
         handle = engine->device().createBuffer(size, usage);
     }
@@ -163,7 +163,8 @@ void cala::RenderPass::setDebugColour(std::array<f32, 4> colour) {
 
 
 cala::RenderGraph::RenderGraph(Engine *engine)
-    : _engine(engine)
+    : _engine(engine),
+    _swapchain(nullptr)
 {}
 
 cala::RenderGraph::~RenderGraph() {
@@ -185,8 +186,10 @@ void cala::RenderGraph::setBackbuffer(const char *label) {
     _backbuffer = label;
 }
 
-bool cala::RenderGraph::compile() {
+bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
     PROFILE_NAMED("RenderGraph::Compile");
+    _swapchain = swapchain;
+    assert(_swapchain);
     _orderedPasses.clear();
 
     tsl::robin_map<const char*, ende::Vector<u32>> outputs;
@@ -226,7 +229,7 @@ bool cala::RenderGraph::compile() {
 
 
     for (auto& attachment : _attachmentMap) {
-        attachment.second->devirtualize(_engine);
+        attachment.second->devirtualize(_engine, _swapchain);
     }
 
     for (u32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
@@ -261,7 +264,7 @@ bool cala::RenderGraph::compile() {
                 attachments.push(attachmentRenderPass);
 
                 if (resource->matchSwapchain) {
-                    auto extent = _engine->device().swapchain().extent();
+                    auto extent = _swapchain->extent();
                     width = extent.width;
                     height = extent.height;
                 } else {
@@ -286,6 +289,7 @@ bool cala::RenderGraph::compile() {
 
 bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) {
     PROFILE_NAMED("RenderGraph::Execute");
+    assert(_swapchain);
     for (auto& pass : _orderedPasses) {
         for (auto& input : pass->_inputs) {
             bool attach = false;
@@ -377,7 +381,7 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
     auto barrier = backbuffer->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::TRANSFER_READ, backend::ImageLayout::TRANSFER_SRC);
     cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::PipelineStage::TRANSFER, { &barrier, 1 });
 
-    _engine->device().swapchain().blitImageToFrame(index, cmd, *backbuffer->handle);
+    _swapchain->blitImageToFrame(index, cmd, *backbuffer->handle);
 
     barrier = backbuffer->handle->barrier(backend::Access::TRANSFER_READ, backend::Access::COLOUR_ATTACHMENT_WRITE, backend::ImageLayout::COLOUR_ATTACHMENT);
     cmd.pipelineBarrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, { &barrier, 1 });

@@ -15,7 +15,7 @@ namespace cala {
 
         virtual ~Resource() = default;
 
-        virtual void devirtualize(Engine* engine) = 0;
+        virtual void devirtualize(Engine* engine, backend::vulkan::Swapchain* swapchain) = 0;
     };
 
     struct ImageResource : public Resource {
@@ -27,7 +27,7 @@ namespace cala {
         bool clear = true;
         backend::vulkan::ImageHandle handle;
 
-        void devirtualize(Engine* engine) override;
+        void devirtualize(Engine* engine, backend::vulkan::Swapchain* swapchain) override;
 
     };
 
@@ -38,7 +38,7 @@ namespace cala {
 
         backend::vulkan::BufferHandle handle;
 
-        void devirtualize(Engine* engine) override;
+        void devirtualize(Engine* engine, backend::vulkan::Swapchain* swapchain) override;
     };
 
     class RenderPass {
@@ -104,7 +104,7 @@ namespace cala {
 
         void setBackbuffer(const char* label);
 
-        bool compile();
+        bool compile(backend::vulkan::Swapchain* swapchain);
 
         bool execute(backend::vulkan::CommandBuffer& cmd, u32 index = 0);
 
@@ -128,6 +128,7 @@ namespace cala {
         friend RenderPass;
 
         Engine* _engine;
+        backend::vulkan::Swapchain* _swapchain;
 
         ende::Vector<RenderPass> _passes;
         ende::Vector<std::pair<const char*, backend::vulkan::Timer>> _timers[2];

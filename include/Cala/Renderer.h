@@ -34,7 +34,7 @@ namespace cala {
 
         Renderer(Engine* engine, Settings settings);
 
-        bool beginFrame();
+        bool beginFrame(backend::vulkan::Swapchain* swapchain);
 
         f64 endFrame();
 
@@ -57,6 +57,7 @@ namespace cala {
     private:
 
         Engine* _engine;
+        backend::vulkan::Swapchain* _swapchain;
 
         backend::vulkan::BufferHandle _cameraBuffer[2];
         backend::vulkan::BufferHandle _drawCountBuffer[2];
@@ -70,6 +71,7 @@ namespace cala {
         RenderGraph _graph;
 
         backend::vulkan::Device::FrameInfo _frameInfo;
+        backend::vulkan::Swapchain::Frame _swapchainFrame;
 
         Stats _stats;
 

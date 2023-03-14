@@ -8,16 +8,17 @@
 
 cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings)
     : _engine(engine),
-      _cameraBuffer{engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT),
-                    engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)},
-      _drawCountBuffer{engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT),
-                       engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)},
-      _drawCommands{engine->device().createBuffer(sizeof(VkDrawIndexedIndirectCommand) * 100, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT),
-                       engine->device().createBuffer(sizeof(VkDrawIndexedIndirectCommand) * 100, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)},
-      _globalDataBuffer(engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
-      _graph(engine),
-      _renderSettings(settings),
-      _cullingFrustum(ende::math::perspective(45.f, 1920.f / 1080.f, 0.1f, 1000.f, true))
+    _swapchain(nullptr),
+    _cameraBuffer{engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT),
+                  engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)},
+    _drawCountBuffer{engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT),
+                     engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)},
+    _drawCommands{engine->device().createBuffer(sizeof(VkDrawIndexedIndirectCommand) * 100, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT),
+                  engine->device().createBuffer(sizeof(VkDrawIndexedIndirectCommand) * 100, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)},
+    _globalDataBuffer(engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT)),
+    _graph(engine),
+    _renderSettings(settings),
+    _cullingFrustum(ende::math::perspective(45.f, 1920.f / 1080.f, 0.1f, 1000.f, true))
 {
     _engine->device().setBindlessSetIndex(0);
 
@@ -48,8 +49,11 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
     _shadowFramebuffer = _engine->device().getFramebuffer(shadowRenderPass, {&_engine->device().getImageView(_shadowTarget).view, 1 }, {&h, 1 }, 1024, 1024);
 }
 
-bool cala::Renderer::beginFrame() {
+bool cala::Renderer::beginFrame(cala::backend::vulkan::Swapchain* swapchain) {
+    _swapchain = swapchain;
+    assert(_swapchain);
     _frameInfo = _engine->device().beginFrame();
+    _swapchainFrame = _swapchain->nextImage();
     _frameInfo.cmd->begin();
     _globalData.time = _engine->getRunningTime().milliseconds();
     auto mapped = _globalDataBuffer->map(0, sizeof(RendererGlobal));
@@ -59,9 +63,10 @@ bool cala::Renderer::beginFrame() {
 
 f64 cala::Renderer::endFrame() {
     _frameInfo.cmd->end();
-    _frameInfo.cmd->submit({ &_frameInfo.swapchainInfo.imageAquired, 1 }, _frameInfo.fence);
+    _frameInfo.cmd->submit({ &_swapchainFrame.imageAquired, 1 }, _frameInfo.fence);
 
-    _engine->device().swapchain().present(_frameInfo.swapchainInfo, _frameInfo.cmd->signal());
+    assert(_swapchain);
+    _swapchain->present(_swapchainFrame, _frameInfo.cmd->signal());
     _engine->device().endFrame();
 
     _stats.drawCallCount = _frameInfo.cmd->drawCalls();
@@ -152,8 +157,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 f32 far;
             } push;
             push.inverseProjection = camera.projection().inverse();
-            push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->device().swapchain().extent().width / (f32)16.f) };
-            push.screenSize = {_engine->device().swapchain().extent().width, _engine->device().swapchain().extent().height };
+            push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
+            push.screenSize = { _swapchain->extent().width, _swapchain->extent().height };
             push.near = camera.near();
             push.far = camera.far();
 
@@ -202,8 +207,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             f32 far;
         } push;
         push.inverseProjection = camera.projection().inverse();
-        push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->device().swapchain().extent().width / (f32)16.f) };
-        push.screenSize = {_engine->device().swapchain().extent().width, _engine->device().swapchain().extent().height };
+        push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
+        push.screenSize = { _swapchain->extent().width, _swapchain->extent().height };
         push.near = camera.near();
         push.far = camera.far();
 
@@ -240,8 +245,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 ende::math::Vec<4, u32> tileSizes;
                 ende::math::Vec<2, u32> screenSize;
             } push;
-            push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->device().swapchain().extent().width / (f32)16.f) };
-            push.screenSize = {_engine->device().swapchain().extent().width, _engine->device().swapchain().extent().height };
+            push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
+            push.screenSize = { _swapchain->extent().width, _swapchain->extent().height };
             cmd.pushConstants({ &push, sizeof(push) });
             cmd.bindBuffer(1, 1, *lightGrid->handle, true);
             cmd.bindImage(1, 2, _engine->device().getImageView(depthBuffer->handle), _engine->device().defaultShadowSampler());
@@ -552,8 +557,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     i32 prefilterIndex;
                     i32 brdfIndex;
                 } push;
-                push.tileSizes = { 16, 9, 24, (u32)std::ceil(_engine->device().swapchain().extent().width / (f32)16.f) };
-                push.screenSize = {_engine->device().swapchain().extent().width, _engine->device().swapchain().extent().height };
+                push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
+                push.screenSize = { _swapchain->extent().width, _swapchain->extent().height };
 
                 if (_renderSettings.ibl) {
                     push.irradianceIndex = scene._skyLightIrradiance.index();
@@ -635,11 +640,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         });
     }
 
-    if (!_graph.compile())
+    if (!_graph.compile(_swapchain))
         throw "cyclical graph found";
 
     cmd.startPipelineStatistics();
-    _graph.execute(cmd, _frameInfo.swapchainInfo.index);
+    _graph.execute(cmd, _swapchainFrame.index);
     cmd.stopPipelineStatistics();
 
 }

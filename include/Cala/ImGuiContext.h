@@ -15,7 +15,7 @@
 class ImGuiContext {
 public:
 
-    ImGuiContext(cala::backend::vulkan::Device& driver, SDL_Window* window);
+    ImGuiContext(cala::backend::vulkan::Device& driver, cala::backend::vulkan::Swapchain* swapchain, SDL_Window* window);
 
     ~ImGuiContext();
 

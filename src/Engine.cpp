@@ -19,8 +19,8 @@ cala::backend::vulkan::RenderPass::Attachment shadowPassAttachment {
 };
 
 
-cala::Engine::Engine(backend::Platform &platform, bool clear)
-    : _device(platform, clear),
+cala::Engine::Engine(backend::Platform &platform)
+    : _device(platform),
       _startTime(ende::time::SystemTime::now()),
       _shadowPass(_device, {&shadowPassAttachment, 1 }),
       _lodSampler(_device, {

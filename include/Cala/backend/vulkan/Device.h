@@ -57,7 +57,7 @@ namespace cala::backend::vulkan {
     class Device {
     public:
 
-        Device(Platform& platform, bool clear = true); // change clear to options struct
+        Device(Platform& platform);
 
         ~Device();
 
@@ -65,7 +65,6 @@ namespace cala::backend::vulkan {
             u64 frame = 0;
             CommandBuffer* cmd = nullptr;
             VkFence fence = VK_NULL_HANDLE;
-            Swapchain::Frame swapchainInfo;
         };
 
         FrameInfo beginFrame();
@@ -146,8 +145,6 @@ namespace cala::backend::vulkan {
 
         const Context& context() const { return _context; }
 
-        Swapchain& swapchain() { return *_swapchain; }
-
         u32 setLayoutCount() const { return _setLayouts.size(); }
 
         f64 fps() const { return 1000.f / (static_cast<f64>(_lastFrameTime.microseconds()) / 1000.f); }
@@ -172,7 +169,6 @@ namespace cala::backend::vulkan {
         friend ui::ResourceViewer;
 
         Context _context;
-        Swapchain* _swapchain;
         CommandPool _commandPools[2][3]; // 0 = graphics, 1 = compute, 2 = transfer
         VkFence _frameFences[FRAMES_IN_FLIGHT];
         u64 _frameCount;

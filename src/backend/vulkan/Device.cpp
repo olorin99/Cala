@@ -49,9 +49,8 @@ bool cala::backend::vulkan::ProgramHandle ::isValid() const {
     return _device->_programs[_index] != nullptr;
 }
 
-cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, bool clear)
+cala::backend::vulkan::Device::Device(cala::backend::Platform& platform)
     : _context(platform),
-      _swapchain(nullptr),
       _commandPools{
               {CommandPool(this, QueueType::GRAPHICS), CommandPool(this, QueueType::COMPUTE), CommandPool(this, QueueType::TRANSFER)},
               {CommandPool(this, QueueType::GRAPHICS), CommandPool(this, QueueType::COMPUTE), CommandPool(this, QueueType::TRANSFER)}
@@ -65,7 +64,6 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, bool cl
           .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
       })
 {
-    _swapchain = new Swapchain(*this, platform, clear);
 
 
     VkFenceCreateInfo fenceCreateInfo{};
@@ -176,7 +174,6 @@ cala::backend::vulkan::Device::~Device() {
 
     for (auto& setLayout : _setLayouts)
         vkDestroyDescriptorSetLayout(_context.device(), setLayout.second, nullptr);
-    delete _swapchain;
 }
 
 
@@ -193,8 +190,7 @@ cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFra
     return {
         _frameCount,
         &getCommandBuffer(frameIndex()),
-        fence,
-        _swapchain->nextImage()
+        fence
     };
 }
 

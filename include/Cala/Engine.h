@@ -21,7 +21,7 @@ namespace cala {
     class Engine {
     public:
 
-        Engine(backend::Platform& platform, bool clear = true);
+        Engine(backend::Platform& platform);
 
         backend::vulkan::Device& device() { return _device; }
 

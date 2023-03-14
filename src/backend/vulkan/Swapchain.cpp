@@ -109,14 +109,12 @@ cala::backend::vulkan::Swapchain::Swapchain(Device &driver, Platform& platform, 
             }
     };
 
-//    _renderPass = new RenderPass(_device, attachments);
     _renderPass = _driver.getRenderPass(attachments);
 
     for (auto& view : _imageViews) {
         VkImageView framebufferAttachments[2] = { view, _depthView.view };
         u32 hashes[2] = { 0, 0 };
         _framebuffers.emplace(_driver.getFramebuffer(_renderPass, framebufferAttachments, hashes, _extent.width, _extent.height));
-//        _framebuffers.emplace(_device.context().device(), *_renderPass, framebufferAttachments, _extent.width, _extent.height);
     }
 }
 
@@ -130,8 +128,13 @@ cala::backend::vulkan::Swapchain::~Swapchain() {
     for (auto& view : _imageViews)
         vkDestroyImageView(_driver.context().device(), view, nullptr);
 
-    vkDestroySwapchainKHR(_driver.context().device(), _swapchain, nullptr);
-    vkDestroySurfaceKHR(_driver.context().instance(), _surface, nullptr);
+    if (_surface != VK_NULL_HANDLE) {
+        vkDestroySwapchainKHR(_driver.context().device(), _swapchain, nullptr);
+        vkDestroySurfaceKHR(_driver.context().instance(), _surface, nullptr);
+    } else {
+        for (u32 i = 0; i < _images.size(); i++)
+            vmaDestroyImage(_driver.context().allocator(), _images[i], _allocations[i]);
+    }
 }
 
 

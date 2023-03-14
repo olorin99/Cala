@@ -33,7 +33,7 @@ void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkDevice device, VkQue
 }
 
 
-ImGuiContext::ImGuiContext(cala::backend::vulkan::Device &driver, SDL_Window* window)
+ImGuiContext::ImGuiContext(cala::backend::vulkan::Device &driver, cala::backend::vulkan::Swapchain* swapchain, SDL_Window* window)
     : _device(driver.context().device()),
     _window(window),
     _renderPass(nullptr),
@@ -119,8 +119,8 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Device &driver, SDL_Window* wi
     initInfo.PipelineCache = VK_NULL_HANDLE;
     initInfo.DescriptorPool = _descriptorPool;
     initInfo.Allocator = nullptr;
-    initInfo.MinImageCount = driver.swapchain().size();
-    initInfo.ImageCount = driver.swapchain().size();
+    initInfo.MinImageCount = swapchain->size();
+    initInfo.ImageCount = swapchain->size();
     initInfo.CheckVkResultFn = nullptr;
     ImGui_ImplVulkan_Init(&initInfo, _renderPass->renderPass());
 

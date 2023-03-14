@@ -1,9 +1,10 @@
 #include "Cala/ui/RendererSettingsWindow.h"
 #include <imgui.h>
 
-cala::ui::RendererSettingsWindow::RendererSettingsWindow(Engine* engine, Renderer *renderer)
+cala::ui::RendererSettingsWindow::RendererSettingsWindow(Engine* engine, Renderer *renderer, backend::vulkan::Swapchain* swapchain)
     : _engine(engine),
-    _renderer(renderer)
+    _renderer(renderer),
+    _swapchain(swapchain)
 {}
 
 void cala::ui::RendererSettingsWindow::render() {
@@ -15,10 +16,10 @@ void cala::ui::RendererSettingsWindow::render() {
     ImGui::Checkbox("Tonemap Pass", &rendererSettings.tonemap);
     ImGui::Checkbox("Freeze Frustum,", &rendererSettings.freezeFrustum);
     ImGui::Checkbox("IBL,", &rendererSettings.ibl);
-    bool vsync = _engine->device().swapchain().getVsync();
+    bool vsync = _swapchain->getVsync();
     if (ImGui::Checkbox("Vsync", &vsync)) {
         _engine->device().wait();
-        _engine->device().swapchain().setVsync(vsync);
+        _swapchain->setVsync(vsync);
     }
     ImGui::Checkbox("Debug Clusters", &rendererSettings.debugClusters);
 

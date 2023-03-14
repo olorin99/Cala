@@ -357,17 +357,19 @@ ShaderProgram loadShader(Device& driver, const ende::fs::Path& vertex, const end
 
 int main() {
     SDLPlatform platform("hello_triangle", 1920, 1080);
-//    OfflinePlatform platform(1920, 1080);
+    OfflinePlatform offlinePlatform(1920, 1080);
 
     Engine engine(platform);
+    backend::vulkan::Swapchain swapchain(engine.device(), platform);
+    backend::vulkan::Swapchain offlineSwapchain(engine.device(), offlinePlatform);
     Renderer renderer(&engine, {});
-    engine.device().swapchain().setVsync(true);
+    swapchain.setVsync(true);
 
-    ImGuiContext imGuiContext(engine.device(), platform.window());
+    ImGuiContext imGuiContext(engine.device(), &swapchain, platform.window());
 
     ui::ProfileWindow profileWindow(&engine, &renderer);
     ui::StatisticsWindow statisticsWindow(&engine, &renderer);
-    ui::RendererSettingsWindow rendererSettingsWindow(&engine, &renderer);
+    ui::RendererSettingsWindow rendererSettingsWindow(&engine, &renderer, &swapchain);
     ui::ResourceViewer resourceViewer(&engine.device());
 
 
@@ -536,7 +538,7 @@ int main() {
                     switch (event.window.event) {
                         case SDL_WINDOWEVENT_RESIZED:
                             engine.device().wait();
-                            engine.device().swapchain().resize(event.window.data1, event.window.data2);
+                            swapchain.resize(event.window.data1, event.window.data2);
                             camera.resize(event.window.data1, event.window.data2);
                             break;
                     }
@@ -631,7 +633,7 @@ int main() {
             lightTransform.rotate(ende::math::Vec3f{0, 1, 1}, ende::math::rad(45) * dt);
         }
         engine.gc();
-        renderer.beginFrame();
+        renderer.beginFrame(&swapchain);
 
         scene.prepare(camera);
 
