@@ -1,3 +1,10 @@
 [submodule "libs/Ende"]
 	path = libs/Ende
 	url = https://github.com/olorin99/Ende
+[submodule "libs/SPIRV-Cross"]
+	path = libs/SPIRV-Cross
+	url = https://github.com/olorin99/SPIRV-Cross.git
+[submodule "libs/imgui"]
+	path = libs/imgui
+	url = https://github.com/olorin99/imgui
+	branch = docking
