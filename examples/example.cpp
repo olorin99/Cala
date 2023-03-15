@@ -365,7 +365,7 @@ int main() {
     Renderer renderer(&engine, {});
     swapchain.setVsync(true);
 
-    ImGuiContext imGuiContext(engine.device(), &swapchain, platform.window());
+    ImGuiContext imGuiContext(engine.device(), &swapchain, (SDL_Window*)platform.window());
 
     ui::ProfileWindow profileWindow(&engine, &renderer);
     ui::StatisticsWindow statisticsWindow(&engine, &renderer);

@@ -15,6 +15,8 @@ namespace cala::backend {
 
         virtual VkSurfaceKHR surface(VkInstance instance) { return VK_NULL_HANDLE; }
 
+        virtual void* window() const { return nullptr; };
+
         virtual std::pair<u32, u32> windowSize() const { return {0, 0}; }
 
     protected:

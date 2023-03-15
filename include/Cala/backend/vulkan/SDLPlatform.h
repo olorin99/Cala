@@ -19,7 +19,7 @@ namespace cala::backend::vulkan {
 
         VkSurfaceKHR surface(VkInstance instance) override;
 
-        SDL_Window* window() const { return _window; }
+        void* window() const override { return _window; }
 
         std::pair<u32, u32> windowSize() const override;
 
