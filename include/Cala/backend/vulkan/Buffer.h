@@ -73,6 +73,20 @@ namespace cala::backend::vulkan {
 
         };
 
+        struct Barrier {
+            Buffer* buffer;
+            Access srcAccess;
+            Access dstAccess;
+        };
+
+        Barrier barrier(Access dstAccess);
+
+        void invalidate() { _invalidated = true; }
+
+        void validate() { _invalidated = false; }
+
+        bool invalidated() const { return _invalidated; }
+
 
         VkBuffer buffer() const { return _buffer; }
 
@@ -95,6 +109,7 @@ namespace cala::backend::vulkan {
         BufferUsage _usage;
         MemoryProperties _flags;
         Mapped _mapped;
+        bool _invalidated;
 
     };
 

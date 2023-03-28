@@ -10,7 +10,8 @@ cala::backend::vulkan::Buffer::Buffer(Device &driver, u32 size, BufferUsage usag
     _allocation(nullptr),
     _size(size),
     _usage(usage | BufferUsage::TRANSFER_DST | BufferUsage::TRANSFER_SRC),
-    _flags(flags)
+    _flags(flags),
+    _invalidated(false)
 {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -115,6 +116,7 @@ void cala::backend::vulkan::Buffer::data(ende::Span<const void> data, u32 offset
         auto mapped = map(offset, data.size());
         std::memcpy(mapped.address, data.data(), data.size());
     }
+    invalidate();
 }
 
 cala::backend::vulkan::Buffer::View::View()
@@ -141,4 +143,12 @@ cala::backend::vulkan::Buffer::Mapped cala::backend::vulkan::Buffer::View::map(u
 
 void cala::backend::vulkan::Buffer::View::data(ende::Span<const void> data, u32 offset) {
     _parent->data(data, _offset + offset);
+}
+
+cala::backend::vulkan::Buffer::Barrier cala::backend::vulkan::Buffer::barrier(Access dstAccess) {
+    Barrier b{};
+    b.srcAccess = invalidated() ? Access::MEMORY_WRITE : Access::MEMORY_READ;
+    b.dstAccess = dstAccess;
+    b.buffer = this;
+    return b;
 }

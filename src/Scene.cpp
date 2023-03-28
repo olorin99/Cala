@@ -135,10 +135,12 @@ void cala::Scene::prepare(cala::Camera& camera) {
             u32 meshOffset = i * sizeof(MeshData);
             MeshData mesh{ renderable.firstIndex, renderable.indexCount, material->id(), static_cast<u32>(renderable.materialInstance->getOffset() / renderable.materialInstance->material()->size()), renderable.aabb.min, renderable.aabb.max };
             assignMemory(_meshDataBuffer[frame]->persistentMapping(), meshOffset, mesh);
+            _meshDataBuffer[frame]->invalidate();
 
             u32 transformOffset = i * sizeof(ende::math::Mat4f);
             auto model = transform->world();
             assignMemory(_modelBuffer[frame]->persistentMapping(), transformOffset, model);
+            _modelBuffer[frame]->invalidate();
             f--;
         }
     }
@@ -199,6 +201,7 @@ void cala::Scene::prepare(cala::Camera& camera) {
 //        assignMemory(_lightBuffer[frame]->persistentMapping(), sizeof(u32) * 4, _lightData.data(), _lightData.size());
         //TODO: find reason for crash when copying memory at offset into mapped lightbuffer memory
 
+        _lightBuffer[frame]->invalidate();
         _lightsDirtyFrame--;
     }
 
@@ -208,6 +211,7 @@ void cala::Scene::prepare(cala::Camera& camera) {
         offset += count.count;
     }
     std::memcpy(_materialCountBuffer[frame]->persistentMapping(), _materialCounts.data(), _materialCounts.size() * sizeof(MaterialCount));
+    _materialCountBuffer[frame]->invalidate();
 
     _engine->updateMaterialdata();
 }

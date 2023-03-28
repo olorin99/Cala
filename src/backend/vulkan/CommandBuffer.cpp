@@ -395,6 +395,24 @@ void cala::backend::vulkan::CommandBuffer::pipelineBarrier(PipelineStage srcStag
     vkCmdPipelineBarrier(_buffer, getPipelineStage(srcStage), getPipelineStage(dstStage), 0, 0, nullptr, 0, nullptr, imageBarriers.size(), barriers);
 }
 
+void cala::backend::vulkan::CommandBuffer::pipelineBarrier(PipelineStage srcStage, PipelineStage dstStage, ende::Span<Buffer::Barrier> bufferBarriers) {
+    VkBufferMemoryBarrier barriers[bufferBarriers.size()];
+    for (u32 i = 0; i < bufferBarriers.size(); i++) {
+        auto& b = barriers[i];
+        auto& barrier = bufferBarriers[i];
+        b.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        b.buffer = barrier.buffer->buffer();
+        b.size = barrier.buffer->size();
+        b.offset = 0;
+        b.srcAccessMask = getAccessFlags(barrier.srcAccess);
+        b.dstAccessMask = getAccessFlags(barrier.dstAccess);
+        b.srcQueueFamilyIndex = -1;
+        b.dstQueueFamilyIndex = -1;
+        b.pNext = nullptr;
+    }
+    vkCmdPipelineBarrier(_buffer, getPipelineStage(srcStage), getPipelineStage(dstStage), 0, 0, nullptr, bufferBarriers.size(), barriers, 0, nullptr);
+}
+
 void cala::backend::vulkan::CommandBuffer::pushDebugLabel(std::string_view label, std::array<f32, 4> colour) {
 #ifndef NDEBUG
     _debugLabels.push(label);
