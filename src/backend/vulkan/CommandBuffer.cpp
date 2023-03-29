@@ -11,7 +11,7 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(Device& device, VkQueue queu
     _signal(VK_NULL_HANDLE),
     _queue(queue),
     _active(false),
-    _indexBuffer(nullptr),
+    _indexBuffer{},
     _currentPipeline(VK_NULL_HANDLE),
     _currentSets{VK_NULL_HANDLE},
     _drawCallCount(0)
@@ -30,7 +30,7 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(CommandBuffer &&rhs) noexcep
     _signal(VK_NULL_HANDLE),
     _queue(VK_NULL_HANDLE),
     _active(false),
-    _indexBuffer(nullptr),
+    _indexBuffer{},
     _boundInterface(nullptr),
     _pipelineKey(),
     _currentPipeline(VK_NULL_HANDLE)
@@ -134,20 +134,21 @@ void cala::backend::vulkan::CommandBuffer::end(Framebuffer &framebuffer) {
 }
 
 
-void cala::backend::vulkan::CommandBuffer::bindProgram(const ShaderProgram &program) {
-    if (_pipelineKey.layout != program._layout)
-        _pipelineKey.layout = program._layout;
+void cala::backend::vulkan::CommandBuffer::bindProgram(ProgramHandle program) {
+    assert(program);
+    if (_pipelineKey.layout != program->_layout)
+        _pipelineKey.layout = program->_layout;
 
     for (u32 i = 0; i < MAX_SET_COUNT; i++) {
-        if (_descriptorKey[i].setLayout != program._setLayout[i])
-            _descriptorKey[i].setLayout = program._setLayout[i];
+        if (_descriptorKey[i].setLayout != program->_setLayout[i])
+            _descriptorKey[i].setLayout = program->_setLayout[i];
     }
-    for (u32 i = 0; i < program._stages.size(); i++) {
-            _pipelineKey.shaders[i] = program._stages[i];
+    for (u32 i = 0; i < program->_stages.size(); i++) {
+            _pipelineKey.shaders[i] = program->_stages[i];
     }
-    _pipelineKey.shaderCount = program._stages.size();
-    _boundInterface = &program._interface;
-    _pipelineKey.compute = program.stagePresent(ShaderStage::COMPUTE);
+    _pipelineKey.shaderCount = program->_stages.size();
+    _boundInterface = &program->_interface;
+    _pipelineKey.compute = program->stagePresent(ShaderStage::COMPUTE);
 }
 
 void cala::backend::vulkan::CommandBuffer::bindAttributes(ende::Span<Attribute> attributes) {
@@ -267,15 +268,17 @@ void cala::backend::vulkan::CommandBuffer::bindPipeline() {
     }
 }
 
-void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 binding, Buffer &buffer, u32 offset, u32 range, bool storage) {
+void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 binding, BufferHandle buffer, u32 offset, u32 range, bool storage) {
+    assert(buffer);
     assert(set < MAX_SET_COUNT && "set is greater than valid number of descriptor sets");
-    _descriptorKey[set].buffers[binding] = { &buffer, offset, range == 0 ? (buffer.size() - offset) : range , storage };
+    _descriptorKey[set].buffers[binding] = { &*buffer, offset, range == 0 ? (buffer->size() - offset) : range , storage };
 //    bindBuffer(set, slot, buffer.buffer(), offset, range == 0 ? buffer.size() : range);
 }
 
-void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 binding, Buffer &buffer, bool storage) {
+void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 binding, BufferHandle buffer, bool storage) {
+    assert(buffer);
     assert(set < MAX_SET_COUNT && "set is greater than valid number of descriptor sets");
-    _descriptorKey[set].buffers[binding] = { &buffer, 0, buffer.size(), storage };
+    _descriptorKey[set].buffers[binding] = { &*buffer, 0, buffer->size(), storage };
 }
 
 void cala::backend::vulkan::CommandBuffer::bindImage(u32 set, u32 binding, Image::View& image, Sampler& sampler, bool storage) {
@@ -309,25 +312,28 @@ void cala::backend::vulkan::CommandBuffer::clearDescriptors() {
 }
 
 
-void cala::backend::vulkan::CommandBuffer::bindVertexBuffer(u32 first, VkBuffer buffer, u32 offset) {
+void cala::backend::vulkan::CommandBuffer::bindVertexBuffer(u32 first, BufferHandle buffer, u32 offset) {
+    assert(buffer);
     VkDeviceSize offsets = offset;
-    vkCmdBindVertexBuffers(_buffer, first, 1, &buffer, &offsets);
-    _indexBuffer = nullptr; //TODO: add support for multiple draws from single buffer
+    VkBuffer b = buffer->buffer();
+    vkCmdBindVertexBuffers(_buffer, first, 1, &b, &offsets);
+    _indexBuffer = {};
 }
 
 void cala::backend::vulkan::CommandBuffer::bindVertexBuffers(u32 first, ende::Span<VkBuffer> buffers, ende::Span<VkDeviceSize> offsets) {
     assert(buffers.size() == offsets.size());
     vkCmdBindVertexBuffers(_buffer, first, buffers.size(), buffers.data(), offsets.data());
-    _indexBuffer = nullptr;
+    _indexBuffer = {};
 }
 
-void cala::backend::vulkan::CommandBuffer::bindVertexBuffer(u32 first, Buffer &buffer, u32 offset) {
-    bindVertexBuffer(first, buffer.buffer(), offset);
-}
+//void cala::backend::vulkan::CommandBuffer::bindVertexBuffer(u32 first, Buffer &buffer, u32 offset) {
+//    bindVertexBuffer(first, buffer.buffer(), offset);
+//}
 
-void cala::backend::vulkan::CommandBuffer::bindIndexBuffer(Buffer& buffer, u32 offset) {
-    vkCmdBindIndexBuffer(_buffer, buffer.buffer(), offset, VK_INDEX_TYPE_UINT32);
-    _indexBuffer = &buffer;
+void cala::backend::vulkan::CommandBuffer::bindIndexBuffer(BufferHandle buffer, u32 offset) {
+    assert(buffer);
+    vkCmdBindIndexBuffer(_buffer, buffer->buffer(), offset, VK_INDEX_TYPE_UINT32);
+    _indexBuffer = buffer;
 }
 
 
@@ -340,28 +346,28 @@ void cala::backend::vulkan::CommandBuffer::draw(u32 count, u32 instanceCount, u3
     ++_drawCallCount;
 }
 
-void cala::backend::vulkan::CommandBuffer::drawIndirect(Buffer &buffer, u32 offset, u32 drawCount, u32 stride) {
+void cala::backend::vulkan::CommandBuffer::drawIndirect(BufferHandle buffer, u32 offset, u32 drawCount, u32 stride) {
     if (_pipelineKey.compute) throw std::runtime_error("Trying to draw when compute pipeline is bound");
 
     if (stride == 0)
         stride = sizeof(u32) * 4;
-    vkCmdDrawIndirect(_buffer, buffer.buffer(), offset, drawCount, stride);
+    vkCmdDrawIndirect(_buffer, buffer->buffer(), offset, drawCount, stride);
     ++_drawCallCount;
 }
 
-void cala::backend::vulkan::CommandBuffer::drawIndirectCount(Buffer &buffer, u32 bufferOffset, Buffer &countBuffer, u32 countOffset, u32 maxDrawCount, u32 stride) {
+void cala::backend::vulkan::CommandBuffer::drawIndirectCount(BufferHandle buffer, u32 bufferOffset, BufferHandle countBuffer, u32 countOffset, u32 maxDrawCount, u32 stride) {
     if (_pipelineKey.compute) throw std::runtime_error("Trying to draw when compute pipeline is bound");
-    assert(countBuffer.size() > countOffset);
+    assert(countBuffer->size() > countOffset);
 
     if (_indexBuffer) {
         if (stride == 0)
             stride = sizeof(VkDrawIndexedIndirectCommand);
-        vkCmdDrawIndexedIndirectCount(_buffer, buffer.buffer(), bufferOffset, countBuffer.buffer(), countOffset, maxDrawCount, stride);
+        vkCmdDrawIndexedIndirectCount(_buffer, buffer->buffer(), bufferOffset, countBuffer->buffer(), countOffset, maxDrawCount, stride);
     }
     else {
         if (stride == 0)
             stride = sizeof(VkDrawIndirectCommand);
-        vkCmdDrawIndirectCount(_buffer, buffer.buffer(), bufferOffset, countBuffer.buffer(), countOffset, maxDrawCount, stride);
+        vkCmdDrawIndirectCount(_buffer, buffer->buffer(), bufferOffset, countBuffer->buffer(), countOffset, maxDrawCount, stride);
     }
     ++_drawCallCount;
 }

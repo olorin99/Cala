@@ -7,7 +7,7 @@
 #include <Cala/backend/vulkan/CommandPool.h>
 #include "Platform.h"
 #include <Ende/Vector.h>
-
+#include <Cala/backend/vulkan/Handle.h>
 #include <Ende/time/StopWatch.h>
 
 namespace cala::ui {
@@ -17,42 +17,6 @@ namespace cala::ui {
 namespace cala::backend::vulkan {
 
     const u32 FRAMES_IN_FLIGHT = 2;
-
-    class Device;
-    template <typename T>
-    class Handle {
-    public:
-
-        Handle() = default;
-
-        T& operator*() noexcept;
-
-        T* operator->() noexcept;
-
-        explicit operator bool() const noexcept {
-            return _device && _index != -1 && isValid();
-        }
-
-        i32 index() const { return _index; }
-
-        bool isValid() const;
-
-    private:
-        friend Device;
-
-        Handle(Device* device, u32 index)
-                : _device(device),
-                  _index(index)
-        {}
-
-        Device* _device = nullptr;
-        i32 _index = -1;
-
-    };
-
-    using BufferHandle = Handle<backend::vulkan::Buffer>;
-    using ImageHandle = Handle<backend::vulkan::Image>;
-    using ProgramHandle = Handle<backend::vulkan::ShaderProgram>;
 
     class Device {
     public:

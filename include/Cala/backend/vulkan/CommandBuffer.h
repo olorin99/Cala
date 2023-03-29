@@ -2,7 +2,7 @@
 #define CALA_COMMANDBUFFER_H
 
 #include <vulkan/vulkan.h>
-
+#include <Cala/backend/vulkan/Handle.h>
 #include <Cala/backend/vulkan/ShaderProgram.h>
 #include <Cala/backend/vulkan/RenderPass.h>
 #include <Cala/backend/vulkan/Framebuffer.h>
@@ -50,7 +50,7 @@ namespace cala::backend::vulkan {
 
 
 
-        void bindProgram(const ShaderProgram& program);
+        void bindProgram(ProgramHandle program);
 
         void bindAttributes(ende::Span<Attribute> attributes);
 
@@ -92,8 +92,8 @@ namespace cala::backend::vulkan {
         void bindPipeline();
 
 
-        void bindBuffer(u32 set, u32 binding, Buffer& buffer, u32 offset, u32 range, bool storage = false);
-        void bindBuffer(u32 set, u32 binding, Buffer& buffer, bool storage = false);
+        void bindBuffer(u32 set, u32 binding, BufferHandle buffer, u32 offset, u32 range, bool storage = false);
+        void bindBuffer(u32 set, u32 binding, BufferHandle buffer, bool storage = false);
 
         void bindImage(u32 set, u32 binding, Image::View& image, Sampler& sampler, bool storage = false);
 
@@ -102,19 +102,19 @@ namespace cala::backend::vulkan {
         void bindDescriptors();
         void clearDescriptors();
 
-        void bindVertexBuffer(u32 first, VkBuffer buffer, u32 offset = 0);
+        void bindVertexBuffer(u32 first, BufferHandle buffer, u32 offset = 0);
         void bindVertexBuffers(u32 first, ende::Span<VkBuffer> buffers, ende::Span<VkDeviceSize> offsets);
 
-        void bindVertexBuffer(u32 first, Buffer& buffer, u32 offset);
+//        void bindVertexBuffer(u32 first, BufferHandle buffer, u32 offset);
 
-        void bindIndexBuffer(Buffer& buffer, u32 offset = 0);
+        void bindIndexBuffer(BufferHandle buffer, u32 offset = 0);
 
 
         void draw(u32 count, u32 instanceCount, u32 first, u32 firstInstance, bool indexed = true);
 
-        void drawIndirect(Buffer& buffer, u32 offset, u32 drawCount, u32 stride = 0);
+        void drawIndirect(BufferHandle buffer, u32 offset, u32 drawCount, u32 stride = 0);
 
-        void drawIndirectCount(Buffer& buffer, u32 bufferOffset, Buffer& countBuffer, u32 countOffset, u32 maxDrawCount, u32 stride = sizeof(VkDrawIndexedIndirectCommand));
+        void drawIndirectCount(BufferHandle buffer, u32 bufferOffset, BufferHandle countBuffer, u32 countOffset, u32 maxDrawCount, u32 stride = sizeof(VkDrawIndexedIndirectCommand));
 
         void dispatchCompute(u32 x, u32 y, u32 z);
 
@@ -152,7 +152,7 @@ namespace cala::backend::vulkan {
         VkQueue _queue;
         bool _active;
 
-        Buffer* _indexBuffer;
+        BufferHandle _indexBuffer;
         const ShaderInterface* _boundInterface;
 
         struct PipelineKey {

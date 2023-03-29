@@ -65,5 +65,5 @@ void cala::MaterialInstance::bind(backend::vulkan::CommandBuffer &cmd, u32 set, 
 //        cmd.bindImage(set, first + i, viewPair.first, viewPair.second);
 //    }
     if (_material->_setSize > 0)
-        cmd.bindBuffer(2, 0, *_material->_materialBuffer, _offset, _material->_setSize, false);
+        cmd.bindBuffer(2, 0, _material->_materialBuffer, _offset, _material->_setSize, false);
 }

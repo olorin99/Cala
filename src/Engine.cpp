@@ -221,7 +221,7 @@ cala::Engine::Engine(backend::Platform &platform)
         auto brdfBarrier = _brdfImage->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, { &brdfBarrier, 1 });
 
-        cmd.bindProgram(*_brdfProgram);
+        cmd.bindProgram(_brdfProgram);
         cmd.bindImage(1, 0, _device.getImageView(_brdfImage), _device.defaultSampler(), true);
         cmd.bindPipeline();
         cmd.bindDescriptors();
@@ -288,7 +288,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::convertToCubeMap(backend::vulka
 //        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &hdrBarrier, 1 });
 
 
-        cmd.bindProgram(*_equirectangularToCubeMap);
+        cmd.bindProgram(_equirectangularToCubeMap);
         cmd.bindImage(1, 0, equirectangularView, _lodSampler);
         cmd.bindImage(1, 1, cubeView, _device.defaultSampler(), true);
 
@@ -320,7 +320,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::generateIrradianceMap(backend::
         auto cubeBarrier = cubeMap->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::GENERAL);
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, { &cubeBarrier, 1 });
 
-        cmd.bindProgram(*_irradianceProgram);
+        cmd.bindProgram(_irradianceProgram);
         cmd.bindImage(1, 0, _device.getImageView(cubeMap), _lodSampler, true);
         cmd.bindImage(1, 1, _device.getImageView(irradianceMap), _device.defaultSampler(), true);
         cmd.bindPipeline();
@@ -361,7 +361,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::generatePrefilteredIrradiance(b
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, { &prefilterBarrier, 1 });
 
         for (u32 mip = 0; mip < prefilteredMap->mips(); mip++) {
-            cmd.bindProgram(*_prefilterProgram);
+            cmd.bindProgram(_prefilterProgram);
             cmd.bindImage(1, 0, _device.getImageView(cubeMap), _lodSampler);
             cmd.bindImage(1, 1, mipViews[mip], _device.defaultSampler(), true);
             f32 roughness = (f32)mip / (f32)prefilteredMap->mips();

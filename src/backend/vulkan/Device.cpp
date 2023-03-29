@@ -4,51 +4,6 @@
 #include <Ende/profile/profile.h>
 #include <Ende/log/log.h>
 
-template <>
-cala::backend::vulkan::Buffer &cala::backend::vulkan::BufferHandle::operator*() noexcept {
-    return *_device->_buffers[_index];
-}
-
-template <>
-cala::backend::vulkan::Buffer *cala::backend::vulkan::BufferHandle::operator->() noexcept {
-    return _device->_buffers[_index];
-}
-
-template <>
-bool cala::backend::vulkan::BufferHandle::isValid() const {
-    return _device->_buffers[_index] != nullptr;
-}
-
-template <>
-cala::backend::vulkan::Image &cala::backend::vulkan::ImageHandle::operator*() noexcept {
-    return *_device->_images[_index];
-}
-
-template <>
-cala::backend::vulkan::Image *cala::backend::vulkan::ImageHandle ::operator->() noexcept {
-    return _device->_images[_index];
-}
-
-template <>
-bool cala::backend::vulkan::ImageHandle::isValid() const {
-    return _device->_images[_index] != nullptr;
-}
-
-template <>
-cala::backend::vulkan::ShaderProgram &cala::backend::vulkan::ProgramHandle::operator*() noexcept {
-    return *_device->_programs[_index];
-}
-
-template <>
-cala::backend::vulkan::ShaderProgram *cala::backend::vulkan::ProgramHandle ::operator->() noexcept {
-    return _device->_programs[_index];
-}
-
-template <>
-bool cala::backend::vulkan::ProgramHandle ::isValid() const {
-    return _device->_programs[_index] != nullptr;
-}
-
 cala::backend::vulkan::Device::Device(cala::backend::Platform& platform)
     : _context(platform),
       _commandPools{
@@ -302,7 +257,7 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
         index = _buffers.size();
         _buffers.emplace(new backend::vulkan::Buffer(*this, size, usage, flags, persistentlyMapped));
     }
-    return { this, index };
+    return { this, static_cast<i32>(index) };
 }
 
 void cala::backend::vulkan::Device::destroyBuffer(BufferHandle handle) {
@@ -310,7 +265,9 @@ void cala::backend::vulkan::Device::destroyBuffer(BufferHandle handle) {
 }
 
 cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::resizeBuffer(BufferHandle handle, u32 size, bool transfer) {
+    assert(handle);
     auto newHandle = createBuffer(size, handle->usage(), handle->flags(), handle->persistentlyMapped());
+    assert(newHandle);
     if (transfer) {
         immediate([&](backend::vulkan::CommandBuffer& cmd) {
             VkBufferCopy bufferCopy{};
@@ -341,7 +298,7 @@ cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Im
         chosenSampler = backend::isDepthFormat(info.format) ? &_defaultShadowSampler : &_defaultSampler;
 
     updateBindlessImage(index, _imageViews[index], *chosenSampler);
-    return { this, index };
+    return { this, static_cast<i32>(index) };
 }
 
 void cala::backend::vulkan::Device::destroyImage(ImageHandle handle) {
@@ -350,7 +307,7 @@ void cala::backend::vulkan::Device::destroyImage(ImageHandle handle) {
 
 cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::getImageHandle(u32 index) {
     assert(index < _images.size());
-    return { this, index };
+    return { this, static_cast<i32>(index) };
 }
 
 cala::backend::vulkan::Image::View &cala::backend::vulkan::Device::getImageView(ImageHandle handle) {
@@ -366,7 +323,7 @@ cala::backend::vulkan::Image::View &cala::backend::vulkan::Device::getImageView(
 cala::backend::vulkan::ProgramHandle cala::backend::vulkan::Device::createProgram(ShaderProgram &&program) {
     u32 index = _programs.size();
     _programs.push(new ShaderProgram(std::move(program)));
-    return { this, index };
+    return { this, static_cast<i32>(index) };
 }
 
 
