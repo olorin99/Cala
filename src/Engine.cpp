@@ -159,11 +159,26 @@ cala::Engine::Engine(backend::Platform &platform)
         ende::Vector<u32> vertexData(file.size() / sizeof(u32));
         file.read({ reinterpret_cast<char*>(vertexData.data()), static_cast<u32>(vertexData.size() * sizeof(u32)) });
 
-        file.open("../../res/shaders/clusters_debug.frag.spv"_path, ende::fs::in | ende::fs::binary);
+        file.open("../../res/shaders/debug/clusters_debug.frag.spv"_path, ende::fs::in | ende::fs::binary);
         ende::Vector<u32> fragmentData(file.size() / sizeof(u32));
         file.read({ reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32)) });
 
         _clusterDebugProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
+                .addStage(vertexData, backend::ShaderStage::VERTEX)
+                .addStage(fragmentData, backend::ShaderStage::FRAGMENT)
+                .compile(_device)));
+    }
+    _device.setBindlessSetIndex(0);
+    {
+        file.open("../../res/shaders/default.vert.spv"_path, ende::fs::in | ende::fs::binary);
+        ende::Vector<u32> vertexData(file.size() / sizeof(u32));
+        file.read({ reinterpret_cast<char*>(vertexData.data()), static_cast<u32>(vertexData.size() * sizeof(u32)) });
+
+        file.open("../../res/shaders/debug/normals.frag.spv"_path, ende::fs::in | ende::fs::binary);
+        ende::Vector<u32> fragmentData(file.size() / sizeof(u32));
+        file.read({ reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32)) });
+
+        _normalsDebugProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
                 .addStage(vertexData, backend::ShaderStage::VERTEX)
                 .addStage(fragmentData, backend::ShaderStage::FRAGMENT)
                 .compile(_device)));

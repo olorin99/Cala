@@ -30,6 +30,9 @@ namespace cala {
             bool ibl = false;
 
             bool debugClusters = false;
+            bool debugNormals = false;
+            bool debugRoughness = false;
+            bool debugMetallic = false;
         };
 
         Renderer(Engine* engine, Settings settings);

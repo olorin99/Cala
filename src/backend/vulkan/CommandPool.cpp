@@ -30,7 +30,7 @@ void cala::backend::vulkan::CommandPool::reset() {
 
 cala::backend::vulkan::CommandBuffer &cala::backend::vulkan::CommandPool::getBuffer() {
     if (_index < _buffers.size())
-        return _buffers[_index];
+        return _buffers[_index++];
 
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;

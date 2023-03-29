@@ -73,6 +73,7 @@ namespace cala {
         backend::vulkan::ProgramHandle _cullLightsProgram;
 
         backend::vulkan::ProgramHandle _clusterDebugProgram;
+        backend::vulkan::ProgramHandle _normalsDebugProgram;
 
         backend::vulkan::ImageHandle _brdfImage;
         backend::vulkan::ImageHandle _defaultIrradiance;

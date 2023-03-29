@@ -21,7 +21,12 @@ void cala::ui::RendererSettingsWindow::render() {
         _engine->device().wait();
         _swapchain->setVsync(vsync);
     }
-    ImGui::Checkbox("Debug Clusters", &rendererSettings.debugClusters);
+    ImGui::Text("Debug Settings");
+    ImGui::Checkbox("\tDebug Clusters", &rendererSettings.debugClusters);
+    ImGui::Checkbox("\tNormals", &rendererSettings.debugNormals);
+//        rendererSettings.forward = false;
+    ImGui::Checkbox("\tRoughness", &rendererSettings.debugRoughness);
+    ImGui::Checkbox("\tMetallic", &rendererSettings.debugMetallic);
 
     f32 gamma = _renderer->getGamma();
     if (ImGui::SliderFloat("Gamma", &gamma, 0, 5))

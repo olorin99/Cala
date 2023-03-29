@@ -306,7 +306,7 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
 }
 
 void cala::backend::vulkan::Device::destroyBuffer(BufferHandle handle) {
-    _buffersToDestroy.push(std::make_pair(10, handle));
+    _buffersToDestroy.push(std::make_pair(FRAMES_IN_FLIGHT + 1, handle));
 }
 
 cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::resizeBuffer(BufferHandle handle, u32 size, bool transfer) {
@@ -345,7 +345,7 @@ cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Im
 }
 
 void cala::backend::vulkan::Device::destroyImage(ImageHandle handle) {
-    _imagesToDestroy.push(std::make_pair(10, handle));
+    _imagesToDestroy.push(std::make_pair(FRAMES_IN_FLIGHT + 1, handle));
 }
 
 cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::getImageHandle(u32 index) {

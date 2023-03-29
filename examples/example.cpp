@@ -618,8 +618,8 @@ int main() {
 
             if (ImGui::Button("Load")) {
                 damagedHelmet = std::move(loadGLTF(&engine, material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path));
-//                damagedHelmet = std::move(loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf"_path));
-//                damagedHelmet = std::move(loadGLTF(&engine, &material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/FlightHelmet/glTF/FlightHelmet.gltf"_path));
+//                damagedHelmet = std::move(loadGLTF(&engine, material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf"_path));
+//                damagedHelmet = std::move(loadGLTF(&engine, material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/FlightHelmet/glTF/FlightHelmet.gltf"_path));
 //                addHelmet = true;
                 scene.addRenderable(damagedHelmet, &helmetTransform, true);
             }

@@ -290,7 +290,8 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
 bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) {
     PROFILE_NAMED("RenderGraph::Execute");
     assert(_swapchain);
-    for (auto& pass : _orderedPasses) {
+    for (u32 i = 0; i < _orderedPasses.size(); i++) {
+        auto& pass = _orderedPasses[i];
         for (auto& input : pass->_inputs) {
             bool attach = false;
             for (auto& attachment : pass->_attachments) {
@@ -354,7 +355,10 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
         }
 
 
-        _timers[_engine->device().frameIndex()][pass->_passTimer].second.start(cmd);
+        auto& timer = _timers[_engine->device().frameIndex()][i];
+        timer.first = pass->_passName;
+        timer.second.start(cmd);
+
         cmd.pushDebugLabel(pass->_passName, pass->_debugColour);
         if (pass->_framebuffer)
             cmd.begin(*pass->_framebuffer);
@@ -363,7 +367,7 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
         if (pass->_framebuffer)
             cmd.end(*pass->_framebuffer);
         cmd.popDebugLabel();
-        _timers[_engine->device().frameIndex()][pass->_passTimer].second.stop();
+        timer.second.stop();
         for (auto& attachment : pass->_attachments) {
             auto it = _attachmentMap.find(attachment);
             if (it == _attachmentMap.end())

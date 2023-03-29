@@ -257,6 +257,37 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         });
     }
 
+    if (_renderSettings.debugNormals) {
+        auto& debugNormals = _graph.addPass("debug_normals");
+        debugNormals.addColourOutput("backbuffer");
+        debugNormals.setDepthOutput("depth", depthAttachment);
+        debugNormals.addBufferInput("drawCommands");
+
+        debugNormals.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            auto meshData = graph.getResource<BufferResource>("meshData");
+            auto drawCommands = graph.getResource<BufferResource>("drawCommands");
+            cmd.clearDescriptors();
+            cmd.bindBuffer(1, 0, *_cameraBuffer[_engine->device().frameIndex()]);
+            auto& renderable = scene._renderables[0].second.first;
+
+            cmd.bindBindings(renderable.bindings);
+            cmd.bindAttributes(renderable.attributes);
+            cmd.bindProgram(*_engine->_normalsDebugProgram);
+            cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
+            cmd.bindRasterState({});
+            cmd.bindBuffer(2, 1, *meshData->handle, true);
+            cmd.bindBuffer(4, 0, *scene._modelBuffer[_engine->device().frameIndex()], true);
+            cmd.bindPipeline();
+            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer->buffer());
+            cmd.bindIndexBuffer(*_engine->_globalIndexBuffer);
+            for (u32 material = 0; material < scene._materialCounts.size(); material++) {
+                cmd.bindBuffer(2, 0, *_engine->_materials[material].buffer(), true);
+                cmd.bindDescriptors();
+                cmd.drawIndirectCount(*drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), *scene._materialCountBuffer[_engine->device().frameIndex()], material * (sizeof(u32) * 2), scene._materialCounts[material].count);
+            }
+        });
+    }
+
 
     auto& pointShadows = _graph.addPass("point_shadows");
     pointShadows.addImageOutput("point_depth", pointDepth);
@@ -496,11 +527,14 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindDescriptors();
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer->buffer());
             cmd.bindIndexBuffer(*_engine->_globalIndexBuffer);
-            cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer[_engine->device().frameIndex()], 0, scene._renderables.size());
+//            cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer[_engine->device().frameIndex()], 0, scene._renderables.size());
+            for (u32 material = 0; material < scene._materialCounts.size(); material++) {
+                cmd.drawIndirectCount(*drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), *scene._materialCountBuffer[_engine->device().frameIndex()], material * (sizeof(u32) * 2), scene._materialCounts[material].count);
+            }
         });
     }
 
-    if (_renderSettings.forward) {
+    if (_renderSettings.forward && !_renderSettings.debugNormals) {
         auto& forwardPass = _graph.addPass("forward");
         if (_renderSettings.tonemap)
             forwardPass.addColourOutput("hdr", colourAttachment);
@@ -606,7 +640,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     if (_renderSettings.skybox && scene._skyLightMap) {
         auto& skyboxPass = _graph.addPass("skybox");
-        if (scene._hdrSkyLight && _renderSettings.tonemap)
+        if (scene._hdrSkyLight && _renderSettings.tonemap && !_renderSettings.debugNormals)
             skyboxPass.addColourOutput("hdr");
         else
             skyboxPass.addColourOutput("backbuffer");
