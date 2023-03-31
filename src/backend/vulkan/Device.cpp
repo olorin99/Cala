@@ -227,6 +227,7 @@ bool cala::backend::vulkan::Device::gc() {
             _buffers[index] = nullptr;
             _freeBuffers.push(index);
             _buffersToDestroy.erase(it--);
+            ende::log::info("destroyed buffer ({})", index);
         } else
             --frame;
     }
@@ -242,6 +243,15 @@ bool cala::backend::vulkan::Device::gc() {
             _images[index] = nullptr;
             _freeImages.push(index);
             _imagesToDestroy.erase(it--);
+            ende::log::info("destroyed image ({})", index);
+        } else
+            --frame;
+    }
+    for (auto it = _descriptorSets.begin(); it != _descriptorSets.end(); it++) {
+        auto& frame = it.value().second;
+        if (frame < 0) {
+            vkFreeDescriptorSets(_context.device(), _descriptorPool, 1, &it.value().first);
+            _descriptorSets.erase(it);
         } else
             --frame;
     }
@@ -425,7 +435,8 @@ VkDescriptorSet cala::backend::vulkan::Device::getDescriptorSet(CommandBuffer::D
 
     auto it = _descriptorSets.find(key);
     if (it != _descriptorSets.end()) {
-        return it->second;
+        it.value().second = FRAMES_IN_FLIGHT + 1;
+        return it->second.first;
     }
 
 
@@ -440,7 +451,7 @@ VkDescriptorSet cala::backend::vulkan::Device::getDescriptorSet(CommandBuffer::D
 
     for (u32 i = 0; i < MAX_BINDING_PER_SET; i++) {
 
-        if (key.buffers[i].buffer != nullptr) {
+        if (key.buffers[i].buffer) {
             VkDescriptorBufferInfo bufferInfo{};
             bufferInfo.buffer = key.buffers[i].buffer->buffer();
             bufferInfo.offset = key.buffers[i].offset;
@@ -481,7 +492,7 @@ VkDescriptorSet cala::backend::vulkan::Device::getDescriptorSet(CommandBuffer::D
         }
     }
 
-    _descriptorSets.emplace(std::make_pair(key, descriptorSet));
+    _descriptorSets.emplace(std::make_pair(key, std::make_pair(descriptorSet, FRAMES_IN_FLIGHT + 1)));
     return descriptorSet;
 }
 

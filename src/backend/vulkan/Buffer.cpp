@@ -29,7 +29,8 @@ cala::backend::vulkan::Buffer::Buffer(Device &driver, u32 size, BufferUsage usag
             allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     }
 
-    vmaCreateBuffer(_driver.context().allocator(), &bufferInfo, &allocInfo, &_buffer, &_allocation, nullptr);
+    auto res = vmaCreateBuffer(_driver.context().allocator(), &bufferInfo, &allocInfo, &_buffer, &_allocation, nullptr);
+    assert(res == VK_SUCCESS);
     if (persistentlyMapped)
         _mapped = map();
 }

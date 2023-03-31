@@ -170,7 +170,7 @@ namespace cala::backend::vulkan {
 
         ende::Vector<ShaderProgram*> _programs;
 
-        tsl::robin_map<CommandBuffer::DescriptorKey, VkDescriptorSet, ende::util::MurmurHash<CommandBuffer::DescriptorKey>> _descriptorSets;
+        tsl::robin_map<CommandBuffer::DescriptorKey, std::pair<VkDescriptorSet, i32>, ende::util::MurmurHash<CommandBuffer::DescriptorKey>> _descriptorSets;
         VkDescriptorPool _descriptorPool;
 
         tsl::robin_map<CommandBuffer::PipelineKey, VkPipeline, ende::util::MurmurHash<CommandBuffer::PipelineKey>, CommandBuffer::PipelineEqual> _pipelines;

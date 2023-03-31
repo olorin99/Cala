@@ -5,6 +5,7 @@
 #include <Cala/Material.h>
 #include <Cala/ImGuiContext.h>
 #include <Ende/profile/profile.h>
+#include <Ende/log/log.h>
 
 cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings)
     : _engine(engine),
@@ -262,10 +263,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         debugNormals.addColourOutput("backbuffer");
         debugNormals.setDepthOutput("depth", depthAttachment);
         debugNormals.addBufferInput("drawCommands");
+        debugNormals.addBufferInput("materialCounts", materialCountResource);
 
         debugNormals.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
             auto meshData = graph.getResource<BufferResource>("meshData");
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
+            auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
             cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
             auto& renderable = scene._renderables[0].second.first;
@@ -283,7 +286,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
                 cmd.bindBuffer(2, 0, _engine->_materials[material].buffer(), true);
                 cmd.bindDescriptors();
-                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), scene._materialCountBuffer[_engine->device().frameIndex()], material * (sizeof(u32) * 2), scene._materialCounts[material].count);
+                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
             }
         });
     }
@@ -293,13 +296,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     pointShadows.addImageOutput("point_depth", pointDepth);
     pointShadows.addBufferInput("transforms", transformsResource);
     pointShadows.addBufferInput("meshData", meshDataResource);
-    pointShadows.addBufferInput("materialCounts", materialCountResource);
 
     pointShadows.addBufferOutput("drawCommands", drawCommandsResource);
     pointShadows.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
         auto transforms = graph.getResource<BufferResource>("transforms");
         auto meshData = graph.getResource<BufferResource>("meshData");
-        auto materialCounts = graph.getResource<BufferResource>("materialCounts");
         auto drawCommands = graph.getResource<BufferResource>("drawCommands");
         u32 shadowIndex = 0;
         for (u32 i = 0; i < scene._lights.size(); i++) {
@@ -511,9 +512,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         auto& depthPrePass = _graph.addPass("depth_pre");
         depthPrePass.setDepthOutput("depth", depthAttachment);
         depthPrePass.addBufferInput("drawCommands");
+        depthPrePass.addBufferInput("materialCounts", materialCountResource);
 
         depthPrePass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
+            auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
             cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
             auto& renderable = scene._renderables[0].second.first;
@@ -529,7 +532,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
 //            cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer[_engine->device().frameIndex()], 0, scene._renderables.size());
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
-                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), scene._materialCountBuffer[_engine->device().frameIndex()], material * (sizeof(u32) * 2), scene._materialCounts[material].count);
+                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
             }
         });
     }
@@ -548,6 +551,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         forwardPass.addBufferInput("drawCommands");
         forwardPass.addBufferInput("lightIndices");
         forwardPass.addBufferInput("lightGrid");
+        forwardPass.addBufferInput("materialCounts", materialCountResource);
         forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
 
         forwardPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
@@ -555,6 +559,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto lightGrid = graph.getResource<BufferResource>("lightGrid");
             auto lightIndices = graph.getResource<BufferResource>("lightIndices");
+            auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
             if (scene._renderables.empty())
                 return;
@@ -562,9 +567,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
 //            cmd.bindBuffer(1, 1, *_globalDataBuffer);
 
-            if (!scene._lightData.empty()) {
-                cmd.bindBuffer(3, 0, scene._lightBuffer[_engine->device().frameIndex()], true);
-            }
+//            if (!scene._lightData.empty()) {
+//                cmd.bindBuffer(2, 4, scene._lightBuffer[_engine->device().frameIndex()], true);
+//            }
 
             auto& renderable = scene._renderables[0].second.first;
 
@@ -582,6 +587,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 cmd.bindBuffer(2, 1, meshData->handle, true);
                 cmd.bindBuffer(2, 2, lightGrid->handle, true);
                 cmd.bindBuffer(2, 3, lightIndices->handle, true);
+                cmd.bindBuffer(3, 0, scene._lightBuffer[_engine->device().frameIndex()], true);
                 cmd.bindBuffer(4, 0, scene._modelBuffer[_engine->device().frameIndex()], true);
 
                 struct ForwardPush {
@@ -611,7 +617,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                 cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
                 cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
-                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand), scene._materialCountBuffer[_engine->device().frameIndex()], i * (sizeof(u32) * 2), scene._materialCounts[i].count);
+                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, i * (sizeof(u32) * 2), scene._materialCounts[i].count);
             }
         });
     }

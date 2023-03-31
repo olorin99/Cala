@@ -19,12 +19,13 @@
 #include <Ende/profile/ProfileManager.h>
 #include <Cala/backend/vulkan/OfflinePlatform.h>
 #include <Cala/Model.h>
-
+#include <Ende/thread/thread.h>
 #include <Cala/ui/ProfileWindow.h>
 #include <Cala/ui/StatisticsWindow.h>
 #include <Cala/ui/RendererSettingsWindow.h>
 #include <Cala/ui/LightWindow.h>
 #include <Cala/ui/ResourceViewer.h>
+#include <Ende/log/log.h>
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -642,6 +643,7 @@ int main() {
         dt = renderer.endFrame();
 
         ende::profile::ProfileManager::frame();
+        ende::thread::sleep(20_milli);
     }
 
     engine.device().wait();
