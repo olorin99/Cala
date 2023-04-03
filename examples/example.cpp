@@ -419,7 +419,7 @@ int main() {
 
     ui::LightWindow lightWindow(&scene);
 
-    Transform lightTransform({-10, 1, 0}, {0, 0, 0, 1}, {0.1, 0.1, 0.1});
+    Transform lightTransform({0, 1, 0}, {0, 0, 0, 1}, {0.1, 0.1, 0.1});
     Light light(cala::Light::POINT, true, lightTransform);
     light.setColour({1, 1, 1});
     light.setIntensity(20);
@@ -507,7 +507,7 @@ int main() {
     }
 
 
-    Transform t1({ 0, 0, 0 });
+    Transform t1({ 0, 4, 0 });
     Transform t2({ 2, 1, 0 }, {}, { 1, 1, 1 }, &t1);
 
     scene.addRenderable(sphere, &instances[0], &t2, true);
@@ -643,7 +643,6 @@ int main() {
         dt = renderer.endFrame();
 
         ende::profile::ProfileManager::frame();
-        ende::thread::sleep(20_milli);
     }
 
     engine.device().wait();

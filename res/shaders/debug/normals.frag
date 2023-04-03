@@ -74,13 +74,14 @@ Material loadMaterial(MaterialData data) {
 }
 
 void main() {
-    Mesh mesh = meshData[fsIn.drawID];
-    MaterialData materialData = material[mesh.materialInstanceIndex];
-
-    Material material = loadMaterial(materialData);
-
-    material.normal = normalize(material.normal * 2.0 - 1.0);
-    material.normal = normalize(fsIn.TBN * material.normal);
-
-    FragColour = vec4(material.normal, 1.0);
+//    Mesh mesh = meshData[fsIn.drawID];
+//    MaterialData materialData = material[mesh.materialInstanceIndex];
+//
+//    Material material = loadMaterial(materialData);
+//
+//    material.normal = normalize(material.normal * 2.0 - 1.0);
+//    material.normal = normalize(fsIn.TBN * material.normal);
+//
+//    FragColour = vec4(material.normal, 1.0);
+    FragColour = vec4(fsIn.TBN[2], 1.0);
 }

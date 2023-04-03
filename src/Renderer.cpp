@@ -264,9 +264,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         debugNormals.setDepthOutput("depth", depthAttachment);
         debugNormals.addBufferInput("drawCommands");
         debugNormals.addBufferInput("materialCounts", materialCountResource);
+        debugNormals.addBufferInput("transforms", transformsResource);
+        debugNormals.addBufferInput("meshData", meshDataResource);
 
         debugNormals.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
             auto meshData = graph.getResource<BufferResource>("meshData");
+            auto transforms = graph.getResource<BufferResource>("transforms");
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
@@ -279,7 +282,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd.bindRasterState({});
             cmd.bindBuffer(2, 1, meshData->handle, true);
-            cmd.bindBuffer(4, 0, scene._modelBuffer[_engine->device().frameIndex()], true);
+            cmd.bindBuffer(4, 0, transforms->handle, true);
             cmd.bindPipeline();
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
@@ -297,7 +300,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     pointShadows.addBufferInput("transforms", transformsResource);
     pointShadows.addBufferInput("meshData", meshDataResource);
 
-    pointShadows.addBufferOutput("drawCommands", drawCommandsResource);
+//    pointShadows.addBufferOutput("drawCommands", drawCommandsResource);
     pointShadows.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
         auto transforms = graph.getResource<BufferResource>("transforms");
         auto meshData = graph.getResource<BufferResource>("meshData");
