@@ -10,6 +10,11 @@
 
 #include "../../third_party/vk_mem_alloc.h"
 
+#define VK_TRY(x) { \
+    VkResult result = x; \
+    assert(result == VK_SUCCESS); \
+}
+
 namespace cala::backend::vulkan {
 
     class Context {
@@ -18,8 +23,6 @@ namespace cala::backend::vulkan {
         Context(cala::backend::Platform& platform);
 
         ~Context();
-
-        VkDeviceMemory allocate(u32 size, u32 typeBits, MemoryProperties flags);
 
 
         void beginDebugLabel(VkCommandBuffer buffer, std::string_view label, std::array<f32, 4> colour) const;

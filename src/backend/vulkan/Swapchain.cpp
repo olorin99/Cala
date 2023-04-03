@@ -62,7 +62,7 @@ cala::backend::vulkan::Swapchain::Swapchain(Device &driver, Platform& platform, 
     : _driver(driver),
     _swapchain(VK_NULL_HANDLE),
     _frame(0),
-    _depthImage(nullptr),
+    _depthImage({}),
     _depthView(),
     _vsync(false)
 {
@@ -70,7 +70,7 @@ cala::backend::vulkan::Swapchain::Swapchain(Device &driver, Platform& platform, 
 //    VkBool32 supported = VK_FALSE;
     u32 index = 0;
     _driver.context().queueIndex(index, QueueType::GRAPHICS);
-//    vkGetPhysicalDeviceSurfaceSupportKHR(_driver.context().physicalDevice(), index, _surface, &supported);
+//    vkGetPhysicalDeviceSurfaceSupportKHR(_device.context().physicalDevice(), index, _surface, &supported);
     auto windowSize = platform.windowSize();
     _extent = { windowSize.first, windowSize.second };
 
@@ -79,8 +79,8 @@ cala::backend::vulkan::Swapchain::Swapchain(Device &driver, Platform& platform, 
     if (!createImageViews()) throw std::runtime_error("Unable to create swapchains image views");
     if (!createSemaphores()) throw std::runtime_error("Unable to create swapchains semaphores");
 
-    _depthImage = new Image(driver, {
-            _extent.width, _extent.height, 1, driver.context().depthFormat(), 1, 1, backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT
+    _depthImage = driver.createImage({
+            _extent.width, _extent.height, 1, driver.context().depthFormat(), 1, 1, backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT | ImageUsage::SAMPLED
     });
     _depthView = _depthImage->newView();
 
@@ -119,7 +119,7 @@ cala::backend::vulkan::Swapchain::Swapchain(Device &driver, Platform& platform, 
 }
 
 cala::backend::vulkan::Swapchain::~Swapchain() {
-    delete _depthImage;
+    _driver.destroyImage(_depthImage);
 
     for (auto& semaphore : _semaphores) {
         vkDestroySemaphore(_driver.context().device(), semaphore, nullptr);
@@ -186,15 +186,14 @@ bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {
     createSwapchain();
     createImageViews();
 
-    delete _depthImage;
-    _depthImage = new Image(_driver, { _extent.width, _extent.height, 1, _driver.context().depthFormat(), 1, 1, ImageUsage::DEPTH_STENCIL_ATTACHMENT });
+    _driver.destroyImage(_depthImage);
+    _depthImage = _driver.createImage({ _extent.width, _extent.height, 1, _driver.context().depthFormat(), 1, 1, ImageUsage::DEPTH_STENCIL_ATTACHMENT | ImageUsage::SAMPLED });
     _depthView = _depthImage->newView();
 
     for (auto& view : _imageViews) {
         VkImageView framebufferAttachments[2] = { view, _depthView.view };
         u32 hashes[2] = { 0, 0 };
         _framebuffers.emplace(_driver.getFramebuffer(_renderPass, framebufferAttachments, hashes, _extent.width, _extent.height));
-//        _framebuffers.emplace(_device.context().device(), *_renderPass, framebufferAttachments, _extent.width, _extent.height);
     }
     return true;
 }

@@ -111,8 +111,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     instanceCreateInfo.ppEnabledExtensionNames = extensions.data();
 //    instanceCreateInfo.pNext = &validationFeatures;
 
-    if (vkCreateInstance(&instanceCreateInfo, nullptr, &_instance) != VK_SUCCESS)
-        throw VulkanContextException("Instance Creation Error");
+    VK_TRY(vkCreateInstance(&instanceCreateInfo, nullptr, &_instance));
 
     //create debug messenger
 #ifndef NDEBUG
@@ -229,8 +228,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
 
     vulkan12Features.hostQueryReset = VK_TRUE;
 
-    if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device) != VK_SUCCESS)
-        throw VulkanContextException("Failed to create logical device");
+    VK_TRY(vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device));
 
     VmaAllocatorCreateInfo allocatorCreateInfo{};
     allocatorCreateInfo.vulkanApiVersion = appInfo.apiVersion;
@@ -276,9 +274,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     queryPoolCreateInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
     queryPoolCreateInfo.queryCount = 20 * 2;
     _timestampQueryPool = VK_NULL_HANDLE;
-    VkResult res = vkCreateQueryPool(_device, &queryPoolCreateInfo, nullptr, &_timestampQueryPool);
-    if (res != VK_SUCCESS)
-        throw "Unable to create query pool";
+    VK_TRY(vkCreateQueryPool(_device, &queryPoolCreateInfo, nullptr, &_timestampQueryPool));
 
 
     const char* pipelineStatNames[] = {
@@ -301,7 +297,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
             VK_QUERY_PIPELINE_STATISTIC_CLIPPING_PRIMITIVES_BIT |
             VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT;
     pipelineStatisticsCreate.queryCount = 6;
-    vkCreateQueryPool(_device, &pipelineStatisticsCreate, nullptr, &_pipelineStatistics);
+    VK_TRY(vkCreateQueryPool(_device, &pipelineStatisticsCreate, nullptr, &_pipelineStatistics));
 
     vkResetQueryPool(_device, _timestampQueryPool, 0, 10);
 }
@@ -402,17 +398,6 @@ u32 cala::backend::vulkan::Context::memoryIndex(u32 filter, VkMemoryPropertyFlag
     return 0; //TODO: error on none available
 }
 
-
-VkDeviceMemory cala::backend::vulkan::Context::allocate(u32 size, u32 typeBits, MemoryProperties flags) {
-    VkMemoryAllocateInfo allocateInfo{};
-    allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocateInfo.allocationSize = size;
-    allocateInfo.memoryTypeIndex = memoryIndex(typeBits, getMemoryProperties(flags));
-
-    VkDeviceMemory memory;
-    vkAllocateMemory(_device, &allocateInfo, nullptr, &memory);
-    return memory;
-}
 
 const char *cala::backend::vulkan::Context::deviceTypeString() const {
     switch (_deviceType) {

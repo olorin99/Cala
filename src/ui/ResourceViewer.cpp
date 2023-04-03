@@ -44,9 +44,9 @@ void cala::ui::ResourceViewer::render() {
     ImGui::SliderInt("BufferIndex", &_bufferIndex, 0, stats.allocatedBuffers - 1);
     ImGui::Text("Buffer: %d", _bufferIndex);
 
-    auto buffer = _device->_buffers[_bufferIndex];
-    if (buffer) {
-        u32 size = buffer->size();
+    auto& buffer = _device->_buffers[_bufferIndex];
+    if (buffer.buffer() != VK_NULL_HANDLE) {
+        u32 size = buffer.size();
         ImGui::Text("\tSize: %d", size);
 
     } else {

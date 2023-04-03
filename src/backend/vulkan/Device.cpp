@@ -42,7 +42,7 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform)
     poolCreateInfo.maxSets = maxBindless;
     poolCreateInfo.poolSizeCount = 1;
     poolCreateInfo.pPoolSizes = poolSizes;
-    vkCreateDescriptorPool(_context.device(), &poolCreateInfo, nullptr, &_bindlessPool);
+    VK_TRY(vkCreateDescriptorPool(_context.device(), &poolCreateInfo, nullptr, &_bindlessPool));
 
     VkDescriptorSetLayoutBinding bindlessLayoutBinding{};
     bindlessLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -64,7 +64,7 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform)
     extendedInfo.pBindingFlags = &bindingFlags;
     bindlessLayoutCreateInfo.pNext = &extendedInfo;
 
-    vkCreateDescriptorSetLayout(_context.device(), &bindlessLayoutCreateInfo, nullptr, &_bindlessLayout);
+    VK_TRY(vkCreateDescriptorSetLayout(_context.device(), &bindlessLayoutCreateInfo, nullptr, &_bindlessLayout));
 
     VkDescriptorSetAllocateInfo bindlessAllocate{};
     bindlessAllocate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -79,7 +79,7 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform)
     countInfo.pDescriptorCounts = &maxBinding;
     bindlessAllocate.pNext = &countInfo;
 
-    vkAllocateDescriptorSets(_context.device(), &bindlessAllocate, &_bindlessSet);
+    VK_TRY(vkAllocateDescriptorSets(_context.device(), &bindlessAllocate, &_bindlessSet));
 
     VkDescriptorPoolSize poolSizes2[] = {
             {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10000},
@@ -94,18 +94,29 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform)
     descriptorPoolCreateInfo.poolSizeCount = 4;
     descriptorPoolCreateInfo.pPoolSizes = poolSizes2;
     descriptorPoolCreateInfo.maxSets = 10000;
-    vkCreateDescriptorPool(context().device(), &descriptorPoolCreateInfo, nullptr, &_descriptorPool);
+    VK_TRY(vkCreateDescriptorPool(context().device(), &descriptorPoolCreateInfo, nullptr, &_descriptorPool));
 }
 
 cala::backend::vulkan::Device::~Device() {
-    vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS)); //ensures last frame finished before destroying stuff
+    VK_TRY(vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS))); //ensures last frame finished before destroying stuff
 
-    for (auto& buffer : _buffers)
-        delete buffer;
+    for (auto& buffer : _buffers) {
+        buffer._mapped = Buffer::Mapped();
+        VkBuffer buf = buffer._buffer;
+        VmaAllocation allocation = buffer._allocation;
+        if (allocation)
+            vmaDestroyBuffer(context().allocator(), buf, allocation);
+        buffer._allocation = nullptr;
+    }
 
     _imageViews.clear();
-    for (auto* image : _images)
-        delete image;
+    for (auto& image : _images) {
+        VkImage im = image._image;
+        VmaAllocation allocation = image._allocation;
+        if (im != VK_NULL_HANDLE)
+            vmaDestroyImage(context().allocator(), im, allocation);
+        image._allocation = nullptr;
+    }
 
     for (auto* program : _programs)
         delete program;
@@ -188,7 +199,7 @@ void cala::backend::vulkan::Device::endSingleTimeCommands(CommandBuffer& buffer)
     VkFenceCreateInfo fenceCreateInfo{};
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceCreateInfo.pNext = nullptr;
-    vkCreateFence(context().device(), &fenceCreateInfo, nullptr, &fence);
+    VK_TRY(vkCreateFence(context().device(), &fenceCreateInfo, nullptr, &fence));
     buffer.submit(nullptr, fence);
 
     auto res = vkWaitForFences(context().device(), 1, &fence, true, 1000000000) == VK_SUCCESS;
@@ -223,8 +234,13 @@ bool cala::backend::vulkan::Device::gc() {
         auto& handle = it->second;
         if (frame <= 0) {
             u32 index = handle.index();
-            delete _buffers[index];
-            _buffers[index] = nullptr;
+            _buffers[index]._mapped = Buffer::Mapped();
+            VkBuffer buffer = _buffers[index]._buffer;
+            VmaAllocation allocation = _buffers[index]._allocation;
+            if (allocation)
+                vmaDestroyBuffer(context().allocator(), buffer, allocation);
+            _buffers[index]._allocation = nullptr;
+            _buffers[index] = Buffer(this);
             _freeBuffers.push(index);
             _buffersToDestroy.erase(it--);
             ende::log::info("destroyed buffer ({})", index);
@@ -237,10 +253,14 @@ bool cala::backend::vulkan::Device::gc() {
         auto& handle = it->second;
         if (frame <= 0) {
             u32 index = handle.index();
+            VkImage image = _images[index]._image;
+            VmaAllocation allocation = _images[index]._allocation;
             _imageViews[index] = backend::vulkan::Image::View();
             updateBindlessImage(index, _imageViews[0], _defaultSampler);
-            delete _images[index];
-            _images[index] = nullptr;
+            if (image != VK_NULL_HANDLE)
+                vmaDestroyImage(context().allocator(), image, allocation);
+            _images[index]._allocation = nullptr;
+            _images[index] = Image(this);
             _freeImages.push(index);
             _imagesToDestroy.erase(it--);
             ende::log::info("destroyed image ({})", index);
@@ -260,13 +280,42 @@ bool cala::backend::vulkan::Device::gc() {
 
 cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(u32 size, BufferUsage usage, backend::MemoryProperties flags, bool persistentlyMapped) {
     u32 index = 0;
+    usage = usage | BufferUsage::TRANSFER_DST | BufferUsage::TRANSFER_SRC;
+
+    VkBuffer buffer;
+    VmaAllocation allocation;
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = size;
+    bufferInfo.usage = getBufferUsage(usage);
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+
+    if ((flags & MemoryProperties::HOST_VISIBLE) == MemoryProperties::HOST_VISIBLE) {
+        if ((flags & MemoryProperties::HOST_CACHED) == MemoryProperties::HOST_CACHED)
+            allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+        else
+            allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    }
+
+    VK_TRY(vmaCreateBuffer(context().allocator(), &bufferInfo, &allocInfo, &buffer, &allocation, nullptr));
     if (!_freeBuffers.empty()) {
         index = _freeBuffers.pop().value();
-        _buffers[index] = new backend::vulkan::Buffer(*this, size, usage, flags, persistentlyMapped);
+        _buffers[index] = backend::vulkan::Buffer(this);
     } else {
         index = _buffers.size();
-        _buffers.emplace(new backend::vulkan::Buffer(*this, size, usage, flags, persistentlyMapped));
+        _buffers.emplace(backend::vulkan::Buffer(this));
     }
+    _buffers[index]._buffer = buffer;
+    _buffers[index]._allocation = allocation;
+    _buffers[index]._size = size;
+    _buffers[index]._usage = usage;
+    _buffers[index]._flags = flags;
+    if (persistentlyMapped)
+        _buffers[index]._mapped = _buffers[index].map();
+
     return { this, static_cast<i32>(index) };
 }
 
@@ -293,16 +342,86 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::resizeBuffer(
 
 cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Image::CreateInfo info, Sampler *sampler) {
     u32 index = 0;
+
+    VkImage image;
+    VmaAllocation allocation;
+    VkImageCreateInfo imageInfo{};
+    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+
+    auto type = info.type;
+    if (info.type == ImageType::AUTO) {
+        if (info.depth > 1) {
+            imageInfo.imageType = VK_IMAGE_TYPE_3D;
+            type = ImageType::IMAGE3D;
+        }
+        else if (info.height > 1) {
+            imageInfo.imageType = VK_IMAGE_TYPE_2D;
+            type = ImageType::IMAGE2D;
+        }
+        else {
+            imageInfo.imageType = VK_IMAGE_TYPE_1D;
+            type = ImageType::IMAGE1D;
+        }
+    } else {
+        imageInfo.imageType = getImageType(info.type);
+    }
+    imageInfo.format = getFormat(info.format);
+    imageInfo.extent.width = info.width;
+    imageInfo.extent.height = info.height;
+    imageInfo.extent.depth = info.depth;
+    imageInfo.mipLevels = info.mipLevels;
+    imageInfo.arrayLayers = info.arrayLayers;
+
+    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage = getImageUsage(info.usage);
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+
+    if (info.aliasFormat != Format::UNDEFINED) {
+        imageInfo.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+        VkImageFormatListCreateInfo listCreateInfo{};
+        listCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO;
+        listCreateInfo.viewFormatCount = 1;
+        VkFormat aliasFormat = getFormat(info.aliasFormat);
+        listCreateInfo.pViewFormats = &aliasFormat;
+        imageInfo.pNext = &listCreateInfo;
+    }
+
+    if (imageInfo.arrayLayers == 6)
+        imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    allocInfo.flags = 0;
+
+    VK_TRY(vmaCreateImage(context().allocator(), &imageInfo, &allocInfo, &image, &allocation, nullptr));
+
     if (!_freeImages.empty()) {
         index = _freeImages.pop().value();
-        _images[index] = new backend::vulkan::Image(*this, info);
-        _imageViews[index] = std::move(_images[index]->newView(0, _images[index]->mips()));
+        _images[index] = backend::vulkan::Image(this);
     } else {
         index = _images.size();
-        _images.emplace(new backend::vulkan::Image(*this, info));
-        _imageViews.emplace(_images.back()->newView(0, _images.back()->mips()));
+        _images.emplace(backend::vulkan::Image(this));
     }
+
+    _images[index]._image = image;
+    _images[index]._allocation = allocation;
+    _images[index]._width = info.width;
+    _images[index]._height = info.height;
+    _images[index]._depth = info.depth;
+    _images[index]._layers = info.arrayLayers;
+    _images[index]._mips = info.mipLevels;
+    _images[index]._format = info.format;
+    _images[index]._usage = info.usage;
+    _images[index]._type = type;
+
+
+    _imageViews.resize(_images.size());
+    _imageViews[index] = std::move(_images[index].newView(0, _images[index].mips()));
+
     assert(_images.size() == _imageViews.size());
+
     backend::vulkan::Sampler* chosenSampler = sampler;
     if (!chosenSampler)
         chosenSampler = backend::isDepthFormat(info.format) ? &_defaultShadowSampler : &_defaultSampler;
@@ -357,7 +476,7 @@ VkDescriptorSetLayout cala::backend::vulkan::Device::getSetLayout(ende::Span <Vk
     createInfo.pBindings = bindings.data();
 
     VkDescriptorSetLayout setLayout;
-    vkCreateDescriptorSetLayout(_context.device(), &createInfo, nullptr, &setLayout);
+    VK_TRY(vkCreateDescriptorSetLayout(_context.device(), &createInfo, nullptr, &setLayout));
 
     _setLayouts.emplace(std::make_pair(key, setLayout));
     return setLayout;
@@ -447,7 +566,7 @@ VkDescriptorSet cala::backend::vulkan::Device::getDescriptorSet(CommandBuffer::D
     allocInfo.pSetLayouts = &key.setLayout;
 
     VkDescriptorSet descriptorSet;
-    vkAllocateDescriptorSets(_context.device(), &allocInfo, &descriptorSet);
+    VK_TRY(vkAllocateDescriptorSets(_context.device(), &allocInfo, &descriptorSet));
 
     for (u32 i = 0; i < MAX_BINDING_PER_SET; i++) {
 

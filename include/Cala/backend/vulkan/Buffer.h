@@ -13,9 +13,7 @@ namespace cala::backend::vulkan {
     class Buffer {
     public:
 
-        Buffer(Device& driver, u32 size, BufferUsage usage, MemoryProperties flags = MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_COHERENT, bool persistentlyMapped = false);
-
-        ~Buffer();
+        Buffer() = delete;
 
         Buffer(const Buffer&) = delete;
         Buffer(Buffer&& rhs) noexcept;
@@ -101,8 +99,11 @@ namespace cala::backend::vulkan {
         void* persistentMapping() { return _mapped.address; }
 
     private:
+        friend Device;
 
-        Device& _driver;
+        Buffer(Device* device);
+
+        Device* _device;
         VkBuffer _buffer;
         VmaAllocation _allocation;
         u32 _size;

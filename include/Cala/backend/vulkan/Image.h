@@ -37,9 +37,7 @@ namespace cala::backend::vulkan {
             u32 layer = 0; // move up in struct just here for backward compat
         };
 
-        Image(Device& driver, CreateInfo info);
-
-        ~Image();
+        Image() = delete;
 
         Image(Image&& rhs) noexcept;
 
@@ -116,7 +114,11 @@ namespace cala::backend::vulkan {
 
     private:
 
-        Device& _driver;
+        friend Device;
+
+        Image(Device* device);
+
+        Device* _device;
         VkImage _image;
         VmaAllocation _allocation;
 

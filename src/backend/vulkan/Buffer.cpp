@@ -3,58 +3,29 @@
 #include <Cala/backend/vulkan/primitives.h>
 #include <Cala/backend/vulkan/Device.h>
 
-
-cala::backend::vulkan::Buffer::Buffer(Device &driver, u32 size, BufferUsage usage, MemoryProperties flags, bool persistentlyMapped)
-    : _driver(driver),
+cala::backend::vulkan::Buffer::Buffer(cala::backend::vulkan::Device *device)
+    : _device(device),
     _buffer(VK_NULL_HANDLE),
     _allocation(nullptr),
-    _size(size),
-    _usage(usage | BufferUsage::TRANSFER_DST | BufferUsage::TRANSFER_SRC),
-    _flags(flags),
     _invalidated(false)
-{
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = getBufferUsage(_usage);
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    VmaAllocationCreateInfo allocInfo{};
-    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-
-    if ((flags & MemoryProperties::HOST_VISIBLE) == MemoryProperties::HOST_VISIBLE) {
-        if ((flags & MemoryProperties::HOST_CACHED) == MemoryProperties::HOST_CACHED)
-            allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
-        else
-            allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-    }
-
-    auto res = vmaCreateBuffer(_driver.context().allocator(), &bufferInfo, &allocInfo, &_buffer, &_allocation, nullptr);
-    assert(res == VK_SUCCESS);
-    if (persistentlyMapped)
-        _mapped = map();
-}
-
-cala::backend::vulkan::Buffer::~Buffer() {
-    _mapped = Mapped();
-    if (_allocation)
-        vmaDestroyBuffer(_driver.context().allocator(), _buffer, _allocation);
-}
+{}
 
 
 cala::backend::vulkan::Buffer::Buffer(Buffer &&rhs) noexcept
-    : _driver(rhs._driver),
-    _buffer(VK_NULL_HANDLE),
-    _allocation(nullptr),
-    _size(0),
-    _flags(MemoryProperties::HOST_VISIBLE),
-    _usage(BufferUsage::UNIFORM)
+    : _device(rhs._device),
+      _buffer(VK_NULL_HANDLE),
+      _allocation(nullptr),
+      _size(0),
+      _flags(MemoryProperties::HOST_VISIBLE),
+      _usage(BufferUsage::UNIFORM),
+      _invalidated(false)
 {
     std::swap(_buffer, rhs._buffer);
     std::swap(_allocation, rhs._allocation);
     std::swap(_size, rhs._size);
     std::swap(_flags, rhs._flags);
     std::swap(_usage, rhs._usage);
+    std::swap(_invalidated, rhs._invalidated);
 }
 
 cala::backend::vulkan::Buffer &cala::backend::vulkan::Buffer::operator=(cala::backend::vulkan::Buffer &&rhs) noexcept {
@@ -63,6 +34,7 @@ cala::backend::vulkan::Buffer &cala::backend::vulkan::Buffer::operator=(cala::ba
     std::swap(_size, rhs._size);
     std::swap(_flags, rhs._flags);
     std::swap(_usage, rhs._usage);
+    std::swap(_invalidated, rhs._invalidated);
     return *this;
 }
 
@@ -97,7 +69,7 @@ cala::backend::vulkan::Buffer::Mapped cala::backend::vulkan::Buffer::map(u32 off
 
     assert(_size >= size + offset);
     void* address = nullptr;
-    vmaMapMemory(_driver.context().allocator(), _allocation, &address);
+    vmaMapMemory(_device->context().allocator(), _allocation, &address);
     Mapped mapped;
     mapped.address = (void*)((char*)address + offset);
     mapped.buffer = this;
@@ -105,7 +77,7 @@ cala::backend::vulkan::Buffer::Mapped cala::backend::vulkan::Buffer::map(u32 off
 }
 
 void cala::backend::vulkan::Buffer::unmap() {
-    vmaUnmapMemory(_driver.context().allocator(), _allocation);
+    vmaUnmapMemory(_device->context().allocator(), _allocation);
 }
 
 void cala::backend::vulkan::Buffer::data(ende::Span<const void> data, u32 offset) {

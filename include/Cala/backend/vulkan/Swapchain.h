@@ -6,6 +6,7 @@
 #include <Cala/backend/vulkan/Framebuffer.h>
 #include <Cala/backend/vulkan/Platform.h>
 #include <Ende/Vector.h>
+#include "Handle.h"
 
 namespace cala::backend::vulkan {
 
@@ -77,7 +78,7 @@ namespace cala::backend::vulkan {
         ende::Vector<VkSemaphore> _semaphores;
         ende::Vector<VmaAllocation> _allocations;
 
-        Image* _depthImage;
+        ImageHandle _depthImage;
         Image::View _depthView;
 
         RenderPass* _renderPass;

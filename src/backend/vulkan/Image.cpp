@@ -2,87 +2,23 @@
 #include <Cala/backend/vulkan/Device.h>
 #include <Cala/backend/vulkan/primitives.h>
 
-cala::backend::vulkan::Image::Image(Device& driver, CreateInfo info)
-    : _driver(driver),
+cala::backend::vulkan::Image::Image(cala::backend::vulkan::Device *device)
+    : _device(device),
     _image(VK_NULL_HANDLE),
     _allocation(nullptr),
     _layout(ImageLayout::UNDEFINED)
-{
-    VkImageCreateInfo imageInfo{};
-    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-
-    _type = info.type;
-    if (info.type == ImageType::AUTO) {
-        if (info.depth > 1) {
-            imageInfo.imageType = VK_IMAGE_TYPE_3D;
-            _type = ImageType::IMAGE3D;
-        }
-        else if (info.height > 1) {
-            imageInfo.imageType = VK_IMAGE_TYPE_2D;
-            _type = ImageType::IMAGE2D;
-        }
-        else {
-            imageInfo.imageType = VK_IMAGE_TYPE_1D;
-            _type = ImageType::IMAGE1D;
-        }
-    } else {
-        imageInfo.imageType = getImageType(info.type);
-    }
-    imageInfo.format = getFormat(info.format);
-    imageInfo.extent.width = info.width;
-    imageInfo.extent.height = info.height;
-    imageInfo.extent.depth = info.depth;
-    imageInfo.mipLevels = info.mipLevels;
-    imageInfo.arrayLayers = info.arrayLayers;
-
-    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.usage = getImageUsage(info.usage);
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-
-    if (info.aliasFormat != Format::UNDEFINED) {
-        imageInfo.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
-        VkImageFormatListCreateInfo listCreateInfo{};
-        listCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO;
-        listCreateInfo.viewFormatCount = 1;
-        VkFormat aliasFormat = getFormat(info.aliasFormat);
-        listCreateInfo.pViewFormats = &aliasFormat;
-        imageInfo.pNext = &listCreateInfo;
-    }
-
-    if (imageInfo.arrayLayers == 6)
-        imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-
-    VmaAllocationCreateInfo allocInfo{};
-    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-    allocInfo.flags = 0;
-
-    vmaCreateImage(driver.context().allocator(), &imageInfo, &allocInfo, &_image, &_allocation, nullptr);
-
-    _width = info.width;
-    _height = info.height;
-    _depth = info.depth;
-    _layers = info.arrayLayers;
-    _mips = info.mipLevels;
-    _format = info.format;
-    _usage = info.usage;
-}
-
-cala::backend::vulkan::Image::~Image() {
-    if (_image != VK_NULL_HANDLE)
-        vmaDestroyImage(_driver.context().allocator(), _image, _allocation);
-}
+{}
 
 cala::backend::vulkan::Image::Image(Image &&rhs) noexcept
-    : _driver(rhs._driver),
-    _image(VK_NULL_HANDLE),
-    _allocation(nullptr),
-    _width(0),
-    _height(0),
-    _depth(0),
-    _format(Format::UNDEFINED),
-    _usage(ImageUsage::COLOUR_ATTACHMENT)
+    : _device(rhs._device),
+      _image(VK_NULL_HANDLE),
+      _allocation(nullptr),
+      _width(0),
+      _height(0),
+      _depth(0),
+      _format(Format::UNDEFINED),
+      _usage(ImageUsage::COLOUR_ATTACHMENT),
+      _layout(ImageLayout::UNDEFINED)
 {
     std::swap(_image, rhs._image);
     std::swap(_allocation, rhs._allocation);
@@ -91,10 +27,11 @@ cala::backend::vulkan::Image::Image(Image &&rhs) noexcept
     std::swap(_depth, rhs._depth);
     std::swap(_format, rhs._format);
     std::swap(_usage, rhs._usage);
+    std::swap(_layout, rhs._layout);
 }
 
 cala::backend::vulkan::Image &cala::backend::vulkan::Image::operator=(Image &&rhs) noexcept {
-    assert(&_driver == &rhs._driver);
+    assert(_device == rhs._device);
     std::swap(_image, rhs._image);
     std::swap(_allocation, rhs._allocation);
     std::swap(_width, rhs._width);
@@ -102,6 +39,7 @@ cala::backend::vulkan::Image &cala::backend::vulkan::Image::operator=(Image &&rh
     std::swap(_depth, rhs._depth);
     std::swap(_format, rhs._format);
     std::swap(_usage, rhs._usage);
+    std::swap(_layout, rhs._layout);
     return *this;
 }
 
@@ -172,12 +110,12 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Device& driver, D
 
 void *cala::backend::vulkan::Image::map(u32 format) {
     void* address = nullptr;
-    vmaMapMemory(_driver.context().allocator(), _allocation, &address);
+    vmaMapMemory(_device->context().allocator(), _allocation, &address);
     return address;
 }
 
 void cala::backend::vulkan::Image::unmap() {
-    vmaUnmapMemory(_driver.context().allocator(), _allocation);
+    vmaUnmapMemory(_device->context().allocator(), _allocation);
 }
 
 void cala::backend::vulkan::Image::blit(CommandBuffer &buffer, Image &dst, ImageLayout srcLayout, ImageLayout dstLayout, VkFilter filter) {
@@ -226,7 +164,7 @@ void cala::backend::vulkan::Image::copy(cala::backend::vulkan::CommandBuffer &bu
 }
 
 void cala::backend::vulkan::Image::generateMips() {
-    _driver.immediate([&](CommandBuffer& cmd) {
+    _device->immediate([&](CommandBuffer& cmd) {
         generateMips(cmd);
     });
 }
@@ -331,10 +269,10 @@ cala::backend::vulkan::Image::View cala::backend::vulkan::Image::newView(u32 mip
     viewCreateInfo.subresourceRange.layerCount = layerCount == 0 ? VK_REMAINING_ARRAY_LAYERS : layerCount;
 
     VkImageView view;
-    vkCreateImageView(_driver.context().device(), &viewCreateInfo, nullptr, &view);
+    vkCreateImageView(_device->context().device(), &viewCreateInfo, nullptr, &view);
     View v{};
     v.view = view;
-    v._device = _driver.context().device();
+    v._device = _device->context().device();
     v._image = this;
     return v;
 }
