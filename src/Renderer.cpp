@@ -124,14 +124,14 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     materialCountResource.size = scene._materialCountBuffer[_engine->device().frameIndex()]->size();
     materialCountResource.usage = scene._materialCountBuffer[_engine->device().frameIndex()]->usage();
 
-    if (scene._renderables.size() * sizeof(VkDrawIndexedIndirectCommand) > _drawCommands[_engine->device().frameIndex()]->size())
-        _drawCommands[_engine->device().frameIndex()] = _engine->device().resizeBuffer(_drawCommands[_engine->device().frameIndex()], scene._renderables.size() * sizeof(VkDrawIndexedIndirectCommand), false);
+    if (scene._renderables.size() * sizeof(VkDrawIndexedIndirectCommand) > _drawCommands[0]->size())
+        _drawCommands[0] = _engine->device().resizeBuffer(_drawCommands[0], scene._renderables.size() * sizeof(VkDrawIndexedIndirectCommand), false);
 
     BufferResource drawCommandsResource;
-    drawCommandsResource.size = _drawCommands[_engine->device().frameIndex()]->size();
+    drawCommandsResource.size = _drawCommands[0]->size();
     drawCommandsResource.transient = false;
-    drawCommandsResource.usage = _drawCommands[_engine->device().frameIndex()]->usage();
-    drawCommandsResource.handle = _drawCommands[_engine->device().frameIndex()]; //TODO: have rendergraph automatically allocate double buffers for frames in flight
+    drawCommandsResource.usage = _drawCommands[0]->usage();
+    drawCommandsResource.handle = _drawCommands[0]; //TODO: have rendergraph automatically allocate double buffers for frames in flight (no need pala to double buffer gpu objects just cpu -> gpu objects)
 
     BufferResource clustersResource;
     clustersResource.size = sizeof(ende::math::Vec4f) * 2 * 16 * 9 * 24;
@@ -416,65 +416,119 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 //    directShadow.addBufferOutput("drawCommands");
 //
 //    directShadow.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+//        auto transforms = graph.getResource<BufferResource>("transforms");
+//        auto meshData = graph.getResource<BufferResource>("meshData");
+//        auto drawCommands = graph.getResource<BufferResource>("drawCommands");
 //        for (u32 i = 0; i < scene._lights.size(); i++) {
-//            auto& light = scene._lights[i];
+//            auto& light = scene._lights[i].second;
 //            if (light.shadowing() && light.type() == Light::LightType::DIRECTIONAL) {
-//                f32 cascadeSplits[3];
-//                f32 nearClip = light.getNear();
-//                f32 farClip = light.getFar();
-//                f32 clipRange = farClip - nearClip;
+//                light.camera().updateFrustum();
+//                auto& shadowFrustum = light.camera().frustum();
 //
-//                f32 minZ = nearClip;
-//                f32 maxZ = nearClip + clipRange;
-//                f32 range = maxZ - minZ;
-//                f32 ratio = maxZ / minZ;
+//                cmd.clearDescriptors();
+//                cmd.bindProgram(_engine->_directShadowCullProgram);
+//                cmd.bindBindings(nullptr);
+//                cmd.bindAttributes(nullptr);
+//                cmd.pushConstants({ &shadowFrustum, sizeof(shadowFrustum) });
+//                cmd.bindBuffer(2, 0, transforms->handle, true);
+//                cmd.bindBuffer(2, 1, meshData->handle, true);
+//                cmd.bindBuffer(2, 2, drawCommands->handle, true);
+//                cmd.bindBuffer(2, 3, _drawCountBuffer[_engine->device().frameIndex()], true);
+//                cmd.bindPipeline();
+//                cmd.bindDescriptors();
+//                cmd.dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
 //
-//                for (u32 j = 0; j < 3; j++) {
-//                    f32 p = (j + 1) / 3.f;
-//                    f32 log = minZ * std::pow(ratio, p);
-//                    f32 uniform = minZ + range * p;
-//                    f32 d = 0.95 * (log - uniform) + uniform;
-//                    cascadeSplits[j] = (d - nearClip) / clipRange;
-//                }
+//                cmd.begin(*_shadowFramebuffer);
+//                cmd.clearDescriptors();
 //
-//                f32 lastSplitDist = 0.0;
+//                cmd.bindRasterState({ backend::CullMode::FRONT });
+//                cmd.bindDepthState({ true, true, backend::CompareOp::LESS_EQUAL });
 //
-//                for (u32 j = 0; j < 3; j++) {
-//                    f32 splitDist = cascadeSplits[j];
-//                    ende::math::Vec3f frustumCorners[8] = {
-//                            {-1, 1, -1},
-//                            {1, 1, -1},
-//                            {1, -1, -1},
-//                            {-1, -1, -1},
-//                            {-1, 1, 1},
-//                            {1, 1, 1},
-//                            {1, -1, 1},
-//                            {-1, -1, 1}
-//                    };
-//                    auto camInv = camera.viewProjection().inverse();
-//                    for (u32 k = 0; k < 4; k++) {
-//                        auto dist = frustumCorners[k + 4] - frustumCorners[k];
-//                        frustumCorners[k + 4] = frustumCorners[k] + (dist * splitDist);
-//                        frustumCorners[k] = frustumCorners[k] + (dist * lastSplitDist);
-//                    }
+//                cmd.bindProgram(_engine->_directShadowProgram);
 //
-//                    ende::math::Vec3f frustumCenter{0, 0, 0};
-//                    for (u32 k = 0; k < 8; k++) {
-//                        frustumCenter = frustumCenter + frustumCorners[k];
-//                    }
-//                    frustumCenter = frustumCenter / 8.f;
-//                    f32 radius = 0.;
-//                    for (u32 k = 0; k < 8; k++) {
-//                        f32 distance = (frustumCorners[k] - frustumCenter).length();
-//                        radius = std::max(radius, distance);
-//                    }
-//                    radius = std::ceil(radius * 16) / 16;
-//                    ende::math::Vec3f maxExtents{radius, radius, radius};
-//                    ende::math::Vec3f minExtents = maxExtents * -1;
+//                cmd.bindBuffer(4, 0, transforms->handle, true);
+//                struct ShadowData {
+//                    ende::math::Mat4f viewProjection;
+//                    ende::math::Vec3f position;
+//                    f32 near;
+//                    f32 far;
+//                };
+//                ShadowData shadowData {
+//                        light.camera().viewProjection(),
+//                        light.camera().transform().pos(),
+//                        light.camera().near(),
+//                        light.camera().far()
+//                };
+//                cmd.pushConstants({ &shadowData, sizeof(shadowData) });
 //
-//                    ende::math::Vec3f lightDir = light.transform().rot().front().unit();
+//                auto& renderable = scene._renderables[0].second.first;
+//                cmd.bindBindings(renderable.bindings);
+//                cmd.bindAttributes(renderable.attributes);
 //
-//                }
+//                cmd.bindPipeline();
+//                cmd.bindDescriptors();
+//                cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
+//                cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
+//                cmd.drawIndirectCount(drawCommands->handle, 0, _drawCountBuffer[_engine->device().frameIndex()], 0, scene._renderables.size());
+//
+//                cmd.end(*_shadowFramebuffer);
+//
+////                f32 cascadeSplits[3];
+////                f32 nearClip = light.getNear();
+////                f32 farClip = light.getFar();
+////                f32 clipRange = farClip - nearClip;
+////
+////                f32 minZ = nearClip;
+////                f32 maxZ = nearClip + clipRange;
+////                f32 range = maxZ - minZ;
+////                f32 ratio = maxZ / minZ;
+////
+////                for (u32 j = 0; j < 3; j++) {
+////                    f32 p = (j + 1) / 3.f;
+////                    f32 log = minZ * std::pow(ratio, p);
+////                    f32 uniform = minZ + range * p;
+////                    f32 d = 0.95 * (log - uniform) + uniform;
+////                    cascadeSplits[j] = (d - nearClip) / clipRange;
+////                }
+////
+////                f32 lastSplitDist = 0.0;
+////
+////                for (u32 j = 0; j < 3; j++) {
+////                    f32 splitDist = cascadeSplits[j];
+////                    ende::math::Vec3f frustumCorners[8] = {
+////                            {-1, 1, -1},
+////                            {1, 1, -1},
+////                            {1, -1, -1},
+////                            {-1, -1, -1},
+////                            {-1, 1, 1},
+////                            {1, 1, 1},
+////                            {1, -1, 1},
+////                            {-1, -1, 1}
+////                    };
+////                    auto camInv = camera.viewProjection().inverse();
+////                    for (u32 k = 0; k < 4; k++) {
+////                        auto dist = frustumCorners[k + 4] - frustumCorners[k];
+////                        frustumCorners[k + 4] = frustumCorners[k] + (dist * splitDist);
+////                        frustumCorners[k] = frustumCorners[k] + (dist * lastSplitDist);
+////                    }
+////
+////                    ende::math::Vec3f frustumCenter{0, 0, 0};
+////                    for (u32 k = 0; k < 8; k++) {
+////                        frustumCenter = frustumCenter + frustumCorners[k];
+////                    }
+////                    frustumCenter = frustumCenter / 8.f;
+////                    f32 radius = 0.;
+////                    for (u32 k = 0; k < 8; k++) {
+////                        f32 distance = (frustumCorners[k] - frustumCenter).length();
+////                        radius = std::max(radius, distance);
+////                    }
+////                    radius = std::ceil(radius * 16) / 16;
+////                    ende::math::Vec3f maxExtents{radius, radius, radius};
+////                    ende::math::Vec3f minExtents = maxExtents * -1;
+////
+////                    ende::math::Vec3f lightDir = light.transform().rot().front().unit();
+////
+////                }
 //
 //            }
 //        }

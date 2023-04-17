@@ -1,0 +1,76 @@
+#version 460
+
+layout (local_size_x = 16) in;
+
+layout (push_constant) uniform FrameData {
+    vec4 planes[6];
+};
+
+layout (set = 2, binding = 0) readonly buffer ModelData {
+    mat4 transforms[];
+};
+
+struct Mesh {
+    uint firstIndex;
+    uint indexCount;
+    uint materialIndex;
+    uint materialInstanceIndex;
+    vec4 min;
+    vec4 max;
+};
+
+layout (set = 2, binding = 1) readonly buffer MeshData {
+    Mesh meshData[];
+};
+
+struct IndexedIndirectCommand {
+    uint indexCount;
+    uint instanceCount;
+    uint firstIndex;
+    uint vertexOffset;
+    uint firstInstance;
+};
+
+layout (set = 2, binding = 2) writeonly buffer DrawCommands {
+    IndexedIndirectCommand commands[];
+};
+
+layout (set = 2, binding = 3) buffer Output {
+    uint drawCount;
+    uint maxDrawCount;
+};
+
+bool frustumCheck(vec3 pos, float radius) {
+    for (int i = 0; i < 6; i++) {
+        if (dot(vec4(pos, 1.0), planes[i]) + radius < 0.0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x;
+    if (idx >= maxDrawCount)
+        return;
+
+    if (idx == 0) {
+        atomicExchange(drawCount, 0);
+    }
+
+    Mesh mesh = meshData[idx];
+    vec3 center = (mesh.max.xyz + mesh.min.xyz) * 0.5;
+    center = (transforms[idx] * vec4(center, 1.0)).xyz;
+    vec3 halfExtent = (mesh.max.xyz - mesh.min.xyz) * 0.5;
+
+    if (frustumCheck(center, length(halfExtent))) {
+        uint a = atomicAdd(drawCount, 1);
+        IndexedIndirectCommand command;
+        command.indexCount = mesh.indexCount;
+        command.firstIndex = mesh.firstIndex;
+        command.vertexOffset = 0;
+        command.firstInstance = idx;
+        command.instanceCount = 1;
+        commands[a] = command;
+    }
+}

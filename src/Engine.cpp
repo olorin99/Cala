@@ -137,6 +137,15 @@ cala::Engine::Engine(backend::Platform &platform)
                 .compile(_device)));
     }
     {
+        file.open("../../res/shaders/direct_shadow_cull.comp.spv"_path, ende::fs::in | ende::fs::binary);
+        ende::Vector<u32> computeData(file.size() / sizeof(u32));
+        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
+
+        _directShadowCullProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
+                .addStage(computeData, backend::ShaderStage::COMPUTE)
+                .compile(_device)));
+    }
+    {
         file.open("../../res/shaders/create_clusters.comp.spv"_path, ende::fs::in | ende::fs::binary);
         ende::Vector<u32> computeData(file.size() / sizeof(u32));
         file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });

@@ -69,6 +69,7 @@ namespace cala {
         backend::vulkan::ProgramHandle _tonemapProgram;
         backend::vulkan::ProgramHandle _cullProgram;
         backend::vulkan::ProgramHandle _pointShadowCullProgram;
+        backend::vulkan::ProgramHandle _directShadowCullProgram;
         backend::vulkan::ProgramHandle _createClustersProgram;
         backend::vulkan::ProgramHandle _cullLightsProgram;
 
