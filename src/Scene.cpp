@@ -8,16 +8,16 @@
 
 cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     : _engine(engine),
-    _meshDataBuffer{engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT, true),
-                 engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT, true)},
-    _modelBuffer{engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT, true),
-                 engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT, true)},
-    _lightBuffer{engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT, true),
-                 engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT, true)},
-    _lightCountBuffer{engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT, true),
-                 engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT, true)},
-    _materialCountBuffer{engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT, true),
-                 engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::HOST_CACHED | backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT, true)},
+    _meshDataBuffer{engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true),
+                 engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true)},
+    _modelBuffer{engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true),
+                 engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true)},
+    _lightBuffer{engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true),
+                 engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true)},
+    _lightCountBuffer{engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true),
+                 engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true)},
+    _materialCountBuffer{engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING, true),
+                 engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING, true)},
     _directionalLightCount(0),
     _lightsDirtyFrame(2)
 {}

@@ -73,11 +73,9 @@ namespace cala::backend {
     }
 
     enum class MemoryProperties {
-        DEVICE_LOCAL = 0x00000001,
-        HOST_VISIBLE = 0x00000002,
-        HOST_COHERENT = 0x00000004,
-        HOST_CACHED = 0x00000008,
-        LAZILY_ALLOCATED = 0x00000010
+        STAGING = 1,
+        DEVICE = 2,
+        READBACK = 3
     };
 
     enum class ImageLayout {

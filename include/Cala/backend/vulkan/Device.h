@@ -60,7 +60,7 @@ namespace cala::backend::vulkan {
 
         bool gc();
 
-        BufferHandle createBuffer(u32 size, BufferUsage usage, backend::MemoryProperties flags = backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT, bool persistentlyMapped = false);
+        BufferHandle createBuffer(u32 size, BufferUsage usage, backend::MemoryProperties flags = backend::MemoryProperties::DEVICE, bool persistentlyMapped = false);
 
         void destroyBuffer(BufferHandle handle);
 

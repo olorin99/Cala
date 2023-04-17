@@ -16,7 +16,7 @@ cala::backend::vulkan::Buffer::Buffer(Buffer &&rhs) noexcept
       _buffer(VK_NULL_HANDLE),
       _allocation(nullptr),
       _size(0),
-      _flags(MemoryProperties::HOST_VISIBLE),
+      _flags(MemoryProperties::STAGING),
       _usage(BufferUsage::UNIFORM),
       _invalidated(false)
 {

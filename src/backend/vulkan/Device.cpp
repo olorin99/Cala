@@ -182,7 +182,7 @@ bool cala::backend::vulkan::Device::wait(u64 timeout) {
 }
 
 cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::stagingBuffer(u32 size) {
-    return createBuffer(size, BufferUsage::TRANSFER_SRC, MemoryProperties::HOST_VISIBLE | MemoryProperties::HOST_CACHED | MemoryProperties::HOST_COHERENT);
+    return createBuffer(size, BufferUsage::TRANSFER_SRC, MemoryProperties::STAGING);
 }
 
 
@@ -293,11 +293,15 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
     VmaAllocationCreateInfo allocInfo{};
     allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 
-    if ((flags & MemoryProperties::HOST_VISIBLE) == MemoryProperties::HOST_VISIBLE) {
-        if ((flags & MemoryProperties::HOST_CACHED) == MemoryProperties::HOST_CACHED)
-            allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
-        else
-            allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    if ((flags & MemoryProperties::DEVICE) == MemoryProperties::DEVICE) {
+        allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+        persistentlyMapped = false;
+    }
+    if ((flags & MemoryProperties::STAGING) == MemoryProperties::STAGING) {
+        allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    }
+    if ((flags & MemoryProperties::READBACK) == MemoryProperties::READBACK) {
+        allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT;
     }
 
     VK_TRY(vmaCreateBuffer(context().allocator(), &bufferInfo, &allocInfo, &buffer, &allocation, nullptr));

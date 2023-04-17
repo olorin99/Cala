@@ -241,10 +241,10 @@ cala::Engine::Engine(backend::Platform &platform)
 
     });
 
-    _globalVertexBuffer = _device.createBuffer(10000, backend::BufferUsage::VERTEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE_LOCAL);
-    _vertexStagingBuffer = _device.createBuffer(10000, backend::BufferUsage::TRANSFER_SRC);
-    _globalIndexBuffer = _device.createBuffer(10000, backend::BufferUsage::INDEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE_LOCAL);
-    _indexStagingBuffer = _device.createBuffer(10000, backend::BufferUsage::TRANSFER_SRC);
+    _globalVertexBuffer = _device.createBuffer(10000, backend::BufferUsage::VERTEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE);
+    _vertexStagingBuffer = _device.createBuffer(10000, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING);
+    _globalIndexBuffer = _device.createBuffer(10000, backend::BufferUsage::INDEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE);
+    _indexStagingBuffer = _device.createBuffer(10000, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING);
 
     _cube = new Mesh(shapes::cube().mesh(this));
 

@@ -42,13 +42,13 @@ cala::MeshData &cala::MeshData::addQuad(u32 a, u32 b, u32 c, u32 d) {
 }
 
 cala::backend::vulkan::BufferHandle cala::MeshData::vertexBuffer(backend::vulkan::Device& driver) const {
-    auto buf = driver.createBuffer(_vertices.size() * sizeof(Vertex), backend::BufferUsage::VERTEX, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT);
+    auto buf = driver.createBuffer(_vertices.size() * sizeof(Vertex), backend::BufferUsage::VERTEX, backend::MemoryProperties::STAGING);
     buf->data({_vertices.data(), static_cast<u32>(_vertices.size() * sizeof(Vertex))});
     return buf;
 }
 
 cala::backend::vulkan::BufferHandle cala::MeshData::indexBuffer(backend::vulkan::Device& driver) const {
-    auto buf = driver.createBuffer(_indices.size() * sizeof(u32), backend::BufferUsage::INDEX, backend::MemoryProperties::HOST_VISIBLE | backend::MemoryProperties::HOST_COHERENT);
+    auto buf = driver.createBuffer(_indices.size() * sizeof(u32), backend::BufferUsage::INDEX, backend::MemoryProperties::STAGING);
     buf->data({_indices.data(), static_cast<u32>(_indices.size() * sizeof(u32))});
     return buf;
 }
