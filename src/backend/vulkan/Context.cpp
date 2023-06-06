@@ -1,13 +1,12 @@
+#include <cstdio> //vma complains without this
 #define VMA_IMPLEMENTATION
-#include "vk_mem_alloc.h"
+#include "../third_party/vk_mem_alloc.h"
 
 #include <Cala/backend/vulkan/Context.h>
 #include <Cala/backend/vulkan/primitives.h>
 
 #include <Ende/Vector.h>
 #include <Ende/log/log.h>
-#include <cstring>
-#include <iostream>
 
 class VulkanContextException : public std::exception {
 public:
@@ -90,6 +89,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
 #ifndef NDEBUG
     extensions.push(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
+    extensions.push(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
 //    extensions.push(VK_EXT_validation_features);
 
@@ -239,6 +239,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
     vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
     allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
+    allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
 
     vmaCreateAllocator(&allocatorCreateInfo, &_allocator);
 
@@ -379,6 +380,8 @@ VkQueue cala::backend::vulkan::Context::getQueue(QueueType type) const {
             return _transferQueue;
         case QueueType::PRESENT:
             return _presentQueue;
+        default:
+            break;
     }
     VkQueue queue;
     u32 index = 0;

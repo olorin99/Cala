@@ -15,7 +15,7 @@ cala::backend::vulkan::SDLPlatform::SDLPlatform(const char *windowTitle, u32 wid
     if (!_window) throw std::runtime_error("Unable to create window");
 }
 
-cala::backend::vulkan::SDLPlatform::~SDLPlatform() noexcept {
+cala::backend::vulkan::SDLPlatform::~SDLPlatform() {
     SDL_DestroyWindow(_window);
 }
 

@@ -2,7 +2,8 @@
 #define CALA_PLATFORM_H
 
 #include <vulkan/vulkan.h>
-#include "Ende/Vector.h"
+#include <Ende/platform.h>
+#include <Ende/Vector.h>
 
 namespace cala::backend {
 

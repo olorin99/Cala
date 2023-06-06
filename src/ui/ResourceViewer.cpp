@@ -14,7 +14,7 @@ cala::ui::ResourceViewer::ResourceViewer(backend::vulkan::Device *device)
     _layerIndex(0)
 {}
 
-cala::ui::ResourceViewer::~ResourceViewer() noexcept {
+cala::ui::ResourceViewer::~ResourceViewer() {
     while (!_destroyQueue.empty()) {
         auto set = _destroyQueue.pop().value();
         set.second.second = backend::vulkan::Image::View();

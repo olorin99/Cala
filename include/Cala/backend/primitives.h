@@ -314,6 +314,46 @@ namespace cala::backend {
         return nullptr;
     }
 
+    constexpr u32 formatToSize(Format format) {
+        switch (format) {
+            case Format::UNDEFINED:
+                return 0;
+            case Format::RGB8_UNORM:
+            case Format::RGB8_SNORM:
+            case Format::RGB8_UINT:
+            case Format::RGB8_SINT:
+            case Format::RGB8_SRGB:
+                return 1 * 3;
+            case Format::RGBA8_UNORM:
+            case Format::RGBA8_SNORM:
+            case Format::RGBA8_UINT:
+            case Format::RGBA8_SINT:
+            case Format::RGBA8_SRGB:
+                return 1 * 4;
+            case Format::RG16_SFLOAT:
+                return 2 * 2;
+            case Format::RGBA16_SFLOAT:
+                return 2 * 4;
+            case Format::R32_SFLOAT:
+                return 4 * 1;
+            case Format::RG32_SFLOAT:
+                return 4 * 2;
+            case Format::RGB32_SFLOAT:
+                return 4 * 3;
+            case Format::RGBA32_UINT:
+            case Format::RGBA32_SINT:
+            case Format::RGBA32_SFLOAT:
+                return 4 * 4;
+            case Format::D16_UNORM:
+                return 2;
+            case Format::D32_SFLOAT:
+            case Format::D24_UNORM_S8_UINT:
+                return 4;
+        }
+
+        return 0;
+    }
+
 }
 
 constexpr cala::backend::QueueType operator|(cala::backend::QueueType lhs, cala::backend::QueueType rhs) {

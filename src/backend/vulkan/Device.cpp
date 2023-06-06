@@ -145,13 +145,16 @@ cala::backend::vulkan::Device::~Device() {
 
 cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFrame() {
     _frameCount++;
+    _bytesAllocatedPerFrame = 0;
 
     VkFence fence = _frameFences[frameIndex()];
 
     waitFrame(_frameCount);
 
     vmaSetCurrentFrameIndex(_context.allocator(), _frameCount);
-    _commandPools[0][frameIndex()].reset();
+
+    for (auto& pool : _commandPools[frameIndex()])
+        pool.reset();
 
     return {
         _frameCount,
@@ -223,6 +226,8 @@ cala::backend::vulkan::CommandBuffer& cala::backend::vulkan::Device::getCommandB
         case QueueType::TRANSFER:
             index = 2;
             break;
+        default:
+            index = 0;
     }
     return _commandPools[frame][index].getBuffer();
 }
@@ -319,6 +324,8 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
     _buffers[index]._flags = flags;
     if (persistentlyMapped)
         _buffers[index]._mapped = _buffers[index].map();
+
+    _bytesAllocatedPerFrame += size;
 
     return { this, static_cast<i32>(index) };
 }
@@ -431,6 +438,9 @@ cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Im
         chosenSampler = backend::isDepthFormat(info.format) ? &_defaultShadowSampler : &_defaultSampler;
 
     updateBindlessImage(index, _imageViews[index], *chosenSampler);
+
+    _bytesAllocatedPerFrame += (info.width * info.height * info.depth * formatToSize(info.format));
+
     return { this, static_cast<i32>(index) };
 }
 
@@ -805,6 +815,7 @@ cala::backend::vulkan::Device::Stats cala::backend::vulkan::Device::stats() cons
         imagesInUse,
         allocatedImages,
         descriptorSetCount,
-        pipelineCount
+        pipelineCount,
+        _bytesAllocatedPerFrame
     };
 }

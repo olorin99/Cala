@@ -122,6 +122,7 @@ namespace cala::backend::vulkan {
             u32 allocatedImages = 0;
             u32 descriptorSetCount = 0;
             u32 pipelineCount = 0;
+            u32 perFrameAllocated = 0;
         };
 
         Stats stats() const;
@@ -174,6 +175,9 @@ namespace cala::backend::vulkan {
         VkDescriptorPool _descriptorPool;
 
         tsl::robin_map<CommandBuffer::PipelineKey, VkPipeline, ende::util::MurmurHash<CommandBuffer::PipelineKey>, CommandBuffer::PipelineEqual> _pipelines;
+
+
+        u32 _bytesAllocatedPerFrame;
 
     };
 
