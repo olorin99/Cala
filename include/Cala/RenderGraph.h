@@ -44,27 +44,27 @@ namespace cala {
     class RenderPass {
     public:
 
-        void addColourOutput(const char* label, ImageResource info);
+        void addColourOutput(const char* label, ImageResource info, bool internal = true);
 
-        void addColourOutput(const char* label);
+        void addColourOutput(const char* label, bool internal = true);
 
-        void setDepthOutput(const char* label, ImageResource info);
+        void setDepthOutput(const char* label, ImageResource info, bool internal = true);
 
-        void addImageInput(const char* label, bool storage = false);
+        void addImageInput(const char* label, bool storage = false, bool internal = true);
 
-        void addImageOutput(const char* label, bool storage = false);
+        void addImageOutput(const char* label, bool storage = false, bool internal = true);
 
-        void addImageOutput(const char* label, ImageResource info, bool storage = false);
+        void addImageOutput(const char* label, ImageResource info, bool storage = false, bool internal = true);
 
-        void setDepthInput(const char* label);
+        void setDepthInput(const char* label, bool internal = true);
 
-        void addBufferInput(const char* label, BufferResource info);
+        void addBufferInput(const char* label, BufferResource info, bool internal = true);
 
-        void addBufferOutput(const char* label, BufferResource info);
+        void addBufferOutput(const char* label, BufferResource info, bool internal = true);
 
-        void addBufferInput(const char* label);
+        void addBufferInput(const char* label, bool internal = true);
 
-        void addBufferOutput(const char* label);
+        void addBufferOutput(const char* label, bool internal = true);
 
         void setExecuteFunction(std::function<void(backend::vulkan::CommandBuffer&, RenderGraph&)> func);
 
@@ -121,7 +121,35 @@ namespace cala {
             auto it = _attachmentMap.find(label);
             if (it == _attachmentMap.end())
                 return nullptr;
-            return dynamic_cast<T*>(it.value());
+
+            u32 index = it.value().index;
+            auto* t = it.value().internal ? _internalResources[index].get() : _externalResources[index].get();
+            return dynamic_cast<T*>(t);
+        }
+
+        template <typename T>
+        void addResource(const char* label, T resource, bool internal = true) {
+            auto it = _attachmentMap.find(label);
+            if (_attachmentMap.end() == it) {
+                if (internal) {
+                    _internalResources.push(std::make_unique<T>(std::move(resource)));
+                    _attachmentMap.emplace(label, ResourcePointer{ (u32)_internalResources.size() - 1, internal });
+                } else {
+                    _externalResources.push(std::make_unique<T>(std::move(resource)));
+                    _attachmentMap.emplace(label, ResourcePointer{ (u32)_externalResources.size() - 1, internal });
+                }
+            } else {
+                assert(it.value().internal == internal);
+                u32 index = it.value().index;
+
+                //TODO: Compare if change
+                if (internal) {
+                    assert(index < _internalResources.size());
+                } else {
+                    assert(index < _externalResources.size());
+                }
+
+            }
         }
 
     private:
@@ -133,7 +161,16 @@ namespace cala {
         ende::Vector<RenderPass> _passes;
         ende::Vector<std::pair<const char*, backend::vulkan::Timer>> _timers[2];
 
-        tsl::robin_map<const char*, Resource*> _attachmentMap;
+        struct ResourcePointer {
+            u32 index;
+            bool internal;
+        };
+
+        tsl::robin_map<const char*, ResourcePointer> _attachmentMap;
+
+        ende::Vector<std::unique_ptr<Resource>> _internalResources;
+        ende::Vector<std::unique_ptr<Resource>> _externalResources;
+        //TODO: _internalAttachments here then adding attachment function to manage creation/deletion/changes
 
         const char* _backbuffer;
 

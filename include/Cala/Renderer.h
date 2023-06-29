@@ -66,7 +66,7 @@ namespace cala {
         backend::vulkan::BufferHandle _drawCountBuffer[2];
         backend::vulkan::BufferHandle _globalDataBuffer;
 
-        backend::vulkan::BufferHandle _drawCommands[2];
+//        backend::vulkan::BufferHandle _drawCommands;
 
         backend::vulkan::ImageHandle _shadowTarget;
         backend::vulkan::Framebuffer* _shadowFramebuffer;

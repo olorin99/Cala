@@ -14,8 +14,7 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
                   engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING)},
     _drawCountBuffer{engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING),
                      engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING)},
-    _drawCommands{engine->device().createBuffer(sizeof(VkDrawIndexedIndirectCommand) * 100, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING),
-                  engine->device().createBuffer(sizeof(VkDrawIndexedIndirectCommand) * 100, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING)},
+//    _drawCommands{engine->device().createBuffer(sizeof(VkDrawIndexedIndirectCommand) * 100, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::DEVICE)},
     _globalDataBuffer(engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING)),
     _graph(engine),
     _renderSettings(settings),
@@ -102,11 +101,23 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     pointDepth.width = 10;
     pointDepth.height = 10;
 
+//    ImageResource directDepth;
+//    pointDepth.format = backend::Format::D32_SFLOAT;
+//    pointDepth.matchSwapchain = false;
+//    pointDepth.transient = false;
+//    pointDepth.width = 10;
+//    pointDepth.height = 10;
+
     ImageResource colourAttachment;
     colourAttachment.format = backend::Format::RGBA32_SFLOAT;
 
     ImageResource backbufferAttachment;
     backbufferAttachment.format = backend::Format::RGBA8_UNORM;
+
+    BufferResource cameraResource;
+    cameraResource.size = _cameraBuffer[_engine->device().frameIndex()]->size();
+    cameraResource.usage = _cameraBuffer[_engine->device().frameIndex()]->usage();
+    cameraResource.handle = _cameraBuffer[_engine->device().frameIndex()];
 
     BufferResource transformsResource;
     transformsResource.handle = scene._modelBuffer[_engine->device().frameIndex()];
@@ -124,14 +135,13 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     materialCountResource.size = scene._materialCountBuffer[_engine->device().frameIndex()]->size();
     materialCountResource.usage = scene._materialCountBuffer[_engine->device().frameIndex()]->usage();
 
-    if (scene._renderables.size() * sizeof(VkDrawIndexedIndirectCommand) > _drawCommands[0]->size())
-        _drawCommands[0] = _engine->device().resizeBuffer(_drawCommands[0], scene._renderables.size() * sizeof(VkDrawIndexedIndirectCommand), false);
+//    if (scene._renderables.size() * sizeof(VkDrawIndexedIndirectCommand) > _drawCommands->size())
+//        _drawCommands = _engine->device().resizeBuffer(_drawCommands, scene._renderables.size() * sizeof(VkDrawIndexedIndirectCommand), false);
 
     BufferResource drawCommandsResource;
-    drawCommandsResource.size = _drawCommands[0]->size();
+    drawCommandsResource.size = scene._renderables.size() * sizeof(VkDrawIndexedIndirectCommand);
     drawCommandsResource.transient = false;
-    drawCommandsResource.usage = _drawCommands[0]->usage();
-    drawCommandsResource.handle = _drawCommands[0]; //TODO: have rendergraph automatically allocate double buffers for frames in flight (no need pala to double buffer gpu objects just cpu -> gpu objects)
+    drawCommandsResource.usage = backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT;
 
     BufferResource clustersResource;
     clustersResource.size = sizeof(ende::math::Vec4f) * 2 * 16 * 9 * 24;
@@ -142,7 +152,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     if (camera.isDirty()) {
         auto& createClusters = _graph.addPass("create_clusters");
-        createClusters.addBufferOutput("clusters", clustersResource);
+        createClusters.addBufferOutput("clusters", clustersResource, true);
 
         createClusters.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
             auto clusters = graph.getResource<BufferResource>("clusters");
@@ -186,10 +196,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     lightGlobalIndexResource.usage = backend::BufferUsage::STORAGE;
 
     auto& cullLights = _graph.addPass("cull_lights");
-    cullLights.addBufferInput("clusters", clustersResource);
-    cullLights.addBufferOutput("lightGrid", lightGridResource);
-    cullLights.addBufferOutput("lightIndices", lightIndicesResource);
-    cullLights.addBufferOutput("lightGlobalResource", lightGlobalIndexResource);
+    cullLights.addBufferInput("clusters", clustersResource, true);
+    cullLights.addBufferOutput("lightGrid", lightGridResource, true);
+    cullLights.addBufferOutput("lightIndices", lightIndicesResource, true);
+    cullLights.addBufferOutput("lightGlobalResource", lightGlobalIndexResource, true);
 
     cullLights.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
         auto clusters = graph.getResource<BufferResource>("clusters");
@@ -229,9 +239,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     if (_renderSettings.debugClusters) {
         auto& debugClusters = _graph.addPass("debug_clusters");
 
-        debugClusters.addBufferInput("lightGrid");
-        debugClusters.addColourOutput("hdr");
-        debugClusters.addImageInput("depth");
+        debugClusters.addBufferInput("lightGrid", true);
+        debugClusters.addColourOutput("hdr", true);
+        debugClusters.addImageInput("depth", false, true);
 
         debugClusters.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
             auto lightGrid = graph.getResource<BufferResource>("lightGrid");
@@ -411,9 +421,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     });
 
 //    auto& directShadow = _graph.addPass("direct_shadow");
+//    directShadow.addImageOutput("direct_depth", directDepth);
 //    directShadow.addBufferInput("transforms");
 //    directShadow.addBufferInput("meshData");
-//    directShadow.addBufferOutput("drawCommands");
+////    directShadow.addBufferOutput("drawCommands");
 //
 //    directShadow.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
 //        auto transforms = graph.getResource<BufferResource>("transforms");
@@ -605,6 +616,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         else
             forwardPass.setDepthOutput("depth", depthAttachment);
         forwardPass.addImageInput("point_depth");
+//        forwardPass.addImageInput("direct_depth");
         forwardPass.addBufferInput("drawCommands");
         forwardPass.addBufferInput("lightIndices");
         forwardPass.addBufferInput("lightGrid");

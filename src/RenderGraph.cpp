@@ -64,30 +64,34 @@ cala::RenderPass::~RenderPass() {
 //    delete _renderPass;
 }
 
-void cala::RenderPass::addColourOutput(const char *label, ImageResource info) {
-    auto it = _graph->_attachmentMap.find(label);
-    if (it == _graph->_attachmentMap.end())
-        _graph->_attachmentMap.emplace(label, new ImageResource(std::move(info)));
+void cala::RenderPass::addColourOutput(const char *label, ImageResource info, bool internal) {
+    _graph->addResource(label, std::move(info), internal);
+//    auto it = _graph->_attachmentMap.find(label);
+//    if (it == _graph->_attachmentMap.end())
+//        _graph->_attachmentMap.emplace(label, new ImageResource(std::move(info)));
     _outputs.emplace(label);
     _attachments.push(label);
 }
 
-void cala::RenderPass::addColourOutput(const char *label) {
-    auto it = _graph->_attachmentMap.find(label);
+void cala::RenderPass::addColourOutput(const char *label, bool internal) {
+//    auto it = _graph->_attachmentMap.find(label);
+//    if (it == _graph->_attachmentMap.end())
+//        throw ""
     _outputs.emplace(label);
     _attachments.push(label);
 }
 
-void cala::RenderPass::setDepthOutput(const char *label, ImageResource info) {
-    auto it = _graph->_attachmentMap.find(label);
-    if (it == _graph->_attachmentMap.end()) {
-        _graph->_attachmentMap.emplace(label, new ImageResource(std::move(info)));
-    }
+void cala::RenderPass::setDepthOutput(const char *label, ImageResource info, bool internal) {
+    _graph->addResource(label, std::move(info), internal);
+//    auto it = _graph->_attachmentMap.find(label);
+//    if (it == _graph->_attachmentMap.end()) {
+//        _graph->_attachmentMap.emplace(label, new ImageResource(std::move(info)));
+//    }
     _outputs.emplace(label);
     _attachments.push(label);
 }
 
-void cala::RenderPass::addImageInput(const char *label, bool storage) {
+void cala::RenderPass::addImageInput(const char *label, bool storage, bool internal) {
     auto it = _graph->_attachmentMap.find(label);
     if (it != _graph->_attachmentMap.end()) {
         _inputs.emplace(std::make_pair(label, storage));
@@ -96,7 +100,7 @@ void cala::RenderPass::addImageInput(const char *label, bool storage) {
         throw "couldn't find attachment"; //TODO: better error handling
 }
 
-void cala::RenderPass::addImageOutput(const char *label, bool storage) {
+void cala::RenderPass::addImageOutput(const char *label, bool storage, bool internal) {
     auto it = _graph->_attachmentMap.find(label);
     if (it != _graph->_attachmentMap.end())
         _inputs.emplace(std::make_pair(label, storage));
@@ -104,14 +108,15 @@ void cala::RenderPass::addImageOutput(const char *label, bool storage) {
         throw "couldn't find attachment";
 }
 
-void cala::RenderPass::addImageOutput(const char *label, ImageResource info, bool storage) {
-    auto it = _graph->_attachmentMap.find(label);
-    if (it == _graph->_attachmentMap.end())
-        _graph->_attachmentMap.emplace(label, new ImageResource(std::move(info)));
+void cala::RenderPass::addImageOutput(const char *label, ImageResource info, bool storage, bool internal) {
+    _graph->addResource(label, std::move(info), internal);
+//    auto it = _graph->_attachmentMap.find(label);
+//    if (it == _graph->_attachmentMap.end())
+//        _graph->_attachmentMap.emplace(label, new ImageResource(std::move(info)));
     _outputs.emplace(label);
 }
 
-void cala::RenderPass::setDepthInput(const char *label) {
+void cala::RenderPass::setDepthInput(const char *label, bool internal) {
     auto it = _graph->_attachmentMap.find(label);
     if (it != _graph->_attachmentMap.end()) {
         _inputs.emplace(std::make_pair(label, false));
@@ -121,23 +126,25 @@ void cala::RenderPass::setDepthInput(const char *label) {
         throw "couldn't find depth attachment"; //TODO: better error handling
 }
 
-void cala::RenderPass::addBufferInput(const char *label, BufferResource info) {
-    auto it = _graph->_attachmentMap.find(label);
-    if (it == _graph->_attachmentMap.end())
-        _graph->_attachmentMap.emplace(label, new BufferResource(std::move(info)));
+void cala::RenderPass::addBufferInput(const char *label, BufferResource info, bool internal) {
+    _graph->addResource(label, std::move(info), internal);
+//    auto it = _graph->_attachmentMap.find(label);
+//    if (it == _graph->_attachmentMap.end())
+//        _graph->_attachmentMap.emplace(label, new BufferResource(std::move(info)));
     _inputs.emplace(std::make_pair(label, false));
 }
 
-void cala::RenderPass::addBufferOutput(const char *label, BufferResource info) {
-    auto it = _graph->_attachmentMap.find(label);
-    if (it == _graph->_attachmentMap.end())
-        _graph->_attachmentMap.emplace(label, new BufferResource(std::move(info)));
-    else if (auto bit = dynamic_cast<BufferResource*>(it->second); bit && bit->size != info.size)
-        bit->size = info.size;
+void cala::RenderPass::addBufferOutput(const char *label, BufferResource info, bool internal) {
+    _graph->addResource(label, std::move(info), internal);
+//    auto it = _graph->_attachmentMap.find(label);
+//    if (it == _graph->_attachmentMap.end())
+//        _graph->_attachmentMap.emplace(label, new BufferResource(std::move(info)));
+//    else if (auto bit = dynamic_cast<BufferResource*>(it->second); bit && bit->size != info.size)
+//        bit->size = info.size;
     _outputs.emplace(label);
 }
 
-void cala::RenderPass::addBufferInput(const char *label) {
+void cala::RenderPass::addBufferInput(const char *label, bool internal) {
     auto it = _graph->_attachmentMap.find(label);
     if (it != _graph->_attachmentMap.end())
         _inputs.emplace(std::make_pair(label, false));
@@ -145,7 +152,7 @@ void cala::RenderPass::addBufferInput(const char *label) {
         throw "couldn't find buffer resource";
 }
 
-void cala::RenderPass::addBufferOutput(const char *label) {
+void cala::RenderPass::addBufferOutput(const char *label, bool internal) {
     auto it = _graph->_attachmentMap.find(label);
     if (it != _graph->_attachmentMap.end())
         _outputs.emplace(label);
@@ -168,8 +175,9 @@ cala::RenderGraph::RenderGraph(Engine *engine)
 {}
 
 cala::RenderGraph::~RenderGraph() {
-    for (auto& attachment : _attachmentMap)
-        delete attachment.second;
+//    for (auto& attachment : _attachmentMap)
+//
+//        delete attachment.second;
 }
 
 cala::RenderPass &cala::RenderGraph::addPass(const char *name) {
@@ -229,7 +237,15 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
 
 
     for (auto& attachment : _attachmentMap) {
-        attachment.second->devirtualize(_engine, _swapchain);
+        u32 index = attachment.second.index;
+        if (attachment.second.internal) {
+            assert(index < _internalResources.size() && _internalResources[index]);
+            _internalResources[index]->devirtualize(_engine, _swapchain);
+        } else {
+            assert(index < _externalResources.size() && _externalResources[index]);
+            _externalResources[index]->devirtualize(_engine, _swapchain);
+        }
+//        attachment.second->devirtualize(_engine, _swapchain);
     }
 
     for (u32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
@@ -244,8 +260,7 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
             ende::Vector<backend::vulkan::RenderPass::Attachment> attachments;
             for (auto &attachment: pass->_attachments) {
 
-                auto it = _attachmentMap.find(attachment);
-                auto resource = dynamic_cast<ImageResource*>(it.value());
+                auto resource = getResource<ImageResource>(attachment);
 
                 bool depth = backend::isDepthFormat(resource->format);
 
@@ -369,10 +384,9 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
         cmd.popDebugLabel();
         timer.second.stop();
         for (auto& attachment : pass->_attachments) {
-            auto it = _attachmentMap.find(attachment);
-            if (it == _attachmentMap.end())
+            auto resource = getResource<ImageResource>(attachment);
+            if (!resource)
                 continue;
-            auto resource = dynamic_cast<ImageResource*>(it.value());
             if (backend::isDepthFormat(resource->handle->format())) {
                 auto b = resource->handle->barrier(backend::Access::DEPTH_STENCIL_WRITE, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
                 cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, { &b, 1 });
@@ -382,11 +396,15 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
             }
         }
     }
-    auto it = _attachmentMap.find(_backbuffer);
-    if (it == _attachmentMap.end())
-        return false;
 
-    auto backbuffer = dynamic_cast<ImageResource*>(it.value());
+    auto backbuffer = getResource<ImageResource>(_backbuffer);
+    if (!backbuffer)
+        return false;
+//    auto it = _attachmentMap.find(_backbuffer);
+//    if (it == _attachmentMap.end())
+//        return false;
+//
+//    auto backbuffer = dynamic_cast<ImageResource*>(it.value());
 
     auto barrier = backbuffer->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::TRANSFER_READ, backend::ImageLayout::TRANSFER_SRC);
     cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::PipelineStage::TRANSFER, { &barrier, 1 });
@@ -400,11 +418,14 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
 
 void cala::RenderGraph::reset() {
     _passes.clear();
-    for (auto& attachment : _attachmentMap) {
-        if (attachment.second->transient && dynamic_cast<BufferResource*>(attachment.second)) {
-            delete attachment.second;
-            _attachmentMap.erase(attachment.first);
-        }
-    }
+//    for (auto& attachment : _attachmentMap) {
+//        u32 index = attachment.second.index;
+//
+//
+//        if (attachment.second->transient && dynamic_cast<BufferResource*>(attachment.second)) {
+////            delete attachment.second;
+//            _attachmentMap.erase(attachment.first);
+//        }
+//    }
 //    _attachmentMap.clear();
 }

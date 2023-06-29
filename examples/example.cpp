@@ -427,8 +427,8 @@ int main() {
     Light light1(cala::Light::POINT, false, light1Transform);
     light1.setColour({0, 1, 0});
     light1.setIntensity(10);
-    Transform light2Transform({0, 0, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-45)));
-    Light light2(cala::Light::DIRECTIONAL, false, light2Transform);
+    Transform light2Transform({0, -20, 0}, ende::math::Quaternion({1, 0, 0}, ende::math::rad(-45)));
+    Light light2(cala::Light::DIRECTIONAL, true, light2Transform);
     light2.setColour({0, 0, 1});
     light2.setIntensity(20);
     Transform light3Transform({-10, 2, 4});
