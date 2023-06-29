@@ -44,27 +44,17 @@ namespace cala {
     class RenderPass {
     public:
 
-        void addColourOutput(const char* label, ImageResource info, bool internal = true);
+        bool reads(const char* label, bool storage = false);
 
-        void addColourOutput(const char* label, bool internal = true);
+        bool writes(const char* label);
 
-        void setDepthOutput(const char* label, ImageResource info, bool internal = true);
+        void addColourAttachment(const char* label);
 
-        void addImageInput(const char* label, bool storage = false, bool internal = true);
+        void addDepthAttachment(const char* label);
 
-        void addImageOutput(const char* label, bool storage = false, bool internal = true);
+        void addDepthReadAttachment(const char* label);
 
-        void addImageOutput(const char* label, ImageResource info, bool storage = false, bool internal = true);
 
-        void setDepthInput(const char* label, bool internal = true);
-
-        void addBufferInput(const char* label, BufferResource info, bool internal = true);
-
-        void addBufferOutput(const char* label, BufferResource info, bool internal = true);
-
-        void addBufferInput(const char* label, bool internal = true);
-
-        void addBufferOutput(const char* label, bool internal = true);
 
         void setExecuteFunction(std::function<void(backend::vulkan::CommandBuffer&, RenderGraph&)> func);
 

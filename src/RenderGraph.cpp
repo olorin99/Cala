@@ -64,100 +64,49 @@ cala::RenderPass::~RenderPass() {
 //    delete _renderPass;
 }
 
-void cala::RenderPass::addColourOutput(const char *label, ImageResource info, bool internal) {
-    _graph->addResource(label, std::move(info), internal);
-//    auto it = _graph->_attachmentMap.find(label);
-//    if (it == _graph->_attachmentMap.end())
-//        _graph->_attachmentMap.emplace(label, new ImageResource(std::move(info)));
-    _outputs.emplace(label);
-    _attachments.push(label);
-}
 
-void cala::RenderPass::addColourOutput(const char *label, bool internal) {
-//    auto it = _graph->_attachmentMap.find(label);
-//    if (it == _graph->_attachmentMap.end())
-//        throw ""
-    _outputs.emplace(label);
-    _attachments.push(label);
-}
-
-void cala::RenderPass::setDepthOutput(const char *label, ImageResource info, bool internal) {
-    _graph->addResource(label, std::move(info), internal);
-//    auto it = _graph->_attachmentMap.find(label);
-//    if (it == _graph->_attachmentMap.end()) {
-//        _graph->_attachmentMap.emplace(label, new ImageResource(std::move(info)));
-//    }
-    _outputs.emplace(label);
-    _attachments.push(label);
-}
-
-void cala::RenderPass::addImageInput(const char *label, bool storage, bool internal) {
+bool cala::RenderPass::reads(const char *label, bool storage) {
     auto it = _graph->_attachmentMap.find(label);
-    if (it != _graph->_attachmentMap.end()) {
-        _inputs.emplace(std::make_pair(label, storage));
+    if (_graph->_attachmentMap.end() == it) {
+        std::string err = "unable to find ";
+        err += label;
+        throw std::runtime_error(err);
+        return false;
     }
-    else
-        throw "couldn't find attachment"; //TODO: better error handling
-}
-
-void cala::RenderPass::addImageOutput(const char *label, bool storage, bool internal) {
-    auto it = _graph->_attachmentMap.find(label);
-    if (it != _graph->_attachmentMap.end())
+    else {
         _inputs.emplace(std::make_pair(label, storage));
-    else
-        throw "couldn't find attachment";
-}
-
-void cala::RenderPass::addImageOutput(const char *label, ImageResource info, bool storage, bool internal) {
-    _graph->addResource(label, std::move(info), internal);
-//    auto it = _graph->_attachmentMap.find(label);
-//    if (it == _graph->_attachmentMap.end())
-//        _graph->_attachmentMap.emplace(label, new ImageResource(std::move(info)));
-    _outputs.emplace(label);
-}
-
-void cala::RenderPass::setDepthInput(const char *label, bool internal) {
-    auto it = _graph->_attachmentMap.find(label);
-    if (it != _graph->_attachmentMap.end()) {
-        _inputs.emplace(std::make_pair(label, false));
-        _attachments.push(label);
+        return true;
     }
-    else
-        throw "couldn't find depth attachment"; //TODO: better error handling
 }
 
-void cala::RenderPass::addBufferInput(const char *label, BufferResource info, bool internal) {
-    _graph->addResource(label, std::move(info), internal);
-//    auto it = _graph->_attachmentMap.find(label);
-//    if (it == _graph->_attachmentMap.end())
-//        _graph->_attachmentMap.emplace(label, new BufferResource(std::move(info)));
-    _inputs.emplace(std::make_pair(label, false));
-}
-
-void cala::RenderPass::addBufferOutput(const char *label, BufferResource info, bool internal) {
-    _graph->addResource(label, std::move(info), internal);
-//    auto it = _graph->_attachmentMap.find(label);
-//    if (it == _graph->_attachmentMap.end())
-//        _graph->_attachmentMap.emplace(label, new BufferResource(std::move(info)));
-//    else if (auto bit = dynamic_cast<BufferResource*>(it->second); bit && bit->size != info.size)
-//        bit->size = info.size;
-    _outputs.emplace(label);
-}
-
-void cala::RenderPass::addBufferInput(const char *label, bool internal) {
+bool cala::RenderPass::writes(const char *label) {
     auto it = _graph->_attachmentMap.find(label);
-    if (it != _graph->_attachmentMap.end())
-        _inputs.emplace(std::make_pair(label, false));
-    else
-        throw "couldn't find buffer resource";
-}
-
-void cala::RenderPass::addBufferOutput(const char *label, bool internal) {
-    auto it = _graph->_attachmentMap.find(label);
-    if (it != _graph->_attachmentMap.end())
+    if (_graph->_attachmentMap.end() == it) {
+        std::string err = "unable to find ";
+        err += label;
+        throw std::runtime_error(err);
+        return false;
+    }
+    else {
         _outputs.emplace(label);
-    else
-        throw "couldn't find buffer resource";
+        return true;
+    }
+}
+
+void cala::RenderPass::addColourAttachment(const char *label) {
+    //TODO: error handling
+    if (writes(label))
+        _attachments.emplace(label);
+}
+
+void cala::RenderPass::addDepthAttachment(const char *label) {
+    if (writes(label))
+        _attachments.emplace(label);
+}
+
+void cala::RenderPass::addDepthReadAttachment(const char *label) {
+    if (reads(label))
+        _attachments.emplace(label);
 }
 
 void cala::RenderPass::setExecuteFunction(std::function<void(backend::vulkan::CommandBuffer&, cala::RenderGraph&)> func) {
@@ -400,11 +349,6 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
     auto backbuffer = getResource<ImageResource>(_backbuffer);
     if (!backbuffer)
         return false;
-//    auto it = _attachmentMap.find(_backbuffer);
-//    if (it == _attachmentMap.end())
-//        return false;
-//
-//    auto backbuffer = dynamic_cast<ImageResource*>(it.value());
 
     auto barrier = backbuffer->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::TRANSFER_READ, backend::ImageLayout::TRANSFER_SRC);
     cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::PipelineStage::TRANSFER, { &barrier, 1 });
