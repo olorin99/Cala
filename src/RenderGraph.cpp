@@ -6,13 +6,20 @@ void cala::ImageResource::devirtualize(cala::Engine* engine, backend::vulkan::Sw
     auto extent = swapchain->extent();
     if (transient)
         clear = true;
+
+    if (backend::isDepthFormat(format))
+        usage = usage | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT;
+
+    auto use = backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST |
+               backend::ImageUsage::STORAGE | (backend::isDepthFormat(format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT);
     if (!handle) {
         if (matchSwapchain) {
             width = extent.width;
             height = extent.height;
         }
+
         handle = engine->device().createImage({
-            width, height, 1, format, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST | (backend::isDepthFormat(format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT)
+            width, height, 1, format, 1, 1, usage
         });
         engine->device().immediate([&](backend::vulkan::CommandBuffer& cmd) {
             if (backend::isDepthFormat(format)) {
@@ -29,7 +36,7 @@ void cala::ImageResource::devirtualize(cala::Engine* engine, backend::vulkan::Sw
         height = extent.height;
         engine->device().destroyImage(handle);
         handle = engine->device().createImage({
-            width, height, 1, format, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST | (backend::isDepthFormat(format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT)
+            width, height, 1, format, 1, 1, usage
         });
         engine->device().immediate([&](backend::vulkan::CommandBuffer& cmd) {
             if (backend::isDepthFormat(format)) {
@@ -70,7 +77,7 @@ bool cala::RenderPass::reads(const char *label, bool storage) {
     if (_graph->_attachmentMap.end() == it) {
         std::string err = "unable to find ";
         err += label;
-        throw std::runtime_error(err);
+        ende::log::error(err);
         return false;
     }
     else {
@@ -84,7 +91,7 @@ bool cala::RenderPass::writes(const char *label) {
     if (_graph->_attachmentMap.end() == it) {
         std::string err = "unable to find ";
         err += label;
-        throw std::runtime_error(err);
+        ende::log::error(err);
         return false;
     }
     else {
@@ -93,21 +100,79 @@ bool cala::RenderPass::writes(const char *label) {
     }
 }
 
+
+
+
+
 void cala::RenderPass::addColourAttachment(const char *label) {
     //TODO: error handling
-    if (writes(label))
+    if (writes(label)) {
         _attachments.emplace(label);
+        if (auto resource = _graph->getResource<ImageResource>(label); resource)
+            resource->usage = resource->usage | backend::ImageUsage::COLOUR_ATTACHMENT;
+    }
 }
 
 void cala::RenderPass::addDepthAttachment(const char *label) {
-    if (writes(label))
+    if (writes(label)) {
         _attachments.emplace(label);
+        if (auto resource = _graph->getResource<ImageResource>(label); resource)
+            resource->usage = resource->usage | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT;
+    }
 }
 
 void cala::RenderPass::addDepthReadAttachment(const char *label) {
-    if (reads(label))
+    if (reads(label)) {
         _attachments.emplace(label);
+        if (auto resource = _graph->getResource<ImageResource>(label); resource)
+            resource->usage = resource->usage | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT;
+    }
 }
+
+void cala::RenderPass::addStorageImageRead(const char *label) {
+    if (reads(label, true)) {
+        if (auto resource = _graph->getResource<ImageResource>(label); resource)
+            resource->usage = resource->usage | backend::ImageUsage::STORAGE;
+    }
+}
+
+void cala::RenderPass::addStorageImageWrite(const char *label) {
+    if (writes(label)) {
+        if (auto resource = _graph->getResource<ImageResource>(label); resource)
+            resource->usage = resource->usage | backend::ImageUsage::STORAGE;
+    }
+}
+
+void cala::RenderPass::addStorageBufferRead(const char *label) {
+    if (reads(label, true)) {
+        if (auto resource = _graph->getResource<BufferResource>(label); resource)
+            resource->usage = resource->usage | backend::BufferUsage::STORAGE;
+    }
+}
+
+void cala::RenderPass::addStorageBufferWrite(const char *label) {
+    if (writes(label)) {
+        if (auto resource = _graph->getResource<BufferResource>(label); resource)
+            resource->usage = resource->usage | backend::BufferUsage::STORAGE;
+    }
+}
+
+void cala::RenderPass::addSampledImageRead(const char *label) {
+    if (reads(label)) {
+        if (auto resource = _graph->getResource<ImageResource>(label); resource)
+            resource->usage = resource->usage | backend::ImageUsage::SAMPLED;
+    }
+}
+
+void cala::RenderPass::addSampledImageWrite(const char *label) {
+    if (writes(label)) {
+        if (auto resource = _graph->getResource<ImageResource>(label); resource)
+            resource->usage = resource->usage | backend::ImageUsage::SAMPLED;
+    }
+}
+
+
+
 
 void cala::RenderPass::setExecuteFunction(std::function<void(backend::vulkan::CommandBuffer&, cala::RenderGraph&)> func) {
     _executeFunc = std::move(func);

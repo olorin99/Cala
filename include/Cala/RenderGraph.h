@@ -25,6 +25,7 @@ namespace cala {
         backend::Format format = backend::Format::RGBA8_UNORM;
         bool matchSwapchain = true;
         bool clear = true;
+        backend::ImageUsage usage = backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST;
         backend::vulkan::ImageHandle handle;
 
         void devirtualize(Engine* engine, backend::vulkan::Swapchain* swapchain) override;
@@ -44,15 +45,29 @@ namespace cala {
     class RenderPass {
     public:
 
+    private:
         bool reads(const char* label, bool storage = false);
 
         bool writes(const char* label);
+    public:
 
         void addColourAttachment(const char* label);
 
         void addDepthAttachment(const char* label);
 
         void addDepthReadAttachment(const char* label);
+
+        void addStorageImageRead(const char* label);
+
+        void addStorageImageWrite(const char* label);
+
+        void addStorageBufferRead(const char* label);
+
+        void addStorageBufferWrite(const char* label);
+
+        void addSampledImageRead(const char* label);
+
+        void addSampledImageWrite(const char* label);
 
 
 
@@ -61,7 +76,7 @@ namespace cala {
         void setDebugColour(std::array<f32, 4> colour);
 
         ~RenderPass();
-//    private:
+    private:
 
         friend RenderGraph;
 
@@ -160,7 +175,6 @@ namespace cala {
 
         ende::Vector<std::unique_ptr<Resource>> _internalResources;
         ende::Vector<std::unique_ptr<Resource>> _externalResources;
-        //TODO: _internalAttachments here then adding attachment function to manage creation/deletion/changes
 
         const char* _backbuffer;
 
