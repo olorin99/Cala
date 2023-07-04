@@ -10,8 +10,6 @@ void cala::ImageResource::devirtualize(cala::Engine* engine, backend::vulkan::Sw
     if (backend::isDepthFormat(format))
         usage = usage | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT;
 
-    auto use = backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST |
-               backend::ImageUsage::STORAGE | (backend::isDepthFormat(format) ? backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT : backend::ImageUsage::COLOUR_ATTACHMENT);
     if (!handle) {
         if (matchSwapchain) {
             width = extent.width;
@@ -31,31 +29,54 @@ void cala::ImageResource::devirtualize(cala::Engine* engine, backend::vulkan::Sw
             }
         });
     }
-    if (matchSwapchain && (handle->width() != extent.width || handle->height() != extent.height)) {
-        width = extent.width;
-        height = extent.height;
-        engine->device().destroyImage(handle);
-        handle = engine->device().createImage({
-            width, height, 1, format, 1, 1, usage
-        });
-        engine->device().immediate([&](backend::vulkan::CommandBuffer& cmd) {
-            if (backend::isDepthFormat(format)) {
-                auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
-                cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP,{ &b, 1 });
-            } else {
-                auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::COLOUR_ATTACHMENT);
-                cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, { &b, 1 });
-            }
-        });
+}
+
+void cala::ImageResource::destroyResource(cala::Engine *engine) {
+    engine->device().destroyImage(handle);
+    handle = {};
+}
+
+bool cala::ImageResource::operator==(cala::Resource *rhs) {
+    auto res = dynamic_cast<ImageResource*>(rhs);
+    if (!res)
+        return false;
+
+    // If set to match swapchain disregard stored size as it will be updated later to swapchain
+    bool match = res->matchSwapchain == matchSwapchain && matchSwapchain;
+    if (!match) {
+        return res->width == width &&
+               res->height == height &&
+               res->format == format &&
+               res->matchSwapchain == matchSwapchain;
+    } else {
+        return res->format == format;
     }
 }
 
+bool cala::ImageResource::operator!=(cala::Resource *rhs) {
+    return !(*this == rhs);
+}
+
 void cala::BufferResource::devirtualize(Engine *engine, backend::vulkan::Swapchain* swapchain) {
-    if (!handle) {
+    if (!handle)
         handle = engine->device().createBuffer(size, usage);
-    }
-    if (size > handle->size())
-        handle = engine->device().resizeBuffer(handle, size * 2);
+}
+
+void cala::BufferResource::destroyResource(cala::Engine *engine) {
+    engine->device().destroyBuffer(handle);
+    handle = {};
+}
+
+bool cala::BufferResource::operator==(cala::Resource *rhs) {
+    auto res = dynamic_cast<BufferResource*>(rhs);
+    if (!res)
+        return false;
+
+    return res->size == size;
+}
+
+bool cala::BufferResource::operator!=(cala::Resource *rhs) {
+    return !(*this == rhs);
 }
 
 cala::RenderPass::RenderPass(RenderGraph *graph, const char *name, u32 index)

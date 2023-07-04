@@ -29,6 +29,10 @@ namespace cala::backend::vulkan {
             return _device && _index >= 0 && isValid();
         }
 
+        bool operator==(Handle<T> rhs) const noexcept {
+            return _device == rhs._device && _index == rhs._index;
+        }
+
         i32 index() const { return _index; }
 
         bool isValid() const;

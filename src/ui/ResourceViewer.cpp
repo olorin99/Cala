@@ -46,8 +46,15 @@ void cala::ui::ResourceViewer::render() {
 
     auto& buffer = _device->_buffers[_bufferIndex];
     if (buffer.buffer() != VK_NULL_HANDLE) {
-        u32 size = buffer.size();
-        ImGui::Text("\tSize: %d", size);
+        u32 bytes = buffer.size();
+        u32 kb = bytes / 1000;
+        u32 mb = bytes / 1000000;
+        u32 gb = bytes / 1000000000;
+
+        ImGui::Text("\tSize: %d", bytes);
+        ImGui::Text("\tKB: %d", kb);
+        ImGui::Text("\tMB: %d", mb);
+        ImGui::Text("\tGB: %d", gb);
 
     } else {
         ImGui::Text("Buffer has been deallocated");

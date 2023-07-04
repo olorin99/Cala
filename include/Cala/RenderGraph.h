@@ -16,6 +16,12 @@ namespace cala {
         virtual ~Resource() = default;
 
         virtual void devirtualize(Engine* engine, backend::vulkan::Swapchain* swapchain) = 0;
+
+        virtual void destroyResource(Engine* engine) = 0;
+
+        virtual bool operator==(Resource* rhs) = 0;
+
+        virtual bool operator!=(Resource* rhs) = 0;
     };
 
     struct ImageResource : public Resource {
@@ -30,6 +36,11 @@ namespace cala {
 
         void devirtualize(Engine* engine, backend::vulkan::Swapchain* swapchain) override;
 
+        void destroyResource(Engine* engine) override;
+
+        bool operator==(Resource* rhs) override;
+
+        bool operator!=(Resource* rhs) override;
     };
 
     struct BufferResource : public Resource {
@@ -40,6 +51,12 @@ namespace cala {
         backend::vulkan::BufferHandle handle;
 
         void devirtualize(Engine* engine, backend::vulkan::Swapchain* swapchain) override;
+
+        void destroyResource(Engine* engine) override;
+
+        bool operator==(Resource* rhs) override;
+
+        bool operator!=(Resource* rhs) override;
     };
 
     class RenderPass {
@@ -147,13 +164,19 @@ namespace cala {
                 assert(it.value().internal == internal);
                 u32 index = it.value().index;
 
-                //TODO: Compare if change
                 if (internal) {
                     assert(index < _internalResources.size());
+                    if (*_internalResources[index] != &resource) {
+                        _internalResources[index]->destroyResource(_engine);
+                        _internalResources[index] = std::make_unique<T>(std::move(resource));
+                    }
                 } else {
                     assert(index < _externalResources.size());
+                    if (*_externalResources[index] != &resource) {
+                        _externalResources[index]->destroyResource(_engine);
+                        _externalResources[index] = std::make_unique<T>(std::move(resource));
+                    }
                 }
-
             }
         }
 
