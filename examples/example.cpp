@@ -378,10 +378,31 @@ int main() {
     ProgramHandle pbrProgram = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
     ProgramHandle pbrTestProgram = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr_test.frag.spv"_path));
 
-    Material* material = engine.createMaterial(pbrTestProgram, sizeof(u32) * 5);
+    ProgramHandle normalDebug = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/debug/normals.frag.spv"_path));
+    ProgramHandle roughnessDebug = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/debug/roughness.frag.spv"_path));
+    ProgramHandle metallicDebug = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/debug/metallic.frag.spv"_path));
+
+    struct Material1Data {
+        i32 albedoIndex = -1;
+        i32 normalIndex = -1;
+        i32 metallicRoughness = -1;
+        f32 metallness = 0;
+        f32 roughness = 0;
+    };
+    Material* material = engine.createMaterial<Material1Data>();
+    material->setVariant(Material::Variant::LIT, pbrTestProgram);
     material->setDepthState({ true, true, CompareOp::LESS_EQUAL });
 
-    Material* material1 = engine.createMaterial(pbrProgram, sizeof(u32) * 3);
+    struct MaterialData {
+        i32 albedoIndex = -1;
+        i32 normalIndex = -1;
+        i32 metallicRoughness = -1;
+    };
+    Material* material1 = engine.createMaterial<MaterialData>();
+    material1->setVariant(Material::Variant::LIT, pbrProgram);
+    material1->setVariant(Material::Variant::NORMAL, normalDebug);
+    material1->setVariant(Material::Variant::ROUGHNESS, roughnessDebug);
+    material1->setVariant(Material::Variant::METALNESS, metallicDebug);
     material1->setDepthState({ true, true, CompareOp::LESS_EQUAL });
 
     Transform sponzaTransform;
@@ -404,13 +425,7 @@ int main() {
 
     auto matInstance = material->instance();
 
-    struct MaterialData {
-        i32 albedoIndex = -1;
-        i32 normalIndex = -1;
-        i32 metallicRoughness = -1;
-        f32 metallness = 0;
-        f32 roughness = 0;
-    };
+
 
     matInstance.setData(MaterialData{});
 
@@ -473,7 +488,7 @@ int main() {
         f32 metallicRoughnessData[] = { 0.f, static_cast<f32>(i) / 10.f, 0.f, 1.f };
         roughnessImages[i]->data(engine.device(), {0, 1, 1, 1, 4 * 4, {metallicRoughnessData, sizeof(f32) * 4 } });
 
-        MaterialData materialData1 {
+        Material1Data materialData1 {
                 -1,
                 -1,
                 roughnessImages[i].index(),

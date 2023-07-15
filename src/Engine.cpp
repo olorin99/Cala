@@ -437,8 +437,8 @@ u32 cala::Engine::uploadIndexData(ende::Span<u32> data) {
     return currentOffset;
 }
 
-cala::Material *cala::Engine::createMaterial(backend::vulkan::ProgramHandle handle, u32 size) {
+cala::Material *cala::Engine::createMaterial(u32 size) {
     u32 id = _materials.size();
-    _materials.emplace(this, handle, id, size);
+    _materials.emplace(this, id, size);
     return &_materials.back();
 }

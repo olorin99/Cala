@@ -84,6 +84,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         *static_cast<u32*>(mapped.address) = scene._renderables.size();
     }
 
+    bool debugViewEnabled = _renderSettings.debugNormals || _renderSettings.debugRoughness || _renderSettings.debugMetallic;
+
     backend::vulkan::CommandBuffer& cmd = *_frameInfo.cmd;
 
     cmd.clearDescriptors();
@@ -298,16 +300,107 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
             cmd.bindBindings(renderable.bindings);
             cmd.bindAttributes(renderable.attributes);
-            cmd.bindProgram(_engine->_normalsDebugProgram);
+//            cmd.bindProgram(_engine->_normalsDebugProgram);
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd.bindRasterState({});
             cmd.bindBuffer(2, 1, meshData->handle, true);
             cmd.bindBuffer(4, 0, transforms->handle, true);
-            cmd.bindPipeline();
+//            cmd.bindPipeline();
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
+                auto program = _engine->_materials[material].getVariant(Material::Variant::NORMAL);
+                if (!program)
+                    continue;
+                cmd.bindProgram(program);
                 cmd.bindBuffer(2, 0, _engine->_materials[material].buffer(), true);
+                cmd.bindPipeline();
+                cmd.bindDescriptors();
+                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
+            }
+        });
+    }
+
+    if (_renderSettings.debugRoughness) {
+        auto& debugRoughness = _graph.addPass("debug_roughness");
+
+        debugRoughness.addColourAttachment("backbuffer");
+        debugRoughness.addDepthAttachment("depth");
+
+        debugRoughness.addStorageBufferRead("drawCommands");
+        debugRoughness.addStorageBufferRead("materialCounts");
+        debugRoughness.addStorageBufferRead("transforms");
+        debugRoughness.addStorageBufferRead("meshData");
+
+        debugRoughness.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            auto meshData = graph.getResource<BufferResource>("meshData");
+            auto transforms = graph.getResource<BufferResource>("transforms");
+            auto drawCommands = graph.getResource<BufferResource>("drawCommands");
+            auto materialCounts = graph.getResource<BufferResource>("materialCounts");
+            cmd.clearDescriptors();
+            cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
+            auto& renderable = scene._renderables[0].second.first;
+
+            cmd.bindBindings(renderable.bindings);
+            cmd.bindAttributes(renderable.attributes);
+//            cmd.bindProgram(_engine->_normalsDebugProgram);
+            cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
+            cmd.bindRasterState({});
+            cmd.bindBuffer(2, 1, meshData->handle, true);
+            cmd.bindBuffer(4, 0, transforms->handle, true);
+//            cmd.bindPipeline();
+            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
+            cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
+            for (u32 material = 0; material < scene._materialCounts.size(); material++) {
+                auto program = _engine->_materials[material].getVariant(Material::Variant::ROUGHNESS);
+                if (!program)
+                    continue;
+                cmd.bindProgram(program);
+                cmd.bindBuffer(2, 0, _engine->_materials[material].buffer(), true);
+                cmd.bindPipeline();
+                cmd.bindDescriptors();
+                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
+            }
+        });
+    }
+
+    if (_renderSettings.debugMetallic) {
+        auto& debugMetallic = _graph.addPass("debug_metallic");
+
+        debugMetallic.addColourAttachment("backbuffer");
+        debugMetallic.addDepthAttachment("depth");
+
+        debugMetallic.addStorageBufferRead("drawCommands");
+        debugMetallic.addStorageBufferRead("materialCounts");
+        debugMetallic.addStorageBufferRead("transforms");
+        debugMetallic.addStorageBufferRead("meshData");
+
+        debugMetallic.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            auto meshData = graph.getResource<BufferResource>("meshData");
+            auto transforms = graph.getResource<BufferResource>("transforms");
+            auto drawCommands = graph.getResource<BufferResource>("drawCommands");
+            auto materialCounts = graph.getResource<BufferResource>("materialCounts");
+            cmd.clearDescriptors();
+            cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
+            auto& renderable = scene._renderables[0].second.first;
+
+            cmd.bindBindings(renderable.bindings);
+            cmd.bindAttributes(renderable.attributes);
+//            cmd.bindProgram(_engine->_normalsDebugProgram);
+            cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
+            cmd.bindRasterState({});
+            cmd.bindBuffer(2, 1, meshData->handle, true);
+            cmd.bindBuffer(4, 0, transforms->handle, true);
+//            cmd.bindPipeline();
+            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
+            cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
+            for (u32 material = 0; material < scene._materialCounts.size(); material++) {
+                auto program = _engine->_materials[material].getVariant(Material::Variant::METALNESS);
+                if (!program)
+                    continue;
+                cmd.bindProgram(program);
+                cmd.bindBuffer(2, 0, _engine->_materials[material].buffer(), true);
+                cmd.bindPipeline();
                 cmd.bindDescriptors();
                 cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
             }
@@ -630,7 +723,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         });
     }
 
-    if (_renderSettings.forward && !_renderSettings.debugNormals) {
+    if (_renderSettings.forward && !debugViewEnabled) {
         auto& forwardPass = _graph.addPass("forward");
         if (_renderSettings.tonemap)
             forwardPass.addColourAttachment("hdr");
@@ -675,7 +768,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 Material* material = &_engine->_materials[i];
                 if (!material)
                     continue;
-                cmd.bindProgram(material->getProgram());
+                cmd.bindProgram(material->getVariant(Material::Variant::LIT));
                 cmd.bindRasterState(material->getRasterState());
                 cmd.bindDepthState(material->getDepthState());
                 cmd.bindBuffer(2, 0, material->buffer(), true);
@@ -717,7 +810,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         });
     }
 
-    if (_renderSettings.tonemap) {
+    if (_renderSettings.tonemap && !debugViewEnabled) {
         auto& tonemapPass = _graph.addPass("tonemap");
 
         tonemapPass.addStorageImageWrite("backbuffer");

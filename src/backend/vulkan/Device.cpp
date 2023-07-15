@@ -197,7 +197,6 @@ cala::backend::vulkan::CommandBuffer& cala::backend::vulkan::Device::beginSingle
 }
 
 void cala::backend::vulkan::Device::endSingleTimeCommands(CommandBuffer& buffer) {
-    VkCommandBuffer buf = buffer.buffer();
     VkFence fence; //TODO: dont create/destroy fence each time
     VkFenceCreateInfo fenceCreateInfo{};
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;

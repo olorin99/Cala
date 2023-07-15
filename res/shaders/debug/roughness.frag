@@ -81,6 +81,6 @@ void main() {
 
     Material material = loadMaterial(materialData);
 
-    FragColour = vec4(material.normal, 1.0);
+    FragColour = vec4(material.roughness, 0.0, 0.0, 1.0);
 //    FragColour = vec4(fsIn.TBN[2], 1.0);
 }

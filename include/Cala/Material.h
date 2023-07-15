@@ -23,13 +23,11 @@ namespace cala {
     class Material {
     public:
 
-        Material(Engine* engine, backend::vulkan::ProgramHandle program, u32 id, u32 size = 0);
+        Material(Engine* engine, u32 id, u32 size = 0);
 
         MaterialInstance instance();
 
-        backend::vulkan::ProgramHandle getProgram() const { return _program; };
-
-        u32 shaderDataSize() { return _program->interface().setSize(2); }
+        //backend::vulkan::ProgramHandle getProgram() const { return _program; };
 
         void setRasterState(backend::vulkan::CommandBuffer::RasterState state) { _rasterState = state; }
 
@@ -47,12 +45,26 @@ namespace cala {
 
         void upload();
 
+        enum class Variant {
+            LIT,
+            UNLIT,
+            NORMAL,
+            ROUGHNESS,
+            METALNESS,
+            MAX
+        };
+
+        void setVariant(Variant variant, backend::vulkan::ProgramHandle program);
+
+        backend::vulkan::ProgramHandle getVariant(Variant variant);
+
     private:
         friend MaterialInstance;
 
         Engine* _engine;
 
-        backend::vulkan::ProgramHandle _program;
+        std::array<backend::vulkan::ProgramHandle, static_cast<u8>(Variant::MAX)> _programs;
+
         backend::vulkan::CommandBuffer::RasterState _rasterState;
         backend::vulkan::CommandBuffer::DepthState _depthState;
 

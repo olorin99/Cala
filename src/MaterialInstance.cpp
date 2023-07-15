@@ -17,7 +17,7 @@ cala::MaterialInstance::MaterialInstance(MaterialInstance &&rhs) noexcept
 }
 
 bool cala::MaterialInstance::setUniform(u32 set, const char *name, u8 *data, u32 size) {
-    i32 offset = _material->getProgram()->interface().getUniformOffset(set, name);
+    i32 offset = _material->getVariant(Material::Variant::LIT)->interface().getUniformOffset(set, name);
     if (offset < 0)
         return false;
 //    if (material()->_uniformData.size() < offset + size)
@@ -42,7 +42,7 @@ bool cala::MaterialInstance::setSampler(const char *name, cala::backend::vulkan:
 }
 
 bool cala::MaterialInstance::setSampler(u32 set, const char *name, backend::vulkan::Image::View &&view, backend::vulkan::Sampler&& sampler) {
-    i32 binding = material()->getProgram()->interface().getSamplerBinding(set, name);
+    i32 binding = material()->getVariant(Material::Variant::LIT)->interface().getSamplerBinding(set, name);
     if (binding < 0)
         return false;
 //    _samplers.set(binding, std::forward<backend::vulkan::Image::View>(view), std::forward<backend::vulkan::Sampler>(sampler));

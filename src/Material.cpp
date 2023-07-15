@@ -1,9 +1,8 @@
 #include "Cala/Material.h"
 
-cala::Material::Material(cala::Engine* engine, backend::vulkan::ProgramHandle program, u32 id, u32 size)
+cala::Material::Material(cala::Engine* engine, u32 id, u32 size)
     : _engine(engine),
-      _program(program),
-      _setSize(size == 0 ? shaderDataSize() : size),
+      _setSize(size),
       _id(id),
       _dirty(true),
       _materialBuffer(engine->device().createBuffer(256, backend::BufferUsage::STORAGE | backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING))
@@ -23,4 +22,14 @@ void cala::Material::upload() {
         _materialBuffer->data(_data);
         _dirty = false;
     }
+}
+
+void cala::Material::setVariant(cala::Material::Variant variant, backend::vulkan::ProgramHandle program) {
+    assert(static_cast<u8>(variant) < static_cast<u8>(Variant::MAX));
+    _programs[static_cast<u8>(variant)] = program;
+}
+
+cala::backend::vulkan::ProgramHandle cala::Material::getVariant(cala::Material::Variant variant) {
+    assert(static_cast<u8>(variant) < static_cast<u8>(Variant::MAX));
+    return _programs[static_cast<u8>(variant)];
 }

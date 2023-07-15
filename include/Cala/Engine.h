@@ -39,7 +39,12 @@ namespace cala {
 
         u32 uploadIndexData(ende::Span<u32> data);
 
-        Material* createMaterial(backend::vulkan::ProgramHandle handle, u32 size = 0);
+        Material* createMaterial(u32 size);
+
+        template <typename T>
+        Material* createMaterial() {
+            return createMaterial(sizeof(T));
+        }
 
         u32 materialCount() const { return _materials.size(); }
 

@@ -109,6 +109,8 @@ Material loadMaterial(MaterialData data) {
     } else {
         material.normal = texture(textureMaps[data.normalIndex], fsIn.TexCoords).rgb;
     }
+    material.normal = normalize(material.normal * 2.0 - 1.0);
+    material.normal = normalize(fsIn.TBN * material.normal);
 
     if (data.metallicRoughnessIndex < 0) {
         material.roughness = 1.0;
@@ -125,9 +127,6 @@ void main() {
     MaterialData materialData = material[mesh.materialInstanceIndex];
 
     Material material = loadMaterial(materialData);
-
-    material.normal = normalize(material.normal * 2.0 - 1.0);
-    material.normal = normalize(fsIn.TBN * material.normal);
 
     vec3 viewPos = fsIn.ViewPos;
     vec3 V = normalize(viewPos - fsIn.FragPos);
