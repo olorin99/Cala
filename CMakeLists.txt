@@ -9,6 +9,7 @@ find_package(SDL2 REQUIRED)
 find_package(assimp)
 find_package(X11 REQUIRED)
 find_package(Vulkan REQUIRED)
+find_library(SHADERC_LIBRARY libshaderc_shared.so)
 
 add_subdirectory(third_party)
 add_subdirectory(examples)
@@ -25,4 +26,4 @@ target_include_directories(Cala
         libs
         third_party)
 
-target_link_libraries(Cala Ende ${Vulkan_LIBRARIES} ${SDL2_LIBRARIES} ${X11_LIBRARIES} imgui assimp spirv-cross-cpp)
+target_link_libraries(Cala Ende ${Vulkan_LIBRARIES} ${SDL2_LIBRARIES} ${X11_LIBRARIES} imgui assimp spirv-cross-cpp ${SHADERC_LIBRARY})

@@ -2,6 +2,24 @@
 #include <Cala/backend/vulkan/Device.h>
 #include <Cala/backend/vulkan/primitives.h>
 #include <SPIRV-Cross/spirv_cross.hpp>
+#include <Ende/log/log.h>
+#include <shaderc/shaderc.hpp>
+
+
+std::vector<u32> compileShader(const std::string& name, const std::string& source, shaderc_shader_kind kind) {
+    shaderc::Compiler compiler;
+    shaderc::CompileOptions options;
+
+    shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(source, kind, name.c_str(), options);
+
+    if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
+        ende::log::error("Failed to compile shader: {}", name);
+        return {};
+    }
+    return { module.cbegin(), module.cend() };
+}
+
+
 
 cala::backend::vulkan::ShaderProgram::Builder cala::backend::vulkan::ShaderProgram::create() {
     return {};
@@ -9,6 +27,35 @@ cala::backend::vulkan::ShaderProgram::Builder cala::backend::vulkan::ShaderProgr
 
 cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStage(ende::Span<u32> code, ShaderStage stage) {
     _stages.push({code, stage});
+    return *this;
+}
+
+cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStageGLSL(const std::string &source, cala::backend::ShaderStage stage, std::vector<u32>& dst) {
+    shaderc_shader_kind kind{};
+    switch (stage) {
+        case ShaderStage::VERTEX:
+            kind = shaderc_shader_kind::shaderc_vertex_shader;
+            break;
+        case ShaderStage::TESS_CONTROL:
+            kind = shaderc_shader_kind::shaderc_tess_control_shader;
+            break;
+        case ShaderStage::TESS_EVAL:
+            kind = shaderc_shader_kind::shaderc_tess_evaluation_shader;
+            break;
+        case ShaderStage::GEOMETRY:
+            kind = shaderc_shader_kind::shaderc_geometry_shader;
+            break;
+        case ShaderStage::FRAGMENT:
+            kind = shaderc_shader_kind::shaderc_fragment_shader;
+            break;
+        case ShaderStage::COMPUTE:
+            kind = shaderc_shader_kind::shaderc_compute_shader;
+            break;
+        default:
+            ende::log::error("invalid shader stage used for compilation");
+    }
+    dst = compileShader("shader_src", source, kind);
+    addStage(dst, stage);
     return *this;
 }
 
