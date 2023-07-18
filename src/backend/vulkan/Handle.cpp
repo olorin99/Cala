@@ -38,10 +38,10 @@ cala::backend::vulkan::ShaderProgram &cala::backend::vulkan::ProgramHandle::oper
 
 template <>
 cala::backend::vulkan::ShaderProgram *cala::backend::vulkan::ProgramHandle ::operator->() noexcept {
-    return _device->_programs[_index];
+    return _device->_programs[_index].get();
 }
 
 template <>
 bool cala::backend::vulkan::ProgramHandle ::isValid() const {
-    return _device->_programs[_index] != nullptr;
+    return _device->_programs[_index] && _device->_programs[_index]->layout() != VK_NULL_HANDLE;
 }

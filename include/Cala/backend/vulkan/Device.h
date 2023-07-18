@@ -78,6 +78,8 @@ namespace cala::backend::vulkan {
 
         ProgramHandle createProgram(ShaderProgram&& program);
 
+        void destroyProgram(ProgramHandle handle);
+
 
         Sampler& defaultSampler() { return _defaultSampler; }
 
@@ -169,7 +171,9 @@ namespace cala::backend::vulkan {
         Sampler _defaultSampler;
         Sampler _defaultShadowSampler;
 
-        ende::Vector<ShaderProgram*> _programs;
+        ende::Vector<std::unique_ptr<ShaderProgram>> _programs;
+        ende::Vector<u32> _freePrograms;
+        ende::Vector<std::pair<i32, ProgramHandle>> _programsToDestroy;
 
         tsl::robin_map<CommandBuffer::DescriptorKey, std::pair<VkDescriptorSet, i32>, ende::util::MurmurHash<CommandBuffer::DescriptorKey>> _descriptorSets;
         VkDescriptorPool _descriptorPool;

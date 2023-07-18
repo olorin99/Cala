@@ -118,8 +118,8 @@ cala::backend::vulkan::Device::~Device() {
         image._allocation = nullptr;
     }
 
-    for (auto* program : _programs)
-        delete program;
+//    for (auto& program : _programs)
+//        program = new ShaderProgram(_context.device());
 
     clearFramebuffers();
 
@@ -271,6 +271,20 @@ bool cala::backend::vulkan::Device::gc() {
         } else
             --frame;
     }
+
+    for (auto it = _programsToDestroy.begin(); it != _programsToDestroy.end(); it++) {
+        auto& frame = it->first;
+        auto& handle = it->second;
+        if (frame <= 0) {
+            u32 index = handle.index();
+            _programs[index] = std::make_unique<ShaderProgram>(_context.device());
+            _freePrograms.push(index);
+            _programsToDestroy.erase(it--);
+            ende::log::info("destroyed program ({})", index);
+        } else
+            --frame;
+    }
+
     for (auto it = _descriptorSets.begin(); it != _descriptorSets.end(); it++) {
         auto& frame = it.value().second;
         if (frame < 0) {
@@ -464,10 +478,13 @@ cala::backend::vulkan::Image::View &cala::backend::vulkan::Device::getImageView(
 
 cala::backend::vulkan::ProgramHandle cala::backend::vulkan::Device::createProgram(ShaderProgram &&program) {
     u32 index = _programs.size();
-    _programs.push(new ShaderProgram(std::move(program)));
+    _programs.push(std::make_unique<ShaderProgram>(std::move(program)));
     return { this, static_cast<i32>(index) };
 }
 
+void cala::backend::vulkan::Device::destroyProgram(cala::backend::vulkan::ProgramHandle handle) {
+    _programsToDestroy.push(std::make_pair(FRAMES_IN_FLIGHT + 1, handle));
+}
 
 
 

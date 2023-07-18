@@ -1,7 +1,3 @@
-//
-// Created by christian on 2/4/23.
-//
-
 #ifndef CALA_MODEL_H
 #define CALA_MODEL_H
 
