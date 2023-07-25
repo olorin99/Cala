@@ -9,6 +9,8 @@
 #include <Cala/backend/vulkan/Platform.h>
 #include <Cala/backend/vulkan/Device.h>
 
+#include <Ende/filesystem/Path.h>
+
 namespace cala {
 
     class Probe;
@@ -44,6 +46,13 @@ namespace cala {
         template <typename T>
         Material* createMaterial() {
             return createMaterial(sizeof(T));
+        }
+
+        Material* loadMaterial(const ende::fs::Path& path, u32 size);
+
+        template <typename T>
+        Material* loadMaterial(const ende::fs::Path& path) {
+            return loadMaterial(path, sizeof(T));
         }
 
         u32 materialCount() const { return _materials.size(); }

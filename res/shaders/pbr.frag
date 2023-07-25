@@ -122,11 +122,17 @@ Material loadMaterial(MaterialData data) {
     return material;
 }
 
-void main() {
-    Mesh mesh = meshData[fsIn.drawID];
-    MaterialData materialData = material[mesh.materialInstanceIndex];
+uint getTileIndex() {
+    uvec2 tileSize = screenSize / tileSizes.xy;
+    float scale = 24.0 / log2(camera.far / camera.near);
+    float bias = -(24.0 * log2(camera.near) / log2(camera.far / camera.near));
+    uint zTile = uint(max(log2(linearDepth(gl_FragCoord.z)) * scale + bias, 0.0));
+    uvec3 tiles = uvec3(uvec2(gl_FragCoord.xy / tileSize), zTile);
+    uint tileIndex = tiles.x + tileSizes.x * tiles.y + (tileSizes.x * tileSizes.y) * tiles.z;
+    return tileIndex;
+}
 
-    Material material = loadMaterial(materialData);
+vec4 evalMaterial(Material material) {
 
     vec3 viewPos = fsIn.ViewPos;
     vec3 V = normalize(viewPos - fsIn.FragPos);
@@ -135,12 +141,7 @@ void main() {
     F0 = mix(F0, material.albedo, material.metallic);
     vec3 Lo = vec3(0.0);
 
-    uvec2 tileSize = screenSize / tileSizes.xy;
-    float scale = 24.0 / log2(camera.far / camera.near);
-    float bias = -(24.0 * log2(camera.near) / log2(camera.far / camera.near));
-    uint zTile = uint(max(log2(linearDepth(gl_FragCoord.z)) * scale + bias, 0.0));
-    uvec3 tiles = uvec3(uvec2(gl_FragCoord.xy / tileSize), zTile);
-    uint tileIndex = tiles.x + tileSizes.x * tiles.y + (tileSizes.x * tileSizes.y) * tiles.z;
+    uint tileIndex = getTileIndex();
 
     uint lightCount = lightGrid[tileIndex].count;
     uint lightOffset = lightGrid[tileIndex].offset;
@@ -153,7 +154,38 @@ void main() {
     vec3 ambient = getAmbient(irradianceIndex, prefilteredIndex, brdfIndex, material.normal, V, F0, material.albedo, material.roughness, material.metallic);
     vec3 colour = (ambient + Lo);
 
-    FragColour = vec4(colour, 1.0);
+    return vec4(colour, 1.0);
+}
+
+void main() {
+    Mesh mesh = meshData[fsIn.drawID];
+    MaterialData materialData = material[mesh.materialInstanceIndex];
+
+    Material material = loadMaterial(materialData);
+
+    FragColour = evalMaterial(material);
+
+//    vec3 viewPos = fsIn.ViewPos;
+//    vec3 V = normalize(viewPos - fsIn.FragPos);
+//
+//    vec3 F0 = vec3(0.04);
+//    F0 = mix(F0, material.albedo, material.metallic);
+//    vec3 Lo = vec3(0.0);
+//
+//    uint tileIndex = getTileIndex();
+//
+//    uint lightCount = lightGrid[tileIndex].count;
+//    uint lightOffset = lightGrid[tileIndex].offset;
+//
+//    for (uint i = 0; i < lightCount; i++) {
+//        Light light = lights[globalLightIndices[lightOffset + i]];
+//        Lo += pointLight(light, material.normal, viewPos, V, F0, material.albedo, material.roughness, material.metallic);
+//    }
+//
+//    vec3 ambient = getAmbient(irradianceIndex, prefilteredIndex, brdfIndex, material.normal, V, F0, material.albedo, material.roughness, material.metallic);
+//    vec3 colour = (ambient + Lo);
+//
+//    FragColour = vec4(colour, 1.0);
 //    FragColour = vec4(fsIn.FragPos, 1.0);
 //    FragColour = vec4(normal, 1.0);
 }

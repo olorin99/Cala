@@ -4,16 +4,122 @@
 #include <SPIRV-Cross/spirv_cross.hpp>
 #include <Ende/log/log.h>
 #include <shaderc/shaderc.hpp>
+#include <Ende/filesystem/File.h>
+
+std::string maybeSlash(const std::string& path) {
+    return (path.empty() || path.back() == '/') ? "" : "/";
+}
+
+class FileFinder {
+public:
+
+    void addSearchPath(const std::string& path) {
+        search_path.push(path);
+    }
+
+    std::string FindReadableFilepath(const std::string& filename) const {
+        assert(!filename.empty());
+        ende::fs::File file;
+
+        for (const auto& prefix : search_path) {
+            std::string prefixed_filename = prefix + maybeSlash(prefix) + filename;
+            std::string f = prefixed_filename;
+            if (file.open(std::move(prefixed_filename), ende::fs::in))
+                return f;
+        }
+        return "";
+    }
+
+    std::string FindRelativeReadableFilepath(const std::string& requesting_file, const std::string& filename) const {
+        assert(!filename.empty());
+        size_t last_slash = requesting_file.find_last_of("/\\");
+        std::string dir_name = requesting_file;
+        if (last_slash != std::string::npos) {
+            dir_name = requesting_file.substr(0, last_slash);
+        }
+        if (dir_name.size() == requesting_file.size()) {
+            dir_name = {};
+        }
+
+        ende::fs::File file;
+        std::string relative_filename = dir_name + maybeSlash(dir_name) + filename;
+        std::string f = relative_filename;
+        if (file.open(std::move(relative_filename), ende::fs::in))
+            return f;
+        return FindReadableFilepath(filename);
+    }
+
+private:
+    ende::Vector<std::string> search_path;
+
+};
+
+struct FileInfo {
+    std::string path;
+    std::string source;
+};
+
+class FileIncluder : public shaderc::CompileOptions::IncluderInterface {
+public:
+
+    explicit FileIncluder(const FileFinder* file_finder) : file_finder(*file_finder) {}
+
+    ~FileIncluder() override = default;
+
+    shaderc_include_result* GetInclude(const char* requested_source, shaderc_include_type type, const char* requesting_source, size_t include_depth) override {
+        std::string path = (type == shaderc_include_type_relative) ? file_finder.FindRelativeReadableFilepath(requesting_source, requested_source)
+                : file_finder.FindReadableFilepath(requested_source);
+
+        if (path.empty())
+            return new shaderc_include_result{"", 0, "unable to open file", 15};
+
+        ende::fs::File file;
+        std::string f = path;
+        if (!file.open(std::move(path), ende::fs::in))
+            return new shaderc_include_result{"", 0, "unable to open file", 15};
+
+        std::string source = file.read();
+        if (source.empty())
+            return new shaderc_include_result{"", 0, "unable to read file", 15};
+
+        included_files.insert(f);
+        FileInfo* info = new FileInfo{ f, source };
+
+        return new shaderc_include_result{info->path.data(), info->path.size(),
+                                          info->source.data(), info->source.size(),
+                                          info};
+    }
+
+    void ReleaseInclude(shaderc_include_result* include_result) override {
+        delete static_cast<FileInfo*>(include_result->user_data);
+        delete include_result;
+    }
+
+    const std::unordered_set<std::string>& file_path_trace() const {
+        return included_files;
+    }
+
+private:
+
+    const FileFinder& file_finder;
+    std::unordered_set<std::string> included_files;
+
+};
 
 
 std::vector<u32> compileShader(const std::string& name, const std::string& source, shaderc_shader_kind kind) {
     shaderc::Compiler compiler;
     shaderc::CompileOptions options;
 
+
+    FileFinder finder;
+    finder.addSearchPath("/home/christian/Documents/Projects/Cala/res/shaders");
+    options.SetIncluder(std::make_unique<FileIncluder>(&finder));
+    
     shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(source, kind, name.c_str(), options);
 
     if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
-        ende::log::error("Failed to compile shader: {}", name);
+        ende::log::error("Failed to compile shader: {}", module.GetErrorMessage());
         return {};
     }
     return { module.cbegin(), module.cend() };
@@ -30,7 +136,7 @@ cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProg
     return *this;
 }
 
-cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStageGLSL(const std::string &source, cala::backend::ShaderStage stage, std::vector<u32>& dst) {
+cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStageGLSL(const ende::fs::Path& path, cala::backend::ShaderStage stage, std::vector<u32>& dst) {
     shaderc_shader_kind kind{};
     switch (stage) {
         case ShaderStage::VERTEX:
@@ -54,7 +160,10 @@ cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProg
         default:
             ende::log::error("invalid shader stage used for compilation");
     }
-    dst = compileShader("shader_src", source, kind);
+    ende::fs::File file;
+    file.open(path);
+    auto source = file.read();
+    dst = compileShader(*path, source, kind);
     addStage(dst, stage);
     return *this;
 }

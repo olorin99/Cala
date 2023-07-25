@@ -6,6 +6,8 @@
 #include <Ende/profile/profile.h>
 #include <Cala/Material.h>
 
+#include <json.hpp>
+
 cala::backend::vulkan::RenderPass::Attachment shadowPassAttachment {
         cala::backend::Format::D32_SFLOAT,
         VK_SAMPLE_COUNT_1_BIT,
@@ -441,4 +443,19 @@ cala::Material *cala::Engine::createMaterial(u32 size) {
     u32 id = _materials.size();
     _materials.emplace(this, id, size);
     return &_materials.back();
+}
+
+cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size) {
+    ende::fs::File file;
+    if (!file.open(path, ende::fs::in | ende::fs::binary))
+        return nullptr;
+
+    std::string source = file.read();
+
+    nlohmann::json json = nlohmann::json::parse(source);
+
+
+    Material* material = createMaterial(size);
+
+    return material;
 }

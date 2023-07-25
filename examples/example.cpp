@@ -357,24 +357,12 @@ ShaderProgram loadShader(Device& driver, const ende::fs::Path& vertex, const end
 }
 
 ShaderProgram loadShaderGLSL(Device& driver, const ende::fs::Path& vertex, const ende::fs::Path& fragment) {
-    ende::fs::File shaderFile;
-    shaderFile.open(vertex, ende::fs::in | ende::fs::binary);
-
-    std::string vertexSource = shaderFile.read();
-
-    std::vector<u32> vertexData(shaderFile.size() / sizeof(u32));
-//    shaderFile.read({reinterpret_cast<char*>(vertexData.data()), static_cast<u32>(vertexData.size() * sizeof(u32))});
-
-    shaderFile.open(fragment, ende::fs::in | ende::fs::binary);
-
-    std::string fragmentSource = shaderFile.read();
-
-    std::vector<u32> fragmentData(shaderFile.size() / sizeof(u32));
-//    shaderFile.read({reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32))});
+    std::vector<u32> vertexData;
+    std::vector<u32> fragmentData;
 
     return ShaderProgram::create()
-            .addStageGLSL(vertexSource, ShaderStage::VERTEX, vertexData)
-            .addStageGLSL(fragmentSource, ShaderStage::FRAGMENT, fragmentData)
+            .addStageGLSL(vertex, ShaderStage::VERTEX, vertexData)
+            .addStageGLSL(fragment, ShaderStage::FRAGMENT, fragmentData)
             .compile(driver);
 }
 
@@ -400,7 +388,7 @@ int main() {
     ProgramHandle pbrProgram = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
     ProgramHandle pbrTestProgram = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr_test.frag.spv"_path));
 
-//    ProgramHandle normalDebug = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/debug/normals.frag.spv"_path));
+    ProgramHandle pbrGLSLProgram = engine.device().createProgram(loadShaderGLSL(engine.device(), "../../res/shaders/default.vert"_path, "../../res/shaders/pbr.frag"_path));
     ProgramHandle normalDebug = engine.device().createProgram(loadShaderGLSL(engine.device(), "../../res/shaders/default.vert"_path, "../../res/shaders/debug/normals.frag"_path));
     ProgramHandle roughnessDebug = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/debug/roughness.frag.spv"_path));
     ProgramHandle metallicDebug = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/debug/metallic.frag.spv"_path));
@@ -422,7 +410,7 @@ int main() {
         i32 metallicRoughness = -1;
     };
     Material* material1 = engine.createMaterial<MaterialData>();
-    material1->setVariant(Material::Variant::LIT, pbrProgram);
+    material1->setVariant(Material::Variant::LIT, pbrGLSLProgram);
     material1->setVariant(Material::Variant::NORMAL, normalDebug);
     material1->setVariant(Material::Variant::ROUGHNESS, roughnessDebug);
     material1->setVariant(Material::Variant::METALNESS, metallicDebug);

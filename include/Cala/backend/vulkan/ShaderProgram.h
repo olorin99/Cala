@@ -6,6 +6,7 @@
 #include <Cala/backend/ShaderInterface.h>
 #include <Cala/backend/primitives.h>
 #include <vector>
+#include <Ende/filesystem/Path.h>
 
 namespace cala::backend::vulkan {
 
@@ -20,7 +21,7 @@ namespace cala::backend::vulkan {
 
             Builder& addStage(ende::Span<u32> code, ShaderStage stage);
 
-            Builder& addStageGLSL(const std::string& source, ShaderStage stage, std::vector<u32>& dst);
+            Builder& addStageGLSL(const ende::fs::Path& path, ShaderStage stage, std::vector<u32>& dst);
 
             ShaderProgram compile(Device& driver);
 
