@@ -15,7 +15,7 @@ cala::backend::vulkan::Sampler::Sampler(Device& driver, CreateInfo info)
     samplerInfo.addressModeW = info.addressMode;
     samplerInfo.mipLodBias = info.mipLodBias;
     samplerInfo.anisotropyEnable = info.anisotropy;
-    samplerInfo.maxAnisotropy = info.maxAnisotropy;
+    samplerInfo.maxAnisotropy = info.anisotropy && info.maxAnisotropy == 0 ? driver.context().maxAnisotropy() : info.maxAnisotropy;
     samplerInfo.compareEnable = info.compare;
     samplerInfo.compareOp = info.compareOp;
     samplerInfo.minLod = info.minLod;

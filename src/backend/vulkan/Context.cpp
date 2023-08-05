@@ -195,7 +195,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     _deviceType = static_cast<PhysicalDeviceType>(deviceProperties.deviceType);
     _deviceName = deviceProperties.deviceName;
     _timestampPeriod = deviceProperties.limits.timestampPeriod;
-
+    _maxAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
 
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

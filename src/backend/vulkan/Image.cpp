@@ -165,6 +165,8 @@ void cala::backend::vulkan::Image::copy(cala::backend::vulkan::CommandBuffer &bu
 
 void cala::backend::vulkan::Image::generateMips() {
     _device->immediate([&](CommandBuffer& cmd) {
+        Barrier b = barrier(Access::SHADER_READ, Access::TRANSFER_WRITE, ImageLayout::TRANSFER_DST);
+        cmd.pipelineBarrier(PipelineStage::FRAGMENT_SHADER, PipelineStage::TRANSFER, { &b, 1});
         generateMips(cmd);
     });
 }

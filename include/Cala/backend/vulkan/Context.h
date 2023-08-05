@@ -65,6 +65,8 @@ namespace cala::backend::vulkan {
 
         f32 timestampPeriod() const { return _timestampPeriod; }
 
+        f32 maxAnisotropy() const { return _maxAnisotropy; }
+
         struct PipelineStatistics {
             u64 inputAssemblyVertices = 0;
             u64 inputAssemblyPrimitives = 0;
@@ -104,6 +106,7 @@ namespace cala::backend::vulkan {
         PhysicalDeviceType _deviceType;
         std::string _deviceName;
         f32 _timestampPeriod;
+        f32 _maxAnisotropy;
 
     };
 

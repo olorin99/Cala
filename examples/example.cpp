@@ -90,15 +90,17 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
             buf = &image.image[0];
             bufferSize = image.image.size();
         }
+        u32 mips = std::floor(std::log2(std::max(image.width, image.height))) + 1;
         images.push(engine->device().createImage({
             (u32)image.width, (u32)image.height, 1,
             Format::RGBA8_SRGB,
-            1, 1,
-            ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST
+            mips, 1,
+            ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST | ImageUsage::TRANSFER_SRC
         }))->data(engine->device(), {
             0, (u32)image.width, (u32)image.height, 1, 4,
             { buf, bufferSize}
         });
+        images.back()->generateMips();
         if (del)
             delete buf;
     }

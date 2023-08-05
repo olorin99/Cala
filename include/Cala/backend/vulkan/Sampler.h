@@ -14,14 +14,14 @@ namespace cala::backend::vulkan {
         struct CreateInfo {
             VkFilter filter = VK_FILTER_LINEAR;
             VkSamplerAddressMode addressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            bool anisotropy = false;
+            bool anisotropy = true;
             f32 maxAnisotropy = 0.f;
             bool compare = false;
             VkCompareOp compareOp = VK_COMPARE_OP_ALWAYS;
-            VkSamplerMipmapMode mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            VkSamplerMipmapMode mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
             f32 mipLodBias = 0.f;
             f32 minLod = 0.f;
-            f32 maxLod = 0.f;
+            f32 maxLod = 10.f;
             VkBorderColor borderColour = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
             bool unnormalizedCoordinates = false;
         };
