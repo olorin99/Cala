@@ -107,19 +107,27 @@ private:
 };
 
 
-std::vector<u32> compileShader(const std::string& name, const std::string& source, shaderc_shader_kind kind) {
+std::vector<u32> compileShader(const std::string& name, const std::string& source, shaderc_shader_kind kind, const std::vector<std::pair<const char*, std::string>>& macros) {
     shaderc::Compiler compiler;
     shaderc::CompileOptions options;
 
 
     FileFinder finder;
     finder.addSearchPath("/home/christian/Documents/Projects/Cala/res/shaders");
+    finder.addSearchPath("/home/christian/Documents/Projects/Cala/res/materials");
     options.SetIncluder(std::make_unique<FileIncluder>(&finder));
-    
+
+    for (auto& macro : macros) {
+        if (macro.first)
+            options.AddMacroDefinition(macro.first, macro.second);
+    }
+
+//    options.AddMacroDefinition("test", "macro");
+
     shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(source, kind, name.c_str(), options);
 
     if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
-        ende::log::error("Failed to compile shader: {}", module.GetErrorMessage());
+        ende::log::error("Failed to compile shader: \nNumber of errors: {}\nNumber of warnings: {}\n{}", module.GetNumErrors(), module.GetNumWarnings(), module.GetErrorMessage());
         return {};
     }
     return { module.cbegin(), module.cend() };
@@ -131,12 +139,12 @@ cala::backend::vulkan::ShaderProgram::Builder cala::backend::vulkan::ShaderProgr
     return {};
 }
 
-cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStage(ende::Span<u32> code, ShaderStage stage) {
+cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStageSPV(const std::vector<u32>& code, ShaderStage stage) {
     _stages.push({code, stage});
     return *this;
 }
 
-cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStageGLSL(const ende::fs::Path& path, cala::backend::ShaderStage stage, std::vector<u32>& dst) {
+cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStageGLSL(const ende::fs::Path& path, cala::backend::ShaderStage stage, const std::vector<std::pair<const char*, std::string>>& macros) {
     shaderc_shader_kind kind{};
     switch (stage) {
         case ShaderStage::VERTEX:
@@ -163,8 +171,8 @@ cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProg
     ende::fs::File file;
     file.open(path);
     auto source = file.read();
-    dst = compileShader(*path, source, kind);
-    addStage(dst, stage);
+    auto dst = compileShader(*path, source, kind, macros);
+    addStageSPV(dst, stage);
     return *this;
 }
 

@@ -27,8 +27,8 @@ ShaderProgram loadShader(Device& driver, const ende::fs::Path& vertex, const end
     shaderFile.read({reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32))});
 
     return ShaderProgram::create()
-            .addStage(vertexData, ShaderStage::VERTEX)
-            .addStage(fragmentData, ShaderStage::FRAGMENT)
+            .addStageSPV(vertexData, ShaderStage::VERTEX)
+            .addStageSPV(fragmentData, ShaderStage::FRAGMENT)
             .compile(driver);
 }
 

@@ -81,8 +81,8 @@ ShaderProgram loadShader(Device& driver, const ende::fs::Path& vertex, const end
     shaderFile.read({reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32))});
 
     return ShaderProgram::create()
-            .addStage(vertexData, ShaderStage::VERTEX)
-            .addStage(fragmentData, ShaderStage::FRAGMENT)
+            .addStageSPV(vertexData, ShaderStage::VERTEX)
+            .addStageSPV(fragmentData, ShaderStage::FRAGMENT)
             .compile(driver);
 }
 
@@ -175,28 +175,28 @@ int main() {
     ende::Vector<u32> computeShaderData(shaderFile.size() / sizeof(u32));
     shaderFile.read({reinterpret_cast<char*>(computeShaderData.data()), static_cast<u32>(computeShaderData.size() * sizeof(u32))});
     ShaderProgram toCubeCompute = ShaderProgram::create()
-            .addStage(computeShaderData, ShaderStage::COMPUTE)
+            .addStageSPV(computeShaderData, ShaderStage::COMPUTE)
             .compile(driver);
     if (!shaderFile.open("../../res/shaders/irradiance.comp.spv"_path, ende::fs::in | ende::fs::binary))
         return -2;
     ende::Vector<u32> irradianceShaderData(shaderFile.size() / sizeof(u32));
     shaderFile.read({reinterpret_cast<char*>(irradianceShaderData.data()), static_cast<u32>(irradianceShaderData.size() * sizeof(u32))});
     ShaderProgram irradianceCompute = ShaderProgram::create()
-            .addStage(irradianceShaderData, ShaderStage::COMPUTE)
+            .addStageSPV(irradianceShaderData, ShaderStage::COMPUTE)
             .compile(driver);
     if (!shaderFile.open("../../res/shaders/prefilter.comp.spv"_path, ende::fs::in | ende::fs::binary))
         return -2;
     ende::Vector<u32> prefilterShaderData(shaderFile.size() / sizeof(u32));
     shaderFile.read({reinterpret_cast<char*>(prefilterShaderData.data()), static_cast<u32>(prefilterShaderData.size() * sizeof(u32))});
     ShaderProgram prefilterCompute = ShaderProgram::create()
-            .addStage(prefilterShaderData, ShaderStage::COMPUTE)
+            .addStageSPV(prefilterShaderData, ShaderStage::COMPUTE)
             .compile(driver);
     if (!shaderFile.open("../../res/shaders/brdf.comp.spv"_path, ende::fs::in | ende::fs::binary))
         return -2;
     ende::Vector<u32> brdfShaderData(shaderFile.size() / sizeof(u32));
     shaderFile.read({reinterpret_cast<char*>(brdfShaderData.data()), static_cast<u32>(brdfShaderData.size() * sizeof(u32))});
     ShaderProgram brdfCompute = ShaderProgram::create()
-            .addStage(brdfShaderData, ShaderStage::COMPUTE)
+            .addStageSPV(brdfShaderData, ShaderStage::COMPUTE)
             .compile(driver);
 
 

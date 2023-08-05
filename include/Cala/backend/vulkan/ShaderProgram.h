@@ -19,15 +19,15 @@ namespace cala::backend::vulkan {
         class Builder {
         public:
 
-            Builder& addStage(ende::Span<u32> code, ShaderStage stage);
+            Builder& addStageSPV(const std::vector<u32>& code, ShaderStage stage);
 
-            Builder& addStageGLSL(const ende::fs::Path& path, ShaderStage stage, std::vector<u32>& dst);
+            Builder& addStageGLSL(const ende::fs::Path& path, ShaderStage stage, const std::vector<std::pair<const char*, std::string>>& macros = {});
 
             ShaderProgram compile(Device& driver);
 
         private:
 
-            ende::Vector<std::pair<ende::Span<u32>, ShaderStage>> _stages;
+            ende::Vector<std::pair<std::vector<u32>, ShaderStage>> _stages;
 
         };
 

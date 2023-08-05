@@ -338,34 +338,6 @@ MeshData loadModel(const ende::fs::Path& path) {
     return data;
 }
 
-ShaderProgram loadShader(Device& driver, const ende::fs::Path& vertex, const ende::fs::Path& fragment) {
-    ende::fs::File shaderFile;
-    shaderFile.open(vertex, ende::fs::in | ende::fs::binary);
-
-    ende::Vector<u32> vertexData(shaderFile.size() / sizeof(u32));
-    shaderFile.read({reinterpret_cast<char*>(vertexData.data()), static_cast<u32>(vertexData.size() * sizeof(u32))});
-
-    shaderFile.open(fragment, ende::fs::in | ende::fs::binary);
-
-    ende::Vector<u32> fragmentData(shaderFile.size() / sizeof(u32));
-    shaderFile.read({reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32))});
-
-    return ShaderProgram::create()
-            .addStage(vertexData, ShaderStage::VERTEX)
-            .addStage(fragmentData, ShaderStage::FRAGMENT)
-            .compile(driver);
-}
-
-ShaderProgram loadShaderGLSL(Device& driver, const ende::fs::Path& vertex, const ende::fs::Path& fragment) {
-    std::vector<u32> vertexData;
-    std::vector<u32> fragmentData;
-
-    return ShaderProgram::create()
-            .addStageGLSL(vertex, ShaderStage::VERTEX, vertexData)
-            .addStageGLSL(fragment, ShaderStage::FRAGMENT, fragmentData)
-            .compile(driver);
-}
-
 int main() {
     SDLPlatform platform("hello_triangle", 1920, 1080);
     OfflinePlatform offlinePlatform(1920, 1080);
@@ -385,13 +357,12 @@ int main() {
 
 
     //Shaders
-    ProgramHandle pbrProgram = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr.frag.spv"_path));
-    ProgramHandle pbrTestProgram = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/pbr_test.frag.spv"_path));
 
-    ProgramHandle pbrGLSLProgram = engine.device().createProgram(loadShaderGLSL(engine.device(), "../../res/shaders/default.vert"_path, "../../res/shaders/pbr.frag"_path));
-    ProgramHandle normalDebug = engine.device().createProgram(loadShaderGLSL(engine.device(), "../../res/shaders/default.vert"_path, "../../res/shaders/debug/normals.frag"_path));
-    ProgramHandle roughnessDebug = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/debug/roughness.frag.spv"_path));
-    ProgramHandle metallicDebug = engine.device().createProgram(loadShader(engine.device(), "../../res/shaders/default.vert.spv"_path, "../../res/shaders/debug/metallic.frag.spv"_path));
+    ProgramHandle pbrTestProgram = engine.loadProgram({
+        { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
+        { "../../res/shaders/pbr_test.frag"_path, backend::ShaderStage::FRAGMENT }
+    });
+
 
     struct Material1Data {
         i32 albedoIndex = -1;
@@ -409,11 +380,8 @@ int main() {
         i32 normalIndex = -1;
         i32 metallicRoughness = -1;
     };
-    Material* material1 = engine.createMaterial<MaterialData>();
-    material1->setVariant(Material::Variant::LIT, pbrGLSLProgram);
-    material1->setVariant(Material::Variant::NORMAL, normalDebug);
-    material1->setVariant(Material::Variant::ROUGHNESS, roughnessDebug);
-    material1->setVariant(Material::Variant::METALNESS, metallicDebug);
+
+    Material* material1 = engine.loadMaterial<MaterialData>("../../res/materials/pbr.mat"_path);
     material1->setDepthState({ true, true, CompareOp::LESS_EQUAL });
 
     Transform sponzaTransform;

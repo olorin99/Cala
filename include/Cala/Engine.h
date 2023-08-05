@@ -112,6 +112,14 @@ namespace cala {
 
         void updateMaterialdata();
 
+    public:
+        struct ShaderInfo {
+            ende::fs::Path path;
+            backend::ShaderStage stage;
+            std::vector<std::pair<const char*, std::string>> macros = {};
+        };
+        backend::vulkan::ProgramHandle loadProgram(const ende::Vector<ShaderInfo>& shaderInfo);
+
     };
 
 }

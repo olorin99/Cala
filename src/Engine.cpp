@@ -39,160 +39,84 @@ cala::Engine::Engine(backend::Platform &platform)
 {
     ende::fs::File file;
     {
-        file.open("../../res/shaders/shadow_point.vert.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> vertexData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(vertexData.data()), static_cast<u32>(vertexData.size() * sizeof(u32)) });
-
-        file.open("../../res/shaders/shadow_point.frag.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> fragmentData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32)) });
-
-        _pointShadowProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-                .addStage(vertexData, backend::ShaderStage::VERTEX)
-                .addStage(fragmentData, backend::ShaderStage::FRAGMENT)
-                .compile(_device)));
+        _pointShadowProgram = loadProgram({
+            { "../../res/shaders/shadow_point.vert"_path, backend::ShaderStage::VERTEX },
+            { "../../res/shaders/shadow_point.frag"_path, backend::ShaderStage::FRAGMENT }
+        });
     }
     {
-        file.open("../../res/shaders/shadow.vert.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> vertexData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(vertexData.data()), static_cast<u32>(vertexData.size() * sizeof(u32)) });
-
-        _directShadowProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-                .addStage(vertexData, backend::ShaderStage::VERTEX)
-                .compile(_device)));
+        _directShadowProgram = loadProgram({
+            { "../../res/shaders/shadow.vert"_path, backend::ShaderStage::VERTEX }
+        });
     }
     {
-        file.open("../../res/shaders/equirectangularToCubeMap.comp.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> computeData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
-
-        _equirectangularToCubeMap = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-                .addStage(computeData, backend::ShaderStage::COMPUTE)
-                .compile(_device)));
+        _equirectangularToCubeMap = loadProgram({
+            { "../../res/shaders/equirectangularToCubeMap.comp"_path, backend::ShaderStage::COMPUTE }
+        });
     }
     {
-        file.open("../../res/shaders/irradiance.comp.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> computeData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
-
-        _irradianceProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-                .addStage(computeData, backend::ShaderStage::COMPUTE)
-                .compile(_device)));
+        _irradianceProgram = loadProgram({
+            { "../../res/shaders/irradiance.comp"_path, backend::ShaderStage::COMPUTE }
+        });
     }
     {
-        file.open("../../res/shaders/prefilter.comp.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> computeData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
-
-        _prefilterProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-                .addStage(computeData, backend::ShaderStage::COMPUTE)
-                .compile(_device)));
+        _prefilterProgram = loadProgram({
+            { "../../res/shaders/prefilter.comp"_path, backend::ShaderStage::COMPUTE }
+        });
     }
     {
-        file.open("../../res/shaders/brdf.comp.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> computeData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
-
-        _brdfProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-                .addStage(computeData, backend::ShaderStage::COMPUTE)
-                .compile(_device)));
+        _brdfProgram = loadProgram({
+            { "../../res/shaders/brdf.comp"_path, backend::ShaderStage::COMPUTE }
+        });
     }
     {
-        file.open("../../res/shaders/skybox.vert.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> vertexData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(vertexData.data()), static_cast<u32>(vertexData.size() * sizeof(u32)) });
-
-        file.open("../../res/shaders/skybox.frag.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> fragmentData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32)) });
-
-        _skyboxProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-                .addStage(vertexData, backend::ShaderStage::VERTEX)
-                .addStage(fragmentData, backend::ShaderStage::FRAGMENT)
-                .compile(_device)));
+        _skyboxProgram = loadProgram({
+            { "../../res/shaders/skybox.vert"_path, backend::ShaderStage::VERTEX },
+            { "../../res/shaders/skybox.frag"_path, backend::ShaderStage::FRAGMENT }
+        });
     }
     {
-        file.open("../../res/shaders/hdr.comp.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> computeData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
-
-        _tonemapProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-                .addStage(computeData, backend::ShaderStage::COMPUTE)
-                .compile(_device)));
+        _tonemapProgram = loadProgram({
+            { "../../res/shaders/hdr.comp"_path, backend::ShaderStage::COMPUTE }
+        });
     }
     {
-        file.open("../../res/shaders/cull.comp.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> computeData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
-
-        _cullProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-                .addStage(computeData, backend::ShaderStage::COMPUTE)
-                .compile(_device)));
+        _cullProgram = loadProgram({
+            { "../../res/shaders/cull.comp"_path, backend::ShaderStage::COMPUTE }
+        });
     }
     {
-        file.open("../../res/shaders/point_shadow_cull.comp.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> computeData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
-
-        _pointShadowCullProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-                .addStage(computeData, backend::ShaderStage::COMPUTE)
-                .compile(_device)));
+        _pointShadowCullProgram = loadProgram({
+            { "../../res/shaders/point_shadow_cull.comp"_path, backend::ShaderStage::COMPUTE }
+        });
     }
     {
-        file.open("../../res/shaders/direct_shadow_cull.comp.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> computeData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
-
-        _directShadowCullProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-                .addStage(computeData, backend::ShaderStage::COMPUTE)
-                .compile(_device)));
+        _directShadowCullProgram = loadProgram({
+            { "../../res/shaders/direct_shadow_cull.comp"_path, backend::ShaderStage::COMPUTE }
+        });
     }
     {
-        file.open("../../res/shaders/create_clusters.comp.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> computeData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
-
-        _createClustersProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-                .addStage(computeData, backend::ShaderStage::COMPUTE)
-                .compile(_device)));
+        _createClustersProgram = loadProgram({
+            { "../../res/shaders/create_clusters.comp"_path, backend::ShaderStage::COMPUTE }
+        });
     }
     {
-        file.open("../../res/shaders/cull_lights.comp.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> computeData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(computeData.data()), static_cast<u32>(computeData.size() * sizeof(u32)) });
-
-        _cullLightsProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-                .addStage(computeData, backend::ShaderStage::COMPUTE)
-                .compile(_device)));
+        _cullLightsProgram = loadProgram({
+            { "../../res/shaders/cull_lights.comp"_path, backend::ShaderStage::COMPUTE }
+        });
     }
     {
-        file.open("../../res/shaders/fullscreen.vert.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> vertexData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(vertexData.data()), static_cast<u32>(vertexData.size() * sizeof(u32)) });
-
-        file.open("../../res/shaders/debug/clusters_debug.frag.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> fragmentData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32)) });
-
-        _clusterDebugProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-                .addStage(vertexData, backend::ShaderStage::VERTEX)
-                .addStage(fragmentData, backend::ShaderStage::FRAGMENT)
-                .compile(_device)));
+        _clusterDebugProgram = loadProgram({
+            { "../../res/shaders/fullscreen.vert"_path, backend::ShaderStage::VERTEX },
+            { "../../res/shaders/debug/clusters_debug.frag"_path, backend::ShaderStage::FRAGMENT }
+        });
     }
     _device.setBindlessSetIndex(0);
     {
-        file.open("../../res/shaders/default.vert.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> vertexData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(vertexData.data()), static_cast<u32>(vertexData.size() * sizeof(u32)) });
-
-        file.open("../../res/shaders/debug/normals.frag.spv"_path, ende::fs::in | ende::fs::binary);
-        ende::Vector<u32> fragmentData(file.size() / sizeof(u32));
-        file.read({ reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32)) });
-
-        _normalsDebugProgram = _device.createProgram(backend::vulkan::ShaderProgram(backend::vulkan::ShaderProgram::create()
-                .addStage(vertexData, backend::ShaderStage::VERTEX)
-                .addStage(fragmentData, backend::ShaderStage::FRAGMENT)
-                .compile(_device)));
+        _normalsDebugProgram = loadProgram({
+            { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
+            { "../../res/shaders/debug/normals.frag"_path, backend::ShaderStage::FRAGMENT }
+        });
     }
 
     _brdfImage = _device.createImage({ 512, 512, 1, backend::Format::RG16_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE });
@@ -452,10 +376,83 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
 
     std::string source = file.read();
 
-    nlohmann::json json = nlohmann::json::parse(source);
+    nlohmann::json materialSource = nlohmann::json::parse(source);
 
+    auto macroize = [](std::string& str) {
+        size_t index = 0;
+        size_t last = 0;
+
+        while ((index = str.find('\n', index)) != std::string::npos) {
+            str.insert(index++, "\\");
+            last = ++index;
+        }
+    };
 
     Material* material = createMaterial(size);
 
+    std::string materialData = materialSource["materialData"];
+    std::string materialDefinition = materialSource["materialDefinition"];
+    std::string materialLoad = materialSource["materialLoad"];
+    std::string materialEval = materialSource["materialEval"];
+
+    macroize(materialData);
+    macroize(materialDefinition);
+    macroize(materialLoad);
+    macroize(materialEval);
+
+    backend::vulkan::ProgramHandle litHandle = loadProgram({
+        { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
+        { "../../res/shaders/default/lit.frag"_path, backend::ShaderStage::FRAGMENT, {
+            { "MATERIAL_DATA", materialData },
+            { "MATERIAL_DEFINITION", materialDefinition },
+            { "MATERIAL_LOAD", materialLoad },
+            { "MATERIAL_EVAL", materialEval },
+        } }
+    });
+    material->setVariant(Material::Variant::LIT, litHandle);
+
+    backend::vulkan::ProgramHandle normalsHandle = loadProgram({
+        { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
+        { "../../res/shaders/default/normals.frag"_path, backend::ShaderStage::FRAGMENT, {
+            { "MATERIAL_DATA", materialData },
+            { "MATERIAL_DEFINITION", materialDefinition },
+            { "MATERIAL_LOAD", materialLoad },
+            { "MATERIAL_EVAL", materialEval },
+        } }
+    });
+    material->setVariant(Material::Variant::NORMAL, normalsHandle);
+
+    backend::vulkan::ProgramHandle metallicHandle = loadProgram({
+        { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
+        { "../../res/shaders/default/metallic.frag"_path, backend::ShaderStage::FRAGMENT, {
+            { "MATERIAL_DATA", materialData },
+            { "MATERIAL_DEFINITION", materialDefinition },
+            { "MATERIAL_LOAD", materialLoad },
+            { "MATERIAL_EVAL", materialEval },
+        } }
+    });
+    material->setVariant(Material::Variant::METALNESS, metallicHandle);
+
+    backend::vulkan::ProgramHandle roughnessHandle = loadProgram({
+        { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
+        { "../../res/shaders/default/roughness.frag"_path, backend::ShaderStage::FRAGMENT, {
+            { "MATERIAL_DATA", materialData },
+            { "MATERIAL_DEFINITION", materialDefinition },
+            { "MATERIAL_LOAD", materialLoad },
+            { "MATERIAL_EVAL", materialEval },
+        } }
+    });
+    material->setVariant(Material::Variant::ROUGHNESS, roughnessHandle);
+
     return material;
+}
+
+cala::backend::vulkan::ProgramHandle cala::Engine::loadProgram(const ende::Vector<ShaderInfo>& shaderInfo) {
+    auto programBuilder = backend::vulkan::ShaderProgram::create();
+
+    for (auto& info : shaderInfo) {
+        programBuilder.addStageGLSL(info.path, info.stage, info.macros);
+    }
+    auto program = programBuilder.compile(_device);
+    return _device.createProgram(std::move(program));
 }

@@ -54,8 +54,8 @@ ShaderProgram loadShader(Device& driver, const ende::fs::Path& vertex, const end
     shaderFile.read({reinterpret_cast<char*>(fragmentData.data()), static_cast<u32>(fragmentData.size() * sizeof(u32))});
 
     return ShaderProgram::create()
-            .addStage(vertexData, ShaderStage::VERTEX)
-            .addStage(fragmentData, ShaderStage::FRAGMENT)
+            .addStageSPV(vertexData, ShaderStage::VERTEX)
+            .addStageSPV(fragmentData, ShaderStage::FRAGMENT)
             .compile(driver);
 }
 
@@ -169,7 +169,7 @@ int main() {
     ShaderProgram triangleProgram = loadShader(driver, "../../res/shaders/triangle.vert.spv"_path, "../../res/shaders/triangle.frag.spv"_path);
 
     ShaderProgram computeProgram = ShaderProgram::create()
-            .addStage(computeShaderData, ShaderStage::COMPUTE)
+            .addStageSPV(computeShaderData, ShaderStage::COMPUTE)
             .compile(driver);
 
     //vertex array
