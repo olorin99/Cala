@@ -32,7 +32,7 @@ void cala::ImageResource::devirtualize(cala::Engine* engine, backend::vulkan::Sw
 }
 
 void cala::ImageResource::destroyResource(cala::Engine *engine) {
-    engine->device().destroyImage(handle);
+//    engine->device().destroyImage(handle);
     handle = {};
 }
 
@@ -63,7 +63,7 @@ void cala::BufferResource::devirtualize(Engine *engine, backend::vulkan::Swapcha
 }
 
 void cala::BufferResource::destroyResource(cala::Engine *engine) {
-    engine->device().destroyBuffer(handle);
+//    engine->device().destroyBuffer(handle);
     handle = {};
 }
 

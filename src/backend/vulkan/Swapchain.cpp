@@ -119,7 +119,8 @@ cala::backend::vulkan::Swapchain::Swapchain(Device &driver, Platform& platform, 
 }
 
 cala::backend::vulkan::Swapchain::~Swapchain() {
-    _driver.destroyImage(_depthImage);
+//    _driver.destroyImage(_depthImage);
+    _depthImage.release();
 
     for (auto& semaphore : _semaphores) {
         vkDestroySemaphore(_driver.context().device(), semaphore, nullptr);
@@ -186,7 +187,7 @@ bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {
     createSwapchain();
     createImageViews();
 
-    _driver.destroyImage(_depthImage);
+//    _driver.destroyImage(_depthImage);
     _depthImage = _driver.createImage({ _extent.width, _extent.height, 1, _driver.context().depthFormat(), 1, 1, ImageUsage::DEPTH_STENCIL_ATTACHMENT | ImageUsage::SAMPLED });
     _depthView = _depthImage->newView();
 

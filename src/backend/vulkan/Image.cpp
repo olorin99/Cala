@@ -104,7 +104,7 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Device& driver, D
         imageBarrier = barrier(Access::TRANSFER_WRITE, Access::SHADER_READ, ImageLayout::SHADER_READ_ONLY);
         buffer.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::FRAGMENT_SHADER, { &imageBarrier, 1 });
     });
-    driver.destroyBuffer(staging);
+//    driver.destroyBuffer(staging);
     _layout = ImageLayout::SHADER_READ_ONLY;
 }
 

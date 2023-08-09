@@ -62,13 +62,13 @@ namespace cala::backend::vulkan {
 
         BufferHandle createBuffer(u32 size, BufferUsage usage, backend::MemoryProperties flags = backend::MemoryProperties::DEVICE, bool persistentlyMapped = false);
 
-        void destroyBuffer(BufferHandle handle);
+
 
         BufferHandle resizeBuffer(BufferHandle handle, u32 size, bool transfer = false);
 
         ImageHandle createImage(Image::CreateInfo info, Sampler* sampler = nullptr);
 
-        void destroyImage(ImageHandle handle);
+
 
         ImageHandle getImageHandle(u32 index);
 
@@ -78,7 +78,7 @@ namespace cala::backend::vulkan {
 
         ProgramHandle createProgram(ShaderProgram&& program);
 
-        void destroyProgram(ProgramHandle handle);
+
 
 
         Sampler& defaultSampler() { return _defaultSampler; }
@@ -159,21 +159,21 @@ namespace cala::backend::vulkan {
         i32 _bindlessIndex;
 
 
-        ende::Vector<std::unique_ptr<Buffer>> _buffers;
+        ende::Vector<std::pair<std::unique_ptr<Buffer>, BufferHandle::Counter*>> _buffers;
         ende::Vector<u32> _freeBuffers;
-        ende::Vector<std::pair<i32, BufferHandle>> _buffersToDestroy;
+        ende::Vector<std::pair<i32, i32>> _buffersToDestroy;
 
-        ende::Vector<std::unique_ptr<Image>> _images;
+        ende::Vector<std::pair<std::unique_ptr<Image>, ImageHandle::Counter*>> _images;
         ende::Vector<Image::View> _imageViews;
         ende::Vector<u32> _freeImages;
-        ende::Vector<std::pair<i32, ImageHandle>> _imagesToDestroy;
+        ende::Vector<std::pair<i32, i32>> _imagesToDestroy;
 
         Sampler _defaultSampler;
         Sampler _defaultShadowSampler;
 
-        ende::Vector<std::unique_ptr<ShaderProgram>> _programs;
+        std::vector<std::pair<std::unique_ptr<ShaderProgram>, ProgramHandle::Counter*>> _programs;
         ende::Vector<u32> _freePrograms;
-        ende::Vector<std::pair<i32, ProgramHandle>> _programsToDestroy;
+        ende::Vector<std::pair<i32, i32>> _programsToDestroy;
 
         tsl::robin_map<CommandBuffer::DescriptorKey, std::pair<VkDescriptorSet, i32>, ende::util::MurmurHash<CommandBuffer::DescriptorKey>> _descriptorSets;
         VkDescriptorPool _descriptorPool;
@@ -182,6 +182,12 @@ namespace cala::backend::vulkan {
 
 
         u32 _bytesAllocatedPerFrame;
+
+        void destroyBuffer(i32 handle);
+
+        void destroyImage(i32 handle);
+
+        void destroyProgram(i32 handle);
 
     };
 

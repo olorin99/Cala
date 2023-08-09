@@ -26,8 +26,9 @@ void cala::Material::upload() {
 
 void cala::Material::setVariant(cala::Material::Variant variant, backend::vulkan::ProgramHandle program) {
     assert(static_cast<u8>(variant) < static_cast<u8>(Variant::MAX));
-    if (_programs[static_cast<u8>(variant)])
-        _engine->device().destroyProgram(_programs[static_cast<u8>(variant)]);
+//    if (_programs[static_cast<u8>(variant)])
+//        _programs[static_cast<u8>(variant)].release();
+//        _engine->device().destroyProgram(_programs[static_cast<u8>(variant)]);
     _programs[static_cast<u8>(variant)] = program;
 }
 
