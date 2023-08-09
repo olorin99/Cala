@@ -101,21 +101,21 @@ cala::backend::vulkan::Device::~Device() {
     VK_TRY(vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS))); //ensures last frame finished before destroying stuff
 
     for (auto& buffer : _buffers) {
-        buffer._mapped = Buffer::Mapped();
-        VkBuffer buf = buffer._buffer;
-        VmaAllocation allocation = buffer._allocation;
+        buffer->_mapped = Buffer::Mapped();
+        VkBuffer buf = buffer->_buffer;
+        VmaAllocation allocation = buffer->_allocation;
         if (allocation)
             vmaDestroyBuffer(context().allocator(), buf, allocation);
-        buffer._allocation = nullptr;
+        buffer->_allocation = nullptr;
     }
 
     _imageViews.clear();
     for (auto& image : _images) {
-        VkImage im = image._image;
-        VmaAllocation allocation = image._allocation;
+        VkImage im = image->_image;
+        VmaAllocation allocation = image->_allocation;
         if (im != VK_NULL_HANDLE)
             vmaDestroyImage(context().allocator(), im, allocation);
-        image._allocation = nullptr;
+        image->_allocation = nullptr;
     }
 
 //    for (auto& program : _programs)
@@ -238,13 +238,13 @@ bool cala::backend::vulkan::Device::gc() {
         auto& handle = it->second;
         if (frame <= 0) {
             u32 index = handle.index();
-            _buffers[index]._mapped = Buffer::Mapped();
-            VkBuffer buffer = _buffers[index]._buffer;
-            VmaAllocation allocation = _buffers[index]._allocation;
+            _buffers[index]->_mapped = Buffer::Mapped();
+            VkBuffer buffer = _buffers[index]->_buffer;
+            VmaAllocation allocation = _buffers[index]->_allocation;
             if (allocation)
                 vmaDestroyBuffer(context().allocator(), buffer, allocation);
-            _buffers[index]._allocation = nullptr;
-            _buffers[index] = Buffer(this);
+            _buffers[index]->_allocation = nullptr;
+            _buffers[index] = std::make_unique<Buffer>(this);
             _freeBuffers.push(index);
             _buffersToDestroy.erase(it--);
             ende::log::info("destroyed buffer ({})", index);
@@ -257,14 +257,14 @@ bool cala::backend::vulkan::Device::gc() {
         auto& handle = it->second;
         if (frame <= 0) {
             u32 index = handle.index();
-            VkImage image = _images[index]._image;
-            VmaAllocation allocation = _images[index]._allocation;
+            VkImage image = _images[index]->_image;
+            VmaAllocation allocation = _images[index]->_allocation;
             _imageViews[index] = backend::vulkan::Image::View();
             updateBindlessImage(index, _imageViews[0], _defaultSampler);
             if (image != VK_NULL_HANDLE)
                 vmaDestroyImage(context().allocator(), image, allocation);
-            _images[index]._allocation = nullptr;
-            _images[index] = Image(this);
+            _images[index]->_allocation = nullptr;
+            _images[index] = std::make_unique<Image>(this);
             _freeImages.push(index);
             _imagesToDestroy.erase(it--);
             ende::log::info("destroyed image ({})", index);
@@ -325,18 +325,18 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
     VK_TRY(vmaCreateBuffer(context().allocator(), &bufferInfo, &allocInfo, &buffer, &allocation, nullptr));
     if (!_freeBuffers.empty()) {
         index = _freeBuffers.pop().value();
-        _buffers[index] = backend::vulkan::Buffer(this);
+        _buffers[index] = std::make_unique<Buffer>(this);
     } else {
         index = _buffers.size();
-        _buffers.emplace(backend::vulkan::Buffer(this));
+        _buffers.emplace(std::make_unique<Buffer>(this));
     }
-    _buffers[index]._buffer = buffer;
-    _buffers[index]._allocation = allocation;
-    _buffers[index]._size = size;
-    _buffers[index]._usage = usage;
-    _buffers[index]._flags = flags;
+    _buffers[index]->_buffer = buffer;
+    _buffers[index]->_allocation = allocation;
+    _buffers[index]->_size = size;
+    _buffers[index]->_usage = usage;
+    _buffers[index]->_flags = flags;
     if (persistentlyMapped)
-        _buffers[index]._mapped = _buffers[index].map();
+        _buffers[index]->_mapped = _buffers[index]->map();
 
     _bytesAllocatedPerFrame += size;
 
@@ -423,26 +423,26 @@ cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Im
 
     if (!_freeImages.empty()) {
         index = _freeImages.pop().value();
-        _images[index] = backend::vulkan::Image(this);
+        _images[index] = std::make_unique<Image>(this);
     } else {
         index = _images.size();
-        _images.emplace(backend::vulkan::Image(this));
+        _images.emplace(std::make_unique<Image>(this));
     }
 
-    _images[index]._image = image;
-    _images[index]._allocation = allocation;
-    _images[index]._width = info.width;
-    _images[index]._height = info.height;
-    _images[index]._depth = info.depth;
-    _images[index]._layers = info.arrayLayers;
-    _images[index]._mips = info.mipLevels;
-    _images[index]._format = info.format;
-    _images[index]._usage = info.usage;
-    _images[index]._type = type;
+    _images[index]->_image = image;
+    _images[index]->_allocation = allocation;
+    _images[index]->_width = info.width;
+    _images[index]->_height = info.height;
+    _images[index]->_depth = info.depth;
+    _images[index]->_layers = info.arrayLayers;
+    _images[index]->_mips = info.mipLevels;
+    _images[index]->_format = info.format;
+    _images[index]->_usage = info.usage;
+    _images[index]->_type = type;
 
 
     _imageViews.resize(_images.size());
-    _imageViews[index] = std::move(_images[index].newView(0, _images[index].mips()));
+    _imageViews[index] = std::move(_images[index]->newView(0, _images[index]->mips()));
 
     assert(_images.size() == _imageViews.size());
 

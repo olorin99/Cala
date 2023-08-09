@@ -3,32 +3,32 @@
 
 template <>
 cala::backend::vulkan::Buffer &cala::backend::vulkan::BufferHandle::operator*() noexcept {
-    return _device->_buffers[_index];
+    return *_device->_buffers[_index];
 }
 
 template <>
 cala::backend::vulkan::Buffer *cala::backend::vulkan::BufferHandle::operator->() noexcept {
-    return &_device->_buffers[_index];
+    return _device->_buffers[_index].get();
 }
 
 template <>
 bool cala::backend::vulkan::BufferHandle::isValid() const {
-    return _device->_buffers[_index].buffer() != VK_NULL_HANDLE;
+    return _device->_buffers[_index]->buffer() != VK_NULL_HANDLE;
 }
 
 template <>
 cala::backend::vulkan::Image &cala::backend::vulkan::ImageHandle::operator*() noexcept {
-    return _device->_images[_index];
+    return *_device->_images[_index];
 }
 
 template <>
 cala::backend::vulkan::Image *cala::backend::vulkan::ImageHandle ::operator->() noexcept {
-    return &_device->_images[_index];
+    return _device->_images[_index].get();
 }
 
 template <>
 bool cala::backend::vulkan::ImageHandle::isValid() const {
-    return _device->_images[_index].image() != VK_NULL_HANDLE;
+    return _device->_images[_index]->image() != VK_NULL_HANDLE;
 }
 
 template <>

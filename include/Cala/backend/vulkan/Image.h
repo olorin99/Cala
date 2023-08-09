@@ -37,6 +37,8 @@ namespace cala::backend::vulkan {
             u32 layer = 0; // move up in struct just here for backward compat
         };
 
+        Image(Device* device);
+
         Image() = delete;
 
         Image(Image&& rhs) noexcept;
@@ -115,8 +117,6 @@ namespace cala::backend::vulkan {
     private:
 
         friend Device;
-
-        Image(Device* device);
 
         Device* _device;
         VkImage _image;

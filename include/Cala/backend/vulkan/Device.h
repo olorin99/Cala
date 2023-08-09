@@ -159,11 +159,11 @@ namespace cala::backend::vulkan {
         i32 _bindlessIndex;
 
 
-        ende::Vector<Buffer> _buffers;
+        ende::Vector<std::unique_ptr<Buffer>> _buffers;
         ende::Vector<u32> _freeBuffers;
         ende::Vector<std::pair<i32, BufferHandle>> _buffersToDestroy;
 
-        ende::Vector<Image> _images;
+        ende::Vector<std::unique_ptr<Image>> _images;
         ende::Vector<Image::View> _imageViews;
         ende::Vector<u32> _freeImages;
         ende::Vector<std::pair<i32, ImageHandle>> _imagesToDestroy;

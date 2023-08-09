@@ -13,6 +13,8 @@ namespace cala::backend::vulkan {
     class Buffer {
     public:
 
+        Buffer(Device* device);
+
         Buffer() = delete;
 
         Buffer(const Buffer&) = delete;
@@ -100,8 +102,6 @@ namespace cala::backend::vulkan {
 
     private:
         friend Device;
-
-        Buffer(Device* device);
 
         Device* _device;
         VkBuffer _buffer;
