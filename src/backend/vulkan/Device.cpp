@@ -100,6 +100,11 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform)
 cala::backend::vulkan::Device::~Device() {
     VK_TRY(vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS))); //ensures last frame finished before destroying stuff
 
+    for (auto& poolArray : _commandPools) {
+        for (auto& pool : poolArray)
+            pool.destroy();
+    }
+
     _descriptorSets.clear();
 
     for (auto& pipeline : _pipelines)

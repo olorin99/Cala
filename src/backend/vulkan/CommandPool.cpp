@@ -16,11 +16,12 @@ cala::backend::vulkan::CommandPool::CommandPool(Device *device, QueueType queueT
 }
 
 cala::backend::vulkan::CommandPool::~CommandPool() {
-    for (auto& buffer : _buffers) {
-        auto buf = buffer.buffer();
-        vkFreeCommandBuffers(_device->context().device(), _pool, 1, &buf);
-    }
-    vkDestroyCommandPool(_device->context().device(), _pool, nullptr);
+    destroy();
+//    for (auto& buffer : _buffers) {
+//        auto buf = buffer.buffer();
+//        vkFreeCommandBuffers(_device->context().device(), _pool, 1, &buf);
+//    }
+//    vkDestroyCommandPool(_device->context().device(), _pool, nullptr);
 }
 
 void cala::backend::vulkan::CommandPool::reset() {
@@ -42,4 +43,15 @@ cala::backend::vulkan::CommandBuffer &cala::backend::vulkan::CommandPool::getBuf
     _buffers.emplace(*_device, _device->context().getQueue(_queueType), buffer);
     ++_index;
     return _buffers.back();
+}
+
+void cala::backend::vulkan::CommandPool::destroy() {
+    if (_pool == VK_NULL_HANDLE)
+        return;
+    for (auto& buffer : _buffers) {
+        auto buf = buffer.buffer();
+        vkFreeCommandBuffers(_device->context().device(), _pool, 1, &buf);
+    }
+    vkDestroyCommandPool(_device->context().device(), _pool, nullptr);
+    _pool = VK_NULL_HANDLE;
 }

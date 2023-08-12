@@ -20,6 +20,8 @@ namespace cala::backend::vulkan {
 
         CommandBuffer& getBuffer();
 
+        void destroy();
+
     private:
 
         Device* _device;
