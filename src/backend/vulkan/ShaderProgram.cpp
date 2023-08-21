@@ -127,7 +127,10 @@ std::vector<u32> compileShader(const std::string& name, const std::string& sourc
     shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(source, kind, name.c_str(), options);
 
     if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
-        ende::log::error("Failed to compile shader: \nNumber of errors: {}\nNumber of warnings: {}\n{}", module.GetNumErrors(), module.GetNumWarnings(), module.GetErrorMessage());
+        auto numErrors = module.GetNumErrors();
+        auto numWarnings = module.GetNumWarnings();
+        auto errorMessage = module.GetErrorMessage();
+        ende::log::error("Failed to compile shader: \nNumber of errors: {}\nNumber of warnings: {}\n{}", numErrors, numWarnings, errorMessage);
         return {};
     }
     return { module.cbegin(), module.cend() };
