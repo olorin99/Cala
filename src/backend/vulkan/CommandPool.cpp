@@ -53,5 +53,6 @@ void cala::backend::vulkan::CommandPool::destroy() {
         vkFreeCommandBuffers(_device->context().device(), _pool, 1, &buf);
     }
     vkDestroyCommandPool(_device->context().device(), _pool, nullptr);
+    _buffers.clear();
     _pool = VK_NULL_HANDLE;
 }
