@@ -4,6 +4,21 @@
 
 Cala is the Quenya word for light so this project is a simulatio of light.
 
+### Dependencies
+- SDL2 - windowing system
+- assimp
+- shaderc - glsl compilation
+
+
+- spirv-cross - spirv reflection
+- imgui - gui
+- Ende - some common functionality
+- stb_image - image loader
+- tiny_gltf - gltf loader
+- vma - vulkan memory allocator
+- nlohmann json - json parser
+- tsl - robin hash map
+
 ### Features:
 - [x] Linux support
 - [ ] Windows support
