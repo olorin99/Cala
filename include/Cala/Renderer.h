@@ -33,6 +33,7 @@ namespace cala {
             bool debugNormals = false;
             bool debugRoughness = false;
             bool debugMetallic = false;
+            bool debugWorldPos = false;
         };
 
         Renderer(Engine* engine, Settings settings);

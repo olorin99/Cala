@@ -84,7 +84,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         *static_cast<u32*>(mapped.address) = scene._renderables.size();
     }
 
-    bool debugViewEnabled = _renderSettings.debugNormals || _renderSettings.debugRoughness || _renderSettings.debugMetallic;
+    bool debugViewEnabled = _renderSettings.debugNormals || _renderSettings.debugRoughness || _renderSettings.debugMetallic || _renderSettings.debugWorldPos;
 
     backend::vulkan::CommandBuffer& cmd = *_frameInfo.cmd;
 
@@ -400,6 +400,44 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     continue;
                 cmd.bindProgram(program);
                 cmd.bindBuffer(2, 0, _engine->_materials[material].buffer(), true);
+                cmd.bindPipeline();
+                cmd.bindDescriptors();
+                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
+            }
+        });
+    }
+
+    if (_renderSettings.debugWorldPos) {
+        auto& debugWorldPos = _graph.addPass("debug_worldPos");
+
+        debugWorldPos.addColourAttachment("backbuffer");
+        debugWorldPos.addDepthAttachment("depth");
+
+        debugWorldPos.addStorageBufferRead("drawCommands");
+        debugWorldPos.addStorageBufferRead("materialCounts");
+        debugWorldPos.addStorageBufferRead("transforms");
+        debugWorldPos.addStorageBufferRead("meshData");
+
+        debugWorldPos.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            auto meshData = graph.getResource<BufferResource>("meshData");
+            auto transforms = graph.getResource<BufferResource>("transforms");
+            auto drawCommands = graph.getResource<BufferResource>("drawCommands");
+            auto materialCounts = graph.getResource<BufferResource>("materialCounts");
+            cmd.clearDescriptors();
+            cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
+            auto& renderable = scene._renderables[0].second.first;
+
+            cmd.bindBindings(renderable.bindings);
+            cmd.bindAttributes(renderable.attributes);
+//            cmd.bindProgram(_engine->_normalsDebugProgram);
+            cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
+            cmd.bindRasterState({});
+            cmd.bindBuffer(4, 0, transforms->handle, true);
+//            cmd.bindPipeline();
+            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
+            cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
+            for (u32 material = 0; material < scene._materialCounts.size(); material++) {
+                cmd.bindProgram(_engine->_worldPosDebugProgram);
                 cmd.bindPipeline();
                 cmd.bindDescriptors();
                 cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);

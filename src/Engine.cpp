@@ -111,6 +111,12 @@ cala::Engine::Engine(backend::Platform &platform)
             { "../../res/shaders/debug/clusters_debug.frag"_path, backend::ShaderStage::FRAGMENT }
         });
     }
+    {
+        _worldPosDebugProgram = loadProgram({
+            { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
+            { "../../res/shaders/default/world_pos.frag"_path, backend::ShaderStage::FRAGMENT }
+        });
+    }
     _device.setBindlessSetIndex(0);
     {
         _normalsDebugProgram = loadProgram({
