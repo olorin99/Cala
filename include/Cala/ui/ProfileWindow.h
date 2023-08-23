@@ -18,8 +18,11 @@ namespace cala::ui {
         Engine* _engine;
         Renderer* _renderer;
 
-        std::array<f32, 60> _globalTime;
+        std::array<std::pair<f32, f32>, 60> _globalTime;
         tsl::robin_map<const char*, std::array<f32, 60>> _times;
+
+        f32 _cpuAvg;
+        f32 _gpuAvg;
 
     };
 
