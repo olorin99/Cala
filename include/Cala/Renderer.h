@@ -29,6 +29,7 @@ namespace cala {
             bool freezeFrustum = false;
             bool ibl = false;
 
+            bool debugUnlit = false;
             bool debugClusters = false;
             bool debugNormals = false;
             bool debugRoughness = false;

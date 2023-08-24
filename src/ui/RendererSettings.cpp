@@ -28,6 +28,7 @@ void cala::ui::RendererSettingsWindow::render() {
     ImGui::Checkbox("\tRoughness", &rendererSettings.debugRoughness);
     ImGui::Checkbox("\tMetallic", &rendererSettings.debugMetallic);
     ImGui::Checkbox("\tWorldPos", &rendererSettings.debugWorldPos);
+    ImGui::Checkbox("\tUnlit", &rendererSettings.debugUnlit);
 
     f32 gamma = _renderer->getGamma();
     if (ImGui::SliderFloat("Gamma", &gamma, 0, 5))

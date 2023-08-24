@@ -84,7 +84,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         *static_cast<u32*>(mapped.address) = scene._renderables.size();
     }
 
-    bool debugViewEnabled = _renderSettings.debugNormals || _renderSettings.debugRoughness || _renderSettings.debugMetallic || _renderSettings.debugWorldPos;
+    bool debugViewEnabled = _renderSettings.debugNormals || _renderSettings.debugRoughness || _renderSettings.debugMetallic || _renderSettings.debugWorldPos || _renderSettings.debugUnlit;
 
     backend::vulkan::CommandBuffer& cmd = *_frameInfo.cmd;
 
@@ -300,12 +300,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
             cmd.bindBindings(renderable.bindings);
             cmd.bindAttributes(renderable.attributes);
-//            cmd.bindProgram(_engine->_normalsDebugProgram);
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd.bindRasterState({});
             cmd.bindBuffer(2, 1, meshData->handle, true);
             cmd.bindBuffer(4, 0, transforms->handle, true);
-//            cmd.bindPipeline();
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
@@ -343,12 +341,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
             cmd.bindBindings(renderable.bindings);
             cmd.bindAttributes(renderable.attributes);
-//            cmd.bindProgram(_engine->_normalsDebugProgram);
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd.bindRasterState({});
             cmd.bindBuffer(2, 1, meshData->handle, true);
             cmd.bindBuffer(4, 0, transforms->handle, true);
-//            cmd.bindPipeline();
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
@@ -386,16 +382,55 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
             cmd.bindBindings(renderable.bindings);
             cmd.bindAttributes(renderable.attributes);
-//            cmd.bindProgram(_engine->_normalsDebugProgram);
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd.bindRasterState({});
             cmd.bindBuffer(2, 1, meshData->handle, true);
             cmd.bindBuffer(4, 0, transforms->handle, true);
-//            cmd.bindPipeline();
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
-                auto program = _engine->_materials[material].getVariant(Material::Variant::METALNESS);
+                auto program = _engine->_materials[material].getVariant(Material::Variant::METALLIC);
+                if (!program)
+                    continue;
+                cmd.bindProgram(program);
+                cmd.bindBuffer(2, 0, _engine->_materials[material].buffer(), true);
+                cmd.bindPipeline();
+                cmd.bindDescriptors();
+                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
+            }
+        });
+    }
+
+    if (_renderSettings.debugUnlit) {
+        auto& debugUnlit = _graph.addPass("debug_unlit");
+
+        debugUnlit.addColourAttachment("backbuffer");
+        debugUnlit.addDepthAttachment("depth");
+
+        debugUnlit.addStorageBufferRead("drawCommands");
+        debugUnlit.addStorageBufferRead("materialCounts");
+        debugUnlit.addStorageBufferRead("transforms");
+        debugUnlit.addStorageBufferRead("meshData");
+
+        debugUnlit.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            auto meshData = graph.getResource<BufferResource>("meshData");
+            auto transforms = graph.getResource<BufferResource>("transforms");
+            auto drawCommands = graph.getResource<BufferResource>("drawCommands");
+            auto materialCounts = graph.getResource<BufferResource>("materialCounts");
+            cmd.clearDescriptors();
+            cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
+            auto& renderable = scene._renderables[0].second.first;
+
+            cmd.bindBindings(renderable.bindings);
+            cmd.bindAttributes(renderable.attributes);
+            cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
+            cmd.bindRasterState({});
+            cmd.bindBuffer(2, 1, meshData->handle, true);
+            cmd.bindBuffer(4, 0, transforms->handle, true);
+            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
+            cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
+            for (u32 material = 0; material < scene._materialCounts.size(); material++) {
+                auto program = _engine->_materials[material].getVariant(Material::Variant::UNLIT);
                 if (!program)
                     continue;
                 cmd.bindProgram(program);
@@ -571,133 +606,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             }
         }
     });
-
-//    auto& directShadow = _graph.addPass("direct_shadow");
-//    directShadow.addImageOutput("direct_depth", directDepth);
-//    directShadow.addBufferInput("transforms");
-//    directShadow.addBufferInput("meshData");
-////    directShadow.addBufferOutput("drawCommands");
-//
-//    directShadow.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-//        auto transforms = graph.getResource<BufferResource>("transforms");
-//        auto meshData = graph.getResource<BufferResource>("meshData");
-//        auto drawCommands = graph.getResource<BufferResource>("drawCommands");
-//        for (u32 i = 0; i < scene._lights.size(); i++) {
-//            auto& light = scene._lights[i].second;
-//            if (light.shadowing() && light.type() == Light::LightType::DIRECTIONAL) {
-//                light.camera().updateFrustum();
-//                auto& shadowFrustum = light.camera().frustum();
-//
-//                cmd.clearDescriptors();
-//                cmd.bindProgram(_engine->_directShadowCullProgram);
-//                cmd.bindBindings(nullptr);
-//                cmd.bindAttributes(nullptr);
-//                cmd.pushConstants({ &shadowFrustum, sizeof(shadowFrustum) });
-//                cmd.bindBuffer(2, 0, transforms->handle, true);
-//                cmd.bindBuffer(2, 1, meshData->handle, true);
-//                cmd.bindBuffer(2, 2, drawCommands->handle, true);
-//                cmd.bindBuffer(2, 3, _drawCountBuffer[_engine->device().frameIndex()], true);
-//                cmd.bindPipeline();
-//                cmd.bindDescriptors();
-//                cmd.dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
-//
-//                cmd.begin(*_shadowFramebuffer);
-//                cmd.clearDescriptors();
-//
-//                cmd.bindRasterState({ backend::CullMode::FRONT });
-//                cmd.bindDepthState({ true, true, backend::CompareOp::LESS_EQUAL });
-//
-//                cmd.bindProgram(_engine->_directShadowProgram);
-//
-//                cmd.bindBuffer(4, 0, transforms->handle, true);
-//                struct ShadowData {
-//                    ende::math::Mat4f viewProjection;
-//                    ende::math::Vec3f position;
-//                    f32 near;
-//                    f32 far;
-//                };
-//                ShadowData shadowData {
-//                        light.camera().viewProjection(),
-//                        light.camera().transform().pos(),
-//                        light.camera().near(),
-//                        light.camera().far()
-//                };
-//                cmd.pushConstants({ &shadowData, sizeof(shadowData) });
-//
-//                auto& renderable = scene._renderables[0].second.first;
-//                cmd.bindBindings(renderable.bindings);
-//                cmd.bindAttributes(renderable.attributes);
-//
-//                cmd.bindPipeline();
-//                cmd.bindDescriptors();
-//                cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
-//                cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
-//                cmd.drawIndirectCount(drawCommands->handle, 0, _drawCountBuffer[_engine->device().frameIndex()], 0, scene._renderables.size());
-//
-//                cmd.end(*_shadowFramebuffer);
-//
-////                f32 cascadeSplits[3];
-////                f32 nearClip = light.getNear();
-////                f32 farClip = light.getFar();
-////                f32 clipRange = farClip - nearClip;
-////
-////                f32 minZ = nearClip;
-////                f32 maxZ = nearClip + clipRange;
-////                f32 range = maxZ - minZ;
-////                f32 ratio = maxZ / minZ;
-////
-////                for (u32 j = 0; j < 3; j++) {
-////                    f32 p = (j + 1) / 3.f;
-////                    f32 log = minZ * std::pow(ratio, p);
-////                    f32 uniform = minZ + range * p;
-////                    f32 d = 0.95 * (log - uniform) + uniform;
-////                    cascadeSplits[j] = (d - nearClip) / clipRange;
-////                }
-////
-////                f32 lastSplitDist = 0.0;
-////
-////                for (u32 j = 0; j < 3; j++) {
-////                    f32 splitDist = cascadeSplits[j];
-////                    ende::math::Vec3f frustumCorners[8] = {
-////                            {-1, 1, -1},
-////                            {1, 1, -1},
-////                            {1, -1, -1},
-////                            {-1, -1, -1},
-////                            {-1, 1, 1},
-////                            {1, 1, 1},
-////                            {1, -1, 1},
-////                            {-1, -1, 1}
-////                    };
-////                    auto camInv = camera.viewProjection().inverse();
-////                    for (u32 k = 0; k < 4; k++) {
-////                        auto dist = frustumCorners[k + 4] - frustumCorners[k];
-////                        frustumCorners[k + 4] = frustumCorners[k] + (dist * splitDist);
-////                        frustumCorners[k] = frustumCorners[k] + (dist * lastSplitDist);
-////                    }
-////
-////                    ende::math::Vec3f frustumCenter{0, 0, 0};
-////                    for (u32 k = 0; k < 8; k++) {
-////                        frustumCenter = frustumCenter + frustumCorners[k];
-////                    }
-////                    frustumCenter = frustumCenter / 8.f;
-////                    f32 radius = 0.;
-////                    for (u32 k = 0; k < 8; k++) {
-////                        f32 distance = (frustumCorners[k] - frustumCenter).length();
-////                        radius = std::max(radius, distance);
-////                    }
-////                    radius = std::ceil(radius * 16) / 16;
-////                    ende::math::Vec3f maxExtents{radius, radius, radius};
-////                    ende::math::Vec3f minExtents = maxExtents * -1;
-////
-////                    ende::math::Vec3f lightDir = light.transform().rot().front().unit();
-////
-////                }
-//
-//            }
-//        }
-//
-//
-//    });
 
 
     auto& cullPass = _graph.addPass("cull");

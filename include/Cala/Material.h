@@ -50,7 +50,7 @@ namespace cala {
             UNLIT,
             NORMAL,
             ROUGHNESS,
-            METALNESS,
+            METALLIC,
             MAX
         };
 

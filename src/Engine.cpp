@@ -384,27 +384,28 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
 
     nlohmann::json materialSource = nlohmann::json::parse(source);
 
-    auto macroize = [](std::string& str) {
+    auto macroize = [](const std::string& str) -> std::string {
+        std::string result = str;
         size_t index = 0;
         size_t last = 0;
 
-        while ((index = str.find('\n', index)) != std::string::npos) {
-            str.insert(index++, "\\");
+        while ((index = result.find('\n', index)) != std::string::npos) {
+            result.insert(index++, "\\");
             last = ++index;
         }
+        return result;
     };
 
     Material* material = createMaterial(size);
 
-    std::string materialData = materialSource["materialData"];
-    std::string materialDefinition = materialSource["materialDefinition"];
-    std::string materialLoad = materialSource["materialLoad"];
-    std::string materialEval = materialSource["materialEval"];
-
-    macroize(materialData);
-    macroize(materialDefinition);
-    macroize(materialLoad);
-    macroize(materialEval);
+    std::string materialData = macroize(materialSource["materialData"]);
+    std::string materialDefinition = macroize(materialSource["materialDefinition"]);
+    std::string materialLoad = macroize(materialSource["materialLoad"]);
+    std::string litEval = macroize(materialSource["lit"]);
+    std::string unlitEval = macroize(materialSource["unlit"]);
+    std::string normalEval = macroize(materialSource["normal"]);
+    std::string roughnessEval = macroize(materialSource["roughness"]);
+    std::string metallicEval = macroize(materialSource["metallic"]);
 
     backend::vulkan::ProgramHandle litHandle = loadProgram({
         { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
@@ -412,40 +413,51 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
             { "MATERIAL_DATA", materialData },
             { "MATERIAL_DEFINITION", materialDefinition },
             { "MATERIAL_LOAD", materialLoad },
-            { "MATERIAL_EVAL", materialEval },
+            { "MATERIAL_EVAL", litEval },
         } }
     });
     material->setVariant(Material::Variant::LIT, litHandle);
 
-    backend::vulkan::ProgramHandle normalsHandle = loadProgram({
+    backend::vulkan::ProgramHandle unlitHandle = loadProgram({
         { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-        { "../../res/shaders/default/normals.frag"_path, backend::ShaderStage::FRAGMENT, {
+        { "../../res/shaders/default/lit.frag"_path, backend::ShaderStage::FRAGMENT, {
             { "MATERIAL_DATA", materialData },
             { "MATERIAL_DEFINITION", materialDefinition },
             { "MATERIAL_LOAD", materialLoad },
-            { "MATERIAL_EVAL", materialEval },
+            { "MATERIAL_EVAL", unlitEval },
+            } }
+    });
+    material->setVariant(Material::Variant::UNLIT, unlitHandle);
+
+    backend::vulkan::ProgramHandle normalsHandle = loadProgram({
+        { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
+        { "../../res/shaders/default/lit.frag"_path, backend::ShaderStage::FRAGMENT, {
+            { "MATERIAL_DATA", materialData },
+            { "MATERIAL_DEFINITION", materialDefinition },
+            { "MATERIAL_LOAD", materialLoad },
+            { "MATERIAL_EVAL", normalEval },
         } }
     });
     material->setVariant(Material::Variant::NORMAL, normalsHandle);
 
     backend::vulkan::ProgramHandle metallicHandle = loadProgram({
         { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-        { "../../res/shaders/default/metallic.frag"_path, backend::ShaderStage::FRAGMENT, {
+        { "../../res/shaders/default/lit.frag"_path, backend::ShaderStage::FRAGMENT, {
             { "MATERIAL_DATA", materialData },
             { "MATERIAL_DEFINITION", materialDefinition },
             { "MATERIAL_LOAD", materialLoad },
-            { "MATERIAL_EVAL", materialEval },
+            { "MATERIAL_EVAL", metallicEval },
         } }
     });
-    material->setVariant(Material::Variant::METALNESS, metallicHandle);
+    material->setVariant(Material::Variant::METALLIC, metallicHandle);
 
     backend::vulkan::ProgramHandle roughnessHandle = loadProgram({
         { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-        { "../../res/shaders/default/roughness.frag"_path, backend::ShaderStage::FRAGMENT, {
+        { "../../res/shaders/default/lit.frag"_path, backend::ShaderStage::FRAGMENT, {
             { "MATERIAL_DATA", materialData },
             { "MATERIAL_DEFINITION", materialDefinition },
             { "MATERIAL_LOAD", materialLoad },
-            { "MATERIAL_EVAL", materialEval },
+            { "MATERIAL_EVAL", roughnessEval },
         } }
     });
     material->setVariant(Material::Variant::ROUGHNESS, roughnessHandle);
