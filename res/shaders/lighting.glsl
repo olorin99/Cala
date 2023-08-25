@@ -26,9 +26,10 @@ vec3 pointLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 al
 
     float distanceSqared = dot(lightVec, lightVec);
     float rangeSquared = light.shadowRange * light.shadowRange;
-    float dpr = distanceSqared / max(0.0001, rangeSquared);
-    dpr *= dpr;
-    float attenuation = clamp(1 - dpr, 0, 1.0) / max(0.0001, distanceSqared);
+//    float dpr = distanceSqared / max(0.0001, rangeSquared);
+//    dpr *= dpr;
+//    float attenuation = clamp(1 - dpr, 0, 1.0) / max(0.0001, distanceSqared);
+    float attenuation = 1.0 / distanceSqared;
 
     vec3 H = normalize(V + L);
     vec3 radiance = light.colour * light.intensity * attenuation;
@@ -44,7 +45,10 @@ vec3 pointLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 al
     vec3 kS = F;
     vec3 kD = vec3(1.0) - kS;
     kD *= 1.0 - metallic;
-    //    return vec3(NdotL);
-    //    return L;
+
+//    return normal;
+//    return vec3(NdotL);
+//    return L;
+//    return ((L + vec3(1.0)) / 2);
     return (kD * albedo / PI + specular) * radiance * NdotL * shadow;
 }

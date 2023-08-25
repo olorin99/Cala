@@ -35,6 +35,9 @@ namespace cala {
             bool debugRoughness = false;
             bool debugMetallic = false;
             bool debugWorldPos = false;
+            bool debugWireframe = false;
+            std::array<f32, 4> wireframeColour = { 1.f, 1.f, 1.f, 1.f };
+            f32 wireframeThickness = 1.f;
         };
 
         Renderer(Engine* engine, Settings settings);

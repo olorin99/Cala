@@ -119,6 +119,12 @@ cala::Engine::Engine(backend::Platform &platform)
     }
     _device.setBindlessSetIndex(0);
     {
+        _solidColourProgram = loadProgram({
+            { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
+            { "../../res/shaders/solid_colour.frag"_path, backend::ShaderStage::FRAGMENT }
+        });
+    }
+    {
         _normalsDebugProgram = loadProgram({
             { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
             { "../../res/shaders/debug/normals.frag"_path, backend::ShaderStage::FRAGMENT }
