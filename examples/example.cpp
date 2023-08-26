@@ -69,9 +69,16 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
     loader.LoadASCIIFromFile(&model, &err, &warn, *path);
 
     ende::Vector<ImageHandle> images;
+    images.resize(model.images.size());
 
-    for (u32 i = 0; i < model.images.size(); i++) {
-        tinygltf::Image& image = model.images[i];
+    auto loadImage = [&](tinygltf::Material& material, const std::string& name, backend::Format format) {
+        u32 index = 0;
+        if (auto it = material.values.find(name); it != material.values.end()) {
+            index = model.textures[it->second.TextureIndex()].source;//it->second.TextureIndex();
+        } else if (auto it1 = material.additionalValues.find(name); it1 != material.additionalValues.end()) {
+            index = model.textures[it1->second.TextureIndex()].source;//it1->second.TextureIndex();
+        }
+        tinygltf::Image& image = model.images[index];
         u8* buf = nullptr;
         u32 bufferSize = 0;
         bool del = false;
@@ -91,19 +98,20 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
             bufferSize = image.image.size();
         }
         u32 mips = std::floor(std::log2(std::max(image.width, image.height))) + 1;
-        images.push(engine->device().createImage({
+        images[index] = engine->device().createImage({
             (u32)image.width, (u32)image.height, 1,
-            Format::RGBA8_SRGB,
+            format,
             mips, 1,
             ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST | ImageUsage::TRANSFER_SRC
-        }))->data(engine->device(), {
+        });
+        images[index]->data(engine->device(), {
             0, (u32)image.width, (u32)image.height, 1, 4,
             { buf, bufferSize}
         });
-        images.back()->generateMips();
+        images[index]->generateMips();
         if (del)
             delete buf;
-    }
+    };
 
     ende::Vector<MaterialInstance> materials;
     struct PbrMat {
@@ -116,15 +124,18 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
         tinygltf::Material& material1 = model.materials[i];
         PbrMat mat{};
         if (auto it = material1.values.find("baseColorTexture"); it != material1.values.end()) {
-            images[model.textures[it->second.TextureIndex()].source].index();
+            loadImage(material1, "baseColorTexture", Format::RGBA8_SRGB);
             mat.albedoIndex = images[model.textures[it->second.TextureIndex()].source].index();
         }
         if (auto it = material1.values.find("normalTexture"); it != material1.values.end()) {
+            loadImage(material1, "normalTexture", Format::RGBA8_UNORM);
             mat.normalIndex = images[model.textures[it->second.TextureIndex()].source].index();
         } else if (auto it1 = material1.additionalValues.find("normalTexture"); it1 != material1.additionalValues.end()) {
+            loadImage(material1, "normalTexture", Format::RGBA8_UNORM);
             mat.normalIndex = images[model.textures[it1->second.TextureIndex()].source].index();
         }
         if (auto it = material1.values.find("metallicRoughnessTexture"); it != material1.values.end()) {
+            loadImage(material1, "metallicRoughnessTexture", Format::RGBA8_UNORM);
             mat.metallicRoughnessIndex = images[model.textures[it->second.TextureIndex()].source].index();
         }
         MaterialInstance instance = material->instance();
