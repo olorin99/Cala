@@ -1,92 +1,24 @@
-#version 460
+vec4 evalMaterial(Material material) {
 
-#extension GL_EXT_nonuniform_qualifier : enable
-#extension GL_GOOGLE_include_directive : enable
+    vec3 viewPos = fsIn.ViewPos;
+    vec3 V = normalize(viewPos - fsIn.FragPos);
 
-layout (location = 0) in VsOut {
-    vec3 FragPos;
-    vec2 TexCoords;
-    mat3 TBN;
-    vec3 ViewPos;
-    flat uint drawID;
-} fsIn;
+    vec3 F0 = vec3(0.04);
+    F0 = mix(F0, material.albedo, material.metallic);
+    vec3 Lo = vec3(0.0);
 
-layout (location = 0) out vec4 FragColour;
+    uint tileIndex = getTileIndex();
 
-layout (set = 0, binding = 0) uniform samplerCube cubeMaps[];
-layout (set = 0, binding = 0) uniform sampler2D textureMaps[];
+    uint lightCount = lightGrid[tileIndex].count;
+    uint lightOffset = lightGrid[tileIndex].offset;
 
-struct CameraData {
-    mat4 projection;
-    mat4 view;
-    vec3 position;
-    float near;
-    float far;
-    float exposure;
-};
+    for (uint i = 0; i < lightCount; i++) {
+        Light light = lights[globalLightIndices[lightOffset + i]];
+        Lo += pointLight(light, material.normal, viewPos, V, F0, material.albedo, material.roughness, material.metallic);
+    }
 
-layout (set = 1, binding = 0) uniform FrameData {
-    CameraData camera;
-};
+    vec3 ambient = getAmbient(irradianceIndex, prefilteredIndex, brdfIndex, material.normal, V, F0, material.albedo, material.roughness, material.metallic);
+    vec3 colour = (ambient + Lo);
 
-layout (push_constant) uniform IBLData {
-    uvec4 tileSizes;
-    uvec2 screenSize;
-    int irradianceIndex;
-    int prefilteredIndex;
-    int brdfIndex;
-};
-
-#include "pbr.glsl"
-#include "shadow.glsl"
-#include "lighting.glsl"
-#include "util.glsl"
-
-struct LightGrid {
-    uint offset;
-    uint count;
-};
-
-layout (set = 2, binding = 2) buffer LightGridSSBO {
-    LightGrid lightGrid[];
-};
-
-layout (set = 2, binding = 3) buffer LightIndices {
-    uint globalLightIndices[];
-};
-
-layout (set = 3, binding = 0) readonly buffer LightData {
-    Light lights[];
-};
-
-MATERIAL_DATA;
-
-MATERIAL_DEFINITION;
-
-MATERIAL_LOAD;
-
-MATERIAL_EVAL;
-
-layout (set = 2, binding = 0) readonly buffer MatData {
-    MaterialData materials[];
-};
-
-struct Mesh {
-    uint firstIndex;
-    uint indexCount;
-    uint materialIndex;
-    uint materialInstanceIndex;
-    vec4 min;
-    vec4 max;
-};
-
-layout (set = 2, binding = 1) readonly buffer MeshData {
-    Mesh meshData[];
-};
-
-void main() {
-    Mesh mesh = meshData[fsIn.drawID];
-    MaterialData materialData = materials[mesh.materialInstanceIndex];
-    Material material = loadMaterial(materialData);
-    FragColour = evalMaterial(material);
+    return vec4(colour, 1.0);
 }

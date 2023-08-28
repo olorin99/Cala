@@ -382,6 +382,34 @@ cala::Material *cala::Engine::createMaterial(u32 size) {
     return &_materials.back();
 }
 
+std::string macroize(const std::string& str) {
+    std::string result = str;
+    size_t index = 0;
+    size_t last = 0;
+
+    while ((index = result.find('\n', index)) != std::string::npos) {
+        result.insert(index++, "\\");
+        last = ++index;
+    }
+    return result;
+}
+
+std::optional<std::string> loadMaterialString(nlohmann::json& json, std::string_view label) {
+    auto it = json.find(label);
+    if (it == json.end())
+        return {};
+    if (it->is_object()) {
+        auto path = it->find("path");
+        if (path == it.value().end())
+            return {};
+        ende::fs::File file;
+        if (!file.open("../../res/shaders/" + path->get<std::string>()))
+            return {};
+        return macroize(file.read());
+    }
+    return macroize(it.value());
+}
+
 cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size) {
     ende::fs::File file;
     if (!file.open(path, ende::fs::in | ende::fs::binary))
@@ -391,32 +419,20 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
 
     nlohmann::json materialSource = nlohmann::json::parse(source);
 
-    auto macroize = [](const std::string& str) -> std::string {
-        std::string result = str;
-        size_t index = 0;
-        size_t last = 0;
-
-        while ((index = result.find('\n', index)) != std::string::npos) {
-            result.insert(index++, "\\");
-            last = ++index;
-        }
-        return result;
-    };
-
     Material* material = createMaterial(size);
 
-    std::string materialData = macroize(materialSource["materialData"]);
-    std::string materialDefinition = macroize(materialSource["materialDefinition"]);
-    std::string materialLoad = macroize(materialSource["materialLoad"]);
-    std::string litEval = macroize(materialSource["lit"]);
-    std::string unlitEval = macroize(materialSource["unlit"]);
-    std::string normalEval = macroize(materialSource["normal"]);
-    std::string roughnessEval = macroize(materialSource["roughness"]);
-    std::string metallicEval = macroize(materialSource["metallic"]);
+    std::string materialData = loadMaterialString(materialSource, "materialData").value();
+    std::string materialDefinition = loadMaterialString(materialSource, "materialDefinition").value();
+    std::string materialLoad = loadMaterialString(materialSource, "materialLoad").value();
+    std::string litEval = loadMaterialString(materialSource, "lit").value();
+    std::string unlitEval = loadMaterialString(materialSource, "unlit").value();
+    std::string normalEval = loadMaterialString(materialSource, "normal").value();
+    std::string roughnessEval = loadMaterialString(materialSource, "roughness").value();
+    std::string metallicEval = loadMaterialString(materialSource, "metallic").value();
 
     backend::vulkan::ProgramHandle litHandle = loadProgram({
         { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-        { "../../res/shaders/default/lit.frag"_path, backend::ShaderStage::FRAGMENT, {
+        { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
             { "MATERIAL_DATA", materialData },
             { "MATERIAL_DEFINITION", materialDefinition },
             { "MATERIAL_LOAD", materialLoad },
@@ -427,7 +443,7 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
 
     backend::vulkan::ProgramHandle unlitHandle = loadProgram({
         { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-        { "../../res/shaders/default/lit.frag"_path, backend::ShaderStage::FRAGMENT, {
+        { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
             { "MATERIAL_DATA", materialData },
             { "MATERIAL_DEFINITION", materialDefinition },
             { "MATERIAL_LOAD", materialLoad },
@@ -438,7 +454,7 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
 
     backend::vulkan::ProgramHandle normalsHandle = loadProgram({
         { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-        { "../../res/shaders/default/lit.frag"_path, backend::ShaderStage::FRAGMENT, {
+        { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
             { "MATERIAL_DATA", materialData },
             { "MATERIAL_DEFINITION", materialDefinition },
             { "MATERIAL_LOAD", materialLoad },
@@ -449,7 +465,7 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
 
     backend::vulkan::ProgramHandle metallicHandle = loadProgram({
         { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-        { "../../res/shaders/default/lit.frag"_path, backend::ShaderStage::FRAGMENT, {
+        { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
             { "MATERIAL_DATA", materialData },
             { "MATERIAL_DEFINITION", materialDefinition },
             { "MATERIAL_LOAD", materialLoad },
@@ -460,7 +476,7 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
 
     backend::vulkan::ProgramHandle roughnessHandle = loadProgram({
         { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-        { "../../res/shaders/default/lit.frag"_path, backend::ShaderStage::FRAGMENT, {
+        { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
             { "MATERIAL_DATA", materialData },
             { "MATERIAL_DEFINITION", materialDefinition },
             { "MATERIAL_LOAD", materialLoad },
