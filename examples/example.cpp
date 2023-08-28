@@ -369,14 +369,6 @@ int main() {
     ui::ResourceViewer resourceViewer(&engine.device());
 
 
-    //Shaders
-
-    ProgramHandle pbrTestProgram = engine.loadProgram({
-        { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-        { "../../res/shaders/pbr_test.frag"_path, backend::ShaderStage::FRAGMENT }
-    });
-
-
     struct Material1Data {
         i32 albedoIndex = -1;
         i32 normalIndex = -1;
@@ -384,9 +376,7 @@ int main() {
         f32 metallness = 0;
         f32 roughness = 0;
     };
-    Material* material = engine.createMaterial<Material1Data>();
-    material->setVariant(Material::Variant::LIT, pbrTestProgram);
-    material->setDepthState({ true, true, CompareOp::LESS_EQUAL });
+    Material* material = engine.loadMaterial<Material1Data>("../../res/materials/expanded_pbr.mat"_path);
 
     struct MaterialData {
         i32 albedoIndex = -1;
@@ -395,7 +385,6 @@ int main() {
     };
 
     Material* material1 = engine.loadMaterial<MaterialData>("../../res/materials/pbr.mat"_path);
-    material1->setDepthState({ true, true, CompareOp::LESS_EQUAL });
 
     Transform sponzaTransform;
 

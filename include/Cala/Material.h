@@ -37,6 +37,10 @@ namespace cala {
 
         backend::vulkan::CommandBuffer::DepthState getDepthState() const { return _depthState; }
 
+        void setBlendState(backend::vulkan::CommandBuffer::BlendState state) { _blendState = state; }
+
+        backend::vulkan::CommandBuffer::BlendState getBlendState() const { return _blendState; }
+
         u32 size() const { return _setSize; }
 
         u32 id() const { return _id; }
@@ -67,6 +71,7 @@ namespace cala {
 
         backend::vulkan::CommandBuffer::RasterState _rasterState;
         backend::vulkan::CommandBuffer::DepthState _depthState;
+        backend::vulkan::CommandBuffer::BlendState _blendState;
 
         bool _dirty;
         ende::Vector<u8> _data;

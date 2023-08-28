@@ -410,6 +410,192 @@ std::optional<std::string> loadMaterialString(nlohmann::json& json, std::string_
     return macroize(it.value());
 }
 
+std::optional<cala::backend::vulkan::CommandBuffer::RasterState> loadMaterialRasterState(nlohmann::json& json) {
+    auto it = json.find("raster_state");
+    if (it == json.end() || !it->is_object())
+        return {};
+    auto cullModeIt = it->find("cullMode");
+    auto frontFaceIt = it->find("frontFace");
+    auto polygonModeIt = it->find("polygonMode");
+    auto lineWidthIt = it->find("lineWidth");
+    auto depthClampIt = it->find("depthClamp");
+    auto rasterDiscardIt = it->find("rasterDiscard");
+    auto depthBiasIt = it->find("depthBias");
+
+    cala::backend::vulkan::CommandBuffer::RasterState state{};
+
+    if (cullModeIt != it->end() || !cullModeIt->is_string()) {
+        std::string mode = cullModeIt->get<std::string>();
+        if (mode == "NONE")
+            state.cullMode = cala::backend::CullMode::NONE;
+        else if (mode == "FRONT")
+            state.cullMode = cala::backend::CullMode::FRONT;
+        else if (mode == "BACK")
+            state.cullMode = cala::backend::CullMode::BACK;
+        else if (mode == "FRONT_BACK")
+            state.cullMode = cala::backend::CullMode::FRONT_BACK;
+    }
+    if (frontFaceIt != it->end() || !frontFaceIt->is_string()) {
+        std::string face = frontFaceIt->get<std::string>();
+        if (face == "CCW")
+            state.frontFace = cala::backend::FrontFace::CCW;
+        else if (face == "CW")
+            state.frontFace = cala::backend::FrontFace::CW;
+    }
+    if (polygonModeIt != it->end() || !polygonModeIt->is_string()) {
+        std::string mode = polygonModeIt->get<std::string>();
+        if (mode == "FILL")
+            state.polygonMode = cala::backend::PolygonMode::FILL;
+        else if (mode == "LINE")
+            state.polygonMode = cala::backend::PolygonMode::LINE;
+        else if (mode == "POINT")
+            state.polygonMode = cala::backend::PolygonMode::POINT;
+    }
+    if (lineWidthIt != it->end() || !lineWidthIt->is_number_float())
+        state.lineWidth = lineWidthIt->get<f32>();
+    if (depthClampIt != it->end() || !depthClampIt->is_boolean())
+        state.depthClamp = depthClampIt->get<bool>();
+    if (rasterDiscardIt != it->end() || !rasterDiscardIt->is_boolean())
+        state.rasterDiscard = rasterDiscardIt->get<bool>();
+    if (depthBiasIt != it->end() || !depthBiasIt->is_boolean())
+        state.depthBias = depthBiasIt->get<bool>();
+
+    return state;
+}
+
+std::optional<cala::backend::vulkan::CommandBuffer::DepthState> loadMaterialDepthState(nlohmann::json& json) {
+    auto it = json.find("depth_state");
+    if (it == json.end() || !it->is_object())
+        return {};
+    auto testIt = it->find("test");
+    auto writeIt = it->find("write");
+    auto compareOpIt = it->find("compareOp");
+
+    cala::backend::vulkan::CommandBuffer::DepthState state{};
+
+    if (testIt != it->end() || !testIt->is_boolean())
+        state.test = testIt->get<bool>();
+    if (writeIt != it->end() || !writeIt->is_boolean())
+        state.write = writeIt->get<bool>();
+    if (compareOpIt != it->end() || !compareOpIt->is_string()) {
+        std::string comp = compareOpIt->get<std::string>();
+        if (comp == "NEVER")
+            state.compareOp = cala::backend::CompareOp::NEVER;
+        else if (comp == "LESS")
+            state.compareOp = cala::backend::CompareOp::LESS;
+        else if (comp == "EQUAL")
+            state.compareOp = cala::backend::CompareOp::EQUAL;
+        else if (comp == "LESS_EQUAL")
+            state.compareOp = cala::backend::CompareOp::LESS_EQUAL;
+        else if (comp == "GREATER")
+            state.compareOp = cala::backend::CompareOp::GREATER;
+        else if (comp == "NOT_EQUAL")
+            state.compareOp = cala::backend::CompareOp::NOT_EQUAL;
+        else if (comp == "GREATER_EQUAL")
+            state.compareOp = cala::backend::CompareOp::GREATER_EQUAL;
+        else if (comp == "ALWAYS")
+            state.compareOp = cala::backend::CompareOp::ALWAYS;
+    }
+    return state;
+}
+
+std::optional<cala::backend::vulkan::CommandBuffer::BlendState> loadMaterialBlendState(nlohmann::json& json) {
+    auto it = json.find("blend_state");
+    if (it == json.end() || !it->is_object())
+        return {};
+    auto blendIt = it->find("blend");
+    auto srcFactorIt = it->find("srcFactor");
+    auto dstFactorIt = it->find("dstFactor");
+
+    cala::backend::vulkan::CommandBuffer::BlendState state;
+
+    if (blendIt != it->end() || !blendIt->is_boolean())
+        state.blend = blendIt->get<bool>();
+    if (srcFactorIt != it->end() || !srcFactorIt->is_string()) {
+        std::string factor = srcFactorIt->get<std::string>();
+        if (factor == "ZERO")
+            state.srcFactor = cala::backend::BlendFactor::ZERO;
+        else if (factor == "ONE")
+            state.srcFactor = cala::backend::BlendFactor::ONE;
+        else if (factor == "SRC_COLOUR")
+            state.srcFactor = cala::backend::BlendFactor::SRC_COLOUR;
+        else if (factor == "ONE_MINUS_SRC_COLOUR")
+            state.srcFactor = cala::backend::BlendFactor::ONE_MINUS_SRC_COLOUR;
+        else if (factor == "DST_COLOUR")
+            state.srcFactor = cala::backend::BlendFactor::DST_COLOUR;
+        else if (factor == "ONE_MINUS_DST_COLOUR")
+            state.srcFactor = cala::backend::BlendFactor::ONE_MINUS_DST_COLOUR;
+        else if (factor == "SRC_ALPHA")
+            state.srcFactor = cala::backend::BlendFactor::SRC_ALPHA;
+        else if (factor == "ONE_MINUS_SRC_ALPHA")
+            state.srcFactor = cala::backend::BlendFactor::ONE_MINUS_SRC_ALPHA;
+        else if (factor == "DST_ALPHA")
+            state.srcFactor = cala::backend::BlendFactor::DST_ALPHA;
+        else if (factor == "ONE_MINUS_DST_ALPHA")
+            state.srcFactor = cala::backend::BlendFactor::ONE_MINUS_DST_ALPHA;
+        else if (factor == "CONSTANT_COLOUR")
+            state.srcFactor = cala::backend::BlendFactor::CONSTANT_COLOUR;
+        else if (factor == "ONE_MINUS_CONSTANT_COLOUR")
+            state.srcFactor = cala::backend::BlendFactor::ONE_MINUS_CONSTANT_COLOUR;
+        else if (factor == "CONSTANT_ALPHA")
+            state.srcFactor = cala::backend::BlendFactor::CONSTANT_ALPHA;
+        else if (factor == "ONE_MINUS_CONSTANT_ALPHA")
+            state.srcFactor = cala::backend::BlendFactor::ONE_MINUS_CONSTANT_ALPHA;
+        else if (factor == "SRC_ALPHA_SATURATE")
+            state.srcFactor = cala::backend::BlendFactor::SRC_ALPHA_SATURATE;
+        else if (factor == "SRC1_COLOUR")
+            state.srcFactor = cala::backend::BlendFactor::SRC1_COLOUR;
+        else if (factor == "ONE_MINUS_SRC1_COLOUR")
+            state.srcFactor = cala::backend::BlendFactor::ONE_MINUS_SRC1_COLOUR;
+        else if (factor == "SRC1_ALPHA")
+            state.srcFactor = cala::backend::BlendFactor::SRC1_ALPHA;
+        else if (factor == "ONE_MINUS_SRC1_ALPHA")
+            state.srcFactor = cala::backend::BlendFactor::ONE_MINUS_SRC1_ALPHA;
+    }
+    if (dstFactorIt != it->end() || !dstFactorIt->is_string()) {
+        std::string factor = dstFactorIt->get<std::string>();
+        if (factor == "ZERO")
+            state.dstFactor = cala::backend::BlendFactor::ZERO;
+        else if (factor == "ONE")
+            state.dstFactor = cala::backend::BlendFactor::ONE;
+        else if (factor == "SRC_COLOUR")
+            state.dstFactor = cala::backend::BlendFactor::SRC_COLOUR;
+        else if (factor == "ONE_MINUS_SRC_COLOUR")
+            state.dstFactor = cala::backend::BlendFactor::ONE_MINUS_SRC_COLOUR;
+        else if (factor == "DST_COLOUR")
+            state.dstFactor = cala::backend::BlendFactor::DST_COLOUR;
+        else if (factor == "ONE_MINUS_DST_COLOUR")
+            state.dstFactor = cala::backend::BlendFactor::ONE_MINUS_DST_COLOUR;
+        else if (factor == "SRC_ALPHA")
+            state.dstFactor = cala::backend::BlendFactor::SRC_ALPHA;
+        else if (factor == "ONE_MINUS_SRC_ALPHA")
+            state.dstFactor = cala::backend::BlendFactor::ONE_MINUS_SRC_ALPHA;
+        else if (factor == "DST_ALPHA")
+            state.dstFactor = cala::backend::BlendFactor::DST_ALPHA;
+        else if (factor == "ONE_MINUS_DST_ALPHA")
+            state.dstFactor = cala::backend::BlendFactor::ONE_MINUS_DST_ALPHA;
+        else if (factor == "CONSTANT_COLOUR")
+            state.dstFactor = cala::backend::BlendFactor::CONSTANT_COLOUR;
+        else if (factor == "ONE_MINUS_CONSTANT_COLOUR")
+            state.dstFactor = cala::backend::BlendFactor::ONE_MINUS_CONSTANT_COLOUR;
+        else if (factor == "CONSTANT_ALPHA")
+            state.dstFactor = cala::backend::BlendFactor::CONSTANT_ALPHA;
+        else if (factor == "ONE_MINUS_CONSTANT_ALPHA")
+            state.dstFactor = cala::backend::BlendFactor::ONE_MINUS_CONSTANT_ALPHA;
+        else if (factor == "SRC_ALPHA_SATURATE")
+            state.dstFactor = cala::backend::BlendFactor::SRC_ALPHA_SATURATE;
+        else if (factor == "SRC1_COLOUR")
+            state.dstFactor = cala::backend::BlendFactor::SRC1_COLOUR;
+        else if (factor == "ONE_MINUS_SRC1_COLOUR")
+            state.dstFactor = cala::backend::BlendFactor::ONE_MINUS_SRC1_COLOUR;
+        else if (factor == "SRC1_ALPHA")
+            state.dstFactor = cala::backend::BlendFactor::SRC1_ALPHA;
+        else if (factor == "ONE_MINUS_SRC1_ALPHA")
+            state.dstFactor = cala::backend::BlendFactor::ONE_MINUS_SRC1_ALPHA;
+    }
+    return state;
+}
+
 cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size) {
     ende::fs::File file;
     if (!file.open(path, ende::fs::in | ende::fs::binary))
@@ -429,6 +615,17 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
     std::string normalEval = loadMaterialString(materialSource, "normal").value();
     std::string roughnessEval = loadMaterialString(materialSource, "roughness").value();
     std::string metallicEval = loadMaterialString(materialSource, "metallic").value();
+
+
+    auto rasterState = loadMaterialRasterState(materialSource);
+    if (rasterState)
+        material->setRasterState(rasterState.value());
+    auto depthState = loadMaterialDepthState(materialSource);
+    if (depthState)
+        material->setDepthState(depthState.value());
+    auto blendState = loadMaterialBlendState(materialSource);
+    if (blendState)
+        material->setBlendState(blendState.value());
 
     backend::vulkan::ProgramHandle litHandle = loadProgram({
         { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
