@@ -30,12 +30,21 @@ void cala::ui::RendererSettingsWindow::render() {
     ImGui::Checkbox("\tWorldPos", &rendererSettings.debugWorldPos);
     ImGui::Checkbox("\tUnlit", &rendererSettings.debugUnlit);
     ImGui::Checkbox("\tWireframe", &rendererSettings.debugWireframe);
-    ImGui::SliderFloat("\tWireframe Thickness", &rendererSettings.wireframeThickness, 1, 20);
-    auto colour = rendererSettings.wireframeColour;
-    ImGui::ColorEdit3("\tWireframe Colour", &colour[0]);
-    ImGui::Text("Colour: { %f, %f, %fm %f }", colour[0], colour[1], colour[2], colour[3]);
-
-    rendererSettings.wireframeColour = colour;
+    if (rendererSettings.debugWireframe) {
+        ImGui::SliderFloat("\tWireframe Thickness", &rendererSettings.wireframeThickness, 1, 20);
+        auto colour = rendererSettings.wireframeColour;
+        ImGui::ColorEdit3("\tWireframe Colour", &colour[0]);
+        ImGui::Text("Colour: { %f, %f, %fm %f }", colour[0], colour[1], colour[2], colour[3]);
+        rendererSettings.wireframeColour = colour;
+    }
+    ImGui::Checkbox("\tNormal Lines", &rendererSettings.debugNormalLines);
+    if (rendererSettings.debugNormalLines) {
+        ImGui::SliderFloat("\tNormal Length", &rendererSettings.normalLength, 0.1, 1);
+        auto colour = rendererSettings.wireframeColour;
+        ImGui::ColorEdit3("\tWireframe Colour", &colour[0]);
+        ImGui::Text("Colour: { %f, %f, %fm %f }", colour[0], colour[1], colour[2], colour[3]);
+        rendererSettings.wireframeColour = colour;
+    }
 
     f32 gamma = _renderer->getGamma();
     if (ImGui::SliderFloat("Gamma", &gamma, 0, 5))

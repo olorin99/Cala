@@ -157,7 +157,7 @@ namespace cala::backend::vulkan {
 
         struct PipelineKey {
             u32 shaderCount = 0;
-            VkPipelineShaderStageCreateInfo shaders[2] = {};
+            VkPipelineShaderStageCreateInfo shaders[4] = {};
             bool compute = false;
             u32 bindingCount = 0;
             u32 attributeCount = 0;

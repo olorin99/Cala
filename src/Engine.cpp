@@ -127,7 +127,8 @@ cala::Engine::Engine(backend::Platform &platform)
     {
         _normalsDebugProgram = loadProgram({
             { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-            { "../../res/shaders/debug/normals.frag"_path, backend::ShaderStage::FRAGMENT }
+            { "../../res/shaders/normals.geom"_path, backend::ShaderStage::GEOMETRY },
+            { "../../res/shaders/solid_colour.frag"_path, backend::ShaderStage::FRAGMENT }
         });
     }
 

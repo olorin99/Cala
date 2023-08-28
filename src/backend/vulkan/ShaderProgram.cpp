@@ -183,7 +183,8 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
     ShaderProgram program(driver.context().device());
 
     bool hasPushConstant = false;
-    VkPushConstantRange pushConstant{};
+    u32 pushConstantCount = 0;
+    ende::Vector<VkPushConstantRange> pushConstants;
 
     for (auto& stage : _stages) {
         // reflection
@@ -193,6 +194,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
         for (auto& resource : resources.push_constant_buffers) {
             const spirv_cross::SPIRType &type = comp.get_type(resource.base_type_id);
             u32 size = comp.get_declared_struct_size(type);
+            u32 blockOffset = 0;
             u32 memberCount = type.member_types.size();
 
             program._interface.pushConstants.byteSize = size;
@@ -203,10 +205,12 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
                 u32 offset = comp.type_struct_member_offset(type, i);
                 u32 memberSize = comp.get_declared_struct_member_size(type, i);
                 program._interface.pushConstants.members[name] = {offset, memberSize};
+                blockOffset = std::min(blockOffset, offset);
             }
-            pushConstant.offset = 0;
-            pushConstant.size = size;
-            pushConstant.stageFlags |= getShaderStage(stage.second);
+            pushConstants.push({});
+            pushConstants.back().offset = blockOffset;
+            pushConstants.back().size = size;
+            pushConstants.back().stageFlags |= getShaderStage(stage.second);
             hasPushConstant = true;
         }
 
@@ -375,8 +379,8 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
     pipelineLayoutInfo.setLayoutCount = MAX_SET_COUNT;
     pipelineLayoutInfo.pSetLayouts = setLayouts;
 
-    pipelineLayoutInfo.pushConstantRangeCount = hasPushConstant ? 1 : 0;
-    pipelineLayoutInfo.pPushConstantRanges = &pushConstant;
+    pipelineLayoutInfo.pushConstantRangeCount = pushConstants.size();//hasPushConstant ? 1 : 0;
+    pipelineLayoutInfo.pPushConstantRanges = pushConstants.data();
 
     VkPipelineLayout  pipelineLayout;
     vkCreatePipelineLayout(driver.context().device(), &pipelineLayoutInfo, nullptr, &pipelineLayout);

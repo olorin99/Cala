@@ -84,7 +84,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         *static_cast<u32*>(mapped.address) = scene._renderables.size();
     }
 
-    bool debugViewEnabled = _renderSettings.debugNormals || _renderSettings.debugRoughness || _renderSettings.debugMetallic || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugWireframe;
+    bool debugViewEnabled = _renderSettings.debugNormals || _renderSettings.debugRoughness || _renderSettings.debugMetallic || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugWireframe || _renderSettings.debugNormalLines;
 
     backend::vulkan::CommandBuffer& cmd = *_frameInfo.cmd;
 
@@ -513,6 +513,43 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
                 cmd.bindProgram(_engine->_solidColourProgram);
+                cmd.bindPipeline();
+                cmd.bindDescriptors();
+                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
+            }
+        });
+    }
+
+    if (_renderSettings.debugNormalLines) {
+        auto& debugNormalLines = _graph.addPass("debug_normal_lines");
+
+        debugNormalLines.addColourAttachment("backbuffer");
+        debugNormalLines.addDepthAttachment("depth");
+
+        debugNormalLines.addStorageBufferRead("drawCommands");
+        debugNormalLines.addStorageBufferRead("materialCounts");
+        debugNormalLines.addStorageBufferRead("transforms");
+        debugNormalLines.addStorageBufferRead("meshData");
+
+        debugNormalLines.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            auto meshData = graph.getResource<BufferResource>("meshData");
+            auto transforms = graph.getResource<BufferResource>("transforms");
+            auto drawCommands = graph.getResource<BufferResource>("drawCommands");
+            auto materialCounts = graph.getResource<BufferResource>("materialCounts");
+            cmd.clearDescriptors();
+            cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
+            auto& renderable = scene._renderables[0].second.first;
+
+            cmd.bindBindings(renderable.bindings);
+            cmd.bindAttributes(renderable.attributes);
+            cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
+            cmd.bindBuffer(4, 0, transforms->handle, true);
+            cmd.pushConstants({ &_renderSettings.wireframeColour, sizeof(_renderSettings.wireframeColour) });
+            cmd.pushConstants({ &_renderSettings.normalLength, sizeof(_renderSettings.normalLength) }, sizeof(_renderSettings.wireframeColour));
+            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
+            cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
+            for (u32 material = 0; material < scene._materialCounts.size(); material++) {
+                cmd.bindProgram(_engine->_normalsDebugProgram);
                 cmd.bindPipeline();
                 cmd.bindDescriptors();
                 cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
