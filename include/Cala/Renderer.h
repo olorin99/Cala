@@ -39,7 +39,7 @@ namespace cala {
             bool debugNormalLines = false;
             std::array<f32, 4> wireframeColour = { 1.f, 1.f, 1.f, 1.f };
             f32 wireframeThickness = 1.f;
-            f32 normalLength = 0.5;
+            f32 normalLength = 0.1;
         };
 
         Renderer(Engine* engine, Settings settings);

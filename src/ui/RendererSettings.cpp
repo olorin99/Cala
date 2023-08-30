@@ -39,7 +39,7 @@ void cala::ui::RendererSettingsWindow::render() {
     }
     ImGui::Checkbox("\tNormal Lines", &rendererSettings.debugNormalLines);
     if (rendererSettings.debugNormalLines) {
-        ImGui::SliderFloat("\tNormal Length", &rendererSettings.normalLength, 0.1, 1);
+        ImGui::SliderFloat("\tNormal Length", &rendererSettings.normalLength, 0.01, 1);
         auto colour = rendererSettings.wireframeColour;
         ImGui::ColorEdit3("\tWireframe Colour", &colour[0]);
         ImGui::Text("Colour: { %f, %f, %fm %f }", colour[0], colour[1], colour[2], colour[3]);

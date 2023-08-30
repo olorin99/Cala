@@ -61,7 +61,10 @@ bool cala::Renderer::beginFrame(cala::backend::vulkan::Swapchain* swapchain) {
 
 f64 cala::Renderer::endFrame() {
     _frameInfo.cmd->end();
-    _frameInfo.cmd->submit({ &_swapchainFrame.imageAquired, 1 }, _frameInfo.fence);
+    if (!_frameInfo.cmd->submit({ &_swapchainFrame.imageAquired, 1 }, _frameInfo.fence)) {
+        _engine->logger().error("Error submitting command buffer");
+        throw std::runtime_error("Error submitting command buffer");
+    }
 
     assert(_swapchain);
     _swapchain->present(_swapchainFrame, _frameInfo.cmd->signal());

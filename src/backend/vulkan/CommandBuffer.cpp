@@ -475,8 +475,7 @@ bool cala::backend::vulkan::CommandBuffer::submit(ende::Span<VkSemaphore> wait, 
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &_buffer;
 
-    VK_TRY(vkQueueSubmit(_queue, 1, &submitInfo, fence));
-    return true;
+    return vkQueueSubmit(_queue, 1, &submitInfo, fence) == VK_SUCCESS;
 }
 
 bool
