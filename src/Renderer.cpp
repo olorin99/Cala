@@ -116,6 +116,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         drawCommandsResource.transient = false;
         drawCommandsResource.usage = backend::BufferUsage::INDIRECT;
         _graph.addResource("drawCommands", drawCommandsResource, true);
+
+        _graph.addResource("shadowDrawCommands", drawCommandsResource, true);
     }
 
 
@@ -573,12 +575,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     pointShadows.addSampledImageWrite("pointDepth");
     pointShadows.addStorageBufferRead("transforms");
     pointShadows.addStorageBufferRead("meshData");
-    pointShadows.addStorageBufferWrite("drawCommands");
+    pointShadows.addStorageBufferWrite("shadowDrawCommands");
 
     pointShadows.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
         auto transforms = graph.getResource<BufferResource>("transforms");
         auto meshData = graph.getResource<BufferResource>("meshData");
-        auto drawCommands = graph.getResource<BufferResource>("drawCommands");
+        auto drawCommands = graph.getResource<BufferResource>("shadowDrawCommands");
         u32 shadowIndex = 0;
         for (u32 i = 0; i < scene._lights.size(); i++) {
             auto& light = scene._lights[i].second;
