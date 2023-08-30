@@ -19,22 +19,24 @@ namespace cala::backend::vulkan {
         class Builder {
         public:
 
+            Builder(Device* device);
+
             Builder& addStageSPV(const std::vector<u32>& code, ShaderStage stage);
 
             Builder& addStageGLSL(const ende::fs::Path& path, ShaderStage stage, const std::vector<std::pair<const char*, std::string>>& macros = {});
 
-            ShaderProgram compile(Device& driver);
+            ShaderProgram compile();
 
         private:
-
+            Device* _device;
             ende::Vector<std::pair<std::vector<u32>, ShaderStage>> _stages;
 
         };
 
-        static Builder create();
+        static Builder create(Device* device);
 
 
-        ShaderProgram(VkDevice device);
+        ShaderProgram(Device* device);
 
         ~ShaderProgram();
 
@@ -57,7 +59,7 @@ namespace cala::backend::vulkan {
         friend Builder;
         friend CommandBuffer;
 
-        VkDevice _device;
+        Device* _device;
         ende::Vector<VkPipelineShaderStageCreateInfo> _stages;
         VkDescriptorSetLayout _setLayout[MAX_SET_COUNT];
         VkPipelineLayout _layout;

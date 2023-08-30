@@ -2,7 +2,6 @@
 #include <Cala/backend/vulkan/Device.h>
 #include <Cala/backend/vulkan/primitives.h>
 #include <SPIRV-Cross/spirv_cross.hpp>
-#include <Ende/log/log.h>
 #include <shaderc/shaderc.hpp>
 #include <Ende/filesystem/File.h>
 
@@ -107,7 +106,7 @@ private:
 };
 
 
-std::vector<u32> compileShader(const std::string& name, const std::string& source, shaderc_shader_kind kind, const std::vector<std::pair<const char*, std::string>>& macros) {
+std::vector<u32> compileShader(cala::backend::vulkan::Device* device, const std::string& name, const std::string& source, shaderc_shader_kind kind, const std::vector<std::pair<const char*, std::string>>& macros) {
     shaderc::Compiler compiler;
     shaderc::CompileOptions options;
 
@@ -130,7 +129,7 @@ std::vector<u32> compileShader(const std::string& name, const std::string& sourc
         auto numErrors = module.GetNumErrors();
         auto numWarnings = module.GetNumWarnings();
         auto errorMessage = module.GetErrorMessage();
-        ende::log::error("Failed to compile shader: \nNumber of errors: {}\nNumber of warnings: {}\n{}", numErrors, numWarnings, errorMessage);
+        device->logger().error("Failed to compile shader: \nNumber of errors: {}\nNumber of warnings: {}\n{}", numErrors, numWarnings, errorMessage);
         return {};
     }
     return { module.cbegin(), module.cend() };
@@ -138,9 +137,13 @@ std::vector<u32> compileShader(const std::string& name, const std::string& sourc
 
 
 
-cala::backend::vulkan::ShaderProgram::Builder cala::backend::vulkan::ShaderProgram::create() {
-    return {};
+cala::backend::vulkan::ShaderProgram::Builder cala::backend::vulkan::ShaderProgram::create(cala::backend::vulkan::Device* device) {
+    return Builder(device);
 }
+
+cala::backend::vulkan::ShaderProgram::Builder::Builder(cala::backend::vulkan::Device *device)
+    : _device(device)
+{}
 
 cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStageSPV(const std::vector<u32>& code, ShaderStage stage) {
     _stages.push({code, stage});
@@ -169,18 +172,18 @@ cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProg
             kind = shaderc_shader_kind::shaderc_compute_shader;
             break;
         default:
-            ende::log::error("invalid shader stage used for compilation");
+            _device->logger().error("invalid shader stage used for compilation");
     }
     ende::fs::File file;
     file.open(path);
     auto source = file.read();
-    auto dst = compileShader(*path, source, kind, macros);
+    auto dst = compileShader(_device, *path, source, kind, macros);
     addStageSPV(dst, stage);
     return *this;
 }
 
-cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Builder::compile(Device& driver) {
-    ShaderProgram program(driver.context().device());
+cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Builder::compile() {
+    ShaderProgram program(_device);
 
     bool hasPushConstant = false;
     u32 pushConstantCount = 0;
@@ -308,7 +311,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
         createInfo.codeSize = stage.first.size() * sizeof(u32);
         createInfo.pCode = stage.first.data();
 
-        if (vkCreateShaderModule(driver.context().device(), &createInfo, nullptr, &shader) != VK_SUCCESS)
+        if (vkCreateShaderModule(_device->context().device(), &createInfo, nullptr, &shader) != VK_SUCCESS)
             throw std::runtime_error("Unable to create shader");
 
         VkPipelineShaderStageCreateInfo stageCreateInfo{};
@@ -327,8 +330,8 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
     VkDescriptorSetLayout setLayouts[MAX_SET_COUNT] = {};
     u32 setCount = 0;
     for (u32 i = 0; i < MAX_SET_COUNT; i++) {
-        if (driver.getBindlessIndex() == i) {
-            setLayouts[i] = driver.bindlessLayout();
+        if (_device->getBindlessIndex() == i) {
+            setLayouts[i] = _device->bindlessLayout();
             continue;
         }
         VkDescriptorSetLayoutBinding layoutBinding[MAX_BINDING_PER_SET];
@@ -369,7 +372,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
             layoutBindingCount++;
         }
 
-        setLayouts[i] = driver.getSetLayout({layoutBinding, layoutBindingCount});
+        setLayouts[i] = _device->getSetLayout({layoutBinding, layoutBindingCount});
     }
 
     program._interface._setCount = setCount + 1;
@@ -383,7 +386,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
     pipelineLayoutInfo.pPushConstantRanges = pushConstants.data();
 
     VkPipelineLayout  pipelineLayout;
-    vkCreatePipelineLayout(driver.context().device(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
+    vkCreatePipelineLayout(_device->context().device(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
 
     program._layout = pipelineLayout;
     for (u32 i = 0; i < MAX_SET_COUNT; i++)
@@ -393,7 +396,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
 }
 
 
-cala::backend::vulkan::ShaderProgram::ShaderProgram(VkDevice device)
+cala::backend::vulkan::ShaderProgram::ShaderProgram(cala::backend::vulkan::Device* device)
     : _device(device),
     _layout(VK_NULL_HANDLE),
     _setLayout{},
@@ -405,9 +408,9 @@ cala::backend::vulkan::ShaderProgram::~ShaderProgram() {
     if (_device == VK_NULL_HANDLE) return;
 
     for (auto& stage : _stages)
-        vkDestroyShaderModule(_device, stage.module, nullptr);
+        vkDestroyShaderModule(_device->context().device(), stage.module, nullptr);
 
-    vkDestroyPipelineLayout(_device, _layout, nullptr);
+    vkDestroyPipelineLayout(_device->context().device(), _layout, nullptr);
 }
 
 cala::backend::vulkan::ShaderProgram::ShaderProgram(ShaderProgram &&rhs) noexcept
@@ -453,7 +456,7 @@ VkPipelineLayout cala::backend::vulkan::ShaderProgram::layout() {
     pipelineLayoutInfo.pushConstantRangeCount = 0;
     pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
-    vkCreatePipelineLayout(_device, &pipelineLayoutInfo, nullptr, &_layout);
+    vkCreatePipelineLayout(_device->context().device(), &pipelineLayoutInfo, nullptr, &_layout);
     return _layout;
 }
 

@@ -17,10 +17,12 @@
 
 namespace cala::backend::vulkan {
 
+    class Device;
+
     class Context {
     public:
 
-        Context(cala::backend::Platform& platform);
+        Context(Device* device, cala::backend::Platform& platform);
 
         ~Context();
 
@@ -39,7 +41,7 @@ namespace cala::backend::vulkan {
 
         VkPhysicalDevice physicalDevice() const { return _physicalDevice; }
 
-        VkDevice device() const { return _device; }
+        VkDevice device() const { return _logicalDevice; }
 
         VmaAllocator allocator() const { return _allocator; }
 
@@ -82,9 +84,10 @@ namespace cala::backend::vulkan {
 
         u32 memoryIndex(u32 filter, VkMemoryPropertyFlags properties);
 
+        Device* _device;
         VkInstance _instance;
         VkPhysicalDevice _physicalDevice;
-        VkDevice _device;
+        VkDevice _logicalDevice;
         VkDebugUtilsMessengerEXT _debugMessenger;
         VmaAllocator _allocator;
 

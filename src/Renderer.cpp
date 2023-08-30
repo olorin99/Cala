@@ -5,7 +5,6 @@
 #include <Cala/Material.h>
 #include <Cala/ImGuiContext.h>
 #include <Ende/profile/profile.h>
-#include <Ende/log/log.h>
 
 cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings)
     : _engine(engine),

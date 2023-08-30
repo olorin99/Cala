@@ -2,10 +2,10 @@
 #include "Cala/backend/vulkan/primitives.h"
 #include <vulkan/vulkan.h>
 #include <Ende/profile/profile.h>
-#include <Ende/log/log.h>
 
-cala::backend::vulkan::Device::Device(cala::backend::Platform& platform)
-    : _context(platform),
+cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog::logger& logger)
+    : _logger(logger),
+      _context(this, platform),
       _commandPools{
               {CommandPool(this, QueueType::GRAPHICS), CommandPool(this, QueueType::COMPUTE), CommandPool(this, QueueType::TRANSFER)},
               {CommandPool(this, QueueType::GRAPHICS), CommandPool(this, QueueType::COMPUTE), CommandPool(this, QueueType::TRANSFER)}
@@ -56,9 +56,10 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform)
     bindlessLayoutCreateInfo.bindingCount = 1;
     bindlessLayoutCreateInfo.pBindings = &bindlessLayoutBinding;
     bindlessLayoutCreateInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+    bindlessLayoutCreateInfo.pNext = nullptr;
 
     VkDescriptorBindingFlags bindingFlags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
-    VkDescriptorSetLayoutBindingFlagsCreateInfo extendedInfo;
+    VkDescriptorSetLayoutBindingFlagsCreateInfo extendedInfo{};
     extendedInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
     extendedInfo.bindingCount = 1;
     extendedInfo.pBindingFlags = &bindingFlags;
@@ -221,7 +222,7 @@ void cala::backend::vulkan::Device::endSingleTimeCommands(CommandBuffer& buffer)
     if (res)
         vkResetFences(context().device(), 1, &fence);
     else
-        ende::log::error("Failed waiting for immediate fence");
+        _logger.error("Failed waiting for immediate fence");
     vkDestroyFence(context().device(), fence, nullptr);
 }
 
@@ -260,7 +261,7 @@ bool cala::backend::vulkan::Device::gc() {
             _buffers[index].first = std::make_unique<Buffer>(this);
             _freeBuffers.push(index);
             _buffersToDestroy.erase(it--);
-            ende::log::info("destroyed buffer ({})", index);
+            _logger.info("destroyed buffer ({})", index);
         } else
             --frame;
     }
@@ -280,7 +281,7 @@ bool cala::backend::vulkan::Device::gc() {
             _images[index].first = std::make_unique<Image>(this);
             _freeImages.push(index);
             _imagesToDestroy.erase(it--);
-            ende::log::info("destroyed image ({})", index);
+            _logger.info("destroyed image ({})", index);
         } else
             --frame;
     }
@@ -290,10 +291,10 @@ bool cala::backend::vulkan::Device::gc() {
         auto& handle = it->second;
         if (frame <= 0) {
             u32 index = handle;
-            _programs[index].first = std::make_unique<ShaderProgram>(_context.device());
+            _programs[index].first = std::make_unique<ShaderProgram>(this);
             _freePrograms.push(index);
             _programsToDestroy.erase(it--);
-            ende::log::info("destroyed program ({})", index);
+            _logger.info("destroyed program ({})", index);
         } else
             --frame;
     }

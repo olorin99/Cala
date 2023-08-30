@@ -4,9 +4,8 @@
 
 #include <Cala/backend/vulkan/Context.h>
 #include <Cala/backend/vulkan/primitives.h>
-
+#include <Cala/backend/vulkan/Device.h>
 #include <Ende/Vector.h>
-#include <Ende/log/log.h>
 
 class VulkanContextException : public std::exception {
 public:
@@ -47,18 +46,19 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         ) {
     if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
         return VK_FALSE;
+    auto d = reinterpret_cast<cala::backend::vulkan::Device*>(pUserData);
     switch (messageSeverity) {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            ende::log::info("{}", pCallbackData->pMessage);
+            d->logger().info("{}", pCallbackData->pMessage);
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-            ende::log::info("{}", pCallbackData->pMessage);
+            d->logger().info("{}", pCallbackData->pMessage);
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            ende::log::warn("{}", pCallbackData->pMessage);
+            d->logger().warn("{}", pCallbackData->pMessage);
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            ende::log::error("{}", pCallbackData->pMessage);
+            d->logger().error("{}", pCallbackData->pMessage);
             break;
         default:
             break;
@@ -76,7 +76,9 @@ bool checkDeviceSuitable(VkPhysicalDevice device, VkPhysicalDeviceFeatures* devi
     return deviceFeatures->geometryShader;
 }
 
-cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
+cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, cala::backend::Platform& platform)
+    : _device(device)
+{
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName = "Cala";
@@ -120,7 +122,7 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     debugInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
     debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
     debugInfo.pfnUserCallback = debugCallback;
-    debugInfo.pUserData = nullptr;
+    debugInfo.pUserData = _device;
 
     auto createDebugUtils = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(_instance, "vkCreateDebugUtilsMessengerEXT");
     createDebugUtils(_instance, &debugInfo, nullptr, &_debugMessenger);
@@ -228,12 +230,12 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
 
     vulkan12Features.hostQueryReset = VK_TRUE;
 
-    VK_TRY(vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device));
+    VK_TRY(vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_logicalDevice));
 
     VmaAllocatorCreateInfo allocatorCreateInfo{};
     allocatorCreateInfo.vulkanApiVersion = appInfo.apiVersion;
     allocatorCreateInfo.physicalDevice = _physicalDevice;
-    allocatorCreateInfo.device = _device;
+    allocatorCreateInfo.device = _logicalDevice;
     allocatorCreateInfo.instance = _instance;
     VmaVulkanFunctions vulkanFunctions{};
     vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
@@ -257,25 +259,25 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
     //cache queues for later use
     u32 queueIndices[4];
     if (queueIndex(queueIndices[0], QueueType::GRAPHICS))
-        vkGetDeviceQueue(_device, queueIndices[0], 0, &_graphicsQueue);
+        vkGetDeviceQueue(_logicalDevice, queueIndices[0], 0, &_graphicsQueue);
 
     if (queueIndex(queueIndices[1], QueueType::COMPUTE, QueueType::GRAPHICS | QueueType::TRANSFER) ||
             queueIndex(queueIndices[1], QueueType::COMPUTE, QueueType::GRAPHICS))
-        vkGetDeviceQueue(_device, queueIndices[1], 0, &_computeQueue);
+        vkGetDeviceQueue(_logicalDevice, queueIndices[1], 0, &_computeQueue);
 
     if (queueIndex(queueIndices[2], QueueType::TRANSFER, QueueType::GRAPHICS | QueueType::COMPUTE) ||
             queueIndex(queueIndices[2], QueueType::TRANSFER, QueueType::GRAPHICS))
-        vkGetDeviceQueue(_device, queueIndices[2], 0, &_transferQueue);
+        vkGetDeviceQueue(_logicalDevice, queueIndices[2], 0, &_transferQueue);
 
     if (queueIndex(queueIndices[3], QueueType::PRESENT))
-        vkGetDeviceQueue(_device, queueIndices[3], 0, &_presentQueue);
+        vkGetDeviceQueue(_logicalDevice, queueIndices[3], 0, &_presentQueue);
 
     VkQueryPoolCreateInfo queryPoolCreateInfo{};
     queryPoolCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
     queryPoolCreateInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
     queryPoolCreateInfo.queryCount = 20 * 2;
     _timestampQueryPool = VK_NULL_HANDLE;
-    VK_TRY(vkCreateQueryPool(_device, &queryPoolCreateInfo, nullptr, &_timestampQueryPool));
+    VK_TRY(vkCreateQueryPool(_logicalDevice, &queryPoolCreateInfo, nullptr, &_timestampQueryPool));
 
 
     const char* pipelineStatNames[] = {
@@ -298,16 +300,16 @@ cala::backend::vulkan::Context::Context(cala::backend::Platform& platform) {
             VK_QUERY_PIPELINE_STATISTIC_CLIPPING_PRIMITIVES_BIT |
             VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT;
     pipelineStatisticsCreate.queryCount = 6;
-    VK_TRY(vkCreateQueryPool(_device, &pipelineStatisticsCreate, nullptr, &_pipelineStatistics));
+    VK_TRY(vkCreateQueryPool(_logicalDevice, &pipelineStatisticsCreate, nullptr, &_pipelineStatistics));
 
-    vkResetQueryPool(_device, _timestampQueryPool, 0, 10);
+    vkResetQueryPool(_logicalDevice, _timestampQueryPool, 0, 10);
 }
 
 cala::backend::vulkan::Context::~Context() {
-    vkDestroyQueryPool(_device, _pipelineStatistics, nullptr);
-    vkDestroyQueryPool(_device, _timestampQueryPool, nullptr);
+    vkDestroyQueryPool(_logicalDevice, _pipelineStatistics, nullptr);
+    vkDestroyQueryPool(_logicalDevice, _timestampQueryPool, nullptr);
     vmaDestroyAllocator(_allocator);
-    vkDestroyDevice(_device, nullptr);
+    vkDestroyDevice(_logicalDevice, nullptr);
 
 #ifndef NDEBUG
     auto destroyDebugUtils = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(_instance, "vkDestroyDebugUtilsMessengerEXT");
@@ -386,7 +388,7 @@ VkQueue cala::backend::vulkan::Context::getQueue(QueueType type) const {
     VkQueue queue;
     u32 index = 0;
     queueIndex(index, type);
-    vkGetDeviceQueue(_device, index, 0, &queue);
+    vkGetDeviceQueue(_logicalDevice, index, 0, &queue);
     return queue;
 }
 
@@ -419,7 +421,7 @@ const char *cala::backend::vulkan::Context::deviceTypeString() const {
 }
 
 cala::backend::vulkan::Context::PipelineStatistics cala::backend::vulkan::Context::getPipelineStatistics() const {
-    vkGetQueryPoolResults(_device, _pipelineStatistics, 0, 1, 6 * sizeof(u64), (void*)_pipelineStats, sizeof(u64), VK_QUERY_RESULT_64_BIT);
+    vkGetQueryPoolResults(_logicalDevice, _pipelineStatistics, 0, 1, 6 * sizeof(u64), (void*)_pipelineStats, sizeof(u64), VK_QUERY_RESULT_64_BIT);
     return {
         _pipelineStats[0],
         _pipelineStats[1],

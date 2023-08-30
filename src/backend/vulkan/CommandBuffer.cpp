@@ -3,8 +3,6 @@
 #include <Cala/backend/vulkan/Device.h>
 #include <Ende/profile/profile.h>
 
-#include <Ende/log/log.h>
-
 cala::backend::vulkan::CommandBuffer::CommandBuffer(Device& device, VkQueue queue, VkCommandBuffer buffer)
     : _device(&device),
     _buffer(buffer),

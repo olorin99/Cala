@@ -7,6 +7,7 @@
 #include <Cala/Material.h>
 
 #include <json.hpp>
+#include <spdlog/sinks/basic_file_sink.h>
 
 cala::backend::vulkan::RenderPass::Attachment shadowPassAttachment {
         cala::backend::Format::D32_SFLOAT,
@@ -22,7 +23,11 @@ cala::backend::vulkan::RenderPass::Attachment shadowPassAttachment {
 
 
 cala::Engine::Engine(backend::Platform &platform)
-    : _device(platform),
+    : _logger("Cala", {
+        std::make_shared<spdlog::sinks::ansicolor_stdout_sink_mt>(),
+        std::make_shared<spdlog::sinks::basic_file_sink_mt>("debug.log", true)
+      }),
+      _device(platform, _logger),
       _startTime(ende::time::SystemTime::now()),
       _shadowPass(_device, {&shadowPassAttachment, 1 }),
       _lodSampler(_device, {
@@ -686,11 +691,11 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
 }
 
 cala::backend::vulkan::ProgramHandle cala::Engine::loadProgram(const ende::Vector<ShaderInfo>& shaderInfo) {
-    auto programBuilder = backend::vulkan::ShaderProgram::create();
+    auto programBuilder = backend::vulkan::ShaderProgram::create(&_device);
 
     for (auto& info : shaderInfo) {
         programBuilder.addStageGLSL(info.path, info.stage, info.macros);
     }
-    auto program = programBuilder.compile(_device);
+    auto program = programBuilder.compile();
     return _device.createProgram(std::move(program));
 }

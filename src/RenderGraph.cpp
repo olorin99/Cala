@@ -1,5 +1,4 @@
 #include "Cala/RenderGraph.h"
-#include <Ende/log/log.h>
 #include <Ende/profile/profile.h>
 
 void cala::ImageResource::devirtualize(cala::Engine* engine, backend::vulkan::Swapchain* swapchain) {
@@ -98,7 +97,7 @@ bool cala::RenderPass::reads(const char *label, bool storage) {
     if (_graph->_attachmentMap.end() == it) {
         std::string err = "unable to find ";
         err += label;
-        ende::log::error(err);
+        _graph->_engine->logger().error(err);
         return false;
     }
     else {
@@ -112,7 +111,7 @@ bool cala::RenderPass::writes(const char *label) {
     if (_graph->_attachmentMap.end() == it) {
         std::string err = "unable to find ";
         err += label;
-        ende::log::error(err);
+        _graph->_engine->logger().error(err);
         return false;
     }
     else {

@@ -9,6 +9,7 @@
 #include <Ende/Vector.h>
 #include <Cala/backend/vulkan/Handle.h>
 #include <Ende/time/StopWatch.h>
+#include <spdlog/spdlog.h>
 
 namespace cala::ui {
     class ResourceViewer;
@@ -21,7 +22,7 @@ namespace cala::backend::vulkan {
     class Device {
     public:
 
-        Device(Platform& platform);
+        Device(Platform& platform, spdlog::logger& logger);
 
         ~Device();
 
@@ -129,12 +130,15 @@ namespace cala::backend::vulkan {
 
         Stats stats() const;
 
+        spdlog::logger& logger() { return _logger; }
+
     private:
         friend BufferHandle;
         friend ImageHandle;
         friend ProgramHandle;
         friend ui::ResourceViewer;
 
+        spdlog::logger& _logger;
         Context _context;
         CommandPool _commandPools[2][3]; // 0 = graphics, 1 = compute, 2 = transfer
         VkFence _frameFences[FRAMES_IN_FLIGHT];

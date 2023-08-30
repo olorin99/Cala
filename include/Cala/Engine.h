@@ -10,6 +10,7 @@
 #include <Cala/backend/vulkan/Device.h>
 
 #include <Ende/filesystem/Path.h>
+#include <spdlog/spdlog.h>
 
 namespace cala {
 
@@ -41,6 +42,13 @@ namespace cala {
 
         u32 uploadIndexData(ende::Span<u32> data);
 
+        struct ShaderInfo {
+            ende::fs::Path path;
+            backend::ShaderStage stage;
+            std::vector<std::pair<const char*, std::string>> macros = {};
+        };
+        backend::vulkan::ProgramHandle loadProgram(const ende::Vector<ShaderInfo>& shaderInfo);
+
         Material* createMaterial(u32 size);
 
         template <typename T>
@@ -57,11 +65,15 @@ namespace cala {
 
         u32 materialCount() const { return _materials.size(); }
 
+        spdlog::logger& logger() { return _logger; }
+
     private:
         friend Renderer;
         friend Scene;
         friend Material;
         friend MaterialInstance;
+
+        spdlog::logger _logger;
 
         backend::vulkan::Device _device;
 
@@ -113,14 +125,6 @@ namespace cala {
         backend::vulkan::ImageHandle getShadowMap(u32 index);
 
         void updateMaterialdata();
-
-    public:
-        struct ShaderInfo {
-            ende::fs::Path path;
-            backend::ShaderStage stage;
-            std::vector<std::pair<const char*, std::string>> macros = {};
-        };
-        backend::vulkan::ProgramHandle loadProgram(const ende::Vector<ShaderInfo>& shaderInfo);
 
     };
 

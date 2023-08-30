@@ -25,7 +25,6 @@
 #include <Cala/ui/RendererSettingsWindow.h>
 #include <Cala/ui/LightWindow.h>
 #include <Cala/ui/ResourceViewer.h>
-#include <Ende/log/log.h>
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION

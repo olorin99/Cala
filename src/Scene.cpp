@@ -4,7 +4,6 @@
 #include <Cala/Material.h>
 #include <Cala/Probe.h>
 #include <Ende/profile/profile.h>
-#include <Ende/log/log.h>
 
 cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     : _engine(engine),
