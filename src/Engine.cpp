@@ -318,7 +318,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::generatePrefilteredIrradiance(b
             cmd.bindImage(1, 0, _device.getImageView(cubeMap), _lodSampler);
             cmd.bindImage(1, 1, mipViews[mip], _device.defaultSampler(), true);
             f32 roughness = (f32)mip / (f32)prefilteredMap->mips();
-            cmd.pushConstants({ &roughness, sizeof(f32) });
+            cmd.pushConstants(backend::ShaderStage::COMPUTE, { &roughness, sizeof(f32) });
             cmd.bindPipeline();
             cmd.bindDescriptors();
             f32 computeDim = 512.f * std::pow(0.5, mip);

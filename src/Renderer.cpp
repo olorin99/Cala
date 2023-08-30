@@ -179,7 +179,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             push.near = camera.near();
             push.far = camera.far();
 
-            cmd.pushConstants({ &push, sizeof(push) });
+            cmd.pushConstants(backend::ShaderStage::COMPUTE, { &push, sizeof(push) });
             cmd.bindBuffer(1, 0, clusters->handle, true);
             cmd.bindPipeline();
             cmd.bindDescriptors();
@@ -234,7 +234,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         push.near = camera.near();
         push.far = camera.far();
 
-        cmd.pushConstants({ &push, sizeof(push) });
+        cmd.pushConstants(backend::ShaderStage::COMPUTE, { &push, sizeof(push) });
         cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()], false);
         cmd.bindBuffer(1, 1, clusters->handle, true);
         cmd.bindBuffer(1, 2, scene._lightBuffer[_engine->device().frameIndex()], true);
@@ -269,7 +269,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             } push;
             push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
             push.screenSize = { _swapchain->extent().width, _swapchain->extent().height };
-            cmd.pushConstants({ &push, sizeof(push) });
+            cmd.pushConstants(backend::ShaderStage::FRAGMENT, { &push, sizeof(push) });
             cmd.bindBuffer(1, 1, lightGrid->handle, true);
             cmd.bindImage(1, 2, _engine->device().getImageView(depthBuffer->handle), _engine->device().defaultShadowSampler());
             cmd.bindPipeline();
@@ -509,11 +509,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 .lineWidth = _renderSettings.wireframeThickness
             });
             cmd.bindBuffer(4, 0, transforms->handle, true);
-            cmd.pushConstants({ &_renderSettings.wireframeColour, sizeof(_renderSettings.wireframeColour) });
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
                 cmd.bindProgram(_engine->_solidColourProgram);
+                cmd.pushConstants(backend::ShaderStage::FRAGMENT, { &_renderSettings.wireframeColour, sizeof(_renderSettings.wireframeColour) });
                 cmd.bindPipeline();
                 cmd.bindDescriptors();
                 cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
@@ -545,12 +545,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindAttributes(renderable.attributes);
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd.bindBuffer(4, 0, transforms->handle, true);
-            cmd.pushConstants({ &_renderSettings.wireframeColour, sizeof(_renderSettings.wireframeColour) });
-            cmd.pushConstants({ &_renderSettings.normalLength, sizeof(_renderSettings.normalLength) }, sizeof(_renderSettings.wireframeColour));
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
                 cmd.bindProgram(_engine->_normalsDebugProgram);
+                cmd.pushConstants(backend::ShaderStage::FRAGMENT, { &_renderSettings.wireframeColour, sizeof(_renderSettings.wireframeColour) });
+                cmd.pushConstants(backend::ShaderStage::GEOMETRY, { &_renderSettings.normalLength, sizeof(_renderSettings.normalLength) }, sizeof(_renderSettings.wireframeColour));
                 cmd.bindPipeline();
                 cmd.bindDescriptors();
                 cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
@@ -617,7 +617,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd.bindProgram(_engine->_pointShadowCullProgram);
                     cmd.bindBindings(nullptr);
                     cmd.bindAttributes(nullptr);
-                    cmd.pushConstants({ &shadowFrustum, sizeof(shadowFrustum) });
+                    cmd.pushConstants(backend::ShaderStage::COMPUTE, { &shadowFrustum, sizeof(shadowFrustum) });
                     cmd.bindBuffer(2, 0, transforms->handle, true);
                     cmd.bindBuffer(2, 1, meshData->handle, true);
                     cmd.bindBuffer(2, 2, drawCommands->handle, true);
@@ -654,7 +654,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         shadowCam.near(),
                         shadowCam.far()
                     };
-                    cmd.pushConstants({ &shadowData, sizeof(shadowData) });
+                    cmd.pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::FRAGMENT, { &shadowData, sizeof(shadowData) });
 
                     auto& renderable = scene._renderables[0].second.first;
                     cmd.bindBindings(renderable.bindings);
@@ -704,7 +704,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd.bindProgram(_engine->_cullProgram);
         cmd.bindBindings(nullptr);
         cmd.bindAttributes(nullptr);
-        cmd.pushConstants({ &_cullingFrustum, sizeof(_cullingFrustum) });
+        cmd.pushConstants(backend::ShaderStage::COMPUTE, { &_cullingFrustum, sizeof(_cullingFrustum) });
         cmd.bindBuffer(2, 0, transforms->handle, true);
         cmd.bindBuffer(2, 1, meshData->handle, true);
         cmd.bindBuffer(2, 2, drawCommands->handle, true);
@@ -822,7 +822,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     push.brdfIndex = -1;
                 }
 
-                cmd.pushConstants({ &push, sizeof(push) });
+                cmd.pushConstants(backend::ShaderStage::FRAGMENT, { &push, sizeof(push) });
 
                 cmd.bindPipeline();
                 cmd.bindDescriptors();

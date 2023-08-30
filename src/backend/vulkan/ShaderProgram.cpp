@@ -197,7 +197,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
         for (auto& resource : resources.push_constant_buffers) {
             const spirv_cross::SPIRType &type = comp.get_type(resource.base_type_id);
             u32 size = comp.get_declared_struct_size(type);
-            u32 blockOffset = 0;
+            u32 blockOffset = 1000;
             u32 memberCount = type.member_types.size();
 
             program._interface.pushConstants.byteSize = size;
