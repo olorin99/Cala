@@ -69,7 +69,7 @@ cala::backend::vulkan::Buffer::Mapped cala::backend::vulkan::Buffer::map(u32 off
 
     assert(_size >= size + offset);
     void* address = nullptr;
-    vmaMapMemory(_device->context().allocator(), _allocation, &address);
+    VK_TRY(vmaMapMemory(_device->context().allocator(), _allocation, &address));
     Mapped mapped;
     mapped.address = (void*)((char*)address + offset);
     mapped.buffer = this;

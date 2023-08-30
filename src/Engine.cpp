@@ -42,7 +42,7 @@ cala::Engine::Engine(backend::Platform &platform)
       _indexOffset(0),
       _stagingReady(false)
 {
-    ende::fs::File file;
+    spdlog::flush_every(std::chrono::seconds(5));
     {
         _pointShadowProgram = loadProgram({
             { "../../res/shaders/shadow_point.vert"_path, backend::ShaderStage::VERTEX },

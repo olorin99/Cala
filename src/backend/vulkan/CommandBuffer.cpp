@@ -76,7 +76,7 @@ bool cala::backend::vulkan::CommandBuffer::begin() {
     vkDestroySemaphore(_device->context().device(), _signal, nullptr);
     VkSemaphoreCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    vkCreateSemaphore(_device->context().device(), &createInfo, nullptr, &_signal);
+    VK_TRY(vkCreateSemaphore(_device->context().device(), &createInfo, nullptr, &_signal));
     _drawCallCount = 0;
     return _active;
 }
@@ -475,7 +475,7 @@ bool cala::backend::vulkan::CommandBuffer::submit(ende::Span<VkSemaphore> wait, 
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &_buffer;
 
-    vkQueueSubmit(_queue, 1, &submitInfo, fence);
+    VK_TRY(vkQueueSubmit(_queue, 1, &submitInfo, fence));
     return true;
 }
 

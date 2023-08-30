@@ -12,6 +12,6 @@
     "depth_state": {
         "test": true,
         "write": true,
-        "compareOp": "LESS_EQUAL"
+        "compareOp": "LESS"
     }
 }

@@ -125,17 +125,17 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     debugInfo.pUserData = _device;
 
     auto createDebugUtils = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(_instance, "vkCreateDebugUtilsMessengerEXT");
-    createDebugUtils(_instance, &debugInfo, nullptr, &_debugMessenger);
+    VK_TRY(createDebugUtils(_instance, &debugInfo, nullptr, &_debugMessenger));
 #endif
 
     //get physical device
     u32 deviceCount = 0;
-    vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr);
+    VK_TRY(vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr));
     if (deviceCount == 0)
         throw VulkanContextException("No GPUs found with vulkan support");
 
     ende::Vector<VkPhysicalDevice> devices(deviceCount);
-    vkEnumeratePhysicalDevices(_instance, &deviceCount, devices.data());
+    VK_TRY(vkEnumeratePhysicalDevices(_instance, &deviceCount, devices.data()));
 
     VkPhysicalDeviceFeatures deviceFeatures;
     for (auto& device : devices) {

@@ -257,6 +257,8 @@ bool cala::backend::vulkan::Device::gc() {
             VmaAllocation allocation = _buffers[index].first->_allocation;
             if (allocation)
                 vmaDestroyBuffer(context().allocator(), buffer, allocation);
+            else
+                _logger.warn("attempted to destroy buffer ({}) which has invalid allocation", index);
             _buffers[index].first->_allocation = nullptr;
             _buffers[index].first = std::make_unique<Buffer>(this);
             _freeBuffers.push(index);
@@ -277,6 +279,8 @@ bool cala::backend::vulkan::Device::gc() {
             updateBindlessImage(index, _imageViews[0], _defaultSampler);
             if (image != VK_NULL_HANDLE)
                 vmaDestroyImage(context().allocator(), image, allocation);
+            else
+                _logger.warn("attempted to destroy image ({}) which is invalid", index);
             _images[index].first->_allocation = nullptr;
             _images[index].first = std::make_unique<Image>(this);
             _freeImages.push(index);
@@ -437,12 +441,6 @@ cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Im
     allocInfo.flags = 0;
 
     VK_TRY(vmaCreateImage(context().allocator(), &imageInfo, &allocInfo, &image, &allocation, nullptr));
-
-    ProgramHandle::Counter counter;
-    counter.count = 1;
-    counter.deleter = [this](i32 index) {
-        destroyImage(index);
-    };
 
     if (!_freeImages.empty()) {
         index = _freeImages.pop().value();

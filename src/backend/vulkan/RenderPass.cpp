@@ -85,7 +85,7 @@ cala::backend::vulkan::RenderPass::RenderPass(Device& driver, ende::Span<Attachm
     createInfo.dependencyCount = 0;
     createInfo.pDependencies = nullptr;
 
-    vkCreateRenderPass(_device, &createInfo, nullptr, &_renderPass);
+    VK_TRY(vkCreateRenderPass(_device, &createInfo, nullptr, &_renderPass));
 
     _attachments.insert(_attachments.begin(), attachments);
 }
@@ -132,7 +132,7 @@ VkFramebuffer cala::backend::vulkan::RenderPass::framebuffer(ende::Span<VkImageV
     createInfo.pAttachments = attachments.data();
 
     VkFramebuffer framebuffer;
-    vkCreateFramebuffer(_device, &createInfo, nullptr, &framebuffer);
+    VK_TRY(vkCreateFramebuffer(_device, &createInfo, nullptr, &framebuffer));
 
     return framebuffer;
 }

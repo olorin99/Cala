@@ -386,7 +386,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
     pipelineLayoutInfo.pPushConstantRanges = pushConstants.data();
 
     VkPipelineLayout  pipelineLayout;
-    vkCreatePipelineLayout(_device->context().device(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
+    VK_TRY(vkCreatePipelineLayout(_device->context().device(), &pipelineLayoutInfo, nullptr, &pipelineLayout));
 
     program._layout = pipelineLayout;
     for (u32 i = 0; i < MAX_SET_COUNT; i++)
@@ -456,7 +456,7 @@ VkPipelineLayout cala::backend::vulkan::ShaderProgram::layout() {
     pipelineLayoutInfo.pushConstantRangeCount = 0;
     pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
-    vkCreatePipelineLayout(_device->context().device(), &pipelineLayoutInfo, nullptr, &_layout);
+    VK_TRY(vkCreatePipelineLayout(_device->context().device(), &pipelineLayoutInfo, nullptr, &_layout));
     return _layout;
 }
 

@@ -23,7 +23,7 @@ cala::backend::vulkan::Sampler::Sampler(Device& driver, CreateInfo info)
     samplerInfo.borderColor = info.borderColour;
     samplerInfo.unnormalizedCoordinates = info.unnormalizedCoordinates;
 
-    vkCreateSampler(_driver.context().device(), &samplerInfo, nullptr, &_sampler);
+    VK_TRY(vkCreateSampler(_driver.context().device(), &samplerInfo, nullptr, &_sampler));
 }
 
 cala::backend::vulkan::Sampler::~Sampler() {
