@@ -174,7 +174,8 @@ cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFra
     if (_markerBuffer) {
         std::memset(_markerBuffer->persistentMapping(), 0, _markerBuffer->size());
         _offset = 0;
-        _marker = 0;
+        _marker = 1;
+        _markedCmds.clear();
     }
 #endif
 
@@ -904,8 +905,9 @@ void cala::backend::vulkan::Device::printMarkers() {
     u32* markers = static_cast<u32*>(_markerBuffer->persistentMapping());
     for (u32 i = 0; i < _markerBuffer->size() / sizeof(u32); i++) {
         u32 marker = markers[i];
-        _logger.warn("Marker[{}]: {}", i, marker);
-        if (i > 0 && marker == 0)
+        auto cmd = marker < _markedCmds.size() ? _markedCmds[i] : std::make_pair( "NullCmd", 0 );
+        _logger.warn("Command: {}\nMarker[{}]: {}", cmd.first, i, marker);
+        if (marker == 0)
             break;
     }
 }

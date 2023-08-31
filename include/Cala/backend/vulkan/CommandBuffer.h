@@ -145,7 +145,7 @@ namespace cala::backend::vulkan {
 
     private:
 
-        void writeBufferMarker(PipelineStage stage);
+        void writeBufferMarker(PipelineStage stage, std::string_view cmd);
 
         friend Device;
 
