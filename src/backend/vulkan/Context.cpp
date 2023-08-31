@@ -32,12 +32,6 @@ const char* validationLayers[] = {
         "VK_LAYER_KHRONOS_validation"
 };
 
-const char* deviceExtensions[] = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
-        VK_EXT_MEMORY_BUDGET_EXTENSION_NAME
-};
-
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -87,13 +81,13 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.apiVersion = VK_API_VERSION_1_2;
 
-    auto extensions = platform.requiredExtensions();
+    auto instanceExtensions = platform.requiredExtensions();
 #ifndef NDEBUG
-    extensions.push(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    instanceExtensions.push(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
-    extensions.push(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    instanceExtensions.push(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
-//    extensions.push(VK_EXT_validation_features);
+//    instanceExtensions.push(VK_EXT_validation_features);
 
 //    VkValidationFeatureEnableEXT v[2] = {VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT, VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT};
 ////    auto v = VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT;
@@ -103,14 +97,14 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
 //    validationFeatures.pEnabledValidationFeatures = v;
 //    validationFeatures.enabledValidationFeatureCount = 2;
 
-    //create instance with required extensions
+    //create instance with required instanceExtensions
     VkInstanceCreateInfo instanceCreateInfo{};
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceCreateInfo.pApplicationInfo = &appInfo;
     instanceCreateInfo.enabledLayerCount = 1;
     instanceCreateInfo.ppEnabledLayerNames = validationLayers;
-    instanceCreateInfo.enabledExtensionCount = extensions.size();
-    instanceCreateInfo.ppEnabledExtensionNames = extensions.data();
+    instanceCreateInfo.enabledExtensionCount = instanceExtensions.size();
+    instanceCreateInfo.ppEnabledExtensionNames = instanceExtensions.data();
 //    instanceCreateInfo.pNext = &validationFeatures;
 
     VK_TRY(vkCreateInstance(&instanceCreateInfo, nullptr, &_instance));
@@ -199,6 +193,41 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     _timestampPeriod = deviceProperties.limits.timestampPeriod;
     _maxAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
 
+
+    u32 supportedDeviceExtensionsCount = 0;
+    vkEnumerateDeviceExtensionProperties(_physicalDevice, nullptr, &supportedDeviceExtensionsCount, nullptr);
+    ende::Vector<VkExtensionProperties> supportedDeviceExtensions(supportedDeviceExtensionsCount);
+    vkEnumerateDeviceExtensionProperties(_physicalDevice, nullptr, &supportedDeviceExtensionsCount, supportedDeviceExtensions.data());
+
+    auto checkExtensions = [](const ende::Vector<VkExtensionProperties>& supportedExtensions, const char* name) {
+        for (auto& extension : supportedExtensions) {
+            if (strcmp(extension.extensionName, name) == 0)
+                return true;
+        }
+        return false;
+    };
+
+    {
+        _supportedExtensions.KHR_swapchain = checkExtensions(supportedDeviceExtensions, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+        _supportedExtensions.KHR_shader_draw_parameters  = checkExtensions(supportedDeviceExtensions, VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
+        _supportedExtensions.EXT_memory_budget  = checkExtensions(supportedDeviceExtensions, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
+        _supportedExtensions.AMD_buffer_marker = checkExtensions(supportedDeviceExtensions, VK_AMD_BUFFER_MARKER_EXTENSION_NAME);
+        _supportedExtensions.AMD_device_coherent_memory = checkExtensions(supportedDeviceExtensions, VK_AMD_DEVICE_COHERENT_MEMORY_EXTENSION_NAME);
+    }
+
+
+
+    ende::Vector<const char*> deviceExtensions;
+    deviceExtensions.push(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    deviceExtensions.push(VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
+    deviceExtensions.push(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
+#ifndef NDEBUG
+    if (_supportedExtensions.AMD_buffer_marker)
+        deviceExtensions.push(VK_AMD_BUFFER_MARKER_EXTENSION_NAME);
+    if (_supportedExtensions.AMD_device_coherent_memory)
+        deviceExtensions.push(VK_AMD_DEVICE_COHERENT_MEMORY_EXTENSION_NAME);
+#endif
+
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     createInfo.pQueueCreateInfos = queueCreateInfos.data();
@@ -206,8 +235,8 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
 
     createInfo.pEnabledFeatures = &deviceFeatures;
 
-    createInfo.enabledExtensionCount = 3;
-    createInfo.ppEnabledExtensionNames = deviceExtensions;
+    createInfo.enabledExtensionCount = deviceExtensions.size();
+    createInfo.ppEnabledExtensionNames = deviceExtensions.data();
     createInfo.enabledLayerCount = 0;
     createInfo.ppEnabledLayerNames = nullptr;
 #ifndef NDEBUG
@@ -242,6 +271,10 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
     allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
     allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
+#ifndef NDEBUG
+    if (_supportedExtensions.AMD_device_coherent_memory)
+        allocatorCreateInfo.flags |= VMA_ALLOCATOR_CREATE_AMD_DEVICE_COHERENT_MEMORY_BIT;
+#endif
 
     vmaCreateAllocator(&allocatorCreateInfo, &_allocator);
 

@@ -144,6 +144,9 @@ namespace cala::backend::vulkan {
         u32 drawCalls() const { return _drawCallCount; }
 
     private:
+
+        void writeBufferMarker(PipelineStage stage);
+
         friend Device;
 
         Device* _device;

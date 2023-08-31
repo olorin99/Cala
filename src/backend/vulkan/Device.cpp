@@ -96,10 +96,22 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
     descriptorPoolCreateInfo.pPoolSizes = poolSizes2;
     descriptorPoolCreateInfo.maxSets = 10000;
     VK_TRY(vkCreateDescriptorPool(context().device(), &descriptorPoolCreateInfo, nullptr, &_descriptorPool));
+
+#ifndef NDEBUG
+    if (_context.getSupportedExtensions().AMD_buffer_marker && _context.getSupportedExtensions().AMD_device_coherent_memory) {
+        _markerBuffer = createBuffer(sizeof(u32) * 1000, BufferUsage::TRANSFER_DST, MemoryProperties::READBACK, true, {
+            .requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            .preferredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT
+        });
+    }
+#endif
+
 }
 
 cala::backend::vulkan::Device::~Device() {
     VK_TRY(vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS))); //ensures last frame finished before destroying stuff
+
+    _markerBuffer = BufferHandle{};
 
     for (auto& poolArray : _commandPools) {
         for (auto& pool : poolArray)
@@ -158,6 +170,14 @@ cala::backend::vulkan::Device::~Device() {
 
 
 cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFrame() {
+#ifndef NDEBUG
+    if (_markerBuffer) {
+        std::memset(_markerBuffer->persistentMapping(), 0, _markerBuffer->size());
+        _offset = 0;
+        _marker = 0;
+    }
+#endif
+
     _frameCount++;
     _bytesAllocatedPerFrame = 0;
 
@@ -218,6 +238,7 @@ void cala::backend::vulkan::Device::endSingleTimeCommands(CommandBuffer& buffer)
     VK_TRY(vkCreateFence(context().device(), &fenceCreateInfo, nullptr, &fence));
     if (!buffer.submit(nullptr, fence)) {
         _logger.error("Error submitting command buffer");
+        printMarkers();
         throw std::runtime_error("Error submitting immediate command buffer");
     }
 
@@ -317,7 +338,7 @@ bool cala::backend::vulkan::Device::gc() {
     return true;
 }
 
-cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(u32 size, BufferUsage usage, backend::MemoryProperties flags, bool persistentlyMapped) {
+cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(u32 size, BufferUsage usage, backend::MemoryProperties flags, bool persistentlyMapped, ExtraInfo extraInfo) {
     u32 index = 0;
     usage = usage | BufferUsage::TRANSFER_DST | BufferUsage::TRANSFER_SRC;
 
@@ -331,6 +352,8 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
 
     VmaAllocationCreateInfo allocInfo{};
     allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    allocInfo.requiredFlags = extraInfo.requiredFlags;
+    allocInfo.preferredFlags = extraInfo.preferredFlags;
 
     if ((flags & MemoryProperties::DEVICE) == MemoryProperties::DEVICE) {
         allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
@@ -340,7 +363,7 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
         allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     }
     if ((flags & MemoryProperties::READBACK) == MemoryProperties::READBACK) {
-        allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT;
+        allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
     }
 
     VK_TRY(vmaCreateBuffer(context().allocator(), &bufferInfo, &allocInfo, &buffer, &allocation, nullptr));
@@ -864,4 +887,17 @@ cala::backend::vulkan::Device::Stats cala::backend::vulkan::Device::stats() cons
         pipelineCount,
         _bytesAllocatedPerFrame
     };
+}
+
+void cala::backend::vulkan::Device::printMarkers() {
+    if (!_markerBuffer)
+        return;
+
+    u32* markers = static_cast<u32*>(_markerBuffer->persistentMapping());
+    for (u32 i = 0; i < _markerBuffer->size() / sizeof(u32); i++) {
+        u32 marker = markers[i];
+        _logger.warn("Marker[{}]: {}", i, marker);
+        if (i > 0 && marker == 0)
+            break;
+    }
 }

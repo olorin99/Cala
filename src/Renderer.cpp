@@ -63,6 +63,7 @@ f64 cala::Renderer::endFrame() {
     _frameInfo.cmd->end();
     if (!_frameInfo.cmd->submit({ &_swapchainFrame.imageAquired, 1 }, _frameInfo.fence)) {
         _engine->logger().error("Error submitting command buffer");
+        _engine->device().printMarkers();
         throw std::runtime_error("Error submitting command buffer");
     }
 

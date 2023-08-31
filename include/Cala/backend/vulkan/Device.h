@@ -61,7 +61,11 @@ namespace cala::backend::vulkan {
 
         bool gc();
 
-        BufferHandle createBuffer(u32 size, BufferUsage usage, backend::MemoryProperties flags = backend::MemoryProperties::DEVICE, bool persistentlyMapped = false);
+        struct ExtraInfo {
+            u32 requiredFlags = 0;
+            u32 preferredFlags = 0;
+        };
+        BufferHandle createBuffer(u32 size, BufferUsage usage, backend::MemoryProperties flags = backend::MemoryProperties::DEVICE, bool persistentlyMapped = false, ExtraInfo extraInfo = { 0, 0 });
 
 
 
@@ -132,11 +136,14 @@ namespace cala::backend::vulkan {
 
         spdlog::logger& logger() { return _logger; }
 
+        void printMarkers();
+
     private:
         friend BufferHandle;
         friend ImageHandle;
         friend ProgramHandle;
         friend ui::ResourceViewer;
+        friend CommandBuffer;
 
         spdlog::logger& _logger;
         Context _context;
@@ -183,6 +190,10 @@ namespace cala::backend::vulkan {
         VkDescriptorPool _descriptorPool;
 
         tsl::robin_map<CommandBuffer::PipelineKey, VkPipeline, ende::util::MurmurHash<CommandBuffer::PipelineKey>, CommandBuffer::PipelineEqual> _pipelines;
+
+        BufferHandle _markerBuffer;
+        u32 _offset = 0;
+        u32 _marker = 1;
 
 
         u32 _bytesAllocatedPerFrame;

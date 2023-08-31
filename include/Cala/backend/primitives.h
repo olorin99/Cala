@@ -75,7 +75,7 @@ namespace cala::backend {
     enum class MemoryProperties {
         STAGING = 1,
         DEVICE = 2,
-        READBACK = 3
+        READBACK = 4
     };
 
     enum class ImageLayout {

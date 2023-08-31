@@ -342,6 +342,7 @@ void cala::backend::vulkan::CommandBuffer::draw(u32 count, u32 instanceCount, u3
     else
         vkCmdDraw(_buffer, count, instanceCount, first, firstInstance);
     ++_drawCallCount;
+    writeBufferMarker(PipelineStage::FRAGMENT_SHADER);
 }
 
 void cala::backend::vulkan::CommandBuffer::drawIndirect(BufferHandle buffer, u32 offset, u32 drawCount, u32 stride) {
@@ -351,6 +352,7 @@ void cala::backend::vulkan::CommandBuffer::drawIndirect(BufferHandle buffer, u32
         stride = sizeof(u32) * 4;
     vkCmdDrawIndirect(_buffer, buffer->buffer(), offset, drawCount, stride);
     ++_drawCallCount;
+    writeBufferMarker(PipelineStage::FRAGMENT_SHADER);
 }
 
 void cala::backend::vulkan::CommandBuffer::drawIndirectCount(BufferHandle buffer, u32 bufferOffset, BufferHandle countBuffer, u32 countOffset, u32 maxDrawCount, u32 stride) {
@@ -368,11 +370,13 @@ void cala::backend::vulkan::CommandBuffer::drawIndirectCount(BufferHandle buffer
         vkCmdDrawIndirectCount(_buffer, buffer->buffer(), bufferOffset, countBuffer->buffer(), countOffset, maxDrawCount, stride);
     }
     ++_drawCallCount;
+    writeBufferMarker(PipelineStage::FRAGMENT_SHADER);
 }
 
 void cala::backend::vulkan::CommandBuffer::dispatchCompute(u32 x, u32 y, u32 z) {
     if (!_pipelineKey.compute) throw std::runtime_error("Trying to dispatch compute when graphics pipeline is bound");
     vkCmdDispatch(_buffer, x, y, z);
+    writeBufferMarker(PipelineStage::COMPUTE_SHADER);
 }
 
 void cala::backend::vulkan::CommandBuffer::pipelineBarrier(PipelineStage srcStage, PipelineStage dstStage, VkDependencyFlags dependencyFlags, ende::Span<VkBufferMemoryBarrier> bufferBarriers, ende::Span<VkImageMemoryBarrier> imageBarriers) {
@@ -478,7 +482,16 @@ bool cala::backend::vulkan::CommandBuffer::submit(ende::Span<VkSemaphore> wait, 
     return vkQueueSubmit(_queue, 1, &submitInfo, fence) == VK_SUCCESS;
 }
 
-bool
-cala::backend::vulkan::CommandBuffer::PipelineEqual::operator()(const PipelineKey &lhs, const PipelineKey &rhs) const {
+bool cala::backend::vulkan::CommandBuffer::PipelineEqual::operator()(const PipelineKey &lhs, const PipelineKey &rhs) const {
     return 0 == memcmp((const void*)&lhs, (const void*)&rhs, sizeof(lhs));
+}
+
+void cala::backend::vulkan::CommandBuffer::writeBufferMarker(cala::backend::PipelineStage stage) {
+#ifndef NDEBUG
+    if (_device->context().getSupportedExtensions().AMD_buffer_marker && _device->_markerBuffer) {
+        static auto cmdWriteBufferMarker = (PFN_vkCmdWriteBufferMarkerAMD)vkGetDeviceProcAddr(_device->context().device(), "vkCmdWriteBufferMarkerAMD");
+        cmdWriteBufferMarker(_buffer, getPipelineStage(stage), _device->_markerBuffer->buffer(), _device->_offset, _device->_marker++);
+        _device->_offset += sizeof(u32);
+    }
+#endif
 }

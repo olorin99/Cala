@@ -80,6 +80,17 @@ namespace cala::backend::vulkan {
 
         PipelineStatistics getPipelineStatistics() const;
 
+
+        struct Extensions {
+            bool KHR_swapchain = false;
+            bool KHR_shader_draw_parameters = false;
+            bool EXT_memory_budget = false;
+            bool AMD_buffer_marker = false;
+            bool AMD_device_coherent_memory = false;
+        };
+
+        Extensions getSupportedExtensions() const { return _supportedExtensions; }
+
     private:
 
         u32 memoryIndex(u32 filter, VkMemoryPropertyFlags properties);
@@ -110,6 +121,8 @@ namespace cala::backend::vulkan {
         std::string _deviceName;
         f32 _timestampPeriod;
         f32 _maxAnisotropy;
+
+        Extensions _supportedExtensions = {};
 
     };
 
