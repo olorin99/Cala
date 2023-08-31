@@ -183,7 +183,15 @@ cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFra
 
     VkFence fence = _frameFences[frameIndex()];
 
-    waitFrame(_frameCount);
+    if (!waitFrame(_frameCount)) {
+        printMarkers();
+        _logger.error("Error waiting for frame ({}), index ({})", _frameCount, frameIndex());
+        return {
+            _frameCount,
+            nullptr,
+            VK_NULL_HANDLE
+        };
+    }
 
     vmaSetCurrentFrameIndex(_context.allocator(), _frameCount);
 

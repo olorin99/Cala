@@ -51,6 +51,9 @@ bool cala::Renderer::beginFrame(cala::backend::vulkan::Swapchain* swapchain) {
     _swapchain = swapchain;
     assert(_swapchain);
     _frameInfo = _engine->device().beginFrame();
+    if (!_frameInfo.cmd || _frameInfo.fence == VK_NULL_HANDLE)
+        return false;
+
     _swapchainFrame = _swapchain->nextImage();
     _frameInfo.cmd->begin();
     _globalData.time = _engine->getRunningTime().milliseconds();

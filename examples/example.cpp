@@ -629,13 +629,14 @@ int main() {
             lightTransform.rotate(ende::math::Vec3f{0, 1, 1}, ende::math::rad(45) * dt);
         }
         engine.gc();
-        renderer.beginFrame(&swapchain);
+        if (renderer.beginFrame(&swapchain)) {
+            scene.prepare(camera);
 
-        scene.prepare(camera);
+            renderer.render(scene, camera, &imGuiContext);
 
-        renderer.render(scene, camera, &imGuiContext);
+            dt = renderer.endFrame();
+        }
 
-        dt = renderer.endFrame();
 
         ende::profile::ProfileManager::frame();
     }
