@@ -84,7 +84,15 @@ namespace cala::backend::vulkan {
         struct Extensions {
             bool KHR_swapchain = false;
             bool KHR_shader_draw_parameters = false;
+            bool KHR_acceleration_structure = false;
+            bool KHR_ray_tracing_pipeline = false;
+            bool KHR_ray_query = false;
+            bool KHR_pipeline_library = false;
+            bool KHR_deferred_host_operations = false;
+
             bool EXT_memory_budget = false;
+            bool EXT_mesh_shader = false;
+
             bool AMD_buffer_marker = false;
             bool AMD_device_coherent_memory = false;
         };

@@ -187,11 +187,15 @@ cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFra
     if (!waitFrame(_frameCount)) {
         printMarkers();
         _logger.error("Error waiting for frame ({}), index ({})", _frameCount, frameIndex());
-        return {
-            _frameCount,
-            nullptr,
-            VK_NULL_HANDLE
-        };
+        // Currently have some calls to wait when swapchain changes
+        // this means that the fences are reset early and the main call fails
+        // resulting in the queue not being submitted and fences not being signaled again.
+        // TODO: either delay swapchain recreation till after this call or use timeline semaphores instead
+//        return {
+//            _frameCount,
+//            nullptr,
+//            VK_NULL_HANDLE
+//        };
     }
 
     vmaSetCurrentFrameIndex(_context.allocator(), _frameCount);
@@ -214,10 +218,10 @@ ende::time::Duration cala::backend::vulkan::Device::endFrame() {
 bool cala::backend::vulkan::Device::waitFrame(u64 frame, u64 timeout) {
     VkFence fence = _frameFences[frame % FRAMES_IN_FLIGHT];
 
-    auto res = vkWaitForFences(_context.device(), 1, &fence, true, timeout) == VK_SUCCESS;
-    if (res)
+    auto res = vkWaitForFences(_context.device(), 1, &fence, true, timeout);
+    if (res == VK_SUCCESS)
         vkResetFences(_context.device(), 1, &fence);
-    return res;
+    return res == VK_SUCCESS;
 }
 
 bool cala::backend::vulkan::Device::wait(u64 timeout) {

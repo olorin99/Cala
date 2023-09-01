@@ -209,8 +209,16 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
 
     {
         _supportedExtensions.KHR_swapchain = checkExtensions(supportedDeviceExtensions, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-        _supportedExtensions.KHR_shader_draw_parameters  = checkExtensions(supportedDeviceExtensions, VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
-        _supportedExtensions.EXT_memory_budget  = checkExtensions(supportedDeviceExtensions, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
+        _supportedExtensions.KHR_shader_draw_parameters = checkExtensions(supportedDeviceExtensions, VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
+        _supportedExtensions.KHR_acceleration_structure = checkExtensions(supportedDeviceExtensions, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+        _supportedExtensions.KHR_ray_tracing_pipeline = checkExtensions(supportedDeviceExtensions, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+        _supportedExtensions.KHR_ray_query = checkExtensions(supportedDeviceExtensions, VK_KHR_RAY_QUERY_EXTENSION_NAME);
+        _supportedExtensions.KHR_pipeline_library = checkExtensions(supportedDeviceExtensions, VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
+        _supportedExtensions.KHR_deferred_host_operations = checkExtensions(supportedDeviceExtensions, VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+
+        _supportedExtensions.EXT_memory_budget = checkExtensions(supportedDeviceExtensions, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
+        _supportedExtensions.EXT_mesh_shader = checkExtensions(supportedDeviceExtensions, VK_EXT_MESH_SHADER_EXTENSION_NAME);
+
         _supportedExtensions.AMD_buffer_marker = checkExtensions(supportedDeviceExtensions, VK_AMD_BUFFER_MARKER_EXTENSION_NAME);
         _supportedExtensions.AMD_device_coherent_memory = checkExtensions(supportedDeviceExtensions, VK_AMD_DEVICE_COHERENT_MEMORY_EXTENSION_NAME);
     }
