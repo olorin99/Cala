@@ -84,8 +84,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         _cullingFrustum = camera.frustum();
     auto cameraData = camera.data();
     _cameraBuffer[_engine->device().frameIndex()]->data({ &cameraData, sizeof(cameraData) });
+
     u32 drawCount = scene._renderables.size();
-    _drawCountBuffer[_engine->device().frameIndex()]->data({ &drawCount, sizeof(drawCount) });
+    _drawCountBuffer[_engine->device().frameIndex()]->data({ &drawCount, sizeof(drawCount) }, sizeof(u32));
 
     _globalData.meshBufferIndex = scene._meshDataBuffer[_engine->device().frameIndex()].index();
     _globalData.lightBufferIndex = scene._lightBuffer[_engine->device().frameIndex()].index();
