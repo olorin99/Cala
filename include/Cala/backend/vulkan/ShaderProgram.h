@@ -23,7 +23,7 @@ namespace cala::backend::vulkan {
 
             Builder& addStageSPV(const std::vector<u32>& code, ShaderStage stage);
 
-            Builder& addStageGLSL(const ende::fs::Path& path, ShaderStage stage, const std::vector<std::pair<const char*, std::string>>& macros = {});
+            Builder& addStageGLSL(const ende::fs::Path& path, ShaderStage stage, const std::vector<std::pair<const char*, std::string>>& macros = {}, const std::vector<std::string>& includes = {});
 
             ShaderProgram compile();
 

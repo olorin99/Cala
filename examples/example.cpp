@@ -376,6 +376,8 @@ int main() {
         f32 roughness = 0;
     };
     Material* material = engine.loadMaterial<Material1Data>("../../res/materials/expanded_pbr.mat"_path);
+    if (!material)
+        return -1;
 
     struct MaterialData {
         i32 albedoIndex = -1;
@@ -384,6 +386,8 @@ int main() {
     };
 
     Material* material1 = engine.loadMaterial<MaterialData>("../../res/materials/pbr.mat"_path);
+    if (!material1)
+        return -2;
 
     Transform sponzaTransform;
 

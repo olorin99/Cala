@@ -121,7 +121,15 @@ std::vector<u32> compileShader(cala::backend::vulkan::Device* device, const std:
             options.AddMacroDefinition(macro.first, macro.second);
     }
 
-//    options.AddMacroDefinition("test", "macro");
+    shaderc::PreprocessedSourceCompilationResult preprocessed = compiler.PreprocessGlsl(source, kind, name.c_str(), options);
+    if (preprocessed.GetCompilationStatus() != shaderc_compilation_status_success) {
+        auto numErrors = preprocessed.GetNumErrors();
+        auto numWarnings = preprocessed.GetNumWarnings();
+        auto errorMessage = preprocessed.GetErrorMessage();
+        device->logger().error("Failed to preprocess shader: \nNumber of errors: {}\nNumber of warnings: {}\n{}\n\nShader: {}", numErrors, numWarnings, errorMessage, source);
+        throw std::runtime_error("Failed to preprocess shader: " + name);
+        return {};
+    }
 
     shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(source, kind, name.c_str(), options);
 
@@ -129,7 +137,9 @@ std::vector<u32> compileShader(cala::backend::vulkan::Device* device, const std:
         auto numErrors = module.GetNumErrors();
         auto numWarnings = module.GetNumWarnings();
         auto errorMessage = module.GetErrorMessage();
-        device->logger().error("Failed to compile shader: \nNumber of errors: {}\nNumber of warnings: {}\n{}", numErrors, numWarnings, errorMessage);
+        std::string p = { preprocessed.begin(), preprocessed.end() };
+        device->logger().error("Failed to compile shader: \nNumber of errors: {}\nNumber of warnings: {}\n{}\n\nShader: {}", numErrors, numWarnings, errorMessage, p);
+        throw std::runtime_error("Failed to compile shader: " + name);
         return {};
     }
     return { module.cbegin(), module.cend() };
@@ -150,7 +160,7 @@ cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProg
     return *this;
 }
 
-cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStageGLSL(const ende::fs::Path& path, cala::backend::ShaderStage stage, const std::vector<std::pair<const char*, std::string>>& macros) {
+cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStageGLSL(const ende::fs::Path& path, cala::backend::ShaderStage stage, const std::vector<std::pair<const char*, std::string>>& macros, const std::vector<std::string>& includes) {
     shaderc_shader_kind kind{};
     switch (stage) {
         case ShaderStage::VERTEX:
@@ -176,7 +186,19 @@ cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProg
     }
     ende::fs::File file;
     file.open(path);
-    auto source = file.read();
+    auto rawSource = file.read();
+
+    std::string source = "#version 460\n"
+             "\n"
+             "#extension GL_EXT_nonuniform_qualifier : enable\n"
+             "#extension GL_GOOGLE_include_directive : enable\n";
+
+    for (auto& include : includes) {
+        source += "\n#include \"" + include + "\"\n";
+    }
+
+    source += rawSource;
+
     auto dst = compileShader(_device, *path, source, kind, macros);
     addStageSPV(dst, stage);
     return *this;
@@ -185,8 +207,6 @@ cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProg
 cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Builder::compile() {
     ShaderProgram program(_device);
 
-    bool hasPushConstant = false;
-    u32 pushConstantCount = 0;
     ende::Vector<VkPushConstantRange> pushConstants;
 
     for (auto& stage : _stages) {
@@ -214,7 +234,6 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
             pushConstants.back().offset = blockOffset;
             pushConstants.back().size = size;
             pushConstants.back().stageFlags |= getShaderStage(stage.second);
-            hasPushConstant = true;
         }
 
         // uniform buffers

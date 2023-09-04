@@ -429,7 +429,7 @@ std::optional<cala::backend::vulkan::CommandBuffer::RasterState> loadMaterialRas
 
     cala::backend::vulkan::CommandBuffer::RasterState state{};
 
-    if (cullModeIt != it->end() || !cullModeIt->is_string()) {
+    if (cullModeIt != it->end() && cullModeIt->is_string()) {
         std::string mode = cullModeIt->get<std::string>();
         if (mode == "NONE")
             state.cullMode = cala::backend::CullMode::NONE;
@@ -440,14 +440,14 @@ std::optional<cala::backend::vulkan::CommandBuffer::RasterState> loadMaterialRas
         else if (mode == "FRONT_BACK")
             state.cullMode = cala::backend::CullMode::FRONT_BACK;
     }
-    if (frontFaceIt != it->end() || !frontFaceIt->is_string()) {
+    if (frontFaceIt != it->end() && frontFaceIt->is_string()) {
         std::string face = frontFaceIt->get<std::string>();
         if (face == "CCW")
             state.frontFace = cala::backend::FrontFace::CCW;
         else if (face == "CW")
             state.frontFace = cala::backend::FrontFace::CW;
     }
-    if (polygonModeIt != it->end() || !polygonModeIt->is_string()) {
+    if (polygonModeIt != it->end() && polygonModeIt->is_string()) {
         std::string mode = polygonModeIt->get<std::string>();
         if (mode == "FILL")
             state.polygonMode = cala::backend::PolygonMode::FILL;
@@ -456,13 +456,13 @@ std::optional<cala::backend::vulkan::CommandBuffer::RasterState> loadMaterialRas
         else if (mode == "POINT")
             state.polygonMode = cala::backend::PolygonMode::POINT;
     }
-    if (lineWidthIt != it->end() || !lineWidthIt->is_number_float())
+    if (lineWidthIt != it->end() && lineWidthIt->is_number_float())
         state.lineWidth = lineWidthIt->get<f32>();
-    if (depthClampIt != it->end() || !depthClampIt->is_boolean())
+    if (depthClampIt != it->end() && depthClampIt->is_boolean())
         state.depthClamp = depthClampIt->get<bool>();
-    if (rasterDiscardIt != it->end() || !rasterDiscardIt->is_boolean())
+    if (rasterDiscardIt != it->end() && rasterDiscardIt->is_boolean())
         state.rasterDiscard = rasterDiscardIt->get<bool>();
-    if (depthBiasIt != it->end() || !depthBiasIt->is_boolean())
+    if (depthBiasIt != it->end() && depthBiasIt->is_boolean())
         state.depthBias = depthBiasIt->get<bool>();
 
     return state;
@@ -478,11 +478,11 @@ std::optional<cala::backend::vulkan::CommandBuffer::DepthState> loadMaterialDept
 
     cala::backend::vulkan::CommandBuffer::DepthState state{};
 
-    if (testIt != it->end() || !testIt->is_boolean())
+    if (testIt != it->end() && testIt->is_boolean())
         state.test = testIt->get<bool>();
-    if (writeIt != it->end() || !writeIt->is_boolean())
+    if (writeIt != it->end() && writeIt->is_boolean())
         state.write = writeIt->get<bool>();
-    if (compareOpIt != it->end() || !compareOpIt->is_string()) {
+    if (compareOpIt != it->end() && compareOpIt->is_string()) {
         std::string comp = compareOpIt->get<std::string>();
         if (comp == "NEVER")
             state.compareOp = cala::backend::CompareOp::NEVER;
@@ -514,9 +514,9 @@ std::optional<cala::backend::vulkan::CommandBuffer::BlendState> loadMaterialBlen
 
     cala::backend::vulkan::CommandBuffer::BlendState state;
 
-    if (blendIt != it->end() || !blendIt->is_boolean())
+    if (blendIt != it->end() && blendIt->is_boolean())
         state.blend = blendIt->get<bool>();
-    if (srcFactorIt != it->end() || !srcFactorIt->is_string()) {
+    if (srcFactorIt != it->end() && srcFactorIt->is_string()) {
         std::string factor = srcFactorIt->get<std::string>();
         if (factor == "ZERO")
             state.srcFactor = cala::backend::BlendFactor::ZERO;
@@ -557,7 +557,7 @@ std::optional<cala::backend::vulkan::CommandBuffer::BlendState> loadMaterialBlen
         else if (factor == "ONE_MINUS_SRC1_ALPHA")
             state.srcFactor = cala::backend::BlendFactor::ONE_MINUS_SRC1_ALPHA;
     }
-    if (dstFactorIt != it->end() || !dstFactorIt->is_string()) {
+    if (dstFactorIt != it->end() && dstFactorIt->is_string()) {
         std::string factor = dstFactorIt->get<std::string>();
         if (factor == "ZERO")
             state.dstFactor = cala::backend::BlendFactor::ZERO;
@@ -602,99 +602,114 @@ std::optional<cala::backend::vulkan::CommandBuffer::BlendState> loadMaterialBlen
 }
 
 cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size) {
-    ende::fs::File file;
-    if (!file.open(path, ende::fs::in | ende::fs::binary))
+    try {
+
+        ende::fs::File file;
+        if (!file.open(path, ende::fs::in | ende::fs::binary))
+            return nullptr;
+
+        std::string source = file.read();
+
+        nlohmann::json materialSource = nlohmann::json::parse(source);
+
+        Material* material = createMaterial(size);
+
+        std::string materialData = loadMaterialString(materialSource, "materialData").value();
+        std::string materialDefinition = loadMaterialString(materialSource, "materialDefinition").value();
+        std::string materialLoad = loadMaterialString(materialSource, "materialLoad").value();
+        std::string litEval = loadMaterialString(materialSource, "lit").value();
+        std::string unlitEval = loadMaterialString(materialSource, "unlit").value();
+        std::string normalEval = loadMaterialString(materialSource, "normal").value();
+        std::string roughnessEval = loadMaterialString(materialSource, "roughness").value();
+        std::string metallicEval = loadMaterialString(materialSource, "metallic").value();
+
+        std::vector<std::string> includes;
+        {
+            auto it = materialSource.find("includes");
+            if (it !=  materialSource.end() && it->is_array()) {
+                for (auto i = it->begin(); i != it->end(); i++) {
+                    includes.push_back(*i);
+                }
+            }
+        }
+
+        auto rasterState = loadMaterialRasterState(materialSource);
+        if (rasterState)
+            material->setRasterState(rasterState.value());
+        auto depthState = loadMaterialDepthState(materialSource);
+        if (depthState)
+            material->setDepthState(depthState.value());
+        auto blendState = loadMaterialBlendState(materialSource);
+        if (blendState)
+            material->setBlendState(blendState.value());
+
+        backend::vulkan::ProgramHandle litHandle = loadProgram({
+            { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
+            { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
+                { "MATERIAL_DATA", materialData },
+                { "MATERIAL_DEFINITION", materialDefinition },
+                { "MATERIAL_LOAD", materialLoad },
+                { "MATERIAL_EVAL", litEval },
+            }, includes }
+        });
+        material->setVariant(Material::Variant::LIT, litHandle);
+
+        backend::vulkan::ProgramHandle unlitHandle = loadProgram({
+            { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
+            { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
+                { "MATERIAL_DATA", materialData },
+                { "MATERIAL_DEFINITION", materialDefinition },
+                { "MATERIAL_LOAD", materialLoad },
+                { "MATERIAL_EVAL", unlitEval },
+            }, includes }
+        });
+        material->setVariant(Material::Variant::UNLIT, unlitHandle);
+
+        backend::vulkan::ProgramHandle normalsHandle = loadProgram({
+            { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
+            { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
+                { "MATERIAL_DATA", materialData },
+                { "MATERIAL_DEFINITION", materialDefinition },
+                { "MATERIAL_LOAD", materialLoad },
+                { "MATERIAL_EVAL", normalEval },
+            }, includes }
+        });
+        material->setVariant(Material::Variant::NORMAL, normalsHandle);
+
+        backend::vulkan::ProgramHandle metallicHandle = loadProgram({
+            { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
+            { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
+                { "MATERIAL_DATA", materialData },
+                { "MATERIAL_DEFINITION", materialDefinition },
+                { "MATERIAL_LOAD", materialLoad },
+                { "MATERIAL_EVAL", metallicEval },
+            }, includes }
+        });
+        material->setVariant(Material::Variant::METALLIC, metallicHandle);
+
+        backend::vulkan::ProgramHandle roughnessHandle = loadProgram({
+            { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
+            { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
+                { "MATERIAL_DATA", materialData },
+                { "MATERIAL_DEFINITION", materialDefinition },
+                { "MATERIAL_LOAD", materialLoad },
+                { "MATERIAL_EVAL", roughnessEval },
+            }, includes }
+        });
+        material->setVariant(Material::Variant::ROUGHNESS, roughnessHandle);
+
+        return material;
+    } catch (std::exception& e) {
+        _device.logger().error("Error with material: {}", *path);
         return nullptr;
-
-    std::string source = file.read();
-
-    nlohmann::json materialSource = nlohmann::json::parse(source);
-
-    Material* material = createMaterial(size);
-
-    std::string materialData = loadMaterialString(materialSource, "materialData").value();
-    std::string materialDefinition = loadMaterialString(materialSource, "materialDefinition").value();
-    std::string materialLoad = loadMaterialString(materialSource, "materialLoad").value();
-    std::string litEval = loadMaterialString(materialSource, "lit").value();
-    std::string unlitEval = loadMaterialString(materialSource, "unlit").value();
-    std::string normalEval = loadMaterialString(materialSource, "normal").value();
-    std::string roughnessEval = loadMaterialString(materialSource, "roughness").value();
-    std::string metallicEval = loadMaterialString(materialSource, "metallic").value();
-
-
-    auto rasterState = loadMaterialRasterState(materialSource);
-    if (rasterState)
-        material->setRasterState(rasterState.value());
-    auto depthState = loadMaterialDepthState(materialSource);
-    if (depthState)
-        material->setDepthState(depthState.value());
-    auto blendState = loadMaterialBlendState(materialSource);
-    if (blendState)
-        material->setBlendState(blendState.value());
-
-    backend::vulkan::ProgramHandle litHandle = loadProgram({
-        { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-        { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
-            { "MATERIAL_DATA", materialData },
-            { "MATERIAL_DEFINITION", materialDefinition },
-            { "MATERIAL_LOAD", materialLoad },
-            { "MATERIAL_EVAL", litEval },
-        } }
-    });
-    material->setVariant(Material::Variant::LIT, litHandle);
-
-    backend::vulkan::ProgramHandle unlitHandle = loadProgram({
-        { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-        { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
-            { "MATERIAL_DATA", materialData },
-            { "MATERIAL_DEFINITION", materialDefinition },
-            { "MATERIAL_LOAD", materialLoad },
-            { "MATERIAL_EVAL", unlitEval },
-            } }
-    });
-    material->setVariant(Material::Variant::UNLIT, unlitHandle);
-
-    backend::vulkan::ProgramHandle normalsHandle = loadProgram({
-        { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-        { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
-            { "MATERIAL_DATA", materialData },
-            { "MATERIAL_DEFINITION", materialDefinition },
-            { "MATERIAL_LOAD", materialLoad },
-            { "MATERIAL_EVAL", normalEval },
-        } }
-    });
-    material->setVariant(Material::Variant::NORMAL, normalsHandle);
-
-    backend::vulkan::ProgramHandle metallicHandle = loadProgram({
-        { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-        { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
-            { "MATERIAL_DATA", materialData },
-            { "MATERIAL_DEFINITION", materialDefinition },
-            { "MATERIAL_LOAD", materialLoad },
-            { "MATERIAL_EVAL", metallicEval },
-        } }
-    });
-    material->setVariant(Material::Variant::METALLIC, metallicHandle);
-
-    backend::vulkan::ProgramHandle roughnessHandle = loadProgram({
-        { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-        { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
-            { "MATERIAL_DATA", materialData },
-            { "MATERIAL_DEFINITION", materialDefinition },
-            { "MATERIAL_LOAD", materialLoad },
-            { "MATERIAL_EVAL", roughnessEval },
-        } }
-    });
-    material->setVariant(Material::Variant::ROUGHNESS, roughnessHandle);
-
-    return material;
+    }
 }
 
 cala::backend::vulkan::ProgramHandle cala::Engine::loadProgram(const ende::Vector<ShaderInfo>& shaderInfo) {
     auto programBuilder = backend::vulkan::ShaderProgram::create(&_device);
 
     for (auto& info : shaderInfo) {
-        programBuilder.addStageGLSL(info.path, info.stage, info.macros);
+        programBuilder.addStageGLSL(info.path, info.stage, info.macros, info.includes);
     }
     auto program = programBuilder.compile();
     return _device.createProgram(std::move(program));

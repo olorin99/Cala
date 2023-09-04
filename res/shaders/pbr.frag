@@ -1,7 +1,3 @@
-#version 460
-
-#extension GL_EXT_nonuniform_qualifier : enable
-#extension GL_GOOGLE_include_directive : enable
 
 layout (location = 0) in VsOut {
     vec3 FragPos;

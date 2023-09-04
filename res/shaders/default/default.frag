@@ -1,7 +1,3 @@
-#version 460
-
-#extension GL_EXT_nonuniform_qualifier : enable
-#extension GL_GOOGLE_include_directive : enable
 
 layout (location = 0) in VsOut {
     vec3 FragPos;
@@ -37,10 +33,10 @@ layout (push_constant) uniform IBLData {
     int brdfIndex;
 };
 
+#include "util.glsl"
 #include "pbr.glsl"
 #include "shadow.glsl"
 #include "lighting.glsl"
-#include "util.glsl"
 
 struct LightGrid {
     uint offset;

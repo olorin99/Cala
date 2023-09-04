@@ -1,5 +1,5 @@
 {
-    "includes": "",
+    "includes": [],
     "materialData": "struct MaterialData {\n  int albedoIndex;\n  int normalIndex;\n  int metallicRoughnessIndex;\n};",
     "materialDefinition": "struct Material {\n  vec3 albedo;\n  vec3 normal;\n  float metallic;\n  float roughness;\n};",
     "materialLoad": "Material loadMaterial(MaterialData data) {\n  Material material;\n  if (data.albedoIndex < 0) {\n    material.albedo = vec3(1.0);\n  } else {\n    vec4 albedaRGBA = texture(textureMaps[data.albedoIndex], fsIn.TexCoords);\n    if (albedaRGBA.a < 0.5)\n    discard;\n    material.albedo = albedaRGBA.rgb;\n  }\n\n  if (data.normalIndex < 0) {\n    material.normal = vec3(0.52, 0.52, 1);\n  } else {\n    material.normal = texture(textureMaps[data.normalIndex], fsIn.TexCoords).rgb;\n  }\n  material.normal = material.normal * 2.0 - 1.0;\n  material.normal = normalize(fsIn.TBN * material.normal);\n\n  if (data.metallicRoughnessIndex < 0) {\n    material.roughness = 1.0;\n    material.metallic = 0.0;\n  } else {\n    material.metallic = texture(textureMaps[data.metallicRoughnessIndex], fsIn.TexCoords).b;\n    material.roughness = texture(textureMaps[data.metallicRoughnessIndex], fsIn.TexCoords).g;\n  }\n  return material;\n}",

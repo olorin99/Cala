@@ -46,6 +46,7 @@ namespace cala {
             ende::fs::Path path;
             backend::ShaderStage stage;
             std::vector<std::pair<const char*, std::string>> macros = {};
+            std::vector<std::string> includes = {};
         };
         backend::vulkan::ProgramHandle loadProgram(const ende::Vector<ShaderInfo>& shaderInfo);
 
