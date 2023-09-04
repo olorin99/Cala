@@ -175,6 +175,8 @@ namespace cala::backend::vulkan {
             //TODO: add rest of pipeline state to key
         } _pipelineKey;
 
+        bool _pipelineDirty;
+
         struct PipelineEqual {
             bool operator()(const PipelineKey& lhs, const PipelineKey& rhs) const;
         };
@@ -200,6 +202,8 @@ namespace cala::backend::vulkan {
                 return memcmp(this, &rhs, sizeof(DescriptorKey)) == 0;
             }
         } _descriptorKey[MAX_SET_COUNT] {};
+
+        bool _descriptorDirty;
 
         //TODO: cull descriptors every now and again
         VkDescriptorSet _currentSets[MAX_SET_COUNT];
