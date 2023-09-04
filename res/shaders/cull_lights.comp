@@ -18,8 +18,19 @@ struct CameraData {
     float exposure;
 };
 
-layout (set = 1, binding = 0) uniform FrameData {
-    CameraData camera;
+layout (set = 0, binding = 1) buffer CameraBuffer { CameraData camera; } globalBuffersCamera[];
+
+struct GlobalData {
+    float gamma;
+    uint time;
+    int meshBufferIndex;
+    int materialBufferIndex;
+    int lightBufferIndex;
+    int cameraBufferIndex;
+};
+
+layout (set = 1, binding = 0) uniform Global {
+    GlobalData globalData;
 };
 
 struct Cluster {
@@ -72,7 +83,7 @@ layout (set = 1, binding = 6) readonly buffer LightCount {
 shared Light sharedLights[16 * 9 * 4];
 
 bool intersect(Light light, Cluster cluster) {
-    vec4 lightPos = (camera.view * vec4(light.position, 1.0));
+    vec4 lightPos = (globalBuffersCamera[globalData.cameraBufferIndex].camera.view * vec4(light.position, 1.0));
 
     vec4 closest = max(cluster.minPoint, min(lightPos, cluster.maxPoint));
     vec3 dist = closest.xyz - lightPos.xyz;

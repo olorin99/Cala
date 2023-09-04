@@ -7,7 +7,7 @@ vec4 evalMaterial(Material material) {
     F0 = mix(F0, material.albedo, material.metallic);
     vec3 Lo = vec3(0.0);
 
-    uint tileIndex = getTileIndex();
+    uint tileIndex = getTileIndex(gl_FragCoord.xy, gl_FragCoord.z);
 
     uint lightCount = lightGrid[tileIndex].count;
     uint lightOffset = lightGrid[tileIndex].offset;

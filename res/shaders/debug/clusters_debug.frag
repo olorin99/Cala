@@ -14,8 +14,19 @@ struct CameraData {
     float exposure;
 };
 
-layout (set = 1, binding = 0) uniform FrameData {
-    CameraData camera;
+layout (set = 0, binding = 1) buffer CameraBuffer { CameraData camera; } globalBuffersCamera[];
+
+struct GlobalData {
+    float gamma;
+    uint time;
+    int meshBufferIndex;
+    int materialBufferIndex;
+    int lightBufferIndex;
+    int cameraBufferIndex;
+};
+
+layout (set = 1, binding = 0) uniform Global {
+    GlobalData globalData;
 };
 
 layout (push_constant) uniform TileData {
@@ -34,31 +45,20 @@ layout (set = 1, binding = 1) buffer LightGridSSBO {
 
 layout (set = 1, binding = 2) uniform sampler2D depthMap;
 
-float linearDepth(float depth) {
-    float depthRange = depth;
-    return 2.0 * camera.near * camera.far / (camera.far + camera.near - depthRange * (camera.far - camera.near));
-}
+#include "util.glsl"
 
 void main() {
 
     const float maxLightCount = 250;
 
-    uvec2 tileSize = screenSize / tileSizes.xy;
-    float scale = 24.0 / log2(camera.far / camera.near);
-    float bias = -(24.0 * log2(camera.near) / log2(camera.far / camera.near));
+    float depth = texture(depthMap, fsIn.TexCoords).r;
+    uint tileIndex = getTileIndex(gl_FragCoord.xy, depth);
 
     uint lightCount = 0;
 
-    float depth = texture(depthMap, fsIn.TexCoords).r;
-
-    uint zTile = uint(max(log2(linearDepth(depth)) * scale + bias, 0.0));
-    uvec3 tiles = uvec3(uvec2(gl_FragCoord.xy / tileSize), zTile);
-    uint tileIndex = tiles.x + tileSizes.x * tiles.y + (tileSizes.x * tileSizes.y) * tiles.z;
     lightCount += lightGrid[tileIndex].count;
 
     float fullness = lightCount / maxLightCount;
 
     FragColour = vec4(fullness, 1.0 - fullness, 0.0, 1.0);
-//    FragColour = vec4(gl_FragCoord.xy, depth, 1.0);
-//    FragColour = vec4(tiles, tileIndex);
 }

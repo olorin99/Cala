@@ -9,10 +9,10 @@
 cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings)
     : _engine(engine),
     _swapchain(nullptr),
-    _cameraBuffer{engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING),
-                  engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING)},
-    _drawCountBuffer{engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING),
-                     engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING)},
+    _cameraBuffer{engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true),
+                  engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true)},
+    _drawCountBuffer{engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING, true),
+                     engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING, true)},
     _globalDataBuffer{engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true),
                       engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true)},
     _graph(engine),
@@ -84,10 +84,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         _cullingFrustum = camera.frustum();
     auto cameraData = camera.data();
     _cameraBuffer[_engine->device().frameIndex()]->data({ &cameraData, sizeof(cameraData) });
-    {
-        auto mapped = _drawCountBuffer[_engine->device().frameIndex()]->map(sizeof(u32), sizeof(u32));
-        *static_cast<u32*>(mapped.address) = scene._renderables.size();
-    }
+    u32 drawCount = scene._renderables.size();
+    _drawCountBuffer[_engine->device().frameIndex()]->data({ &drawCount, sizeof(drawCount) });
+
     _globalData.meshBufferIndex = scene._meshDataBuffer[_engine->device().frameIndex()].index();
     _globalData.lightBufferIndex = scene._lightBuffer[_engine->device().frameIndex()].index();
     _globalData.cameraBufferIndex = _cameraBuffer[_engine->device().frameIndex()].index();
@@ -139,10 +138,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 //    pointDepth.width = 10;
 //    pointDepth.height = 10;
 
-    BufferResource cameraResource;
-    cameraResource.size = _cameraBuffer[_engine->device().frameIndex()]->size();
-    cameraResource.usage = _cameraBuffer[_engine->device().frameIndex()]->usage();
-    cameraResource.handle = _cameraBuffer[_engine->device().frameIndex()];
 
     BufferResource transformsResource;
     transformsResource.handle = scene._modelBuffer[_engine->device().frameIndex()];
@@ -246,7 +241,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         push.far = camera.far();
 
         cmd.pushConstants(backend::ShaderStage::COMPUTE, { &push, sizeof(push) });
-        cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()], false);
+        cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
         cmd.bindBuffer(1, 1, clusters->handle, true);
         cmd.bindBuffer(1, 2, scene._lightBuffer[_engine->device().frameIndex()], true);
         cmd.bindBuffer(1, 3, lightGrid->handle, true);
@@ -269,7 +264,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto lightGrid = graph.getResource<BufferResource>("lightGrid");
             auto depthBuffer = graph.getResource<ImageResource>("depth");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
             cmd.bindBindings(nullptr);
             cmd.bindAttributes(nullptr);
             cmd.bindBlendState({ true });
@@ -307,7 +302,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
@@ -348,7 +343,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
@@ -389,7 +384,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
@@ -430,7 +425,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
@@ -471,7 +466,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
@@ -509,7 +504,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
@@ -549,7 +544,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
@@ -739,7 +734,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
@@ -787,8 +782,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             if (scene._renderables.empty())
                 return;
 
-            cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
-            cmd.bindBuffer(1, 1, _globalDataBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
 
 //            if (!scene._lightData.empty()) {
 //                cmd.bindBuffer(2, 4, scene._lightBuffer[_engine->device().frameIndex()], true);
@@ -859,8 +853,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindProgram(_engine->_tonemapProgram);
             cmd.bindBindings(nullptr);
             cmd.bindAttributes(nullptr);
-            cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
-            cmd.bindBuffer(1, 1, _globalDataBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
             cmd.bindImage(2, 0, _engine->device().getImageView(hdrImage->handle), _engine->device().defaultSampler(), true);
             cmd.bindImage(2, 1, _engine->device().getImageView(backbuffer->handle), _engine->device().defaultSampler(), true);
             cmd.bindPipeline();
@@ -885,7 +878,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
             cmd.bindBindings({ &_engine->_cube->_binding, 1 });
             cmd.bindAttributes(_engine->_cube->_attributes);
-            cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
             cmd.bindImage(2, 0, scene._skyLightMapView, _engine->device().defaultSampler());
             cmd.bindPipeline();
             cmd.bindDescriptors();

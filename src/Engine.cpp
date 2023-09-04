@@ -43,6 +43,7 @@ cala::Engine::Engine(backend::Platform &platform)
       _stagingReady(false)
 {
     spdlog::flush_every(std::chrono::seconds(5));
+    _device.setBindlessSetIndex(0);
     {
         _pointShadowProgram = loadProgram({
             { "../../res/shaders/shadow_point.vert"_path, backend::ShaderStage::VERTEX },
@@ -119,10 +120,9 @@ cala::Engine::Engine(backend::Platform &platform)
     {
         _worldPosDebugProgram = loadProgram({
             { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-            { "../../res/shaders/default/world_pos.frag"_path, backend::ShaderStage::FRAGMENT }
+            { "../../res/shaders/debug/world_pos.frag"_path, backend::ShaderStage::FRAGMENT }
         });
     }
-    _device.setBindlessSetIndex(0);
     {
         _solidColourProgram = loadProgram({
             { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },

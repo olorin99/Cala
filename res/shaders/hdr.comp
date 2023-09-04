@@ -10,9 +10,7 @@ struct CameraData {
     float exposure;
 };
 
-layout (set = 1, binding = 0) uniform FrameData {
-    CameraData camera;
-};
+layout (set = 0, binding = 1) buffer CameraBuffer { CameraData camera; } globalBuffersCamera[];
 
 struct GlobalData {
     float gamma;
@@ -23,7 +21,7 @@ struct GlobalData {
     int cameraBufferIndex;
 };
 
-layout (set = 1, binding = 1) uniform Global {
+layout (set = 1, binding = 0) uniform Global {
     GlobalData globalData;
 };
 
@@ -74,7 +72,7 @@ void main() {
 //    vec3 result = uncharted2Tonemap(hdr * camera.exposure);
 //    result = result * (1.0 / uncharted2Tonemap(vec3(11.2f)));
 
-    vec3 result = aces(hdr * camera.exposure);
+    vec3 result = aces(hdr * globalBuffersCamera[globalData.cameraBufferIndex].camera.exposure);
 //    vec3 result = reinhard(hdr * camera.exposure);
 //    vec3 result = reinhard2(hdr * camera.exposure);
 

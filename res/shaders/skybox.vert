@@ -12,14 +12,28 @@ struct CameraData {
     mat4 projection;
     mat4 view;
     vec3 position;
+    float near;
+    float far;
+    float exposure;
 };
 
-layout (set = 1, binding = 0) uniform FrameData {
-    CameraData camera;
+layout (set = 0, binding = 1) buffer CameraBuffer { CameraData camera; } globalBuffersCamera[];
+
+struct GlobalData {
+    float gamma;
+    uint time;
+    int meshBufferIndex;
+    int materialBufferIndex;
+    int lightBufferIndex;
+    int cameraBufferIndex;
+};
+
+layout (set = 1, binding = 0) uniform Global {
+    GlobalData globalData;
 };
 
 void main() {
     vsOut.TexCoords = inPosition;
 
-    gl_Position = (camera.projection * mat4(mat3(camera.view)) * vec4(inPosition, 1.0)).xyww;
+    gl_Position = (globalBuffersCamera[globalData.cameraBufferIndex].camera.projection * mat4(mat3(globalBuffersCamera[globalData.cameraBufferIndex].camera.view)) * vec4(inPosition, 1.0)).xyww;
 }

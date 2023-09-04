@@ -310,7 +310,7 @@ void cala::backend::vulkan::CommandBuffer::bindDescriptors() {
 
     // find descriptors with key
     for (u32 i = 0; i < MAX_SET_COUNT; i++) {
-        if (_boundInterface->setPresent(i) && _device->getBindlessIndex() == i)
+        if (_device->getBindlessIndex() == i)
             _currentSets[i] = _device->bindlessSet();
         else {
             auto descriptor = _device->getDescriptorSet(_descriptorKey[i]);

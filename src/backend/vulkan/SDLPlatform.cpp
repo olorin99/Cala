@@ -11,6 +11,7 @@ cala::backend::vulkan::SDLPlatform::SDLPlatform(const char *windowTitle, u32 wid
     _width(width),
     _height(height)
 {
+//    SDL_VideoInit("wayland");
     _window = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, flags | SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN);
     if (!_window) throw std::runtime_error("Unable to create window");
 }

@@ -71,7 +71,6 @@ namespace cala::backend {
             } bindings[MAX_BINDING_PER_SET];
         } sets[MAX_SET_COUNT];
         u32 _setCount = 0;
-        u32 _bindlessIndex = 0;
 
         struct {
             u32 byteSize = 0;

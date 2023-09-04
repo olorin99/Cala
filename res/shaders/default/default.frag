@@ -23,10 +23,6 @@ struct CameraData {
 
 layout (set = 0, binding = 1) buffer CameraBuffer { CameraData camera; } globalBuffersCamera[];
 
-layout (set = 1, binding = 0) uniform FrameData {
-    CameraData globcamera;
-};
-
 struct GlobalData {
     float gamma;
     uint time;
@@ -36,7 +32,7 @@ struct GlobalData {
     int cameraBufferIndex;
 };
 
-layout (set = 1, binding = 1) uniform Global {
+layout (set = 1, binding = 0) uniform Global {
     GlobalData globalData;
 };
 

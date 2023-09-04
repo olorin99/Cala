@@ -31,11 +31,24 @@ struct CameraData {
     float exposure;
 };
 
-layout (set = 1, binding = 0) uniform FrameData {
-    CameraData camera;
+layout (set = 0, binding = 1) buffer CameraBuffer { CameraData camera; } globalBuffersCamera[];
+
+struct GlobalData {
+    float gamma;
+    uint time;
+    int meshBufferIndex;
+    int materialBufferIndex;
+    int lightBufferIndex;
+    int cameraBufferIndex;
+};
+
+layout (set = 1, binding = 0) uniform Global {
+    GlobalData globalData;
 };
 
 void genLine(int index) {
+    CameraData camera = globalBuffersCamera[globalData.cameraBufferIndex].camera;
+
     vec3 normal = gsIn[index].TBN[2];
     vec4 N = camera.projection * camera.view * vec4(normal * length, 0.0);
 
