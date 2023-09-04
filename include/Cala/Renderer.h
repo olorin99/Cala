@@ -71,9 +71,7 @@ namespace cala {
 
         backend::vulkan::BufferHandle _cameraBuffer[2];
         backend::vulkan::BufferHandle _drawCountBuffer[2];
-        backend::vulkan::BufferHandle _globalDataBuffer;
-
-//        backend::vulkan::BufferHandle _drawCommands;
+        backend::vulkan::BufferHandle _globalDataBuffer[2];
 
         backend::vulkan::ImageHandle _shadowTarget;
         backend::vulkan::Framebuffer* _shadowFramebuffer;
@@ -90,6 +88,10 @@ namespace cala {
         struct RendererGlobal {
             f32 gamma = 2.2;
             u32 time = 0;
+            i32 meshBufferIndex = 0;
+            i32 materialBufferIndex = 0;
+            i32 lightBufferIndex = 0;
+            i32 cameraBufferIndex = 0;
         };
 
         RendererGlobal _globalData;

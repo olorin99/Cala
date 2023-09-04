@@ -21,8 +21,23 @@ struct CameraData {
     float exposure;
 };
 
+layout (set = 0, binding = 1) buffer CameraBuffer { CameraData camera; } globalBuffersCamera[];
+
 layout (set = 1, binding = 0) uniform FrameData {
-    CameraData camera;
+    CameraData globcamera;
+};
+
+struct GlobalData {
+    float gamma;
+    uint time;
+    int meshBufferIndex;
+    int materialBufferIndex;
+    int lightBufferIndex;
+    int cameraBufferIndex;
+};
+
+layout (set = 1, binding = 1) uniform Global {
+    GlobalData globalData;
 };
 
 layout (push_constant) uniform IBLData {

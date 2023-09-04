@@ -17,6 +17,10 @@ layout (set = 1, binding = 0) uniform FrameData {
 struct GlobalData {
     float gamma;
     uint time;
+    int meshBufferIndex;
+    int materialBufferIndex;
+    int lightBufferIndex;
+    int cameraBufferIndex;
 };
 
 layout (set = 1, binding = 1) uniform Global {

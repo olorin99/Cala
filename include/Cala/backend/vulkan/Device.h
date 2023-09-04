@@ -93,6 +93,8 @@ namespace cala::backend::vulkan {
 
         VkDescriptorSetLayout getSetLayout(ende::Span<VkDescriptorSetLayoutBinding> bindings);
 
+        void updateBindlessBuffer(u32 index);
+
         void updateBindlessImage(u32 index, Image::View& image, Sampler& sampler);
 
         VkDescriptorSetLayout bindlessLayout() const { return _bindlessLayout; }

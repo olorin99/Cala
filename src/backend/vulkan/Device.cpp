@@ -33,36 +33,51 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
     constexpr u32 maxBindless = 1000;
 
     VkDescriptorPoolSize poolSizes[] = {
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxBindless }
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxBindless },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, maxBindless }
     };
 
     VkDescriptorPoolCreateInfo poolCreateInfo{};
     poolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
     poolCreateInfo.maxSets = maxBindless;
-    poolCreateInfo.poolSizeCount = 1;
+    poolCreateInfo.poolSizeCount = 2;
     poolCreateInfo.pPoolSizes = poolSizes;
     VK_TRY(vkCreateDescriptorPool(_context.device(), &poolCreateInfo, nullptr, &_bindlessPool));
 
-    VkDescriptorSetLayoutBinding bindlessLayoutBinding{};
-    bindlessLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    bindlessLayoutBinding.descriptorCount = maxBindless;
-    bindlessLayoutBinding.binding = 0;
-    bindlessLayoutBinding.stageFlags = VK_SHADER_STAGE_ALL;
-    bindlessLayoutBinding.pImmutableSamplers = nullptr;
+    VkDescriptorSetLayoutBinding bindlessLayoutBinding[2] = {};
+
+    // images
+    bindlessLayoutBinding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    bindlessLayoutBinding[0].descriptorCount = maxBindless;
+    bindlessLayoutBinding[0].binding = 0;
+    bindlessLayoutBinding[0].stageFlags = VK_SHADER_STAGE_ALL;
+    bindlessLayoutBinding[0].pImmutableSamplers = nullptr;
+
+    // buffers
+    bindlessLayoutBinding[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    bindlessLayoutBinding[1].descriptorCount = maxBindless;
+    bindlessLayoutBinding[1].binding = 1;
+    bindlessLayoutBinding[1].stageFlags = VK_SHADER_STAGE_ALL;
+    bindlessLayoutBinding[1].pImmutableSamplers = nullptr;
+
+
 
     VkDescriptorSetLayoutCreateInfo bindlessLayoutCreateInfo{};
     bindlessLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    bindlessLayoutCreateInfo.bindingCount = 1;
-    bindlessLayoutCreateInfo.pBindings = &bindlessLayoutBinding;
+    bindlessLayoutCreateInfo.bindingCount = 2;
+    bindlessLayoutCreateInfo.pBindings = bindlessLayoutBinding;
     bindlessLayoutCreateInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
     bindlessLayoutCreateInfo.pNext = nullptr;
 
-    VkDescriptorBindingFlags bindingFlags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
+    VkDescriptorBindingFlags bindingFlags[2] = {
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
+    };
     VkDescriptorSetLayoutBindingFlagsCreateInfo extendedInfo{};
     extendedInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
-    extendedInfo.bindingCount = 1;
-    extendedInfo.pBindingFlags = &bindingFlags;
+    extendedInfo.bindingCount = 2;
+    extendedInfo.pBindingFlags = bindingFlags;
     bindlessLayoutCreateInfo.pNext = &extendedInfo;
 
     VK_TRY(vkCreateDescriptorSetLayout(_context.device(), &bindlessLayoutCreateInfo, nullptr, &_bindlessLayout));
@@ -73,12 +88,12 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
     bindlessAllocate.pSetLayouts = &_bindlessLayout;
     bindlessAllocate.descriptorPool = _bindlessPool;
 
-    VkDescriptorSetVariableDescriptorCountAllocateInfo countInfo{};
-    countInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
-    countInfo.descriptorSetCount = 1;
-    u32 maxBinding = maxBindless - 1;
-    countInfo.pDescriptorCounts = &maxBinding;
-    bindlessAllocate.pNext = &countInfo;
+//    VkDescriptorSetVariableDescriptorCountAllocateInfo countInfo{};
+//    countInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
+//    countInfo.descriptorSetCount = 1;
+//    u32 maxBinding = maxBindless - 1;
+//    countInfo.pDescriptorCounts = &maxBinding;
+//    bindlessAllocate.pNext = &countInfo;
 
     VK_TRY(vkAllocateDescriptorSets(_context.device(), &bindlessAllocate, &_bindlessSet));
 
@@ -353,7 +368,7 @@ bool cala::backend::vulkan::Device::gc() {
 
 cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(u32 size, BufferUsage usage, backend::MemoryProperties flags, bool persistentlyMapped, ExtraInfo extraInfo) {
     u32 index = 0;
-    usage = usage | BufferUsage::TRANSFER_DST | BufferUsage::TRANSFER_SRC;
+    usage = usage | BufferUsage::TRANSFER_DST | BufferUsage::TRANSFER_SRC | BufferUsage::STORAGE;
 
     VkBuffer buffer;
     VmaAllocation allocation;
@@ -399,6 +414,8 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
         _buffers[index].first->_mapped = _buffers[index].first->map();
 
     _bytesAllocatedPerFrame += size;
+
+    updateBindlessBuffer(index);
 
     return { this, static_cast<i32>(index), _buffers[index].second };
 }
@@ -576,6 +593,27 @@ VkDescriptorSetLayout cala::backend::vulkan::Device::getSetLayout(ende::Span <Vk
 
     _setLayouts.emplace(std::make_pair(key, setLayout));
     return setLayout;
+}
+
+void cala::backend::vulkan::Device::updateBindlessBuffer(u32 index) {
+    VkWriteDescriptorSet descriptorWrite{};
+    VkDescriptorBufferInfo bufferInfo{};
+
+    auto buffer = _buffers[index].first.get();
+
+    bufferInfo.buffer = buffer->buffer();
+    bufferInfo.offset = 0;
+    bufferInfo.range = buffer->size();
+
+    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrite.descriptorCount = 1;
+    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    descriptorWrite.dstArrayElement = index;
+    descriptorWrite.dstSet = _bindlessSet;
+    descriptorWrite.dstBinding = 1;
+    descriptorWrite.pBufferInfo = &bufferInfo;
+
+    vkUpdateDescriptorSets(_context.device(), 1, &descriptorWrite, 0, nullptr);
 }
 
 void cala::backend::vulkan::Device::updateBindlessImage(u32 index, Image::View &image, Sampler& sampler) {

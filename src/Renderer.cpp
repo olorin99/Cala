@@ -13,7 +13,8 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
                   engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING)},
     _drawCountBuffer{engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING),
                      engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING)},
-    _globalDataBuffer(engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING)),
+    _globalDataBuffer{engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true),
+                      engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true)},
     _graph(engine),
     _renderSettings(settings),
     _cullingFrustum(ende::math::perspective(45.f, 1920.f / 1080.f, 0.1f, 1000.f, true))
@@ -57,8 +58,6 @@ bool cala::Renderer::beginFrame(cala::backend::vulkan::Swapchain* swapchain) {
     _swapchainFrame = _swapchain->nextImage();
     _frameInfo.cmd->begin();
     _globalData.time = _engine->getRunningTime().milliseconds();
-    auto mapped = _globalDataBuffer->map(0, sizeof(RendererGlobal));
-    *static_cast<RendererGlobal*>(mapped.address) = _globalData;
     return true;
 }
 
@@ -89,6 +88,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         auto mapped = _drawCountBuffer[_engine->device().frameIndex()]->map(sizeof(u32), sizeof(u32));
         *static_cast<u32*>(mapped.address) = scene._renderables.size();
     }
+    _globalData.meshBufferIndex = scene._meshDataBuffer[_engine->device().frameIndex()].index();
+    _globalData.lightBufferIndex = scene._lightBuffer[_engine->device().frameIndex()].index();
+    _globalData.cameraBufferIndex = _cameraBuffer[_engine->device().frameIndex()].index();
+
+    _globalDataBuffer[_engine->device().frameIndex()]->data({ &_globalData, sizeof(_globalData) });
 
     bool debugViewEnabled = _renderSettings.debugNormals || _renderSettings.debugRoughness || _renderSettings.debugMetallic || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugWireframe || _renderSettings.debugNormalLines;
 
@@ -784,7 +788,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 return;
 
             cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
-//            cmd.bindBuffer(1, 1, *_globalDataBuffer);
+            cmd.bindBuffer(1, 1, _globalDataBuffer[_engine->device().frameIndex()]);
 
 //            if (!scene._lightData.empty()) {
 //                cmd.bindBuffer(2, 4, scene._lightBuffer[_engine->device().frameIndex()], true);
@@ -856,7 +860,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindBindings(nullptr);
             cmd.bindAttributes(nullptr);
             cmd.bindBuffer(1, 0, _cameraBuffer[_engine->device().frameIndex()]);
-            cmd.bindBuffer(1, 1, _globalDataBuffer);
+            cmd.bindBuffer(1, 1, _globalDataBuffer[_engine->device().frameIndex()]);
             cmd.bindImage(2, 0, _engine->device().getImageView(hdrImage->handle), _engine->device().defaultSampler(), true);
             cmd.bindImage(2, 1, _engine->device().getImageView(backbuffer->handle), _engine->device().defaultSampler(), true);
             cmd.bindPipeline();
