@@ -23,25 +23,15 @@ struct CameraData {
 
 layout (set = 0, binding = 1) buffer CameraBuffer { CameraData camera; } globalBuffersCamera[];
 
-struct GlobalData {
-    float gamma;
-    uint time;
-    int meshBufferIndex;
-    int materialBufferIndex;
-    int lightBufferIndex;
-    int cameraBufferIndex;
-};
+#include "global_data.glsl"
 
-layout (set = 1, binding = 0) uniform Global {
-    GlobalData globalData;
-};
-
-layout (set = 4, binding = 0) readonly buffer ModelData {
+layout (set = 0, binding = 1) readonly buffer TransformsBuffer {
     mat4 transforms[];
-};
+} globalBuffersTransforms[];
 
 void main() {
-    mat4 model = transforms[gl_BaseInstance];
+    mat4 model = globalBuffersTransforms[globalData.transformsBufferIndex].transforms[gl_BaseInstance];
+
     vec3 T = normalize(mat3(model) * inTangent.xyz) * inTangent.w;
     vec3 N = normalize(mat3(model) * inNormal);
     T = normalize(T - dot(T, N) * N);

@@ -88,6 +88,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     u32 drawCount = scene._renderables.size();
     _drawCountBuffer[_engine->device().frameIndex()]->data({ &drawCount, sizeof(drawCount) }, sizeof(u32));
 
+    _globalData.tranformsBufferIndex = scene._modelBuffer[_engine->device().frameIndex()].index();
     _globalData.meshBufferIndex = scene._meshDataBuffer[_engine->device().frameIndex()].index();
     _globalData.lightBufferIndex = scene._lightBuffer[_engine->device().frameIndex()].index();
     _globalData.cameraBufferIndex = _cameraBuffer[_engine->device().frameIndex()].index();
@@ -311,7 +312,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd.bindRasterState({});
             cmd.bindBuffer(2, 1, meshData->handle, true);
-            cmd.bindBuffer(4, 0, transforms->handle, true);
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
@@ -352,7 +352,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd.bindRasterState({});
             cmd.bindBuffer(2, 1, meshData->handle, true);
-            cmd.bindBuffer(4, 0, transforms->handle, true);
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
@@ -393,7 +392,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd.bindRasterState({});
             cmd.bindBuffer(2, 1, meshData->handle, true);
-            cmd.bindBuffer(4, 0, transforms->handle, true);
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
@@ -434,7 +432,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd.bindRasterState({});
             cmd.bindBuffer(2, 1, meshData->handle, true);
-            cmd.bindBuffer(4, 0, transforms->handle, true);
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
@@ -475,7 +472,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 //            cmd.bindProgram(_engine->_normalsDebugProgram);
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd.bindRasterState({});
-            cmd.bindBuffer(4, 0, transforms->handle, true);
 //            cmd.bindPipeline();
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
@@ -515,7 +511,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 .polygonMode = backend::PolygonMode::LINE,
                 .lineWidth = _renderSettings.wireframeThickness
             });
-            cmd.bindBuffer(4, 0, transforms->handle, true);
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
@@ -551,7 +546,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindBindings(renderable.bindings);
             cmd.bindAttributes(renderable.attributes);
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
-            cmd.bindBuffer(4, 0, transforms->handle, true);
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
@@ -742,7 +736,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindAttributes(renderable.attributes);
             cmd.bindProgram(_engine->_directShadowProgram);
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
-            cmd.bindBuffer(4, 0, scene._modelBuffer[_engine->device().frameIndex()], true);
             cmd.bindPipeline();
             cmd.bindDescriptors();
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
@@ -806,7 +799,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 cmd.bindBuffer(2, 2, lightGrid->handle, true);
                 cmd.bindBuffer(2, 3, lightIndices->handle, true);
                 cmd.bindBuffer(3, 0, scene._lightBuffer[_engine->device().frameIndex()], true);
-                cmd.bindBuffer(4, 0, scene._modelBuffer[_engine->device().frameIndex()], true);
 
                 struct ForwardPush {
                     ende::math::Vec<4, u32> tileSizes;

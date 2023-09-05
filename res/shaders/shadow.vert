@@ -15,11 +15,14 @@ layout (push_constant) uniform PushConstants {
     CameraData camera;
 };
 
-layout (set = 4, binding = 0) readonly buffer ModelData {
+
+#include "global_data.glsl"
+
+layout (set = 0, binding = 1) readonly buffer TransformsBuffer {
     mat4 transforms[];
-};
+} globalBuffersTransforms[];
 
 void main() {
-    mat4 model = transforms[gl_BaseInstance];
+    mat4 model = globalBuffersTransforms[globalData.transformsBufferIndex].transforms[gl_BaseInstance];
     gl_Position = camera.viewProjection * model * vec4(inPosition, 1.0);
 }

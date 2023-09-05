@@ -88,6 +88,7 @@ namespace cala {
         struct RendererGlobal {
             f32 gamma = 2.2;
             u32 time = 0;
+            i32 tranformsBufferIndex = 0;
             i32 meshBufferIndex = 0;
             i32 materialBufferIndex = 0;
             i32 lightBufferIndex = 0;
