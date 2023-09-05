@@ -240,10 +240,7 @@ bool cala::backend::vulkan::Device::waitFrame(u64 frame, u64 timeout) {
 }
 
 bool cala::backend::vulkan::Device::wait(u64 timeout) {
-    bool res = false;
-    for (u32 i = 0; i < FRAMES_IN_FLIGHT; i++)
-        res = waitFrame(i);
-    return res;
+    return VK_SUCCESS == vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS));
 }
 
 cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::stagingBuffer(u32 size) {
