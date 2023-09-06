@@ -12,16 +12,7 @@ layout (location = 0) out vec4 FragColour;
 layout (set = 0, binding = 0) uniform samplerCube cubeMaps[];
 layout (set = 0, binding = 0) uniform sampler2D textureMaps[];
 
-struct CameraData {
-    mat4 projection;
-    mat4 view;
-    vec3 position;
-    float near;
-    float far;
-    float exposure;
-};
-
-layout (set = 0, binding = 1) buffer CameraBuffer { CameraData camera; } globalBuffersCamera[];
+#include "camera.glsl"
 
 #include "global_data.glsl"
 

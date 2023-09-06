@@ -5,16 +5,7 @@ layout (location = 0) in VsOut {
 
 layout (location = 0) out vec4 FragColour;
 
-struct CameraData {
-    mat4 projection;
-    mat4 view;
-    vec3 position;
-    float near;
-    float far;
-    float exposure;
-};
-
-layout (set = 0, binding = 1) buffer CameraBuffer { CameraData camera; } globalBuffersCamera[];
+#include "camera.glsl"
 
 #include "global_data.glsl"
 
@@ -38,10 +29,12 @@ layout (set = 1, binding = 2) uniform sampler2D depthMap;
 
 void main() {
 
+    CameraData camera = globalBuffersCamera[globalData.cameraBufferIndex].camera;
+
     const float maxLightCount = 250;
 
     float depth = texture(depthMap, fsIn.TexCoords).r;
-    uint tileIndex = getTileIndex(gl_FragCoord.xy, depth);
+    uint tileIndex = getTileIndex(gl_FragCoord.xy, depth, camera.near, camera.far);
 
     uint lightCount = 0;
 
