@@ -7,11 +7,8 @@ layout (push_constant) uniform FrameData {
     vec4 planes[6];
 };
 
-layout (set = 2, binding = 0) readonly buffer ModelData {
-    mat4 transforms[];
-};
-
 #include "mesh_data.glsl"
+#include "transforms_data.glsl"
 
 struct IndexedIndirectCommand {
     uint indexCount;
@@ -21,11 +18,11 @@ struct IndexedIndirectCommand {
     uint firstInstance;
 };
 
-layout (set = 2, binding = 2) writeonly buffer DrawCommands {
+layout (set = 2, binding = 0) writeonly buffer DrawCommands {
     IndexedIndirectCommand commands[];
 };
 
-layout (set = 2, binding = 3) buffer Output {
+layout (set = 2, binding = 1) buffer Output {
     uint drawCount;
     uint maxDrawCount;
 };
@@ -50,7 +47,7 @@ void main() {
 
     Mesh mesh = bindlessBufferMesh[globalData.meshBufferIndex].meshData[idx];
     vec3 center = (mesh.max.xyz + mesh.min.xyz) * 0.5;
-    center = (transforms[idx] * vec4(center, 1.0)).xyz;
+    center = (bindlessBuffersTransforms[globalData.transformsBufferIndex].transforms[idx] * vec4(center, 1.0)).xyz;
     vec3 halfExtent = (mesh.max.xyz - mesh.min.xyz) * 0.5;
 
     if (frustumCheck(center, length(halfExtent))) {

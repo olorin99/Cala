@@ -18,11 +18,9 @@ layout (push_constant) uniform PushConstants {
 
 #include "global_data.glsl"
 
-layout (set = 0, binding = 1) readonly buffer TransformsBuffer {
-    mat4 transforms[];
-} globalBuffersTransforms[];
+#include "transforms_data.glsl"
 
 void main() {
-    mat4 model = globalBuffersTransforms[globalData.transformsBufferIndex].transforms[gl_BaseInstance];
+    mat4 model = bindlessBuffersTransforms[globalData.transformsBufferIndex].transforms[gl_BaseInstance];
     gl_Position = camera.viewProjection * model * vec4(inPosition, 1.0);
 }

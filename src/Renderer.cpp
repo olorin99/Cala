@@ -620,10 +620,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd.bindAttributes(nullptr);
                     cmd.pushConstants(backend::ShaderStage::COMPUTE, { &shadowFrustum, sizeof(shadowFrustum) });
                     cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
-                    cmd.bindBuffer(2, 0, transforms->handle, true);
-//                    cmd.bindBuffer(2, 1, meshData->handle, true);
-                    cmd.bindBuffer(2, 1, drawCommands->handle, true);
-                    cmd.bindBuffer(2, 2, _drawCountBuffer[_engine->device().frameIndex()], true);
+                    cmd.bindBuffer(2, 0, drawCommands->handle, true);
+                    cmd.bindBuffer(2, 1, _drawCountBuffer[_engine->device().frameIndex()], true);
                     cmd.bindPipeline();
                     cmd.bindDescriptors();
                     cmd.dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
@@ -662,7 +660,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd.bindBindings(renderable.bindings);
                     cmd.bindAttributes(renderable.attributes);
 
-                    cmd.bindBuffer(1, 0, scene._modelBuffer[_engine->device().frameIndex()], true);
+                    cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
 
                     cmd.bindPipeline();
                     cmd.bindDescriptors();
@@ -708,11 +706,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd.bindAttributes(nullptr);
         cmd.pushConstants(backend::ShaderStage::COMPUTE, { &_cullingFrustum, sizeof(_cullingFrustum) });
         cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
-        cmd.bindBuffer(2, 0, transforms->handle, true);
-//        cmd.bindBuffer(2, 1, meshData->handle, true);
-        cmd.bindBuffer(2, 1, drawCommands->handle, true);
-        cmd.bindBuffer(2, 2, _drawCountBuffer[_engine->device().frameIndex()], true);
-        cmd.bindBuffer(2, 3, materialCounts->handle, true);
+        cmd.bindBuffer(2, 0, drawCommands->handle, true);
+        cmd.bindBuffer(2, 1, _drawCountBuffer[_engine->device().frameIndex()], true);
+        cmd.bindBuffer(2, 2, materialCounts->handle, true);
         cmd.bindPipeline();
         cmd.bindDescriptors();
         cmd.dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);

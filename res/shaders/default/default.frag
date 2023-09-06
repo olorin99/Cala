@@ -60,19 +60,6 @@ layout (set = 2, binding = 0) readonly buffer MatData {
 
 #include "mesh_data.glsl"
 
-//struct Mesh {
-//    uint firstIndex;
-//    uint indexCount;
-//    uint materialIndex;
-//    uint materialInstanceIndex;
-//    vec4 min;
-//    vec4 max;
-//};
-//
-//layout (set = 2, binding = 1) readonly buffer MeshData {
-//    Mesh meshData[];
-//};
-
 void main() {
     Mesh mesh = bindlessBufferMesh[globalData.meshBufferIndex].meshData[fsIn.drawID];
     MaterialData materialData = materials[mesh.materialInstanceIndex];

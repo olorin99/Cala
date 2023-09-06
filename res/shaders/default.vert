@@ -16,12 +16,10 @@ layout (location = 0) out VsOut {
 
 #include "global_data.glsl"
 
-layout (set = 0, binding = 1) readonly buffer TransformsBuffer {
-    mat4 transforms[];
-} globalBuffersTransforms[];
+#include "transforms_data.glsl"
 
 void main() {
-    mat4 model = globalBuffersTransforms[globalData.transformsBufferIndex].transforms[gl_BaseInstance];
+    mat4 model = bindlessBuffersTransforms[globalData.transformsBufferIndex].transforms[gl_BaseInstance];
 
     vec3 T = normalize(mat3(model) * inTangent.xyz) * inTangent.w;
     vec3 N = normalize(mat3(model) * inNormal);

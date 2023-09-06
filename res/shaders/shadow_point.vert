@@ -19,12 +19,11 @@ layout (push_constant) uniform PushConstants {
     CameraData camera;
 };
 
-layout (set = 1, binding = 0) readonly buffer ModelData {
-    mat4 transforms[];
-};
+#include "global_data.glsl"
+#include "transforms_data.glsl"
 
 void main() {
-    mat4 model = transforms[gl_BaseInstance];
+    mat4 model = bindlessBuffersTransforms[globalData.transformsBufferIndex].transforms[gl_BaseInstance];
     vsOut.FragPos = (model * vec4(inPosition, 1.0)).xyz;
     gl_Position = camera.viewProjection * model * vec4(inPosition, 1.0);
 }
