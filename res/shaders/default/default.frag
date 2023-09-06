@@ -34,11 +34,11 @@ struct LightGrid {
     uint count;
 };
 
-layout (set = 2, binding = 2) buffer LightGridSSBO {
+layout (set = 2, binding = 1) buffer LightGridSSBO {
     LightGrid lightGrid[];
 };
 
-layout (set = 2, binding = 3) buffer LightIndices {
+layout (set = 2, binding = 2) buffer LightIndices {
     uint globalLightIndices[];
 };
 
@@ -58,21 +58,23 @@ layout (set = 2, binding = 0) readonly buffer MatData {
     MaterialData materials[];
 };
 
-struct Mesh {
-    uint firstIndex;
-    uint indexCount;
-    uint materialIndex;
-    uint materialInstanceIndex;
-    vec4 min;
-    vec4 max;
-};
+#include "mesh_data.glsl"
 
-layout (set = 2, binding = 1) readonly buffer MeshData {
-    Mesh meshData[];
-};
+//struct Mesh {
+//    uint firstIndex;
+//    uint indexCount;
+//    uint materialIndex;
+//    uint materialInstanceIndex;
+//    vec4 min;
+//    vec4 max;
+//};
+//
+//layout (set = 2, binding = 1) readonly buffer MeshData {
+//    Mesh meshData[];
+//};
 
 void main() {
-    Mesh mesh = meshData[fsIn.drawID];
+    Mesh mesh = bindlessBufferMesh[globalData.meshBufferIndex].meshData[fsIn.drawID];
     MaterialData materialData = materials[mesh.materialInstanceIndex];
     Material material = loadMaterial(materialData);
     FragColour = evalMaterial(material);

@@ -1,6 +1,8 @@
 
 layout (local_size_x = 16) in;
 
+#include "global_data.glsl"
+
 layout (push_constant) uniform FrameData {
     vec4 planes[6];
 };
@@ -9,18 +11,7 @@ layout (set = 2, binding = 0) readonly buffer ModelData {
     mat4 transforms[];
 };
 
-struct Mesh {
-    uint firstIndex;
-    uint indexCount;
-    uint materialIndex;
-    uint materialInstanceIndex;
-    vec4 min;
-    vec4 max;
-};
-
-layout (set = 2, binding = 1) readonly buffer MeshData {
-    Mesh meshData[];
-};
+#include "mesh_data.glsl"
 
 struct IndexedIndirectCommand {
     uint indexCount;
@@ -57,7 +48,7 @@ void main() {
         atomicExchange(drawCount, 0);
     }
 
-    Mesh mesh = meshData[idx];
+    Mesh mesh = bindlessBufferMesh[globalData.meshBufferIndex].meshData[idx];
     vec3 center = (mesh.max.xyz + mesh.min.xyz) * 0.5;
     center = (transforms[idx] * vec4(center, 1.0)).xyz;
     vec3 halfExtent = (mesh.max.xyz - mesh.min.xyz) * 0.5;
