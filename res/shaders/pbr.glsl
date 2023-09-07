@@ -1,3 +1,6 @@
+#ifndef PBR_GLSL
+#define PBR_GLSL
+
 const float PI = 3.1415926559;
 
 float distributionGGX(vec3 N, vec3 H, float roughness) {
@@ -60,3 +63,5 @@ vec3 getAmbient(int irradianceIndex, int prefilterIndex, int brdfIndex, vec3 nor
     }
     return kD * diffuse + specular;
 }
+
+#endif

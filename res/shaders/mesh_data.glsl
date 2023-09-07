@@ -1,3 +1,5 @@
+#ifndef MESH_DATA_GLSL
+#define MESH_DATA_GLSL
 
 struct Mesh {
     uint firstIndex;
@@ -11,3 +13,5 @@ struct Mesh {
 layout (set = 0, binding = 1) readonly buffer MeshBuffer {
     Mesh meshData[];
 } bindlessBufferMesh[];
+
+#endif

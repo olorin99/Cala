@@ -1,3 +1,6 @@
+#ifndef LIGHTING_GLSL
+#define LIGHTING_GLSL
+
 struct Light {
     vec3 position;
     uint type;
@@ -52,3 +55,5 @@ vec3 pointLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 al
 //    return ((L + vec3(1.0)) / 2);
     return (kD * albedo / PI + specular) * radiance * NdotL * shadow;
 }
+
+#endif

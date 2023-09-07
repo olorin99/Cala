@@ -1,3 +1,5 @@
+#ifndef CAMERA_DATA_GLSL
+#define CAMERA_DATA_GLSL
 
 struct CameraData {
     mat4 projection;
@@ -9,3 +11,5 @@ struct CameraData {
 };
 
 layout (set = 0, binding = 1) buffer CameraBuffer { CameraData camera; } globalBuffersCamera[];
+
+#endif

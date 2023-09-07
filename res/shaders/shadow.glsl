@@ -1,3 +1,6 @@
+#ifndef SHADOW_GLSL
+#define SHADOW_GLSL
+
 float calcShadows(uint index, vec3 viewDir, vec3 offset, float bias, float range) {
     float shadow = 1.0;
     if(texture(cubeMaps[index], viewDir + offset).r < length(viewDir) / range - bias) {
@@ -26,3 +29,5 @@ float filterPCF(uint index, vec3 lightPos, float bias, float range) {
     }
     return shadow / samples;
 }
+
+#endif
