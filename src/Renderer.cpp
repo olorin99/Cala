@@ -150,6 +150,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 //    pointDepth.width = 10;
 //    pointDepth.height = 10;
 
+    BufferResource globalResource;
+    globalResource.handle = _globalDataBuffer[_engine->device().frameIndex()];
+    globalResource.size = _globalDataBuffer[_engine->device().frameIndex()]->size();
+    globalResource.usage = _globalDataBuffer[_engine->device().frameIndex()]->usage();
+    _graph.addResource("global", globalResource, false);
 
     BufferResource transformsResource;
     transformsResource.handle = scene._modelBuffer[_engine->device().frameIndex()];
@@ -225,12 +230,14 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     auto& cullLights = _graph.addPass("cull_lights");
 
+    cullLights.addStorageBufferRead("global");
     cullLights.addStorageBufferRead("clusters");
     cullLights.addStorageBufferWrite("lightGrid");
     cullLights.addStorageBufferWrite("lightIndices");
     cullLights.addStorageBufferWrite("lightGlobalResource");
 
     cullLights.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+        auto global = graph.getResource<BufferResource>("global");
         auto clusters = graph.getResource<BufferResource>("clusters");
         auto lightGrid = graph.getResource<BufferResource>("lightGrid");
         auto lightIndices = graph.getResource<BufferResource>("lightIndices");
@@ -257,7 +264,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         push.lightIndicesIndex = lightIndices->handle.index();
 
         cmd.pushConstants(backend::ShaderStage::COMPUTE, { &push, sizeof(push) });
-        cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
+        cmd.bindBuffer(1, 0, global->handle);
         cmd.bindBuffer(1, 1, clusters->handle, true);
         cmd.bindBuffer(1, 2, lightGlobalIndex->handle, true);
         cmd.bindBuffer(1, 3, scene._lightCountBuffer[_engine->device().frameIndex()], true);
@@ -269,15 +276,17 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     if (_renderSettings.debugClusters) {
         auto& debugClusters = _graph.addPass("debug_clusters");
 
+        debugClusters.addStorageBufferRead("global");
         debugClusters.addColourAttachment("hdr");
         debugClusters.addStorageBufferRead("lightGrid");
         debugClusters.addSampledImageRead("depth");
 
         debugClusters.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            auto global = graph.getResource<BufferResource>("global");
             auto lightGrid = graph.getResource<BufferResource>("lightGrid");
             auto depthBuffer = graph.getResource<ImageResource>("depth");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, global->handle);
             cmd.bindBindings(nullptr);
             cmd.bindAttributes(nullptr);
             cmd.bindBlendState({ true });
@@ -304,25 +313,25 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         debugNormals.addColourAttachment("backbuffer");
         debugNormals.addDepthAttachment("depth");
 
+        debugNormals.addStorageBufferRead("global");
         debugNormals.addStorageBufferRead("drawCommands");
         debugNormals.addStorageBufferRead("materialCounts");
         debugNormals.addStorageBufferRead("transforms");
         debugNormals.addStorageBufferRead("meshData");
 
         debugNormals.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-            auto meshData = graph.getResource<BufferResource>("meshData");
-            auto transforms = graph.getResource<BufferResource>("transforms");
+            auto global = graph.getResource<BufferResource>("global");
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
+
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, global->handle);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
             cmd.bindAttributes(renderable.attributes);
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd.bindRasterState({});
-            cmd.bindBuffer(2, 1, meshData->handle, true);
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
@@ -344,25 +353,24 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         debugRoughness.addColourAttachment("backbuffer");
         debugRoughness.addDepthAttachment("depth");
 
+        debugRoughness.addStorageBufferRead("global");
         debugRoughness.addStorageBufferRead("drawCommands");
         debugRoughness.addStorageBufferRead("materialCounts");
         debugRoughness.addStorageBufferRead("transforms");
         debugRoughness.addStorageBufferRead("meshData");
 
         debugRoughness.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-            auto meshData = graph.getResource<BufferResource>("meshData");
-            auto transforms = graph.getResource<BufferResource>("transforms");
+            auto global = graph.getResource<BufferResource>("global");
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, global->handle);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
             cmd.bindAttributes(renderable.attributes);
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd.bindRasterState({});
-            cmd.bindBuffer(2, 1, meshData->handle, true);
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
@@ -384,25 +392,24 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         debugMetallic.addColourAttachment("backbuffer");
         debugMetallic.addDepthAttachment("depth");
 
+        debugMetallic.addStorageBufferRead("global");
         debugMetallic.addStorageBufferRead("drawCommands");
         debugMetallic.addStorageBufferRead("materialCounts");
         debugMetallic.addStorageBufferRead("transforms");
         debugMetallic.addStorageBufferRead("meshData");
 
         debugMetallic.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-            auto meshData = graph.getResource<BufferResource>("meshData");
-            auto transforms = graph.getResource<BufferResource>("transforms");
+            auto global = graph.getResource<BufferResource>("global");
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, global->handle);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
             cmd.bindAttributes(renderable.attributes);
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd.bindRasterState({});
-            cmd.bindBuffer(2, 1, meshData->handle, true);
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
@@ -424,25 +431,24 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         debugUnlit.addColourAttachment("backbuffer");
         debugUnlit.addDepthAttachment("depth");
 
+        debugUnlit.addStorageBufferRead("global");
         debugUnlit.addStorageBufferRead("drawCommands");
         debugUnlit.addStorageBufferRead("materialCounts");
         debugUnlit.addStorageBufferRead("transforms");
         debugUnlit.addStorageBufferRead("meshData");
 
         debugUnlit.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-            auto meshData = graph.getResource<BufferResource>("meshData");
-            auto transforms = graph.getResource<BufferResource>("transforms");
+            auto global = graph.getResource<BufferResource>("global");
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, global->handle);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
             cmd.bindAttributes(renderable.attributes);
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd.bindRasterState({});
-            cmd.bindBuffer(2, 1, meshData->handle, true);
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
@@ -464,23 +470,22 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         debugWorldPos.addColourAttachment("backbuffer");
         debugWorldPos.addDepthAttachment("depth");
 
+        debugWorldPos.addStorageBufferRead("global");
         debugWorldPos.addStorageBufferRead("drawCommands");
         debugWorldPos.addStorageBufferRead("materialCounts");
         debugWorldPos.addStorageBufferRead("transforms");
         debugWorldPos.addStorageBufferRead("meshData");
 
         debugWorldPos.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-            auto meshData = graph.getResource<BufferResource>("meshData");
-            auto transforms = graph.getResource<BufferResource>("transforms");
+            auto global = graph.getResource<BufferResource>("global");
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, global->handle);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
             cmd.bindAttributes(renderable.attributes);
-//            cmd.bindProgram(_engine->_normalsDebugProgram);
             cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd.bindRasterState({});
 //            cmd.bindPipeline();
@@ -501,18 +506,18 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         debugWireframe.addColourAttachment("backbuffer");
         debugWireframe.addDepthAttachment("depth");
 
+        debugWireframe.addStorageBufferRead("global");
         debugWireframe.addStorageBufferRead("drawCommands");
         debugWireframe.addStorageBufferRead("materialCounts");
         debugWireframe.addStorageBufferRead("transforms");
         debugWireframe.addStorageBufferRead("meshData");
 
         debugWireframe.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-            auto meshData = graph.getResource<BufferResource>("meshData");
-            auto transforms = graph.getResource<BufferResource>("transforms");
+            auto global = graph.getResource<BufferResource>("global");
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, global->handle);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
@@ -540,18 +545,18 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         debugNormalLines.addColourAttachment("backbuffer");
         debugNormalLines.addDepthAttachment("depth");
 
+        debugNormalLines.addStorageBufferRead("global");
         debugNormalLines.addStorageBufferRead("drawCommands");
         debugNormalLines.addStorageBufferRead("materialCounts");
         debugNormalLines.addStorageBufferRead("transforms");
         debugNormalLines.addStorageBufferRead("meshData");
 
         debugNormalLines.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-            auto meshData = graph.getResource<BufferResource>("meshData");
-            auto transforms = graph.getResource<BufferResource>("transforms");
+            auto global = graph.getResource<BufferResource>("global");
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, global->handle);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
@@ -583,14 +588,14 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     auto& pointShadows = _graph.addPass("point_shadows");
 
+    pointShadows.addStorageBufferRead("global");
     pointShadows.addSampledImageWrite("pointDepth");
     pointShadows.addStorageBufferRead("transforms");
     pointShadows.addStorageBufferRead("meshData");
     pointShadows.addStorageBufferWrite("shadowDrawCommands");
 
     pointShadows.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-        auto transforms = graph.getResource<BufferResource>("transforms");
-        auto meshData = graph.getResource<BufferResource>("meshData");
+        auto global = graph.getResource<BufferResource>("global");
         auto drawCommands = graph.getResource<BufferResource>("shadowDrawCommands");
         u32 shadowIndex = 0;
         for (u32 i = 0; i < scene._lights.size(); i++) {
@@ -630,7 +635,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd.bindBindings(nullptr);
                     cmd.bindAttributes(nullptr);
                     cmd.pushConstants(backend::ShaderStage::COMPUTE, { &shadowFrustum, sizeof(shadowFrustum) });
-                    cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
+                    cmd.bindBuffer(1, 0, global->handle);
                     cmd.bindBuffer(2, 0, drawCommands->handle, true);
                     cmd.bindBuffer(2, 1, _drawCountBuffer[_engine->device().frameIndex()], true);
                     cmd.bindPipeline();
@@ -671,7 +676,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd.bindBindings(renderable.bindings);
                     cmd.bindAttributes(renderable.attributes);
 
-                    cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
+                    cmd.bindBuffer(1, 0, global->handle);
 
                     cmd.bindPipeline();
                     cmd.bindDescriptors();
@@ -699,6 +704,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     auto& cullPass = _graph.addPass("cull");
 
+    cullPass.addStorageBufferRead("global");
     cullPass.addStorageBufferRead("transforms");
     cullPass.addStorageBufferRead("meshData");
     cullPass.addStorageBufferRead("materialCounts");
@@ -707,8 +713,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     cullPass.setDebugColour({0.3, 0.3, 1, 1});
 
     cullPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-        auto transforms = graph.getResource<BufferResource>("transforms");
-        auto meshData = graph.getResource<BufferResource>("meshData");
+        auto global = graph.getResource<BufferResource>("global");
         auto materialCounts = graph.getResource<BufferResource>("materialCounts");
         auto drawCommands = graph.getResource<BufferResource>("drawCommands");
         cmd.clearDescriptors();
@@ -716,7 +721,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd.bindBindings(nullptr);
         cmd.bindAttributes(nullptr);
         cmd.pushConstants(backend::ShaderStage::COMPUTE, { &_cullingFrustum, sizeof(_cullingFrustum) });
-        cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
+        cmd.bindBuffer(1, 0, global->handle);
         cmd.bindBuffer(2, 0, drawCommands->handle, true);
         cmd.bindBuffer(2, 1, _drawCountBuffer[_engine->device().frameIndex()], true);
         cmd.bindBuffer(2, 2, materialCounts->handle, true);
@@ -731,14 +736,16 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
         depthPrePass.addDepthAttachment("depth");
 
+        depthPrePass.addStorageBufferRead("global");
         depthPrePass.addStorageBufferRead("drawCommands");
         depthPrePass.addStorageBufferRead("materialCounts");
 
         depthPrePass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            auto global = graph.getResource<BufferResource>("global");
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
             cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, global->handle);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd.bindBindings(renderable.bindings);
@@ -749,7 +756,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindDescriptors();
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
-//            cmd.drawIndirectCount(*drawCommands->handle, 0, *_drawCountBuffer[_engine->device().frameIndex()], 0, scene._renderables.size());
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
                 cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
             }
@@ -767,6 +773,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         else
             forwardPass.addDepthAttachment("depth");
 
+        forwardPass.addStorageBufferRead("global");
         forwardPass.addSampledImageRead("pointDepth");
         forwardPass.addStorageBufferRead("drawCommands");
         forwardPass.addStorageBufferRead("lightIndices");
@@ -776,7 +783,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
 
         forwardPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-            auto meshData = graph.getResource<BufferResource>("meshData");
+            auto global = graph.getResource<BufferResource>("global");
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto lightGrid = graph.getResource<BufferResource>("lightGrid");
             auto lightIndices = graph.getResource<BufferResource>("lightIndices");
@@ -785,11 +792,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             if (scene._renderables.empty())
                 return;
 
-            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
-
-//            if (!scene._lightData.empty()) {
-//                cmd.bindBuffer(2, 4, scene._lightBuffer[_engine->device().frameIndex()], true);
-//            }
+            cmd.bindBuffer(1, 0, global->handle);
 
             auto& renderable = scene._renderables[0].second.first;
 
@@ -831,18 +834,20 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     if (_renderSettings.tonemap && !debugViewEnabled) {
         auto& tonemapPass = _graph.addPass("tonemap");
 
+        tonemapPass.addStorageBufferRead("global");
         tonemapPass.addStorageImageWrite("backbuffer");
         tonemapPass.addStorageImageRead("hdr");
 
         tonemapPass.setDebugColour({0.1, 0.4, 0.7, 1});
         tonemapPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            auto global = graph.getResource<BufferResource>("global");
             auto hdrImage = graph.getResource<ImageResource>("hdr");
             auto backbuffer = graph.getResource<ImageResource>("backbuffer");
             cmd.clearDescriptors();
             cmd.bindProgram(_engine->_tonemapProgram);
             cmd.bindBindings(nullptr);
             cmd.bindAttributes(nullptr);
-            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
+            cmd.bindBuffer(1, 0, global->handle);
             cmd.bindImage(2, 0, _engine->device().getImageView(hdrImage->handle), _engine->device().defaultSampler(), true);
             cmd.bindImage(2, 1, _engine->device().getImageView(backbuffer->handle), _engine->device().defaultSampler(), true);
             cmd.bindPipeline();
@@ -860,15 +865,20 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         skyboxPass.addDepthReadAttachment("depth");
         skyboxPass.setDebugColour({0, 0.7, 0.1, 1});
 
+        skyboxPass.addStorageBufferRead("global");
+
         skyboxPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            auto global = graph.getResource<BufferResource>("global");
             cmd.clearDescriptors();
             cmd.bindProgram(_engine->_skyboxProgram);
             cmd.bindRasterState({ backend::CullMode::NONE });
             cmd.bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
             cmd.bindBindings({ &_engine->_cube->_binding, 1 });
             cmd.bindAttributes(_engine->_cube->_attributes);
-            cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
-            cmd.bindImage(2, 0, scene._skyLightMapView, _engine->device().defaultSampler());
+            cmd.bindBuffer(1, 0, global->handle);
+            i32 skyMapIndex = scene._skyLightMap.index();
+            cmd.pushConstants(backend::ShaderStage::FRAGMENT, { &skyMapIndex, sizeof(skyMapIndex) });
+
             cmd.bindPipeline();
             cmd.bindDescriptors();
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);

@@ -352,6 +352,7 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
             if (attach)
                 continue;
             if (auto imageResource = getResource<ImageResource>(input.first); imageResource) {
+                assert(imageResource->handle);
                 if (input.second) {
                     if (imageResource->handle->layout() != backend::ImageLayout::GENERAL) {
                         auto b = imageResource->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::GENERAL);
@@ -364,6 +365,7 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
                     }
                 }
             } else if (auto bufferResource = getResource<BufferResource>(input.first); bufferResource) {
+                assert(bufferResource->handle);
                 auto b = bufferResource->handle->barrier(backend::Access::MEMORY_READ);
                 cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, { &b, 1 });
             }
@@ -379,17 +381,20 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
             if (attach)
                 continue;
             if (auto imageResource = getResource<ImageResource>(output); imageResource) {
+                assert(imageResource->handle);
                 if (imageResource->handle->layout() != backend::ImageLayout::GENERAL) {
                     auto b = imageResource->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
                     cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::COMPUTE_SHADER | backend::PipelineStage::FRAGMENT_SHADER, { &b, 1 });
                 }
             } else if (auto bufferResource = getResource<BufferResource>(output); bufferResource) {
+                assert(bufferResource->handle);
                 auto b = bufferResource->handle->barrier(backend::Access::MEMORY_WRITE);
                 cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, { &b, 1 });
             }
         }
         for (auto& attachment : pass->_attachments) {
             auto resource = getResource<ImageResource>(attachment);
+            assert(resource->handle);
             if (backend::isDepthFormat(resource->handle->format())) {
                 if (resource->handle->layout() != backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT) {
                     auto b = resource->handle->barrier(backend::Access::SHADER_READ, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
