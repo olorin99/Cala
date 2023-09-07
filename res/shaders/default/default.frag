@@ -19,32 +19,14 @@ layout (set = 0, binding = 0) uniform sampler2D textureMaps[];
 layout (push_constant) uniform IBLData {
     uvec4 tileSizes;
     uvec2 screenSize;
-    int irradianceIndex;
-    int prefilteredIndex;
-    int brdfIndex;
+    int lightGridIndex;
+    int lightIndicesIndex;
 };
 
 #include "util.glsl"
 #include "pbr.glsl"
 #include "shadow.glsl"
 #include "lighting.glsl"
-
-struct LightGrid {
-    uint offset;
-    uint count;
-};
-
-layout (set = 2, binding = 1) buffer LightGridSSBO {
-    LightGrid lightGrid[];
-};
-
-layout (set = 2, binding = 2) buffer LightIndices {
-    uint globalLightIndices[];
-};
-
-layout (set = 3, binding = 0) readonly buffer LightData {
-    Light lights[];
-};
 
 MATERIAL_DATA;
 

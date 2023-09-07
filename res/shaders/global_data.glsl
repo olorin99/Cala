@@ -9,6 +9,9 @@ struct GlobalData {
     int materialBufferIndex;
     int lightBufferIndex;
     int cameraBufferIndex;
+    int irradianceIndex;
+    int prefilterIndex;
+    int brdfIndex;
 };
 
 layout (set = 1, binding = 0) uniform Global {

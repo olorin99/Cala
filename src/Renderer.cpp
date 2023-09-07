@@ -93,6 +93,16 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _globalData.lightBufferIndex = scene._lightBuffer[_engine->device().frameIndex()].index();
     _globalData.cameraBufferIndex = _cameraBuffer[_engine->device().frameIndex()].index();
 
+    if (_renderSettings.ibl) {
+        _globalData.irradianceIndex = scene._skyLightIrradiance.index();
+        _globalData.prefilterIndex = scene._skyLightPrefilter.index();
+        _globalData.brdfIndex = _engine->_brdfImage.index();
+    } else {
+        _globalData.irradianceIndex = -1;
+        _globalData.prefilterIndex = -1;
+        _globalData.brdfIndex = -1;
+    }
+
     _globalDataBuffer[_engine->device().frameIndex()]->data({ &_globalData, sizeof(_globalData) });
 
     bool debugViewEnabled = _renderSettings.debugNormals || _renderSettings.debugRoughness || _renderSettings.debugMetallic || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugWireframe || _renderSettings.debugNormalLines;
@@ -235,21 +245,22 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             ende::math::Vec<2, u32> screenSize;
             f32 near;
             f32 far;
+            i32 lightGridIndex;
+            i32 lightIndicesIndex;
         } push;
         push.inverseProjection = camera.projection().inverse();
         push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
         push.screenSize = { _swapchain->extent().width, _swapchain->extent().height };
         push.near = camera.near();
         push.far = camera.far();
+        push.lightGridIndex = lightGrid->handle.index();
+        push.lightIndicesIndex = lightIndices->handle.index();
 
         cmd.pushConstants(backend::ShaderStage::COMPUTE, { &push, sizeof(push) });
         cmd.bindBuffer(1, 0, _globalDataBuffer[_engine->device().frameIndex()]);
         cmd.bindBuffer(1, 1, clusters->handle, true);
-        cmd.bindBuffer(1, 2, scene._lightBuffer[_engine->device().frameIndex()], true);
-        cmd.bindBuffer(1, 3, lightGrid->handle, true);
-        cmd.bindBuffer(1, 4, lightGlobalIndex->handle, true);
-        cmd.bindBuffer(1, 5, lightIndices->handle, true);
-        cmd.bindBuffer(1, 6, scene._lightCountBuffer[_engine->device().frameIndex()], true);
+        cmd.bindBuffer(1, 2, lightGlobalIndex->handle, true);
+        cmd.bindBuffer(1, 3, scene._lightCountBuffer[_engine->device().frameIndex()], true);
         cmd.bindPipeline();
         cmd.bindDescriptors();
         cmd.dispatchCompute(1, 1, 6);
@@ -793,30 +804,17 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 cmd.bindRasterState(material->getRasterState());
                 cmd.bindDepthState(material->getDepthState());
                 cmd.bindBuffer(2, 0, material->buffer(), true);
-//                cmd.bindBuffer(2, 1, meshData->handle, true);
-                cmd.bindBuffer(2, 1, lightGrid->handle, true);
-                cmd.bindBuffer(2, 2, lightIndices->handle, true);
-                cmd.bindBuffer(3, 0, scene._lightBuffer[_engine->device().frameIndex()], true);
 
                 struct ForwardPush {
                     ende::math::Vec<4, u32> tileSizes;
                     ende::math::Vec<2, u32> screenSize;
-                    i32 irradianceIndex;
-                    i32 prefilterIndex;
-                    i32 brdfIndex;
+                    i32 lightGridIndex;
+                    i32 lightIndicesIndex;
                 } push;
                 push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
                 push.screenSize = { _swapchain->extent().width, _swapchain->extent().height };
-
-                if (_renderSettings.ibl) {
-                    push.irradianceIndex = scene._skyLightIrradiance.index();
-                    push.prefilterIndex = scene._skyLightPrefilter.index();
-                    push.brdfIndex = _engine->_brdfImage.index();
-                } else {
-                    push.irradianceIndex = -1;
-                    push.prefilterIndex = -1;
-                    push.brdfIndex = -1;
-                }
+                push.lightGridIndex = lightGrid->handle.index();
+                push.lightIndicesIndex = lightIndices->handle.index();
 
                 cmd.pushConstants(backend::ShaderStage::FRAGMENT, { &push, sizeof(push) });
 

@@ -1,16 +1,7 @@
 #ifndef LIGHTING_GLSL
 #define LIGHTING_GLSL
 
-struct Light {
-    vec3 position;
-    uint type;
-    vec3 colour;
-    float intensity;
-    float shadowRange;
-    float radius;
-    float shadowBias;
-    int shadowIndex;
-};
+#include "light_data.glsl"
 
 vec3 pointLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 albedo, float roughness, float metallic) {
     vec3 lightVec = light.position - fsIn.FragPos;

@@ -88,11 +88,14 @@ namespace cala {
         struct RendererGlobal {
             f32 gamma = 2.2;
             u32 time = 0;
-            i32 tranformsBufferIndex = 0;
-            i32 meshBufferIndex = 0;
-            i32 materialBufferIndex = 0;
-            i32 lightBufferIndex = 0;
-            i32 cameraBufferIndex = 0;
+            i32 tranformsBufferIndex = -1;
+            i32 meshBufferIndex = -1;
+            i32 materialBufferIndex = -1;
+            i32 lightBufferIndex = -1;
+            i32 cameraBufferIndex = -1;
+            i32 irradianceIndex = -1;
+            i32 prefilterIndex = -1;
+            i32 brdfIndex = -1;
         };
 
         RendererGlobal _globalData;

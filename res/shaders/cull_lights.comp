@@ -7,6 +7,8 @@ layout (push_constant) uniform ScreenViewInfo {
     uvec2 screenSize;
     float near;
     float far;
+    int lightGridIndex;
+    int lightIndicesIndex;
 };
 
 #include "camera.glsl"
@@ -22,40 +24,13 @@ layout (set = 1, binding = 1) buffer ClusterSSBO {
     Cluster clusters[];
 };
 
-struct Light {
-    vec3 position;
-    uint type;
-    vec3 colour;
-    float intensity;
-    float shadowRange;
-    float radius;
-    float shadowBias;
-    int shadowIndex;
-};
+#include "light_data.glsl"
 
-layout (set = 1, binding = 2) readonly buffer LightData {
-//    uint count; // problems inserting light data at offset
-    Light lights[];
-};
-
-struct LightGrid {
-    uint offset;
-    uint count;
-};
-
-layout (set = 1, binding = 3) buffer LightGridSSBO {
-    LightGrid lightGrid[];
-};
-
-layout (set = 1, binding = 4) buffer GlobalIndex {
+layout (set = 1, binding = 2) buffer GlobalIndex {
     uint globalIndexCount;
 };
 
-layout (set = 1, binding = 5) buffer LightIndices {
-    uint globalLightIndices[];
-};
-
-layout (set = 1, binding = 6) readonly buffer LightCount {
+layout (set = 1, binding = 3) readonly buffer LightCount {
     uint directLightCount;
     uint pointLightCount;
 };
@@ -84,7 +59,7 @@ void main() {
         uint batchSize = min(threadCount, lightCount - lightOffset);
         if (uint(gl_LocalInvocationIndex) < batchSize) {
             uint lightIndex = lightOffset + gl_LocalInvocationIndex;
-            sharedLights[gl_LocalInvocationIndex] = lights[lightIndex];
+            sharedLights[gl_LocalInvocationIndex] = bindlessBuffersLights[globalData.lightBufferIndex].lights[lightIndex];
         }
         barrier();
 
@@ -100,10 +75,9 @@ void main() {
 
     uint offset = atomicAdd(globalIndexCount, visibleLightCount);
     for (uint i = 0; i < visibleLightCount; i++) {
-        globalLightIndices[offset + i] = visibleLightIndices[i];
+        bindlessBuffersLightIndices[lightIndicesIndex].lightIndices[offset + i] = visibleLightIndices[i];
     }
 
-    lightGrid[tileIndex].offset = offset;
-    lightGrid[tileIndex].count = visibleLightCount;
-//    lightGrid[tileIndex].count = tileIndex;
+    bindlessBuffersLightGrid[lightGridIndex].lightGrid[tileIndex].offset = offset;
+    bindlessBuffersLightGrid[lightGridIndex].lightGrid[tileIndex].count = visibleLightCount;
 }

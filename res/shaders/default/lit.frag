@@ -11,15 +11,16 @@ vec4 evalMaterial(Material material) {
 
     uint tileIndex = getTileIndex(gl_FragCoord.xy, gl_FragCoord.z, camera.near, camera.far);
 
-    uint lightCount = lightGrid[tileIndex].count;
-    uint lightOffset = lightGrid[tileIndex].offset;
+    uint lightCount = bindlessBuffersLightGrid[lightGridIndex].lightGrid[tileIndex].count;
+    uint lightOffset = bindlessBuffersLightGrid[lightGridIndex].lightGrid[tileIndex].offset;
 
     for (uint i = 0; i < lightCount; i++) {
-        Light light = lights[globalLightIndices[lightOffset + i]];
+        uint lightIndex = bindlessBuffersLightIndices[lightIndicesIndex].lightIndices[lightOffset + i];
+        Light light = bindlessBuffersLights[globalData.lightBufferIndex].lights[lightIndex];
         Lo += pointLight(light, material.normal, viewPos, V, F0, material.albedo, material.roughness, material.metallic);
     }
 
-    vec3 ambient = getAmbient(irradianceIndex, prefilteredIndex, brdfIndex, material.normal, V, F0, material.albedo, material.roughness, material.metallic);
+    vec3 ambient = getAmbient(globalData.irradianceIndex, globalData.prefilterIndex, globalData.brdfIndex, material.normal, V, F0, material.albedo, material.roughness, material.metallic);
     vec3 colour = (ambient + Lo);
 
     return vec4(colour, 1.0);
