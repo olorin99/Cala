@@ -38,7 +38,7 @@ layout (set = 1, binding = 3) readonly buffer LightCount {
 shared Light sharedLights[16 * 9 * 4];
 
 bool intersect(Light light, Cluster cluster) {
-    vec4 lightPos = (globalBuffersCamera[globalData.cameraBufferIndex].camera.view * vec4(light.position, 1.0));
+    vec4 lightPos = (bindlessBuffersCamera[globalData.cameraBufferIndex].camera.view * vec4(light.position, 1.0));
 
     vec4 closest = max(cluster.minPoint, min(lightPos, cluster.maxPoint));
     vec3 dist = closest.xyz - lightPos.xyz;

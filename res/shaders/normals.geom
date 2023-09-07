@@ -27,7 +27,7 @@ layout (push_constant) uniform PushData {
 #include "global_data.glsl"
 
 void genLine(int index) {
-    CameraData camera = globalBuffersCamera[globalData.cameraBufferIndex].camera;
+    CameraData camera = bindlessBuffersCamera[globalData.cameraBufferIndex].camera;
 
     vec3 normal = gsIn[index].TBN[2];
     vec4 N = camera.projection * camera.view * vec4(normal * length, 0.0);

@@ -29,7 +29,7 @@ layout (set = 1, binding = 2) uniform sampler2D depthMap;
 
 void main() {
 
-    CameraData camera = globalBuffersCamera[globalData.cameraBufferIndex].camera;
+    CameraData camera = bindlessBuffersCamera[globalData.cameraBufferIndex].camera;
 
     const float maxLightCount = 250;
 

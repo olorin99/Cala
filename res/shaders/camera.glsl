@@ -10,6 +10,6 @@ struct CameraData {
     float exposure;
 };
 
-layout (set = 0, binding = 1) buffer CameraBuffer { CameraData camera; } globalBuffersCamera[];
+layout (set = 0, binding = 1) buffer CameraBuffer { CameraData camera; } bindlessBuffersCamera[];
 
 #endif

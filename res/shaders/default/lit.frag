@@ -1,6 +1,6 @@
 vec4 evalMaterial(Material material) {
 
-    CameraData camera = globalBuffersCamera[globalData.cameraBufferIndex].camera;
+    CameraData camera = bindlessBuffersCamera[globalData.cameraBufferIndex].camera;
 
     vec3 viewPos = fsIn.ViewPos;
     vec3 V = normalize(viewPos - fsIn.FragPos);
