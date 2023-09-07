@@ -714,3 +714,36 @@ cala::backend::vulkan::ProgramHandle cala::Engine::loadProgram(const ende::Vecto
     auto program = programBuilder.compile();
     return _device.createProgram(std::move(program));
 }
+
+cala::Material *cala::Engine::getMaterial(u32 index) {
+    return &_materials[index];
+}
+
+cala::backend::vulkan::ProgramHandle cala::Engine::getProgram(cala::Engine::ProgramType type) {
+    switch (type) {
+        case ProgramType::SHADOW_POINT:
+            return _pointShadowProgram;
+        case ProgramType::SHADOW_DIRECT:
+            return _directShadowProgram;
+        case ProgramType::TONEMAP:
+            return _tonemapProgram;
+        case ProgramType::CULL:
+            return _cullProgram;
+        case ProgramType::CULL_POINT:
+            return _pointShadowCullProgram;
+        case ProgramType::CULL_DIRECT:
+            return _directShadowCullProgram;
+        case ProgramType::CULL_LIGHTS:
+            return _cullLightsProgram;
+        case ProgramType::CREATE_CLUSTERS:
+            return _createClustersProgram;
+        case ProgramType::DEBUG_CLUSTER:
+            return _clusterDebugProgram;
+        case ProgramType::DEBUG_NORMALS:
+            return _normalsDebugProgram;
+        case ProgramType::DEBUG_WORLDPOS:
+            return _worldPosDebugProgram;
+        case ProgramType::SOLID_COLOUR:
+            return _solidColourProgram;
+    }
+}

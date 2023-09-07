@@ -6,6 +6,8 @@
 #include <Cala/ImGuiContext.h>
 #include <Ende/profile/profile.h>
 
+#include "renderPasses/debugPasses.h"
+
 cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings)
     : _engine(engine),
     _swapchain(nullptr),
@@ -308,271 +310,31 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     }
 
     if (_renderSettings.debugNormals) {
-        auto& debugNormals = _graph.addPass("debug_normals");
-
-        debugNormals.addColourAttachment("backbuffer");
-        debugNormals.addDepthAttachment("depth");
-
-        debugNormals.addStorageBufferRead("global");
-        debugNormals.addStorageBufferRead("drawCommands");
-        debugNormals.addStorageBufferRead("materialCounts");
-        debugNormals.addStorageBufferRead("transforms");
-        debugNormals.addStorageBufferRead("meshData");
-
-        debugNormals.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-            auto global = graph.getResource<BufferResource>("global");
-            auto drawCommands = graph.getResource<BufferResource>("drawCommands");
-            auto materialCounts = graph.getResource<BufferResource>("materialCounts");
-
-            cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, global->handle);
-            auto& renderable = scene._renderables[0].second.first;
-
-            cmd.bindBindings(renderable.bindings);
-            cmd.bindAttributes(renderable.attributes);
-            cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
-            cmd.bindRasterState({});
-            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
-            cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
-            for (u32 material = 0; material < scene._materialCounts.size(); material++) {
-                auto program = _engine->_materials[material].getVariant(Material::Variant::NORMAL);
-                if (!program)
-                    continue;
-                cmd.bindProgram(program);
-                cmd.bindBuffer(2, 0, _engine->_materials[material].buffer(), true);
-                cmd.bindPipeline();
-                cmd.bindDescriptors();
-                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
-            }
-        });
+        debugNormalPass(_graph, *_engine, scene);
     }
 
     if (_renderSettings.debugRoughness) {
-        auto& debugRoughness = _graph.addPass("debug_roughness");
-
-        debugRoughness.addColourAttachment("backbuffer");
-        debugRoughness.addDepthAttachment("depth");
-
-        debugRoughness.addStorageBufferRead("global");
-        debugRoughness.addStorageBufferRead("drawCommands");
-        debugRoughness.addStorageBufferRead("materialCounts");
-        debugRoughness.addStorageBufferRead("transforms");
-        debugRoughness.addStorageBufferRead("meshData");
-
-        debugRoughness.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-            auto global = graph.getResource<BufferResource>("global");
-            auto drawCommands = graph.getResource<BufferResource>("drawCommands");
-            auto materialCounts = graph.getResource<BufferResource>("materialCounts");
-            cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, global->handle);
-            auto& renderable = scene._renderables[0].second.first;
-
-            cmd.bindBindings(renderable.bindings);
-            cmd.bindAttributes(renderable.attributes);
-            cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
-            cmd.bindRasterState({});
-            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
-            cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
-            for (u32 material = 0; material < scene._materialCounts.size(); material++) {
-                auto program = _engine->_materials[material].getVariant(Material::Variant::ROUGHNESS);
-                if (!program)
-                    continue;
-                cmd.bindProgram(program);
-                cmd.bindBuffer(2, 0, _engine->_materials[material].buffer(), true);
-                cmd.bindPipeline();
-                cmd.bindDescriptors();
-                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
-            }
-        });
+        debugRoughnessPass(_graph, *_engine, scene);
     }
 
     if (_renderSettings.debugMetallic) {
-        auto& debugMetallic = _graph.addPass("debug_metallic");
-
-        debugMetallic.addColourAttachment("backbuffer");
-        debugMetallic.addDepthAttachment("depth");
-
-        debugMetallic.addStorageBufferRead("global");
-        debugMetallic.addStorageBufferRead("drawCommands");
-        debugMetallic.addStorageBufferRead("materialCounts");
-        debugMetallic.addStorageBufferRead("transforms");
-        debugMetallic.addStorageBufferRead("meshData");
-
-        debugMetallic.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-            auto global = graph.getResource<BufferResource>("global");
-            auto drawCommands = graph.getResource<BufferResource>("drawCommands");
-            auto materialCounts = graph.getResource<BufferResource>("materialCounts");
-            cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, global->handle);
-            auto& renderable = scene._renderables[0].second.first;
-
-            cmd.bindBindings(renderable.bindings);
-            cmd.bindAttributes(renderable.attributes);
-            cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
-            cmd.bindRasterState({});
-            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
-            cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
-            for (u32 material = 0; material < scene._materialCounts.size(); material++) {
-                auto program = _engine->_materials[material].getVariant(Material::Variant::METALLIC);
-                if (!program)
-                    continue;
-                cmd.bindProgram(program);
-                cmd.bindBuffer(2, 0, _engine->_materials[material].buffer(), true);
-                cmd.bindPipeline();
-                cmd.bindDescriptors();
-                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
-            }
-        });
+        debugMetallicPass(_graph, *_engine, scene);
     }
 
     if (_renderSettings.debugUnlit) {
-        auto& debugUnlit = _graph.addPass("debug_unlit");
-
-        debugUnlit.addColourAttachment("backbuffer");
-        debugUnlit.addDepthAttachment("depth");
-
-        debugUnlit.addStorageBufferRead("global");
-        debugUnlit.addStorageBufferRead("drawCommands");
-        debugUnlit.addStorageBufferRead("materialCounts");
-        debugUnlit.addStorageBufferRead("transforms");
-        debugUnlit.addStorageBufferRead("meshData");
-
-        debugUnlit.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-            auto global = graph.getResource<BufferResource>("global");
-            auto drawCommands = graph.getResource<BufferResource>("drawCommands");
-            auto materialCounts = graph.getResource<BufferResource>("materialCounts");
-            cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, global->handle);
-            auto& renderable = scene._renderables[0].second.first;
-
-            cmd.bindBindings(renderable.bindings);
-            cmd.bindAttributes(renderable.attributes);
-            cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
-            cmd.bindRasterState({});
-            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
-            cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
-            for (u32 material = 0; material < scene._materialCounts.size(); material++) {
-                auto program = _engine->_materials[material].getVariant(Material::Variant::UNLIT);
-                if (!program)
-                    continue;
-                cmd.bindProgram(program);
-                cmd.bindBuffer(2, 0, _engine->_materials[material].buffer(), true);
-                cmd.bindPipeline();
-                cmd.bindDescriptors();
-                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
-            }
-        });
+        debugUnlitPass(_graph, *_engine, scene);
     }
 
     if (_renderSettings.debugWorldPos) {
-        auto& debugWorldPos = _graph.addPass("debug_worldPos");
-
-        debugWorldPos.addColourAttachment("backbuffer");
-        debugWorldPos.addDepthAttachment("depth");
-
-        debugWorldPos.addStorageBufferRead("global");
-        debugWorldPos.addStorageBufferRead("drawCommands");
-        debugWorldPos.addStorageBufferRead("materialCounts");
-        debugWorldPos.addStorageBufferRead("transforms");
-        debugWorldPos.addStorageBufferRead("meshData");
-
-        debugWorldPos.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-            auto global = graph.getResource<BufferResource>("global");
-            auto drawCommands = graph.getResource<BufferResource>("drawCommands");
-            auto materialCounts = graph.getResource<BufferResource>("materialCounts");
-            cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, global->handle);
-            auto& renderable = scene._renderables[0].second.first;
-
-            cmd.bindBindings(renderable.bindings);
-            cmd.bindAttributes(renderable.attributes);
-            cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
-            cmd.bindRasterState({});
-//            cmd.bindPipeline();
-            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
-            cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
-            for (u32 material = 0; material < scene._materialCounts.size(); material++) {
-                cmd.bindProgram(_engine->_worldPosDebugProgram);
-                cmd.bindPipeline();
-                cmd.bindDescriptors();
-                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
-            }
-        });
+        debugWorldPositionPass(_graph, *_engine, scene);
     }
 
     if (_renderSettings.debugWireframe) {
-        auto& debugWireframe = _graph.addPass("debug_wireframe");
-
-        debugWireframe.addColourAttachment("backbuffer");
-        debugWireframe.addDepthAttachment("depth");
-
-        debugWireframe.addStorageBufferRead("global");
-        debugWireframe.addStorageBufferRead("drawCommands");
-        debugWireframe.addStorageBufferRead("materialCounts");
-        debugWireframe.addStorageBufferRead("transforms");
-        debugWireframe.addStorageBufferRead("meshData");
-
-        debugWireframe.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-            auto global = graph.getResource<BufferResource>("global");
-            auto drawCommands = graph.getResource<BufferResource>("drawCommands");
-            auto materialCounts = graph.getResource<BufferResource>("materialCounts");
-            cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, global->handle);
-            auto& renderable = scene._renderables[0].second.first;
-
-            cmd.bindBindings(renderable.bindings);
-            cmd.bindAttributes(renderable.attributes);
-            cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
-            cmd.bindRasterState({
-                .polygonMode = backend::PolygonMode::LINE,
-                .lineWidth = _renderSettings.wireframeThickness
-            });
-            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
-            cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
-            for (u32 material = 0; material < scene._materialCounts.size(); material++) {
-                cmd.bindProgram(_engine->_solidColourProgram);
-                cmd.pushConstants(backend::ShaderStage::FRAGMENT, { &_renderSettings.wireframeColour, sizeof(_renderSettings.wireframeColour) });
-                cmd.bindPipeline();
-                cmd.bindDescriptors();
-                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
-            }
-        });
+        debugWireframePass(_graph, *_engine, scene, _renderSettings);
     }
 
     if (_renderSettings.debugNormalLines) {
-        auto& debugNormalLines = _graph.addPass("debug_normal_lines");
-
-        debugNormalLines.addColourAttachment("backbuffer");
-        debugNormalLines.addDepthAttachment("depth");
-
-        debugNormalLines.addStorageBufferRead("global");
-        debugNormalLines.addStorageBufferRead("drawCommands");
-        debugNormalLines.addStorageBufferRead("materialCounts");
-        debugNormalLines.addStorageBufferRead("transforms");
-        debugNormalLines.addStorageBufferRead("meshData");
-
-        debugNormalLines.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
-            auto global = graph.getResource<BufferResource>("global");
-            auto drawCommands = graph.getResource<BufferResource>("drawCommands");
-            auto materialCounts = graph.getResource<BufferResource>("materialCounts");
-            cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, global->handle);
-            auto& renderable = scene._renderables[0].second.first;
-
-            cmd.bindBindings(renderable.bindings);
-            cmd.bindAttributes(renderable.attributes);
-            cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
-            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
-            cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
-            for (u32 material = 0; material < scene._materialCounts.size(); material++) {
-                cmd.bindProgram(_engine->_normalsDebugProgram);
-                cmd.pushConstants(backend::ShaderStage::FRAGMENT, { &_renderSettings.wireframeColour, sizeof(_renderSettings.wireframeColour) });
-                cmd.pushConstants(backend::ShaderStage::GEOMETRY, { &_renderSettings.normalLength, sizeof(_renderSettings.normalLength) }, sizeof(_renderSettings.wireframeColour));
-                cmd.bindPipeline();
-                cmd.bindDescriptors();
-                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
-            }
-        });
+        debugNormalLinesPass(_graph, *_engine, scene, _renderSettings);
     }
 
 

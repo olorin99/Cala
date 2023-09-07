@@ -64,9 +64,33 @@ namespace cala {
             return loadMaterial(path, sizeof(T));
         }
 
+        Material* getMaterial(u32 index);
+
         u32 materialCount() const { return _materials.size(); }
 
         spdlog::logger& logger() { return _logger; }
+
+        backend::vulkan::BufferHandle vertexBuffer() const { return _globalVertexBuffer; }
+
+        backend::vulkan::BufferHandle indexBuffer() const { return _globalIndexBuffer; }
+
+        enum class ProgramType {
+            SHADOW_POINT,
+            SHADOW_DIRECT,
+            TONEMAP,
+            CULL,
+            CULL_POINT,
+            CULL_DIRECT,
+            CULL_LIGHTS,
+            CREATE_CLUSTERS,
+            DEBUG_CLUSTER,
+            DEBUG_NORMALS,
+            DEBUG_WORLDPOS,
+            SOLID_COLOUR
+        };
+
+
+        backend::vulkan::ProgramHandle getProgram(ProgramType type);
 
     private:
         friend Renderer;
