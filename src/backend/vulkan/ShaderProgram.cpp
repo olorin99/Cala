@@ -106,6 +106,19 @@ private:
 };
 
 
+std::string dumpShader(const std::string& source) {
+    std::string output = source;
+    size_t index = 0;
+    u32 line = 1;
+    while ((index = output.find('\n', index)) != std::string::npos) {
+        std::string lineNum = std::to_string(line++) + ": ";
+        output.insert(index + 1, lineNum);
+        index += lineNum.size();
+    }
+    return output;
+}
+
+
 std::vector<u32> compileShader(cala::backend::vulkan::Device* device, const std::string& name, const std::string& source, shaderc_shader_kind kind, const std::vector<std::pair<const char*, std::string>>& macros) {
     shaderc::Compiler compiler;
     shaderc::CompileOptions options;
@@ -123,10 +136,11 @@ std::vector<u32> compileShader(cala::backend::vulkan::Device* device, const std:
 
     shaderc::PreprocessedSourceCompilationResult preprocessed = compiler.PreprocessGlsl(source, kind, name.c_str(), options);
     if (preprocessed.GetCompilationStatus() != shaderc_compilation_status_success) {
+        auto dump = dumpShader(source);
         auto numErrors = preprocessed.GetNumErrors();
         auto numWarnings = preprocessed.GetNumWarnings();
         auto errorMessage = preprocessed.GetErrorMessage();
-        device->logger().error("Failed to preprocess shader: \nNumber of errors: {}\nNumber of warnings: {}\n{}\n\nShader: {}", numErrors, numWarnings, errorMessage, source);
+        device->logger().error("Failed to preprocess shader: \nNumber of errors: {}\nNumber of warnings: {}\n{}\n\nShader: {}", numErrors, numWarnings, errorMessage, dump);
         throw std::runtime_error("Failed to preprocess shader: " + name);
         return {};
     }
@@ -134,11 +148,12 @@ std::vector<u32> compileShader(cala::backend::vulkan::Device* device, const std:
     shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(source, kind, name.c_str(), options);
 
     if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
+        std::string p = { preprocessed.begin(), preprocessed.end() };
+        auto dump = dumpShader(p);
         auto numErrors = module.GetNumErrors();
         auto numWarnings = module.GetNumWarnings();
         auto errorMessage = module.GetErrorMessage();
-        std::string p = { preprocessed.begin(), preprocessed.end() };
-        device->logger().error("Failed to compile shader: \nNumber of errors: {}\nNumber of warnings: {}\n{}\n\nShader: {}", numErrors, numWarnings, errorMessage, p);
+        device->logger().error("Failed to compile shader: \nNumber of errors: {}\nNumber of warnings: {}\n{}\n\n0: {}", numErrors, numWarnings, errorMessage, dump);
         throw std::runtime_error("Failed to compile shader: " + name);
         return {};
     }
