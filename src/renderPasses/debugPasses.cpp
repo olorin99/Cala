@@ -194,10 +194,10 @@ void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala
     });
 }
 
-void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings) {
+void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings, const char* backbuffer) {
     auto& debugWireframe = graph.addPass("debug_wireframe");
 
-    debugWireframe.addColourAttachment("backbuffer");
+    debugWireframe.addColourAttachment(backbuffer);
     debugWireframe.addDepthAttachment("depth");
 
     debugWireframe.addStorageBufferRead("global");
@@ -233,10 +233,10 @@ void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
     });
 }
 
-void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings) {
+void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings, const char* backbuffer) {
     auto& debugNormalLines = graph.addPass("debug_normal_lines");
 
-    debugNormalLines.addColourAttachment("backbuffer");
+    debugNormalLines.addColourAttachment(backbuffer);
     debugNormalLines.addDepthAttachment("depth");
 
     debugNormalLines.addStorageBufferRead("global");
@@ -256,6 +256,7 @@ void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::
         cmd.bindBindings(renderable.bindings);
         cmd.bindAttributes(renderable.attributes);
         cmd.bindDepthState({ true, true, cala::backend::CompareOp::LESS });
+        cmd.bindRasterState({});
         cmd.bindVertexBuffer(0, engine.vertexBuffer());
         cmd.bindIndexBuffer(engine.indexBuffer());
         for (u32 material = 0; material < scene._materialCounts.size(); material++) {

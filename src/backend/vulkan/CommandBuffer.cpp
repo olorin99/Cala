@@ -505,7 +505,13 @@ bool cala::backend::vulkan::CommandBuffer::submit(ende::Span<VkSemaphore> wait, 
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &_buffer;
 
-    return vkQueueSubmit(_queue, 1, &submitInfo, fence) == VK_SUCCESS;
+    auto res = vkQueueSubmit(_queue, 1, &submitInfo, fence);
+    if (res == VK_ERROR_DEVICE_LOST) {
+        _device->logger().error("Device lost on queue submit");
+        _device->printMarkers();
+        throw std::runtime_error("Device lost on queue submit");
+    }
+    return res == VK_SUCCESS;
 }
 
 bool cala::backend::vulkan::CommandBuffer::PipelineEqual::operator()(const PipelineKey &lhs, const PipelineKey &rhs) const {

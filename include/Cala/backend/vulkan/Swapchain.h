@@ -1,6 +1,7 @@
 #ifndef CALA_SWAPCHAIN_H
 #define CALA_SWAPCHAIN_H
 
+#include <expected>
 #include <Cala/backend/vulkan/Image.h>
 #include <Cala/backend/vulkan/RenderPass.h>
 #include <Cala/backend/vulkan/Framebuffer.h>
@@ -26,7 +27,7 @@ namespace cala::backend::vulkan {
             Framebuffer* framebuffer = nullptr;
         };
 
-        Frame nextImage();
+        std::expected<Frame, i32> nextImage();
 
         bool present(Frame frame, VkSemaphore renderFinish);
 

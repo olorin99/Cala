@@ -139,18 +139,19 @@ cala::backend::vulkan::Swapchain::~Swapchain() {
 }
 
 
-cala::backend::vulkan::Swapchain::Frame cala::backend::vulkan::Swapchain::nextImage() {
+std::expected<cala::backend::vulkan::Swapchain::Frame, i32> cala::backend::vulkan::Swapchain::nextImage() {
     auto image = _semaphores.pop().value();
     u32 index = 0;
     if (_surface != VK_NULL_HANDLE) {
         VkResult result = vkAcquireNextImageKHR(_driver.context().device(), _swapchain, std::numeric_limits<u64>::max(), image, VK_NULL_HANDLE, &index);
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
             resize(_depthImage->width(), _depthImage->height());
-        }
+        } else if (result == VK_ERROR_DEVICE_LOST)
+            return std::unexpected((i32)VK_ERROR_DEVICE_LOST);
     } else {
         index = (index + 1) % 2;
     }
-    return { _frame++, index, image, _framebuffers[index] };
+    return Frame{ _frame++, index, image, _framebuffers[index] };
 }
 
 bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFinish) {
@@ -170,9 +171,13 @@ bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFi
         presentInfo.pImageIndices = &frame.index;
         presentInfo.pResults = nullptr;
 
-        auto res = vkQueuePresentKHR(_driver.context().getQueue(QueueType::PRESENT), &presentInfo) == VK_SUCCESS;
-
-        return res;
+        auto res = vkQueuePresentKHR(_driver.context().getQueue(QueueType::PRESENT), &presentInfo);
+        if (res == VK_ERROR_DEVICE_LOST) {
+            _driver.logger().error("Device lost on queue submit");
+            _driver.printMarkers();
+            throw std::runtime_error("Device lost on queue submit");
+        }
+        return res == VK_SUCCESS;
     }
     return false;
 }

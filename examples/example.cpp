@@ -632,8 +632,8 @@ int main() {
 //            helmetTransform.rotate(ende::math::Vec3f{0, 1, 0}, ende::math::rad(45) * dt);
             lightTransform.rotate(ende::math::Vec3f{0, 1, 1}, ende::math::rad(45) * dt);
         }
-        engine.gc();
         if (renderer.beginFrame(&swapchain)) {
+            engine.gc();
             scene.prepare(camera);
 
             renderer.render(scene, camera, &imGuiContext);

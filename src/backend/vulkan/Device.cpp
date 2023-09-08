@@ -1,5 +1,6 @@
 #include "Cala/backend/vulkan/Device.h"
 #include "Cala/backend/vulkan/primitives.h"
+#include "Ende/filesystem/File.h"
 #include <vulkan/vulkan.h>
 #include <Ende/profile/profile.h>
 
@@ -202,15 +203,11 @@ cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFra
     if (!waitFrame(_frameCount)) {
         printMarkers();
         _logger.error("Error waiting for frame ({}), index ({})", _frameCount, frameIndex());
-        // Currently have some calls to wait when swapchain changes
-        // this means that the fences are reset early and the main call fails
-        // resulting in the queue not being submitted and fences not being signaled again.
-        // TODO: either delay swapchain recreation till after this call or use timeline semaphores instead
-//        return {
-//            _frameCount,
-//            nullptr,
-//            VK_NULL_HANDLE
-//        };
+        return {
+            _frameCount,
+            nullptr,
+            VK_NULL_HANDLE
+        };
     }
 
     vmaSetCurrentFrameIndex(_context.allocator(), _frameCount);
@@ -236,6 +233,11 @@ bool cala::backend::vulkan::Device::waitFrame(u64 frame, u64 timeout) {
     auto res = vkWaitForFences(_context.device(), 1, &fence, true, timeout);
     if (res == VK_SUCCESS)
         vkResetFences(_context.device(), 1, &fence);
+    if (res == VK_ERROR_DEVICE_LOST) {
+        _logger.error("Device lost on wait for fence");
+        printMarkers();
+        throw std::runtime_error("Device lost on wait for fence");
+    }
     return res == VK_SUCCESS;
 }
 
@@ -941,12 +943,17 @@ void cala::backend::vulkan::Device::printMarkers() {
     if (!_markerBuffer)
         return;
 
+    ende::fs::File file;
+    file.open("markers.log"_path);
+
     u32* markers = static_cast<u32*>(_markerBuffer->persistentMapping());
     for (u32 i = 0; i < _markerBuffer->size() / sizeof(u32); i++) {
         u32 marker = markers[i];
         auto cmd = marker < _markedCmds.size() ? _markedCmds[i] : std::make_pair( "NullCmd", 0 );
+        file.write(std::format("Command: {}\nMarker[{}]: {}\n", cmd.first, i, marker));
         _logger.warn("Command: {}\nMarker[{}]: {}", cmd.first, i, marker);
         if (marker == 0)
             break;
     }
+    file.close();
 }

@@ -15,8 +15,8 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene&
 
 void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene);
 
-void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings);
+void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings, const char* backbuffer);
 
-void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings);
+void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings, const char* backbuffer);
 
 #endif //CALA_DEBUGPASSES_H

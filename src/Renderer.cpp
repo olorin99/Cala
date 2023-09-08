@@ -57,7 +57,13 @@ bool cala::Renderer::beginFrame(cala::backend::vulkan::Swapchain* swapchain) {
     if (!_frameInfo.cmd || _frameInfo.fence == VK_NULL_HANDLE)
         return false;
 
-    _swapchainFrame = _swapchain->nextImage();
+    auto result = _swapchain->nextImage();
+    if (!result) {
+        _engine->logger().error("Device Lost - Frame: {}", _frameInfo.frame);
+        _engine->device().printMarkers();
+        throw std::runtime_error("Device Lost");
+    }
+    _swapchainFrame = result.value();
     _frameInfo.cmd->begin();
     _globalData.time = _engine->getRunningTime().milliseconds();
     return true;
@@ -108,6 +114,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _globalDataBuffer[_engine->device().frameIndex()]->data({ &_globalData, sizeof(_globalData) });
 
     bool debugViewEnabled = _renderSettings.debugNormals || _renderSettings.debugRoughness || _renderSettings.debugMetallic || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugWireframe || _renderSettings.debugNormalLines;
+    debugViewEnabled = false;
 
     backend::vulkan::CommandBuffer& cmd = *_frameInfo.cmd;
 
@@ -330,11 +337,13 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     }
 
     if (_renderSettings.debugWireframe) {
-        debugWireframePass(_graph, *_engine, scene, _renderSettings);
+        bool overlay = _renderSettings.tonemap;
+        debugWireframePass(_graph, *_engine, scene, _renderSettings, overlay ? "hdr" : "backbuffer");
     }
 
     if (_renderSettings.debugNormalLines) {
-        debugNormalLinesPass(_graph, *_engine, scene, _renderSettings);
+        bool overlay = _renderSettings.tonemap;
+        debugNormalLinesPass(_graph, *_engine, scene, _renderSettings, overlay ? "hdr" : "backbuffer");
     }
 
 

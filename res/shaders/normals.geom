@@ -52,7 +52,7 @@ void genLine(int index) {
 }
 
 void main() {
-    genLine(0);
-    genLine(1);
-    genLine(2);
+    for (int i = 0; i < gl_in.length(); i++) {
+        genLine(i);
+    }
 }
