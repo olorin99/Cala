@@ -1,7 +1,7 @@
 #ifndef CALA_SHADERPROGRAM_H
 #define CALA_SHADERPROGRAM_H
 
-#include <vulkan/vulkan.h>
+#include <volk.h>
 #include <Ende/Vector.h>
 #include <Cala/backend/ShaderInterface.h>
 #include <Cala/backend/primitives.h>

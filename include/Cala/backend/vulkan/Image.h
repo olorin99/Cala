@@ -1,9 +1,11 @@
 #ifndef CALA_IMAGE_H
 #define CALA_IMAGE_H
 
-#include <vulkan/vulkan.h>
+#include <volk.h>
 #include <Ende/platform.h>
 #include <Ende/Span.h>
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
 #include "../../third_party/vk_mem_alloc.h"
 #include <Cala/backend/primitives.h>
 

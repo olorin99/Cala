@@ -746,4 +746,5 @@ cala::backend::vulkan::ProgramHandle cala::Engine::getProgram(cala::Engine::Prog
         case ProgramType::SOLID_COLOUR:
             return _solidColourProgram;
     }
+    return _solidColourProgram;
 }

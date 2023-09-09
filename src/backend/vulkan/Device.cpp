@@ -1,7 +1,6 @@
 #include "Cala/backend/vulkan/Device.h"
 #include "Cala/backend/vulkan/primitives.h"
 #include "Ende/filesystem/File.h"
-#include <vulkan/vulkan.h>
 #include <Ende/profile/profile.h>
 
 cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog::logger& logger)

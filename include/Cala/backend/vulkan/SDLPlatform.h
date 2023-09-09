@@ -3,7 +3,7 @@
 
 #include <Ende/platform.h>
 #include <SDL2/SDL.h>
-#include <vulkan/vulkan.h>
+#include <volk.h>
 #include "Platform.h"
 
 namespace cala::backend::vulkan {

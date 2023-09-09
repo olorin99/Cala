@@ -1,6 +1,7 @@
 #ifndef CALA_OFFLINEPLATFORM_H
 #define CALA_OFFLINEPLATFORM_H
 
+#include <volk.h>
 #include <Cala/backend/vulkan/Platform.h>
 
 namespace cala::backend::vulkan {

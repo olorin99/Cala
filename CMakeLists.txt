@@ -3,12 +3,11 @@ project(Cala)
 
 set(CMAKE_CXX_STANDARD 23)
 
-set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -DENDE_PROFILE)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENDE_PROFILE -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES")
 
 find_package(SDL2 REQUIRED)
 find_package(assimp)
 find_package(X11 REQUIRED)
-find_package(Vulkan REQUIRED)
 find_library(SHADERC_LIBRARY libshaderc_shared.so)
 
 add_subdirectory(third_party)
@@ -28,4 +27,4 @@ target_include_directories(Cala
         libs
         third_party)
 
-target_link_libraries(Cala Ende ${Vulkan_LIBRARIES} ${SDL2_LIBRARIES} ${X11_LIBRARIES} imgui assimp spirv-cross-cpp ${SHADERC_LIBRARY})
+target_link_libraries(Cala Ende ${SDL2_LIBRARIES} ${X11_LIBRARIES} imgui assimp spirv-cross-cpp ${SHADERC_LIBRARY} volk)

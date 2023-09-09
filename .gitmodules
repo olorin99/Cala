@@ -8,3 +8,6 @@
 	path = libs/imgui
 	url = https://github.com/olorin99/imgui
 	branch = docking
+[submodule "libs/volk"]
+	path = libs/volk
+	url = https://github.com/zeux/volk.git

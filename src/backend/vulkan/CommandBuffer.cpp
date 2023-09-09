@@ -302,7 +302,7 @@ void cala::backend::vulkan::CommandBuffer::bindImage(u32 set, u32 binding, Image
 }
 
 void cala::backend::vulkan::CommandBuffer::pushConstants(ShaderStage stage, ende::Span<const void> data, u32 offset) {
-    assert(data.size() <= 128);
+    assert(offset + data.size() <= 128);
     vkCmdPushConstants(_buffer, _pipelineKey.layout, getShaderStage(stage), offset, data.size(), data.data());
 }
 
@@ -521,8 +521,7 @@ bool cala::backend::vulkan::CommandBuffer::PipelineEqual::operator()(const Pipel
 void cala::backend::vulkan::CommandBuffer::writeBufferMarker(cala::backend::PipelineStage stage, std::string_view cmd) {
 #ifndef NDEBUG
     if (_device->context().getSupportedExtensions().AMD_buffer_marker && _device->_markerBuffer) {
-        static auto cmdWriteBufferMarker = (PFN_vkCmdWriteBufferMarkerAMD)vkGetDeviceProcAddr(_device->context().device(), "vkCmdWriteBufferMarkerAMD");
-        cmdWriteBufferMarker(_buffer, getPipelineStage(stage), _device->_markerBuffer->buffer(), _device->_offset, _device->_marker);
+        vkCmdWriteBufferMarkerAMD(_buffer, getPipelineStage(stage), _device->_markerBuffer->buffer(), _device->_offset, _device->_marker);
 
         if (_device->_markedCmds.size() >= _device->_marker) {
             _device->_markedCmds[_device->_offset / sizeof(u32)] = std::make_pair(cmd, _device->_marker);

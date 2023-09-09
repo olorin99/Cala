@@ -1,7 +1,7 @@
 #ifndef CALA_VK_PRIMITIVES_H
 #define CALA_VK_PRIMITIVES_H
 
-#include <vulkan/vulkan.h>
+#include <volk.h>
 #include <Cala/backend/primitives.h>
 
 namespace cala::backend::vulkan {

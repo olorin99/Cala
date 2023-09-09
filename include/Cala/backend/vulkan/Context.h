@@ -1,13 +1,15 @@
 #ifndef CALA_CONTEXT_H
 #define CALA_CONTEXT_H
 
-#include <vulkan/vulkan.h>
+#include <volk.h>
 #include <string>
 #include <Ende/Vector.h>
 #include <Ende/Span.h>
 #include <Cala/backend/primitives.h>
 #include <Cala/backend/vulkan/Platform.h>
 
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
 #include "../../third_party/vk_mem_alloc.h"
 
 #define VK_TRY(x) { \

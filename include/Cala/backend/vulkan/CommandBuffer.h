@@ -1,7 +1,7 @@
 #ifndef CALA_COMMANDBUFFER_H
 #define CALA_COMMANDBUFFER_H
 
-#include <vulkan/vulkan.h>
+#include <volk.h>
 #include <Cala/backend/vulkan/Handle.h>
 #include <Cala/backend/vulkan/ShaderProgram.h>
 #include <Cala/backend/vulkan/RenderPass.h>

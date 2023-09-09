@@ -1,7 +1,7 @@
 #ifndef CALA_RENDERPASS_H
 #define CALA_RENDERPASS_H
 
-#include <vulkan/vulkan.h>
+#include <volk.h>
 #include <Ende/Vector.h>
 #include <Ende/Span.h>
 #include <Cala/backend/primitives.h>

@@ -1,8 +1,7 @@
 #ifndef CALA_FRAMEBUFFER_H
 #define CALA_FRAMEBUFFER_H
 
-#include <vulkan/vulkan.h>
-
+#include <volk.h>
 #include <Cala/backend/vulkan/RenderPass.h>
 
 namespace cala {

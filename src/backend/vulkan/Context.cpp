@@ -1,8 +1,11 @@
 #include <cstdio> //vma complains without this
+#include <Cala/backend/vulkan/Context.h>
+
 #define VMA_IMPLEMENTATION
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
 #include "../third_party/vk_mem_alloc.h"
 
-#include <Cala/backend/vulkan/Context.h>
 #include <Cala/backend/vulkan/primitives.h>
 #include <Cala/backend/vulkan/Device.h>
 #include <Ende/Vector.h>
@@ -73,6 +76,8 @@ bool checkDeviceSuitable(VkPhysicalDevice device, VkPhysicalDeviceFeatures* devi
 cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, cala::backend::Platform& platform)
     : _device(device)
 {
+    VK_TRY(volkInitialize());
+
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName = "Cala";
@@ -108,6 +113,8 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
 //    instanceCreateInfo.pNext = &validationFeatures;
 
     VK_TRY(vkCreateInstance(&instanceCreateInfo, nullptr, &_instance));
+
+    volkLoadInstanceOnly(_instance);
 
     //create debug messenger
 #ifndef NDEBUG
@@ -270,14 +277,40 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
 
     VK_TRY(vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_logicalDevice));
 
+    volkLoadDevice(_logicalDevice);
+
     VmaAllocatorCreateInfo allocatorCreateInfo{};
     allocatorCreateInfo.vulkanApiVersion = appInfo.apiVersion;
     allocatorCreateInfo.physicalDevice = _physicalDevice;
     allocatorCreateInfo.device = _logicalDevice;
     allocatorCreateInfo.instance = _instance;
+
     VmaVulkanFunctions vulkanFunctions{};
-    vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
-    vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
+    vulkanFunctions.vkGetInstanceProcAddr               = vkGetInstanceProcAddr;
+    vulkanFunctions.vkGetDeviceProcAddr                 = vkGetDeviceProcAddr;
+    vulkanFunctions.vkAllocateMemory                    = vkAllocateMemory;
+    vulkanFunctions.vkBindBufferMemory                  = vkBindBufferMemory;
+    vulkanFunctions.vkBindBufferMemory2KHR              = vkBindBufferMemory2;
+    vulkanFunctions.vkBindImageMemory                   = vkBindImageMemory;
+    vulkanFunctions.vkBindImageMemory2KHR               = vkBindImageMemory2;
+    vulkanFunctions.vkCreateBuffer                      = vkCreateBuffer;
+    vulkanFunctions.vkCreateImage                       = vkCreateImage;
+    vulkanFunctions.vkDestroyBuffer                     = vkDestroyBuffer;
+    vulkanFunctions.vkDestroyImage                      = vkDestroyImage;
+    vulkanFunctions.vkFlushMappedMemoryRanges           = vkFlushMappedMemoryRanges;
+    vulkanFunctions.vkFreeMemory                        = vkFreeMemory;
+    vulkanFunctions.vkGetBufferMemoryRequirements       = vkGetBufferMemoryRequirements;
+    vulkanFunctions.vkGetBufferMemoryRequirements2KHR   = vkGetBufferMemoryRequirements2;
+    vulkanFunctions.vkGetImageMemoryRequirements        = vkGetImageMemoryRequirements;
+    vulkanFunctions.vkGetImageMemoryRequirements2KHR    = vkGetImageMemoryRequirements2;
+    vulkanFunctions.vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties;
+    vulkanFunctions.vkGetPhysicalDeviceMemoryProperties2KHR = vkGetPhysicalDeviceMemoryProperties2;
+    vulkanFunctions.vkGetPhysicalDeviceProperties       = vkGetPhysicalDeviceProperties;
+    vulkanFunctions.vkInvalidateMappedMemoryRanges      = vkInvalidateMappedMemoryRanges;
+    vulkanFunctions.vkMapMemory                         = vkMapMemory;
+    vulkanFunctions.vkUnmapMemory                       = vkUnmapMemory;
+    vulkanFunctions.vkCmdCopyBuffer                     = vkCmdCopyBuffer;
+
     allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
     allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
 #ifndef NDEBUG

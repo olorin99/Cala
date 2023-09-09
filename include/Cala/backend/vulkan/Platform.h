@@ -1,7 +1,7 @@
 #ifndef CALA_PLATFORM_H
 #define CALA_PLATFORM_H
 
-#include <vulkan/vulkan.h>
+#include <volk.h>
 #include <Ende/platform.h>
 #include <Ende/Vector.h>
 

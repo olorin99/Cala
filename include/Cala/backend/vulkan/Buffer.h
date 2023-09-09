@@ -1,9 +1,11 @@
 #ifndef CALA_BUFFER_H
 #define CALA_BUFFER_H
 
-#include <vulkan/vulkan.h>
 #include <Cala/backend/primitives.h>
 #include <Ende/Span.h>
+#include <volk.h>
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
 #include "../../third_party/vk_mem_alloc.h"
 
 namespace cala::backend::vulkan {

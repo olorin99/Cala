@@ -1,4 +1,8 @@
 #include "Cala/ImGuiContext.h"
+#include <volk.h>
+
+#include <imgui.h>
+#include <backends/imgui_impl_vulkan.h>
 
 
 VkCommandBuffer beginSingleTimeCommands(VkDevice device, VkCommandPool pool) {
@@ -110,6 +114,13 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Device &driver, cala::backend:
 
     if (_window)
         ImGui_ImplSDL2_InitForVulkan(window);
+
+    VkInstance inst = driver.context().instance();
+
+    ImGui_ImplVulkan_LoadFunctions([](const char* functionName, void* instance) {
+        return vkGetInstanceProcAddr(*(reinterpret_cast<VkInstance*>(instance)), functionName);
+    }, &inst);
+
     ImGui_ImplVulkan_InitInfo initInfo{};
     initInfo.Instance = driver.context().instance();
     initInfo.PhysicalDevice = driver.context().physicalDevice();

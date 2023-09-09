@@ -1,8 +1,8 @@
 #ifndef CALA_SAMPLER_H
 #define CALA_SAMPLER_H
 
-#include <vulkan/vulkan.h>
 #include <Ende/platform.h>
+#include <volk.h>
 
 namespace cala::backend::vulkan {
 
