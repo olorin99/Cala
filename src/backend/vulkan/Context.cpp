@@ -423,16 +423,16 @@ void cala::backend::vulkan::Context::endDebugLabel(VkCommandBuffer buffer) const
 
 void cala::backend::vulkan::Context::setDebugName(u32 type, u64 object, std::string_view name) {
 #ifndef NDEBUG
-    if (_supportedExtensions.EXT_debug_marker) {
-//        static auto setNameObject = (PFN_vkDebugMarkerSetObjectNameEXT)vkGetInstanceProcAddr(_instance, "vkDebugMarkerSetObjectNameEXT");
-        VkDebugMarkerObjectNameInfoEXT nameInfo{};
-        nameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;
-        nameInfo.objectType = static_cast<VkDebugReportObjectTypeEXT>(type);
-        nameInfo.object = object;
-        nameInfo.pObjectName = name.data();
-//        setNameObject(_logicalDevice, &nameInfo);
-    vkDebugMarkerSetObjectNameEXT(_logicalDevice, &nameInfo);
-    }
+//    if (_supportedExtensions.EXT_debug_marker) {
+////        static auto setNameObject = (PFN_vkDebugMarkerSetObjectNameEXT)vkGetInstanceProcAddr(_instance, "vkDebugMarkerSetObjectNameEXT");
+//        VkDebugMarkerObjectNameInfoEXT nameInfo{};
+//        nameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;
+//        nameInfo.objectType = static_cast<VkDebugReportObjectTypeEXT>(type);
+//        nameInfo.object = object;
+//        nameInfo.pObjectName = name.data();
+////        setNameObject(_logicalDevice, &nameInfo);
+//    vkDebugMarkerSetObjectNameEXT(_logicalDevice, &nameInfo);
+//    }
 #endif
 }
 
