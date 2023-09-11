@@ -415,6 +415,8 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
 
     updateBindlessBuffer(index);
 
+    _context.setDebugName(VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, (u64)buffer, "Buffer: " + std::to_string(index));
+
     return { this, static_cast<i32>(index), _buffers[index].second };
 }
 
@@ -531,6 +533,9 @@ cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Im
     updateBindlessImage(index, _imageViews[index], *chosenSampler);
 
     _bytesAllocatedPerFrame += (info.width * info.height * info.depth * formatToSize(info.format));
+
+    _context.setDebugName(VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, (u64)image, "Image: " + std::to_string(index));
+    _context.setDebugName(VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, (u64)_imageViews[index].view, "ImageView: " + std::to_string(index));
 
     return { this, static_cast<i32>(index), _images[index].second };
 }

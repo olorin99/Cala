@@ -33,6 +33,8 @@ namespace cala::backend::vulkan {
 
         void endDebugLabel(VkCommandBuffer buffer) const;
 
+        void setDebugName(u32 type, u64 object, std::string_view name);
+
 
         //internal objects
         bool queueIndex(u32& index, QueueType type, QueueType rejectType = QueueType::NONE) const;
@@ -92,6 +94,7 @@ namespace cala::backend::vulkan {
             bool KHR_pipeline_library = false;
             bool KHR_deferred_host_operations = false;
 
+            bool EXT_debug_marker = false;
             bool EXT_memory_budget = false;
             bool EXT_mesh_shader = false;
 

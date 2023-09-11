@@ -95,7 +95,7 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
 //    instanceExtensions.push(VK_EXT_validation_features);
 
 //    VkValidationFeatureEnableEXT v[2] = {VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT, VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT};
-////    auto v = VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT;
+//////    auto v = VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT;
 //
 //    VkValidationFeaturesEXT validationFeatures{};
 //    validationFeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
@@ -223,6 +223,7 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
         _supportedExtensions.KHR_pipeline_library = checkExtensions(supportedDeviceExtensions, VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
         _supportedExtensions.KHR_deferred_host_operations = checkExtensions(supportedDeviceExtensions, VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
 
+        _supportedExtensions.EXT_debug_marker = checkExtensions(supportedDeviceExtensions, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
         _supportedExtensions.EXT_memory_budget = checkExtensions(supportedDeviceExtensions, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
         _supportedExtensions.EXT_mesh_shader = checkExtensions(supportedDeviceExtensions, VK_EXT_MESH_SHADER_EXTENSION_NAME);
 
@@ -238,6 +239,8 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     if (_supportedExtensions.EXT_memory_budget)
         deviceExtensions.push(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
 #ifndef NDEBUG
+    if (_supportedExtensions.EXT_debug_marker)
+        deviceExtensions.push(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
     if (_supportedExtensions.AMD_buffer_marker)
         deviceExtensions.push(VK_AMD_BUFFER_MARKER_EXTENSION_NAME);
     if (_supportedExtensions.AMD_device_coherent_memory)
@@ -398,23 +401,40 @@ cala::backend::vulkan::Context::~Context() {
 
 void cala::backend::vulkan::Context::beginDebugLabel(VkCommandBuffer buffer, std::string_view label, std::array<f32, 4> colour) const {
 #ifndef NDEBUG
-    static auto beginDebugLabel = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(_instance, "vkCmdBeginDebugUtilsLabelEXT");
+//    static auto beginDebugLabel = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(_instance, "vkCmdBeginDebugUtilsLabelEXT");
     VkDebugUtilsLabelEXT labelExt{};
     labelExt.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
     labelExt.pLabelName = label.data();
     for (i32 i = 0; i < 4; i++)
         labelExt.color[i] = colour[i];
-    beginDebugLabel(buffer, &labelExt);
+    vkCmdBeginDebugUtilsLabelEXT(buffer, &labelExt);
+//    beginDebugLabel(buffer, &labelExt);
 #endif
 }
 
 void cala::backend::vulkan::Context::endDebugLabel(VkCommandBuffer buffer) const {
 #ifndef NDEBUG
-    static auto endDebugLabel = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetInstanceProcAddr(_instance, "vkCmdEndDebugUtilsLabelEXT");
-    endDebugLabel(buffer);
+//    static auto endDebugLabel = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetInstanceProcAddr(_instance, "vkCmdEndDebugUtilsLabelEXT");
+//    endDebugLabel(buffer);
+    vkCmdEndDebugUtilsLabelEXT(buffer);
 #endif
 }
 
+
+void cala::backend::vulkan::Context::setDebugName(u32 type, u64 object, std::string_view name) {
+#ifndef NDEBUG
+    if (_supportedExtensions.EXT_debug_marker) {
+//        static auto setNameObject = (PFN_vkDebugMarkerSetObjectNameEXT)vkGetInstanceProcAddr(_instance, "vkDebugMarkerSetObjectNameEXT");
+        VkDebugMarkerObjectNameInfoEXT nameInfo{};
+        nameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;
+        nameInfo.objectType = static_cast<VkDebugReportObjectTypeEXT>(type);
+        nameInfo.object = object;
+        nameInfo.pObjectName = name.data();
+//        setNameObject(_logicalDevice, &nameInfo);
+    vkDebugMarkerSetObjectNameEXT(_logicalDevice, &nameInfo);
+    }
+#endif
+}
 
 
 bool cala::backend::vulkan::Context::queueIndex(u32& index, QueueType type, QueueType rejectType) const {
