@@ -93,7 +93,7 @@ namespace cala {
         void setDebugColour(std::array<f32, 4> colour);
 
         ~RenderPass();
-    private:
+//    private:
 
         friend RenderGraph;
 
@@ -180,7 +180,7 @@ namespace cala {
             }
         }
 
-    private:
+//    private:
         friend RenderPass;
 
         Engine* _engine;

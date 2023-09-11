@@ -76,8 +76,10 @@ namespace cala {
         backend::vulkan::ImageHandle _shadowTarget;
         backend::vulkan::Framebuffer* _shadowFramebuffer;
 
+    public:
         RenderGraph _graph;
 
+    private:
         backend::vulkan::Device::FrameInfo _frameInfo;
         backend::vulkan::Swapchain::Frame _swapchainFrame;
 

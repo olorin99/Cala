@@ -235,7 +235,8 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     ende::Vector<const char*> deviceExtensions;
     deviceExtensions.push(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     deviceExtensions.push(VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
-    deviceExtensions.push(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
+    if (_supportedExtensions.EXT_memory_budget)
+        deviceExtensions.push(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
 #ifndef NDEBUG
     if (_supportedExtensions.AMD_buffer_marker)
         deviceExtensions.push(VK_AMD_BUFFER_MARKER_EXTENSION_NAME);
@@ -312,7 +313,8 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     vulkanFunctions.vkCmdCopyBuffer                     = vkCmdCopyBuffer;
 
     allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
-    allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
+    if (_supportedExtensions.EXT_memory_budget)
+        allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
 #ifndef NDEBUG
     if (_supportedExtensions.AMD_device_coherent_memory)
         allocatorCreateInfo.flags |= VMA_ALLOCATOR_CREATE_AMD_DEVICE_COHERENT_MEMORY_BIT;

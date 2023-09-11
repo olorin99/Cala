@@ -9,3 +9,6 @@ set(IMGUI_PATH "imgui")
 set(IMGUI_SOURCES ${IMGUI_PATH}/imgui.cpp ${IMGUI_PATH}/imgui_demo.cpp ${IMGUI_PATH}/imgui_tables.cpp ${IMGUI_PATH}/imgui_widgets.cpp ${IMGUI_PATH}/imgui_draw.cpp ${IMGUI_PATH}/backends/imgui_impl_vulkan.cpp ${IMGUI_PATH}/backends/imgui_impl_sdl2.cpp )
 add_library(imgui STATIC ${IMGUI_SOURCES})
 target_include_directories(imgui PUBLIC ${IMGUI_PATH})
+
+add_library(node_editor STATIC node_editor/imgui_canvas.cpp node_editor/imgui_node_editor.cpp node_editor/imgui_node_editor_api.cpp node_editor/crude_json.cpp)
+target_include_directories(node_editor PUBLIC node_editor ${IMGUI_PATH})

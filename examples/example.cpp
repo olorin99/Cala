@@ -25,6 +25,7 @@
 #include <Cala/ui/RendererSettingsWindow.h>
 #include <Cala/ui/LightWindow.h>
 #include <Cala/ui/ResourceViewer.h>
+#include <Cala/ui/RenderGraphViewer.h>
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -366,6 +367,7 @@ int main() {
     ui::StatisticsWindow statisticsWindow(&engine, &renderer);
     ui::RendererSettingsWindow rendererSettingsWindow(&engine, &renderer, &swapchain);
     ui::ResourceViewer resourceViewer(&engine.device());
+    ui::RenderGraphViewer renderGraphViewer(&renderer._graph);
 
 
     struct Material1Data {
@@ -575,8 +577,9 @@ int main() {
             profileWindow.render();
             statisticsWindow.render();
             rendererSettingsWindow.render();
-            lightWindow.render();
+            renderGraphViewer.render();
             resourceViewer.render();
+            lightWindow.render();
 
 
 
@@ -625,6 +628,7 @@ int main() {
             }
 
             ImGui::End();
+
             ImGui::Render();
         }
 
