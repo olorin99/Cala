@@ -32,6 +32,7 @@ namespace cala {
         bool matchSwapchain = true;
         bool clear = true;
         backend::ImageUsage usage = backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST;
+        backend::ImageLayout layout = backend::ImageLayout::UNDEFINED;
         backend::vulkan::ImageHandle handle;
 
         void devirtualize(Engine* engine, backend::vulkan::Swapchain* swapchain) override;
@@ -63,9 +64,9 @@ namespace cala {
     public:
 
     private:
-        bool reads(const char* label, bool storage = false);
+        bool reads(const char* label, bool storage = false, backend::PipelineStage stage = backend::PipelineStage::TOP, backend::Access access = backend::Access::MEMORY_READ, backend::ImageLayout layout = backend::ImageLayout::UNDEFINED);
 
-        bool writes(const char* label);
+        bool writes(const char* label, backend::PipelineStage stage = backend::PipelineStage::TOP, backend::Access access = backend::Access::MEMORY_WRITE, backend::ImageLayout layout = backend::ImageLayout::UNDEFINED);
     public:
 
         void addColourAttachment(const char* label);
@@ -74,17 +75,19 @@ namespace cala {
 
         void addDepthReadAttachment(const char* label);
 
-        void addStorageImageRead(const char* label);
+        void addIndirectBufferRead(const char* label);
 
-        void addStorageImageWrite(const char* label);
+        void addStorageImageRead(const char* label, backend::PipelineStage stage);
 
-        void addStorageBufferRead(const char* label);
+        void addStorageImageWrite(const char* label, backend::PipelineStage stage);
 
-        void addStorageBufferWrite(const char* label);
+        void addStorageBufferRead(const char* label, backend::PipelineStage stage);
 
-        void addSampledImageRead(const char* label);
+        void addStorageBufferWrite(const char* label, backend::PipelineStage stage);
 
-        void addSampledImageWrite(const char* label);
+        void addSampledImageRead(const char* label, backend::PipelineStage stage);
+
+        void addSampledImageWrite(const char* label, backend::PipelineStage stage);
 
 
 
@@ -102,9 +105,30 @@ namespace cala {
         RenderGraph* _graph;
         const char* _passName;
 
-        ende::Vector<std::pair<const char*, bool>> _inputs;
-        ende::Vector<const char*> _outputs;
-        ende::Vector<const char*> _attachments;
+        struct PassResource {
+            const char* name;
+            backend::Access access;
+            backend::PipelineStage stage;
+            backend::ImageLayout layout;
+        };
+
+        ende::Vector<PassResource> _inputs;
+        ende::Vector<PassResource> _outputs;
+        ende::Vector<PassResource> _attachments;
+
+        struct Barrier {
+            const char* name;
+            i32 index = -1;
+            backend::PipelineStage srcStage = backend::PipelineStage::TOP;
+            backend::PipelineStage dstStage = backend::PipelineStage::BOTTOM;
+            backend::Access srcAccess = backend::Access::NONE;
+            backend::Access dstAccess = backend::Access::NONE;
+            backend::ImageLayout srcLayout = backend::ImageLayout::UNDEFINED;
+            backend::ImageLayout dstLayout = backend::ImageLayout::UNDEFINED;
+        };
+
+        ende::Vector<Barrier> _invalidate; //inputs
+        ende::Vector<Barrier> _flush; //outputs
 
         std::function<void(backend::vulkan::CommandBuffer&, RenderGraph&)> _executeFunc;
 

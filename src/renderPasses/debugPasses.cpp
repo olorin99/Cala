@@ -1,17 +1,19 @@
 #include "debugPasses.h"
 #include <Cala/Material.h>
 
+using namespace cala;
+
 void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     auto& normalsPass = graph.addPass("debug_normals");
 
     normalsPass.addColourAttachment("backbuffer");
     normalsPass.addDepthAttachment("depth");
 
-    normalsPass.addStorageBufferRead("global");
-    normalsPass.addStorageBufferRead("drawCommands");
-    normalsPass.addStorageBufferRead("materialCounts");
-    normalsPass.addStorageBufferRead("transforms");
-    normalsPass.addStorageBufferRead("meshData");
+    normalsPass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    normalsPass.addIndirectBufferRead("drawCommands");
+    normalsPass.addIndirectBufferRead("materialCounts");
+    normalsPass.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
+    normalsPass.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     normalsPass.setExecuteFunction([&](cala::backend::vulkan::CommandBuffer& cmd, cala::RenderGraph& graph) {
         auto global = graph.getResource<cala::BufferResource>("global");
@@ -47,11 +49,11 @@ void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
     debugRoughness.addColourAttachment("backbuffer");
     debugRoughness.addDepthAttachment("depth");
 
-    debugRoughness.addStorageBufferRead("global");
-    debugRoughness.addStorageBufferRead("drawCommands");
-    debugRoughness.addStorageBufferRead("materialCounts");
-    debugRoughness.addStorageBufferRead("transforms");
-    debugRoughness.addStorageBufferRead("meshData");
+    debugRoughness.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    debugRoughness.addIndirectBufferRead("drawCommands");
+    debugRoughness.addIndirectBufferRead("materialCounts");
+    debugRoughness.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
+    debugRoughness.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugRoughness.setExecuteFunction([&](cala::backend::vulkan::CommandBuffer& cmd, cala::RenderGraph& graph) {
         auto global = graph.getResource<cala::BufferResource>("global");
@@ -86,11 +88,11 @@ void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sce
     debugMetallic.addColourAttachment("backbuffer");
     debugMetallic.addDepthAttachment("depth");
 
-    debugMetallic.addStorageBufferRead("global");
-    debugMetallic.addStorageBufferRead("drawCommands");
-    debugMetallic.addStorageBufferRead("materialCounts");
-    debugMetallic.addStorageBufferRead("transforms");
-    debugMetallic.addStorageBufferRead("meshData");
+    debugMetallic.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    debugMetallic.addIndirectBufferRead("drawCommands");
+    debugMetallic.addIndirectBufferRead("materialCounts");
+    debugMetallic.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
+    debugMetallic.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugMetallic.setExecuteFunction([&](cala::backend::vulkan::CommandBuffer& cmd, cala::RenderGraph& graph) {
         auto global = graph.getResource<cala::BufferResource>("global");
@@ -125,11 +127,11 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene&
     debugUnlit.addColourAttachment("backbuffer");
     debugUnlit.addDepthAttachment("depth");
 
-    debugUnlit.addStorageBufferRead("global");
-    debugUnlit.addStorageBufferRead("drawCommands");
-    debugUnlit.addStorageBufferRead("materialCounts");
-    debugUnlit.addStorageBufferRead("transforms");
-    debugUnlit.addStorageBufferRead("meshData");
+    debugUnlit.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    debugUnlit.addIndirectBufferRead("drawCommands");
+    debugUnlit.addIndirectBufferRead("materialCounts");
+    debugUnlit.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
+    debugUnlit.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugUnlit.setExecuteFunction([&](cala::backend::vulkan::CommandBuffer& cmd, cala::RenderGraph& graph) {
         auto global = graph.getResource<cala::BufferResource>("global");
@@ -164,11 +166,11 @@ void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala
     debugWorldPos.addColourAttachment("backbuffer");
     debugWorldPos.addDepthAttachment("depth");
 
-    debugWorldPos.addStorageBufferRead("global");
-    debugWorldPos.addStorageBufferRead("drawCommands");
-    debugWorldPos.addStorageBufferRead("materialCounts");
-    debugWorldPos.addStorageBufferRead("transforms");
-    debugWorldPos.addStorageBufferRead("meshData");
+    debugWorldPos.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    debugWorldPos.addIndirectBufferRead("drawCommands");
+    debugWorldPos.addIndirectBufferRead("materialCounts");
+    debugWorldPos.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
+    debugWorldPos.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugWorldPos.setExecuteFunction([&](cala::backend::vulkan::CommandBuffer& cmd, cala::RenderGraph& graph) {
         auto global = graph.getResource<cala::BufferResource>("global");
@@ -200,11 +202,11 @@ void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
     debugWireframe.addColourAttachment(backbuffer);
     debugWireframe.addDepthAttachment("depth");
 
-    debugWireframe.addStorageBufferRead("global");
-    debugWireframe.addStorageBufferRead("drawCommands");
-    debugWireframe.addStorageBufferRead("materialCounts");
-    debugWireframe.addStorageBufferRead("transforms");
-    debugWireframe.addStorageBufferRead("meshData");
+    debugWireframe.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    debugWireframe.addIndirectBufferRead("drawCommands");
+    debugWireframe.addIndirectBufferRead("materialCounts");
+    debugWireframe.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
+    debugWireframe.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugWireframe.setExecuteFunction([settings, &engine, &scene](cala::backend::vulkan::CommandBuffer& cmd, cala::RenderGraph& graph) {
         auto global = graph.getResource<cala::BufferResource>("global");
@@ -239,11 +241,11 @@ void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::
     debugNormalLines.addColourAttachment(backbuffer);
     debugNormalLines.addDepthAttachment("depth");
 
-    debugNormalLines.addStorageBufferRead("global");
-    debugNormalLines.addStorageBufferRead("drawCommands");
-    debugNormalLines.addStorageBufferRead("materialCounts");
-    debugNormalLines.addStorageBufferRead("transforms");
-    debugNormalLines.addStorageBufferRead("meshData");
+    debugNormalLines.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    debugNormalLines.addIndirectBufferRead("drawCommands");
+    debugNormalLines.addIndirectBufferRead("materialCounts");
+    debugNormalLines.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
+    debugNormalLines.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugNormalLines.setExecuteFunction([settings, &engine, &scene](cala::backend::vulkan::CommandBuffer& cmd, cala::RenderGraph& graph) {
         auto global = graph.getResource<cala::BufferResource>("global");

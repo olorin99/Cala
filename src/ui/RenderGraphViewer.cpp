@@ -11,7 +11,7 @@ void cala::ui::RenderGraphViewer::render() {
     for (u32 i = 0; i < _graph->_orderedPasses.size(); i++) {
         auto& pass = _graph->_passes[i];
         for (auto& input : pass._inputs)
-            inputs[input.first].push(i);
+            inputs[input.name].push(i);
     }
 
     ende::Vector<tsl::robin_map<const char*, u32>> ids;
@@ -36,16 +36,16 @@ void cala::ui::RenderGraphViewer::render() {
         ImGui::Separator();
 
         for (auto& input : pass->_inputs) {
-            ids.back()[input.first] = id;
+            ids.back()[input.name] = id;
             ax::NodeEditor::BeginPin(id++, ax::NodeEditor::PinKind::Input);
-            ImGui::Text("%s", input.first);
+            ImGui::Text("%s", input);
             ax::NodeEditor::EndPin();
         }
 
         ImGui::Separator();
 
         for (auto& output : pass->_outputs) {
-            ids.back()[output] = id;
+            ids.back()[output.name] = id;
             ax::NodeEditor::BeginPin(id++, ax::NodeEditor::PinKind::Output);
             ImGui::Text("%s", output);
             ax::NodeEditor::EndPin();
@@ -62,19 +62,19 @@ void cala::ui::RenderGraphViewer::render() {
     for (i32 i = 0; i < (i32)_graph->_orderedPasses.size() - 1; i++) {
         auto& pass = _graph->_orderedPasses[i];
         for (auto& output : pass->_outputs) {
-            i32 outputID = ids[i][output];
+            i32 outputID = ids[i][output.name];
 
             for (i32 j = i; j < _graph->_orderedPasses.size(); j++) {
                 auto& nextPass = _graph->_orderedPasses[j];
                 for (auto& input : nextPass->_inputs) {
-                    if (strcmp(output, input.first) == 0) {
-                        i32 inputID = ids[j][input.first];
+                    if (strcmp(output.name, input.name) == 0) {
+                        i32 inputID = ids[j][input.name];
                         ax::NodeEditor::Link(id++, outputID, inputID);
                     }
                 }
                 for (auto& output2 : nextPass->_outputs) {
-                    if (strcmp(output, output2) == 0) {
-                        i32 inputID = ids[j][output2];
+                    if (strcmp(output.name, output2.name) == 0) {
+                        i32 inputID = ids[j][output2.name];
                         ax::NodeEditor::Link(id++, outputID, inputID);
                     }
                 }

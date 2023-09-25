@@ -190,7 +190,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     if (camera.isDirty()) {
         auto& createClusters = _graph.addPass("create_clusters");
 
-        createClusters.addStorageBufferWrite("clusters");
+        createClusters.addStorageBufferWrite("clusters", backend::PipelineStage::COMPUTE_SHADER);
 
         createClusters.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
             auto clusters = graph.getResource<BufferResource>("clusters");
@@ -239,11 +239,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     auto& cullLights = _graph.addPass("cull_lights");
 
-    cullLights.addStorageBufferRead("global");
-    cullLights.addStorageBufferRead("clusters");
-    cullLights.addStorageBufferWrite("lightGrid");
-    cullLights.addStorageBufferWrite("lightIndices");
-    cullLights.addStorageBufferWrite("lightGlobalResource");
+    cullLights.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
+    cullLights.addStorageBufferRead("clusters", backend::PipelineStage::COMPUTE_SHADER);
+    cullLights.addStorageBufferWrite("lightGrid", backend::PipelineStage::COMPUTE_SHADER);
+    cullLights.addStorageBufferWrite("lightIndices", backend::PipelineStage::COMPUTE_SHADER);
+    cullLights.addStorageBufferRead("lightGlobalResource", backend::PipelineStage::COMPUTE_SHADER);
 
     cullLights.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
         auto global = graph.getResource<BufferResource>("global");
@@ -285,10 +285,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     if (_renderSettings.debugClusters) {
         auto& debugClusters = _graph.addPass("debug_clusters");
 
-        debugClusters.addStorageBufferRead("global");
+        debugClusters.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
         debugClusters.addColourAttachment("hdr");
-        debugClusters.addStorageBufferRead("lightGrid");
-        debugClusters.addSampledImageRead("depth");
+        debugClusters.addStorageBufferRead("lightGrid", backend::PipelineStage::FRAGMENT_SHADER);
+        debugClusters.addSampledImageRead("depth", backend::PipelineStage::FRAGMENT_SHADER);
 
         debugClusters.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
             auto global = graph.getResource<BufferResource>("global");
@@ -362,11 +362,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     auto& pointShadows = _graph.addPass("point_shadows");
 
-    pointShadows.addStorageBufferRead("global");
-    pointShadows.addSampledImageWrite("pointDepth");
-    pointShadows.addStorageBufferRead("transforms");
-    pointShadows.addStorageBufferRead("meshData");
-    pointShadows.addStorageBufferWrite("shadowDrawCommands");
+    pointShadows.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    pointShadows.addSampledImageWrite("pointDepth", backend::PipelineStage::FRAGMENT_SHADER);
+    pointShadows.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
+    pointShadows.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER);
+    pointShadows.addIndirectBufferRead("shadowDrawCommands");
 
     pointShadows.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
         auto global = graph.getResource<BufferResource>("global");
@@ -478,11 +478,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     auto& cullPass = _graph.addPass("cull");
 
-    cullPass.addStorageBufferRead("global");
-    cullPass.addStorageBufferRead("transforms");
-    cullPass.addStorageBufferRead("meshData");
-    cullPass.addStorageBufferRead("materialCounts");
-    cullPass.addStorageBufferWrite("drawCommands");
+    cullPass.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
+    cullPass.addStorageBufferRead("transforms", backend::PipelineStage::COMPUTE_SHADER);
+    cullPass.addStorageBufferRead("meshData", backend::PipelineStage::COMPUTE_SHADER);
+    cullPass.addStorageBufferWrite("materialCounts", backend::PipelineStage::COMPUTE_SHADER);
+    cullPass.addStorageBufferWrite("drawCommands", backend::PipelineStage::COMPUTE_SHADER);
 
     cullPass.setDebugColour({0.3, 0.3, 1, 1});
 
@@ -510,9 +510,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
         depthPrePass.addDepthAttachment("depth");
 
-        depthPrePass.addStorageBufferRead("global");
-        depthPrePass.addStorageBufferRead("drawCommands");
-        depthPrePass.addStorageBufferRead("materialCounts");
+        depthPrePass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+        depthPrePass.addIndirectBufferRead("drawCommands");
+        depthPrePass.addIndirectBufferRead("materialCounts");
 
         depthPrePass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
             auto global = graph.getResource<BufferResource>("global");
@@ -547,12 +547,13 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         else
             forwardPass.addDepthAttachment("depth");
 
-        forwardPass.addStorageBufferRead("global");
-        forwardPass.addSampledImageRead("pointDepth");
-        forwardPass.addStorageBufferRead("drawCommands");
-        forwardPass.addStorageBufferRead("lightIndices");
-        forwardPass.addStorageBufferRead("lightGrid");
-        forwardPass.addStorageBufferRead("materialCounts");
+        forwardPass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addSampledImageRead("pointDepth", backend::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addIndirectBufferRead("drawCommands");
+        forwardPass.addStorageBufferRead("lightIndices", backend::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addStorageBufferRead("lightGrid", backend::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addStorageBufferRead("lightGlobalResource", backend::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addIndirectBufferRead("materialCounts");
 
         forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
 
@@ -608,9 +609,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     if (_renderSettings.tonemap && !debugViewEnabled) {
         auto& tonemapPass = _graph.addPass("tonemap");
 
-        tonemapPass.addStorageBufferRead("global");
-        tonemapPass.addStorageImageWrite("backbuffer");
-        tonemapPass.addStorageImageRead("hdr");
+        tonemapPass.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
+        tonemapPass.addStorageImageWrite("backbuffer", backend::PipelineStage::COMPUTE_SHADER);
+        tonemapPass.addStorageImageRead("hdr", backend::PipelineStage::COMPUTE_SHADER);
 
         tonemapPass.setDebugColour({0.1, 0.4, 0.7, 1});
         tonemapPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
@@ -639,7 +640,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         skyboxPass.addDepthReadAttachment("depth");
         skyboxPass.setDebugColour({0, 0.7, 0.1, 1});
 
-        skyboxPass.addStorageBufferRead("global");
+        skyboxPass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
         skyboxPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
             auto global = graph.getResource<BufferResource>("global");

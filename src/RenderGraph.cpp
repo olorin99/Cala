@@ -92,7 +92,7 @@ cala::RenderPass::~RenderPass() {
 }
 
 
-bool cala::RenderPass::reads(const char *label, bool storage) {
+bool cala::RenderPass::reads(const char *label, bool storage, backend::PipelineStage stage, backend::Access access, backend::ImageLayout layout) {
     auto it = _graph->_attachmentMap.find(label);
     if (_graph->_attachmentMap.end() == it) {
         std::string err = "unable to find ";
@@ -101,12 +101,12 @@ bool cala::RenderPass::reads(const char *label, bool storage) {
         return false;
     }
     else {
-        _inputs.emplace(std::make_pair(label, storage));
+        _inputs.emplace(label, access, stage, layout);
         return true;
     }
 }
 
-bool cala::RenderPass::writes(const char *label) {
+bool cala::RenderPass::writes(const char *label, backend::PipelineStage stage, backend::Access access, backend::ImageLayout layout) {
     auto it = _graph->_attachmentMap.find(label);
     if (_graph->_attachmentMap.end() == it) {
         std::string err = "unable to find ";
@@ -115,7 +115,7 @@ bool cala::RenderPass::writes(const char *label) {
         return false;
     }
     else {
-        _outputs.emplace(label);
+        _outputs.emplace(label, access, stage, layout);
         return true;
     }
 }
@@ -126,66 +126,73 @@ bool cala::RenderPass::writes(const char *label) {
 
 void cala::RenderPass::addColourAttachment(const char *label) {
     //TODO: error handling
-    if (writes(label)) {
-        _attachments.emplace(label);
+    if (writes(label, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::Access::COLOUR_ATTACHMENT_WRITE, backend::ImageLayout::COLOUR_ATTACHMENT)) {
+        _attachments.emplace(label, backend::Access::COLOUR_ATTACHMENT_WRITE, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::ImageLayout::COLOUR_ATTACHMENT);
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->usage = resource->usage | backend::ImageUsage::COLOUR_ATTACHMENT;
     }
 }
 
 void cala::RenderPass::addDepthAttachment(const char *label) {
-    if (writes(label)) {
-        _attachments.emplace(label);
+    if (writes(label, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::Access::DEPTH_STENCIL_WRITE, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT)) {
+        _attachments.emplace(label, backend::Access::DEPTH_STENCIL_WRITE, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->usage = resource->usage | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT;
     }
 }
 
 void cala::RenderPass::addDepthReadAttachment(const char *label) {
-    if (reads(label)) {
-        _attachments.emplace(label);
+    if (reads(label, false, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT)) {
+        _attachments.emplace(label, backend::Access::DEPTH_STENCIL_READ, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->usage = resource->usage | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT;
     }
 }
 
-void cala::RenderPass::addStorageImageRead(const char *label) {
-    if (reads(label, true)) {
+void cala::RenderPass::addIndirectBufferRead(const char *label) {
+    if (reads(label, true, backend::PipelineStage::DRAW_INDIRECT, backend::Access::INDIRECT_READ)) {
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->usage = resource->usage | backend::ImageUsage::STORAGE;
     }
 }
 
-void cala::RenderPass::addStorageImageWrite(const char *label) {
-    if (writes(label)) {
+void cala::RenderPass::addStorageImageRead(const char *label, backend::PipelineStage stage) {
+    if (reads(label, true, stage, backend::Access::SHADER_READ, backend::ImageLayout::GENERAL)) {
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->usage = resource->usage | backend::ImageUsage::STORAGE;
     }
 }
 
-void cala::RenderPass::addStorageBufferRead(const char *label) {
-    if (reads(label, true)) {
+void cala::RenderPass::addStorageImageWrite(const char *label, backend::PipelineStage stage) {
+    if (writes(label, stage, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL)) {
+        if (auto resource = _graph->getResource<ImageResource>(label); resource)
+            resource->usage = resource->usage | backend::ImageUsage::STORAGE;
+    }
+}
+
+void cala::RenderPass::addStorageBufferRead(const char *label, backend::PipelineStage stage) {
+    if (reads(label, true, stage, backend::Access::SHADER_READ)) {
         if (auto resource = _graph->getResource<BufferResource>(label); resource)
             resource->usage = resource->usage | backend::BufferUsage::STORAGE;
     }
 }
 
-void cala::RenderPass::addStorageBufferWrite(const char *label) {
-    if (writes(label)) {
+void cala::RenderPass::addStorageBufferWrite(const char *label, backend::PipelineStage stage) {
+    if (writes(label, stage, backend::Access::SHADER_WRITE)) {
         if (auto resource = _graph->getResource<BufferResource>(label); resource)
             resource->usage = resource->usage | backend::BufferUsage::STORAGE;
     }
 }
 
-void cala::RenderPass::addSampledImageRead(const char *label) {
-    if (reads(label)) {
+void cala::RenderPass::addSampledImageRead(const char *label, backend::PipelineStage stage) {
+    if (reads(label, false, stage, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY)) {
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->usage = resource->usage | backend::ImageUsage::SAMPLED;
     }
 }
 
-void cala::RenderPass::addSampledImageWrite(const char *label) {
-    if (writes(label)) {
+void cala::RenderPass::addSampledImageWrite(const char *label, backend::PipelineStage stage) {
+    if (writes(label, stage, backend::Access::SHADER_WRITE, backend::ImageLayout::SHADER_READ_ONLY)) {
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->usage = resource->usage | backend::ImageUsage::SAMPLED;
     }
@@ -238,7 +245,7 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
     for (u32 i = 0; i < _passes.size(); i++) {
         auto& pass = _passes[i];
         for (auto& output : pass._outputs)
-            outputs[output].push(i);
+            outputs[output.name].push(i);
     }
 
     ende::Vector<bool> visited(_passes.size(), false);
@@ -249,8 +256,8 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
         onStack[index] = true;
         auto& pass = _passes[index];
         for (auto& input : pass._inputs) {
-            for (u32 i = 0; i < outputs[input.first].size(); i++) {
-                u32 j = outputs[input.first][i];
+            for (u32 i = 0; i < outputs[input.name].size(); i++) {
+                u32 j = outputs[input.name][i];
                 if (visited[j] && onStack[j])
                     return false;
                 if (!visited[j]) {
@@ -269,6 +276,122 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
             return false;
     }
 
+    auto findNextAccess = [&](i32 startIndex, const char* resource) -> std::tuple<i32, i32, RenderPass::PassResource> {
+        for (i32 passIndex = startIndex + 1; passIndex < _orderedPasses.size(); passIndex++) {
+            auto& pass = _orderedPasses[passIndex];
+            for (i32 outputIndex = 0; outputIndex < pass->_outputs.size(); outputIndex++) {
+                if (pass->_outputs[outputIndex].name == resource)
+                    return { passIndex, outputIndex, pass->_outputs[outputIndex] };
+            }
+            for (i32 inputIndex = 0; inputIndex < pass->_inputs.size(); inputIndex++) {
+                if (pass->_inputs[inputIndex].name == resource)
+                    return { passIndex, inputIndex, pass->_inputs[inputIndex] };
+            }
+        }
+        return { -1, -1, {} };
+    };
+
+    for (i32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
+        auto& pass = _orderedPasses[passIndex];
+
+        for (i32 outputIndex = 0; outputIndex < pass->_outputs.size(); outputIndex++) {
+            auto& currentAccess = pass->_outputs[outputIndex];
+
+            auto [accessPassIndex, accessIndex, nextAccess] = findNextAccess(passIndex, currentAccess.name);
+            if (accessPassIndex < 0)
+                continue;
+            auto& accessPass = _orderedPasses[accessPassIndex];
+            if (backend::isReadAccess(nextAccess.access)) {
+                accessPass->_invalidate.push({
+                    currentAccess.name,
+                    accessIndex,
+                    currentAccess.stage,
+                    nextAccess.stage,
+                    currentAccess.access,
+                    nextAccess.access,
+                    currentAccess.layout,
+                    nextAccess.layout
+                });
+            } else {
+                pass->_flush.push({
+                    currentAccess.name,
+                    accessIndex,
+                    currentAccess.stage,
+                    nextAccess.stage,
+                    currentAccess.access,
+                    nextAccess.access,
+                    currentAccess.layout,
+                    nextAccess.layout
+                });
+            }
+        }
+        for (i32 inputIndex = 0; inputIndex < pass->_inputs.size(); inputIndex++) {
+            auto& currentAccess = pass->_inputs[inputIndex];
+
+            auto [accessPassIndex, accessIndex, nextAccess] = findNextAccess(passIndex, currentAccess.name);
+            if (accessPassIndex < 0)
+                continue;
+            auto& accessPass = _orderedPasses[accessPassIndex];
+            if (backend::isReadAccess(nextAccess.access)) {
+                accessPass->_invalidate.push({
+                    currentAccess.name,
+                    accessIndex,
+                    currentAccess.stage,
+                    nextAccess.stage,
+                    currentAccess.access,
+                    nextAccess.access,
+                    currentAccess.layout,
+                    nextAccess.layout
+                });
+            } else {
+                pass->_flush.push({
+                    currentAccess.name,
+                    accessIndex,
+                    currentAccess.stage,
+                    nextAccess.stage,
+                    currentAccess.access,
+                    nextAccess.access,
+                    currentAccess.layout,
+                    nextAccess.layout
+                });
+            }
+        }
+    }
+
+    for (auto& attachment : _attachmentMap) {
+        if (attachment.second.internal) {
+            if (auto resource = getResource<ImageResource>(attachment.first); resource) {
+                if (resource->layout == backend::ImageLayout::UNDEFINED) {
+                    // find first use
+                    auto [accessPassIndex, accessIndex, nextAccess] = findNextAccess(-1, attachment.first);
+                    auto& accessPass = _orderedPasses[accessPassIndex];
+                    accessPass->_invalidate.push({
+                        attachment.first,
+                        accessIndex,
+                        backend::PipelineStage::TOP,
+                        nextAccess.stage,
+                        backend::Access::NONE,
+                        nextAccess.access,
+                        backend::ImageLayout::UNDEFINED,
+                        nextAccess.layout
+                    });
+                }
+            }
+        }
+    }
+
+#ifdef 0
+    for (i32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
+        auto& pass = _orderedPasses[passIndex];
+        _engine->logger().info("Pass: {}", pass->_passName);
+        for (auto& barrier : pass->_invalidate) {
+            _engine->logger().info("Invalidate: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
+        }
+        for (auto& barrier : pass->_flush) {
+            _engine->logger().info("Flush: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
+        }
+    }
+#endif
 
     for (auto& attachment : _attachmentMap) {
         u32 index = attachment.second.index;
@@ -294,7 +417,7 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
             ende::Vector<backend::vulkan::RenderPass::Attachment> attachments;
             for (auto &attachment: pass->_attachments) {
 
-                auto resource = getResource<ImageResource>(attachment);
+                auto resource = getResource<ImageResource>(attachment.name);
 
                 bool depth = backend::isDepthFormat(resource->format);
 
@@ -327,7 +450,7 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
             pass->_framebuffer = _engine->device().getFramebuffer(renderPass, attachmentImages, attachmentHashes, width, height);
         } else if (!pass->_framebuffer) {
             for (auto& output : pass->_outputs) {
-                if (auto resource = getResource<ImageResource>(output); resource) {
+                if (auto resource = getResource<ImageResource>(output.name); resource) {
                     resource->clear = false;
                 }
             }
@@ -341,77 +464,24 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
     assert(_swapchain);
     for (u32 i = 0; i < _orderedPasses.size(); i++) {
         auto& pass = _orderedPasses[i];
-        for (auto& input : pass->_inputs) {
-            bool attach = false;
-            for (auto& attachment : pass->_attachments) {
-                if (input.first == attachment) {
-                    attach = true;
-                    continue;
-                }
-            }
-            if (attach)
-                continue;
-            if (auto imageResource = getResource<ImageResource>(input.first); imageResource) {
-                assert(imageResource->handle);
-                if (input.second) {
-                    if (imageResource->handle->layout() != backend::ImageLayout::GENERAL) {
-                        auto b = imageResource->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::GENERAL);
-                        cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::FRAGMENT_SHADER, { &b, 1 });
-                    }
-                } else {
-                    if (imageResource->handle->layout() != backend::ImageLayout::SHADER_READ_ONLY) {
-                        auto b = imageResource->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
-                        cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::FRAGMENT_SHADER, { &b, 1 });
-                    }
-                }
-            } else if (auto bufferResource = getResource<BufferResource>(input.first); bufferResource) {
-                assert(bufferResource->handle);
-                auto b = bufferResource->handle->barrier(backend::Access::MEMORY_READ);
-                cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, { &b, 1 });
-            }
-        }
-        for (auto& output : pass->_outputs) {
-            bool attach = false;
-            for (auto& attachment : pass->_attachments) {
-                if (output == attachment) {
-                    attach = true;
-                    continue;
-                }
-            }
-            if (attach)
-                continue;
-            if (auto imageResource = getResource<ImageResource>(output); imageResource) {
-                assert(imageResource->handle);
-                if (imageResource->handle->layout() != backend::ImageLayout::GENERAL) {
-                    auto b = imageResource->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
-                    cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::COMPUTE_SHADER | backend::PipelineStage::FRAGMENT_SHADER, { &b, 1 });
-                }
-            } else if (auto bufferResource = getResource<BufferResource>(output); bufferResource) {
-                assert(bufferResource->handle);
-                auto b = bufferResource->handle->barrier(backend::Access::MEMORY_WRITE);
-                cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, { &b, 1 });
-            }
-        }
-        for (auto& attachment : pass->_attachments) {
-            auto resource = getResource<ImageResource>(attachment);
-            assert(resource->handle);
-            if (backend::isDepthFormat(resource->handle->format())) {
-                if (resource->handle->layout() != backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT) {
-                    auto b = resource->handle->barrier(backend::Access::SHADER_READ, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
-                    cmd.pipelineBarrier(backend::PipelineStage::FRAGMENT_SHADER, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, { &b, 1 });
-                }
-            } else {
-                if (resource->handle->layout() != backend::ImageLayout::COLOUR_ATTACHMENT) {
-                    auto b = resource->handle->barrier(backend::Access::SHADER_READ | backend::Access::SHADER_WRITE, backend::Access::COLOUR_ATTACHMENT_WRITE | backend::Access::COLOUR_ATTACHMENT_READ, backend::ImageLayout::COLOUR_ATTACHMENT);
-                    cmd.pipelineBarrier(backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, { &b, 1 });
-                }
-            }
-        }
-
 
         auto& timer = _timers[_engine->device().frameIndex()][i];
         timer.first = pass->_passName;
         timer.second.start(cmd);
+
+        for (auto& barrier : pass->_invalidate) {
+            if (barrier.dstLayout != backend::ImageLayout::UNDEFINED) {
+                if (auto resource = getResource<ImageResource>(barrier.name); resource) {
+                    auto b = resource->handle->barrier(barrier.srcAccess, barrier.dstAccess, barrier.srcLayout, barrier.dstLayout);
+                    cmd.pipelineBarrier(barrier.srcStage, barrier.dstStage, { &b, 1 });
+                }
+            } else {
+                if (auto resource = getResource<BufferResource>(barrier.name); resource) {
+                    auto b = resource->handle->barrier(barrier.dstAccess);
+                    cmd.pipelineBarrier(barrier.srcStage, barrier.dstStage, { &b, 1 });
+                }
+            }
+        }
 
         cmd.pushDebugLabel(pass->_passName, pass->_debugColour);
         if (pass->_framebuffer)
@@ -421,21 +491,23 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
         if (pass->_framebuffer)
             cmd.end(*pass->_framebuffer);
         cmd.popDebugLabel();
-        timer.second.stop();
-        for (auto& attachment : pass->_attachments) {
-            auto resource = getResource<ImageResource>(attachment);
-            if (!resource)
-                continue;
-            if (backend::isDepthFormat(resource->handle->format())) {
-                auto b = resource->handle->barrier(backend::Access::DEPTH_STENCIL_WRITE, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
-                cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, { &b, 1 });
-//                cmd.pipelineBarrier(backend::PipelineStage::ALL_GRAPHICS, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::LATE_FRAGMENT, { &b, 1 });
+
+        for (auto& barrier : pass->_flush) {
+            if (barrier.dstLayout != backend::ImageLayout::UNDEFINED) {
+                if (auto resource = getResource<ImageResource>(barrier.name); resource) {
+                    auto b = resource->handle->barrier(barrier.srcAccess, barrier.dstAccess, barrier.srcLayout, barrier.dstLayout);
+                    cmd.pipelineBarrier(barrier.srcStage, barrier.dstStage, { &b, 1 });
+                }
             } else {
-                auto b = resource->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::COLOUR_ATTACHMENT_WRITE | backend::Access::COLOUR_ATTACHMENT_READ, backend::ImageLayout::COLOUR_ATTACHMENT);
-                cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT | backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, { &b, 1 });
-//                cmd.pipelineBarrier(backend::PipelineStage::ALL_GRAPHICS, backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, { &b, 1 });
+                if (auto resource = getResource<BufferResource>(barrier.name); resource) {
+                    auto b = resource->handle->barrier(barrier.dstAccess);
+                    cmd.pipelineBarrier(barrier.srcStage, barrier.dstStage, { &b, 1 });
+                }
             }
         }
+
+
+        timer.second.stop();
     }
 
     auto backbuffer = getResource<ImageResource>(_backbuffer);
