@@ -83,7 +83,7 @@ namespace cala::backend::vulkan {
 
         View newView(u32 mipLevel = 0, u32 levelCount = 1, u32 arrayLayer = 0, u32 layerCount = 0, ImageViewType viewType = ImageViewType::AUTO, Format format = Format::UNDEFINED);
 
-        VkImageMemoryBarrier barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer = 0);
+//        VkImageMemoryBarrier barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer = 0);
 
         struct Barrier {
             Image* image;
@@ -95,6 +95,8 @@ namespace cala::backend::vulkan {
         };
 
         Barrier barrier(Access srcAccess, Access dstAccess, ImageLayout dstLayout, u32 layer = 0);
+
+        Barrier barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer = 0);
 
         void setLayout(VkImageLayout layout);
 

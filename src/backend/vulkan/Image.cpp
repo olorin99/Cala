@@ -279,24 +279,24 @@ cala::backend::vulkan::Image::View cala::backend::vulkan::Image::newView(u32 mip
     return v;
 }
 
-VkImageMemoryBarrier cala::backend::vulkan::Image::barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer) {
-    VkImageSubresourceRange range{};
-    range.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-    range.baseMipLevel = 0;
-    range.levelCount = VK_REMAINING_MIP_LEVELS;
-    range.baseArrayLayer = layer;
-    range.layerCount = VK_REMAINING_ARRAY_LAYERS;
-
-    VkImageMemoryBarrier memoryBarrier{};
-    memoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    memoryBarrier.srcAccessMask = getAccessFlags(srcAccess);
-    memoryBarrier.dstAccessMask = getAccessFlags(dstAccess);
-    memoryBarrier.oldLayout = getImageLayout(srcLayout);
-    memoryBarrier.newLayout = getImageLayout(dstLayout);
-    memoryBarrier.image = _image;
-    memoryBarrier.subresourceRange = range;
-    return memoryBarrier;
-}
+//VkImageMemoryBarrier cala::backend::vulkan::Image::barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer) {
+//    VkImageSubresourceRange range{};
+//    range.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+//    range.baseMipLevel = 0;
+//    range.levelCount = VK_REMAINING_MIP_LEVELS;
+//    range.baseArrayLayer = layer;
+//    range.layerCount = VK_REMAINING_ARRAY_LAYERS;
+//
+//    VkImageMemoryBarrier memoryBarrier{};
+//    memoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+//    memoryBarrier.srcAccessMask = getAccessFlags(srcAccess);
+//    memoryBarrier.dstAccessMask = getAccessFlags(dstAccess);
+//    memoryBarrier.oldLayout = getImageLayout(srcLayout);
+//    memoryBarrier.newLayout = getImageLayout(dstLayout);
+//    memoryBarrier.image = _image;
+//    memoryBarrier.subresourceRange = range;
+//    return memoryBarrier;
+//}
 
 cala::backend::vulkan::Image::Barrier cala::backend::vulkan::Image::barrier(Access srcAccess, Access dstAccess, ImageLayout dstLayout, u32 layer) {
     Barrier b{};
@@ -309,6 +309,22 @@ cala::backend::vulkan::Image::Barrier cala::backend::vulkan::Image::barrier(Acce
     b.srcAccess = srcAccess;
     b.dstAccess = dstAccess;
     b.srcLayout = layout();
+    b.dstLayout = dstLayout;
+    b.image = this;
+    return b;
+}
+
+cala::backend::vulkan::Image::Barrier cala::backend::vulkan::Image::barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer) {
+    Barrier b{};
+    b.subresourceRange.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    b.subresourceRange.baseMipLevel = 0;
+    b.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+    b.subresourceRange.baseArrayLayer = layer;
+    b.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+    b.srcAccess = srcAccess;
+    b.dstAccess = dstAccess;
+    b.srcLayout = srcLayout;
     b.dstLayout = dstLayout;
     b.image = this;
     return b;
