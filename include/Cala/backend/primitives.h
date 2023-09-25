@@ -215,6 +215,37 @@ namespace cala::backend {
         MEMORY_WRITE = 0x00010000
     };
 
+    constexpr bool isReadAccess(Access access) {
+        switch (access) {
+            case Access::INDIRECT_READ:
+            case Access::INDEX_READ:
+            case Access::VERTEX_READ:
+            case Access::UNIFORM_READ:
+            case Access::INPUT_READ:
+            case Access::SHADER_READ:
+            case Access::COLOUR_ATTACHMENT_READ:
+            case Access::DEPTH_STENCIL_READ:
+            case Access::TRANSFER_READ:
+            case Access::HOST_READ:
+            case Access::MEMORY_READ:
+                return true;
+        }
+        return false;
+    }
+
+    constexpr bool isWriteAccess(Access access) {
+        switch (access) {
+            case Access::SHADER_WRITE:
+            case Access::COLOUR_ATTACHMENT_WRITE:
+            case Access::DEPTH_STENCIL_WRITE:
+            case Access::TRANSFER_WRITE:
+            case Access::HOST_WRITE:
+            case Access::MEMORY_WRITE:
+                return true;
+        }
+        return false;
+    }
+
     enum class PipelineStage {
         TOP = 0x00000001,
         DRAW_INDIRECT = 0x00000002,
@@ -352,6 +383,112 @@ namespace cala::backend {
         }
 
         return 0;
+    }
+
+    constexpr const char* imageLayoutToString(ImageLayout layout) {
+        switch (layout) {
+            case ImageLayout::UNDEFINED:
+                return tostr(ImageLayout::UNDEFINED);
+            case ImageLayout::GENERAL:
+                return tostr(ImageLayout::GENERAL);
+            case ImageLayout::COLOUR_ATTACHMENT:
+                return tostr(ImageLayout::COLOUR_ATTACHMENT);
+            case ImageLayout::DEPTH_STENCIL_ATTACHMENT:
+                return tostr(ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+            case ImageLayout::DEPTH_STENCIL_READ_ONLY:
+                return tostr(ImageLayout::DEPTH_STENCIL_READ_ONLY);
+            case ImageLayout::SHADER_READ_ONLY:
+                return tostr(ImageLayout::SHADER_READ_ONLY);
+            case ImageLayout::TRANSFER_SRC:
+                return tostr(ImageLayout::TRANSFER_SRC);
+            case ImageLayout::TRANSFER_DST:
+                return tostr(ImageLayout::TRANSFER_DST);
+            case ImageLayout::PREINITIALIZED:
+                return tostr(ImageLayout::PREINITIALIZED);
+        }
+        return tostr(ImageLayout::UNDEFINED);
+    }
+
+    constexpr const char* pipelineStageToString(PipelineStage stage) {
+        switch (stage) {
+            case PipelineStage::TOP:
+                return tostr(PipelineStage::TOP);
+            case PipelineStage::DRAW_INDIRECT:
+                return tostr(PipelineStage::DRAW_INDIRECT);
+            case PipelineStage::VERTEX_INPUT:
+                return tostr(PipelineStage::VERTEX_INPUT);
+            case PipelineStage::VERTEX_SHADER:
+                return tostr(PipelineStage::VERTEX_SHADER);
+            case PipelineStage::TESS_CONTROL:
+                return tostr(PipelineStage::TESS_CONTROL);
+            case PipelineStage::TESS_EVAL:
+                return tostr(PipelineStage::TESS_EVAL);
+            case PipelineStage::GEOMETRY_SHADER:
+                return tostr(PipelineStage::GEOMETRY_SHADER);
+            case PipelineStage::FRAGMENT_SHADER:
+                return tostr(PipelineStage::FRAGMENT_SHADER);
+            case PipelineStage::EARLY_FRAGMENT:
+                return tostr(PipelineStage::EARLY_FRAGMENT);
+            case PipelineStage::LATE_FRAGMENT:
+                return tostr(PipelineStage::LATE_FRAGMENT);
+            case PipelineStage::COLOUR_ATTACHMENT_OUTPUT:
+                return tostr(PipelineStage::COLOUR_ATTACHMENT_OUTPUT);
+            case PipelineStage::COMPUTE_SHADER:
+                return tostr(PipelineStage::COMPUTE_SHADER);
+            case PipelineStage::TRANSFER:
+                return tostr(PipelineStage::TRANSFER);
+            case PipelineStage::BOTTOM:
+                return tostr(PipelineStage::BOTTOM);
+            case PipelineStage::HOST:
+                return tostr(PipelineStage::HOST);
+            case PipelineStage::ALL_GRAPHICS:
+                return tostr(PipelineStage::ALL_GRAPHICS);
+            case PipelineStage::ALL_COMMANDS:
+                return tostr(PipelineStage::ALL_COMMANDS);
+        }
+        return tostr(PipelineStage::TOP);
+    }
+
+    constexpr const char* accessToString(Access access) {
+        switch (access) {
+            case Access::NONE:
+                return tostr(Access::NONE);
+            case Access::INDIRECT_READ:
+                return tostr(Access::INDIRECT_READ);
+            case Access::INDEX_READ:
+                return tostr(Access::INDEX_READ);
+            case Access::VERTEX_READ:
+                return tostr(Access::VERTEX_READ);
+            case Access::UNIFORM_READ:
+                return tostr(Access::UNIFORM_READ);
+            case Access::INPUT_READ:
+                return tostr(Access::INPUT_READ);
+            case Access::SHADER_READ:
+                return tostr(Access::SHADER_READ);
+            case Access::SHADER_WRITE:
+                return tostr(Access::SHADER_WRITE);
+            case Access::COLOUR_ATTACHMENT_READ:
+                return tostr(Access::COLOUR_ATTACHMENT_READ);
+            case Access::COLOUR_ATTACHMENT_WRITE:
+                return tostr(Access::COLOUR_ATTACHMENT_WRITE);
+            case Access::DEPTH_STENCIL_READ:
+                return tostr(Access::DEPTH_STENCIL_READ);
+            case Access::DEPTH_STENCIL_WRITE:
+                return tostr(Access::DEPTH_STENCIL_WRITE);
+            case Access::TRANSFER_READ:
+                return tostr(Access::TRANSFER_READ);
+            case Access::TRANSFER_WRITE:
+                return tostr(Access::TRANSFER_WRITE);
+            case Access::HOST_READ:
+                return tostr(Access::HOST_READ);
+            case Access::HOST_WRITE:
+                return tostr(Access::HOST_WRITE);
+            case Access::MEMORY_READ:
+                return tostr(Access::MEMORY_READ);
+            case Access::MEMORY_WRITE:
+                return tostr(Access::MEMORY_WRITE);
+        }
+        return tostr(Access::NONE);
     }
 
 }
