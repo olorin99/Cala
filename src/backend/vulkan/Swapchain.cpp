@@ -255,8 +255,8 @@ void cala::backend::vulkan::Swapchain::blitImageToFrame(u32 index, CommandBuffer
 void cala::backend::vulkan::Swapchain::copyImageToFrame(u32 index, CommandBuffer &buffer, Image &src) {
     assert(_extent.width == src.width() && _extent.height == src.height() && 1 == src.depth());
 
-    VkImageMemoryBarrier barriers[] = { src.barrier(Access::SHADER_WRITE, Access::TRANSFER_WRITE, ImageLayout::COLOUR_ATTACHMENT, ImageLayout::TRANSFER_SRC) };
-    buffer.pipelineBarrier(PipelineStage::ALL_COMMANDS, PipelineStage::ALL_COMMANDS, 0, nullptr, barriers);
+    auto barriers = src.barrier(Access::SHADER_WRITE, Access::TRANSFER_WRITE, ImageLayout::COLOUR_ATTACHMENT, ImageLayout::TRANSFER_SRC);
+    buffer.pipelineBarrier(PipelineStage::ALL_COMMANDS, PipelineStage::ALL_COMMANDS, { &barriers, 1 });
 
 
     VkImageSubresourceRange range{};
@@ -305,8 +305,8 @@ void cala::backend::vulkan::Swapchain::copyImageToFrame(u32 index, CommandBuffer
 void cala::backend::vulkan::Swapchain::copyFrameToImage(u32 index, cala::backend::vulkan::CommandBuffer &buffer, cala::backend::vulkan::Image &dst) {
     assert(_extent.width == dst.width() && _extent.height == dst.height() && 1 == dst.depth());
 
-    VkImageMemoryBarrier barriers[] = { dst.barrier(Access::TRANSFER_WRITE, Access::TRANSFER_WRITE, ImageLayout::UNDEFINED, ImageLayout::TRANSFER_DST) };
-    buffer.pipelineBarrier(PipelineStage::ALL_COMMANDS, PipelineStage::ALL_COMMANDS, 0, nullptr, barriers);
+    auto barriers = dst.barrier(Access::TRANSFER_WRITE, Access::TRANSFER_WRITE, ImageLayout::UNDEFINED, ImageLayout::TRANSFER_DST);
+    buffer.pipelineBarrier(PipelineStage::ALL_COMMANDS, PipelineStage::ALL_COMMANDS, { &barriers, 1 });
 
     VkImageCopy region{};
 
