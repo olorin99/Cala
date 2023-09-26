@@ -28,6 +28,7 @@ namespace cala {
 
         u32 width = 1;
         u32 height = 1;
+        u32 depth = 1;
         backend::Format format = backend::Format::RGBA8_UNORM;
         bool matchSwapchain = true;
         bool clear = true;

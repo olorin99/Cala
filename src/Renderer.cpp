@@ -156,6 +156,14 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         _graph.addResource("drawCommands", drawCommandsResource, true);
 
         _graph.addResource("shadowDrawCommands", drawCommandsResource, true);
+
+//        ImageResource voxelGridResource;
+//        voxelGridResource.format = backend::Format::RGBA32_SFLOAT;
+//        voxelGridResource.width = 100;
+//        voxelGridResource.height = 100;
+//        voxelGridResource.depth = 100;
+//        voxelGridResource.matchSwapchain = false;
+//        _graph.addResource("voxelGrid", voxelGridResource);
     }
 
 
@@ -371,7 +379,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     auto& pointShadows = _graph.addPass("point_shadows");
 
     pointShadows.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
-    pointShadows.addSampledImageRead("pointDepth", backend::PipelineStage::FRAGMENT_SHADER);
+    pointShadows.addSampledImageWrite("pointDepth", backend::PipelineStage::FRAGMENT_SHADER);
     pointShadows.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
     pointShadows.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER);
     pointShadows.addIndirectBufferRead("shadowDrawCommands");

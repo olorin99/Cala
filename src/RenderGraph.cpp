@@ -17,7 +17,7 @@ void cala::ImageResource::devirtualize(cala::Engine* engine, backend::vulkan::Sw
         }
 
         handle = engine->device().createImage({
-            width, height, 1, format, 1, 1, usage
+            width, height, depth, format, 1, 1, usage
         });
         engine->device().immediate([&](backend::vulkan::CommandBuffer& cmd) {
             if (backend::isDepthFormat(format)) {
