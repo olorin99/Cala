@@ -365,6 +365,8 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
                 if (resource->layout == backend::ImageLayout::UNDEFINED) {
                     // find first use
                     auto [accessPassIndex, accessIndex, nextAccess] = findNextAccess(-1, attachment.first);
+                    if (accessPassIndex < 0)
+                        continue;
                     auto& accessPass = _orderedPasses[accessPassIndex];
                     accessPass->_invalidate.push({
                         attachment.first,

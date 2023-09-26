@@ -165,33 +165,34 @@ void cala::backend::vulkan::Image::copy(cala::backend::vulkan::CommandBuffer &bu
 
 void cala::backend::vulkan::Image::generateMips() {
     _device->immediate([&](CommandBuffer& cmd) {
-        Barrier b = barrier(Access::SHADER_READ, Access::TRANSFER_WRITE, ImageLayout::TRANSFER_DST);
-        cmd.pipelineBarrier(PipelineStage::FRAGMENT_SHADER, PipelineStage::TRANSFER, { &b, 1});
+//        Barrier b = barrier(Access::SHADER_READ, Access::TRANSFER_WRITE, ImageLayout::TRANSFER_DST);
+//        cmd.pipelineBarrier(PipelineStage::FRAGMENT_SHADER, PipelineStage::TRANSFER, { &b, 1});
         generateMips(cmd);
     });
 }
 
 void cala::backend::vulkan::Image::generateMips(CommandBuffer &cmd) {
+    // mip -> mip+1
 
-    Barrier barrier{};
-    barrier.image = this;
-    barrier.subresourceRange.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.layerCount = 1;
-    barrier.subresourceRange.levelCount = 1;
+    Barrier b = barrier(Access::NONE, Access::TRANSFER_READ, ImageLayout::TRANSFER_SRC);
+    cmd.pipelineBarrier(PipelineStage::TOP, PipelineStage::TRANSFER, { &b, 1 });
+
+    b.subresourceRange.layerCount = 1;
+    b.subresourceRange.levelCount = 1;
 
     for (u32 layer = 0; layer < _layers; layer++) {
         i32 mipWidth = _width;
         i32 mipHeight = _height;
-        barrier.subresourceRange.baseArrayLayer = layer;
-
+        b.subresourceRange.baseArrayLayer = layer;
         for (u32 mip = 1; mip < _mips; mip++) {
-            barrier.subresourceRange.baseMipLevel = mip - 1;
-            barrier.srcLayout = ImageLayout::TRANSFER_DST;
-            barrier.dstLayout = ImageLayout::TRANSFER_SRC;
-            barrier.srcAccess = Access::TRANSFER_WRITE;
-            barrier.dstAccess = Access::TRANSFER_READ;
 
-            cmd.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::TRANSFER, { &barrier, 1});
+            b.subresourceRange.baseMipLevel = mip;
+            b.srcLayout = ImageLayout::TRANSFER_SRC;
+            b.dstLayout = ImageLayout::TRANSFER_DST;
+            b.srcAccess = Access::TRANSFER_READ;
+            b.dstAccess = Access::TRANSFER_WRITE;
+
+            cmd.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::TRANSFER, { &b, 1 });
 
             VkImageBlit blit{};
             blit.srcOffsets[0] = {0, 0, 0};
@@ -213,20 +214,71 @@ void cala::backend::vulkan::Image::generateMips(CommandBuffer &cmd) {
 
             vkCmdBlitImage(cmd.buffer(), _image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 
-            barrier.srcLayout = ImageLayout::TRANSFER_SRC;
-            barrier.dstLayout = ImageLayout::SHADER_READ_ONLY;
-            barrier.srcAccess = Access::TRANSFER_WRITE;
-            barrier.dstAccess = Access::SHADER_READ;
+            b.subresourceRange.baseMipLevel = mip;
+            b.srcLayout = ImageLayout::TRANSFER_DST;
+            b.dstLayout = ImageLayout::TRANSFER_SRC;
+            b.srcAccess = Access::TRANSFER_WRITE;
+            b.dstAccess = Access::TRANSFER_READ;
 
-            cmd.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::FRAGMENT_SHADER, { &barrier, 1});
+            cmd.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::TRANSFER, { &b, 1 });
+
         }
-        barrier.subresourceRange.baseMipLevel = _mips - 1;
-        barrier.srcLayout = ImageLayout::TRANSFER_DST;
-        barrier.dstLayout = ImageLayout::SHADER_READ_ONLY;
-        barrier.srcAccess = Access::TRANSFER_WRITE;
-        barrier.dstAccess = Access::SHADER_READ;
-        cmd.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::FRAGMENT_SHADER, { &barrier, 1});
     }
+
+//    Barrier barrier{};
+//    barrier.image = this;
+//    barrier.subresourceRange.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+//    barrier.subresourceRange.layerCount = 1;
+//    barrier.subresourceRange.levelCount = 1;
+//
+//    for (u32 layer = 0; layer < _layers; layer++) {
+//        i32 mipWidth = _width;
+//        i32 mipHeight = _height;
+//        barrier.subresourceRange.baseArrayLayer = layer;
+//
+//        for (u32 mip = 1; mip < _mips; mip++) {
+//            barrier.subresourceRange.baseMipLevel = mip - 1;
+//            barrier.srcLayout = ImageLayout::TRANSFER_DST;
+//            barrier.dstLayout = ImageLayout::TRANSFER_SRC;
+//            barrier.srcAccess = Access::TRANSFER_WRITE;
+//            barrier.dstAccess = Access::TRANSFER_READ;
+//
+//            cmd.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::TRANSFER, { &barrier, 1});
+//
+//            VkImageBlit blit{};
+//            blit.srcOffsets[0] = {0, 0, 0};
+//            blit.srcOffsets[1] = {mipWidth, mipHeight, 1};
+//            blit.srcSubresource.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+//            blit.srcSubresource.mipLevel = mip - 1;
+//            blit.srcSubresource.baseArrayLayer = layer;
+//            blit.srcSubresource.layerCount = 1;
+//
+//            if (mipWidth > 1) mipWidth /= 2;
+//            if (mipHeight > 1) mipHeight /= 2;
+//
+//            blit.dstOffsets[0] = {0, 0, 0};
+//            blit.dstOffsets[1] = {mipWidth, mipHeight, 1};
+//            blit.dstSubresource.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+//            blit.dstSubresource.mipLevel = mip;
+//            blit.dstSubresource.baseArrayLayer = layer;
+//            blit.dstSubresource.layerCount = 1;
+//
+//            vkCmdBlitImage(cmd.buffer(), _image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
+//
+//            barrier.srcLayout = ImageLayout::TRANSFER_SRC;
+//            barrier.dstLayout = ImageLayout::SHADER_READ_ONLY;
+//            barrier.srcAccess = Access::TRANSFER_WRITE;
+//            barrier.dstAccess = Access::SHADER_READ;
+//
+//            cmd.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::FRAGMENT_SHADER, { &barrier, 1});
+//        }
+//        barrier.subresourceRange.baseMipLevel = _mips - 1;
+//        barrier.srcLayout = ImageLayout::TRANSFER_DST;
+//        barrier.dstLayout = ImageLayout::SHADER_READ_ONLY;
+//        barrier.srcAccess = Access::TRANSFER_WRITE;
+//        barrier.dstAccess = Access::SHADER_READ;
+//        cmd.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::FRAGMENT_SHADER, { &barrier, 1});
+//    }
 }
 
 

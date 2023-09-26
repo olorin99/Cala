@@ -94,13 +94,11 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
 
 //    instanceExtensions.push(VK_EXT_validation_features);
 
-    VkValidationFeatureEnableEXT v[5] = {VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT, VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT, VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT};
-//////    auto v = VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT;
-//
-    VkValidationFeaturesEXT validationFeatures{};
-    validationFeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
-    validationFeatures.pEnabledValidationFeatures = v;
-    validationFeatures.enabledValidationFeatureCount = 3;
+//    VkValidationFeatureEnableEXT v[5] = {VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT, VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT, VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT};
+//    VkValidationFeaturesEXT validationFeatures{};
+//    validationFeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+//    validationFeatures.pEnabledValidationFeatures = v;
+//    validationFeatures.enabledValidationFeatureCount = 3;
 
     //create instance with required instanceExtensions
     VkInstanceCreateInfo instanceCreateInfo{};
@@ -110,7 +108,7 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     instanceCreateInfo.ppEnabledLayerNames = validationLayers;
     instanceCreateInfo.enabledExtensionCount = instanceExtensions.size();
     instanceCreateInfo.ppEnabledExtensionNames = instanceExtensions.data();
-    instanceCreateInfo.pNext = &validationFeatures;
+//    instanceCreateInfo.pNext = &validationFeatures;
 
     VK_TRY(vkCreateInstance(&instanceCreateInfo, nullptr, &_instance));
 
@@ -239,7 +237,7 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
 
     ende::Vector<const char*> deviceExtensions;
     deviceExtensions.push(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    deviceExtensions.push(VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
+//    deviceExtensions.push(VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
     if (_supportedExtensions.EXT_memory_budget)
         deviceExtensions.push(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
 //    if (_supportedExtensions.EXT_load_store_op_none)
@@ -269,18 +267,15 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     createInfo.ppEnabledLayerNames = validationLayers;
 #endif
 
-//    VkPhysicalDeviceVulkan11Features vulkan11Features{};
-//    vulkan11Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+    VkPhysicalDeviceVulkan11Features vulkan11Features{};
+    vulkan11Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
 
-//    vulkan11Features.
+    vulkan11Features.shaderDrawParameters = VK_TRUE;
 
     VkPhysicalDeviceVulkan12Features vulkan12Features{};
-
-    createInfo.pNext = &vulkan12Features;
-
     vulkan12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-    vulkan12Features.drawIndirectCount = VK_TRUE;
 
+    vulkan12Features.drawIndirectCount = VK_TRUE;
     vulkan12Features.descriptorIndexing = VK_TRUE;
     vulkan12Features.descriptorBindingPartiallyBound = VK_TRUE;
     vulkan12Features.runtimeDescriptorArray = VK_TRUE;
@@ -292,6 +287,8 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
 //    VkPhysicalDeviceVulkan13Features vulkan13Features{};
 //    vulkan13Features.sType - VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
 
+    vulkan11Features.pNext = &vulkan12Features;
+    createInfo.pNext = &vulkan11Features;
     VK_TRY(vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_logicalDevice));
 
     volkLoadDevice(_logicalDevice);
