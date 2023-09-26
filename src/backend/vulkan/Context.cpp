@@ -283,6 +283,7 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     vulkan12Features.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
     vulkan12Features.descriptorBindingVariableDescriptorCount = VK_TRUE;
     vulkan12Features.hostQueryReset = VK_TRUE;
+    vulkan12Features.timelineSemaphore = VK_TRUE;
 
 //    VkPhysicalDeviceVulkan13Features vulkan13Features{};
 //    vulkan13Features.sType - VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;

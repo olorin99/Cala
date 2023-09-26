@@ -54,7 +54,7 @@ bool cala::Renderer::beginFrame(cala::backend::vulkan::Swapchain* swapchain) {
     _swapchain = swapchain;
     assert(_swapchain);
     _frameInfo = _engine->device().beginFrame();
-    if (!_frameInfo.cmd || _frameInfo.fence == VK_NULL_HANDLE)
+    if (!_frameInfo.cmd)
         return false;
 
     auto result = _swapchain->nextImage();
@@ -71,11 +71,19 @@ bool cala::Renderer::beginFrame(cala::backend::vulkan::Swapchain* swapchain) {
 
 f64 cala::Renderer::endFrame() {
     _frameInfo.cmd->end();
-    if (!_frameInfo.cmd->submit({ &_swapchainFrame.imageAquired, 1 }, _frameInfo.fence)) {
+    u64 waitValue = _engine->device().getFrameValue(_engine->device().frameIndex());
+    u64 signalValue = _engine->device().getNextTimelineValue();
+    if (!_frameInfo.cmd->submit(_engine->device().getTimelineSemaphore(), waitValue, signalValue, _swapchainFrame.imageAquired)) {
         _engine->logger().error("Error submitting command buffer");
         _engine->device().printMarkers();
         throw std::runtime_error("Error submitting command buffer");
     }
+    _engine->device().setFrameValue(_engine->device().frameIndex(), signalValue);
+//    if (!_frameInfo.cmd->submit({ &_swapchainFrame.imageAquired, 1 }, _frameInfo.fence)) {
+//        _engine->logger().error("Error submitting command buffer");
+//        _engine->device().printMarkers();
+//        throw std::runtime_error("Error submitting command buffer");
+//    }
 
     assert(_swapchain);
     _swapchain->present(_swapchainFrame, _frameInfo.cmd->signal());

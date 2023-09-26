@@ -514,6 +514,47 @@ bool cala::backend::vulkan::CommandBuffer::submit(ende::Span<VkSemaphore> wait, 
     return res == VK_SUCCESS;
 }
 
+bool cala::backend::vulkan::CommandBuffer::submit(VkSemaphore timeline, u64 waitValue, u64 signalValue, VkSemaphore waitSemaphore) {
+    PROFILE_NAMED("CommandBuffer::Submit");
+    end();
+
+    u64 waitValues[2] = { waitValue, 0 };
+    u64 signalValues[2] = { signalValue, 0 };
+
+    VkTimelineSemaphoreSubmitInfo timelineSubmitInfo{};
+    timelineSubmitInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
+    timelineSubmitInfo.waitSemaphoreValueCount = 2;
+    timelineSubmitInfo.pWaitSemaphoreValues = waitValues;
+    timelineSubmitInfo.signalSemaphoreValueCount = 2;
+    timelineSubmitInfo.pSignalSemaphoreValues = signalValues;
+
+    VkPipelineStageFlags waitDstStageMasks[2] = { VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT };
+
+    VkSemaphore waits[2] = { timeline, waitSemaphore };
+    VkSemaphore signals[2] = { timeline, _signal };
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.pNext = &timelineSubmitInfo;
+    submitInfo.waitSemaphoreCount = 2;
+    submitInfo.pWaitSemaphores = waits;
+    submitInfo.signalSemaphoreCount = 2;
+    submitInfo.pSignalSemaphores = signals;
+
+    submitInfo.pWaitDstStageMask = waitDstStageMasks;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &_buffer;
+
+    auto res = vkQueueSubmit(_queue, 1, &submitInfo, VK_NULL_HANDLE);
+    if (res == VK_ERROR_DEVICE_LOST) {
+        _device->logger().error("Device lost on queue submit");
+        _device->printMarkers();
+        throw std::runtime_error("Device lost on queue submit");
+    }
+    return res == VK_SUCCESS;
+}
+
 bool cala::backend::vulkan::CommandBuffer::PipelineEqual::operator()(const PipelineKey &lhs, const PipelineKey &rhs) const {
     return 0 == memcmp((const void*)&lhs, (const void*)&rhs, sizeof(lhs));
 }

@@ -29,7 +29,6 @@ namespace cala::backend::vulkan {
         struct FrameInfo {
             u64 frame = 0;
             CommandBuffer* cmd = nullptr;
-            VkFence fence = VK_NULL_HANDLE;
         };
 
         FrameInfo beginFrame();
@@ -42,6 +41,21 @@ namespace cala::backend::vulkan {
 
         bool wait(u64 timeout = 1000000000); // waits for all frames
 
+        bool waitTimeline(u64 value, u64 timeout = 1000000000);
+
+        bool signalTimeline(u64 value);
+
+        u64 queryGPUTimelineValue();
+
+        u64 queryCPUTimelineValue();
+
+        u64 getNextTimelineValue();
+
+        VkSemaphore getTimelineSemaphore() { return _timelineSemaphore; }
+
+        void setFrameValue(u64 frame, u64 value) { _frameValues[frame] = value; }
+
+        u64 getFrameValue(u64 frame) { return _frameValues[frame]; }
 
         BufferHandle stagingBuffer(u32 size);
 
@@ -150,7 +164,9 @@ namespace cala::backend::vulkan {
         spdlog::logger& _logger;
         Context _context;
         CommandPool _commandPools[2][3]; // 0 = graphics, 1 = compute, 2 = transfer
-        VkFence _frameFences[FRAMES_IN_FLIGHT];
+        VkSemaphore _timelineSemaphore;
+        u64 _timelineValue;
+        u64 _frameValues[FRAMES_IN_FLIGHT];
         u64 _frameCount;
         ende::time::StopWatch _frameClock;
         ende::time::Duration _lastFrameTime;

@@ -136,6 +136,8 @@ namespace cala::backend::vulkan {
 
         bool submit(ende::Span<VkSemaphore> wait = nullptr, VkFence fence = VK_NULL_HANDLE);
 
+        bool submit(VkSemaphore timeline = VK_NULL_HANDLE, u64 waitValue = 0, u64 signalValue = 0, VkSemaphore waitSemaphore = VK_NULL_HANDLE);
+
         VkSemaphore signal() const { return _signal; }
 
         bool active() const { return _active; }
