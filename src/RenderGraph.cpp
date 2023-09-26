@@ -1,5 +1,6 @@
 #include "Cala/RenderGraph.h"
 #include <Ende/profile/profile.h>
+#include <Cala/backend/vulkan/primitives.h>
 
 void cala::ImageResource::devirtualize(cala::Engine* engine, backend::vulkan::Swapchain* swapchain) {
     auto extent = swapchain->extent();
@@ -126,24 +127,24 @@ bool cala::RenderPass::writes(const char *label, backend::PipelineStage stage, b
 
 void cala::RenderPass::addColourAttachment(const char *label) {
     //TODO: error handling
-    if (writes(label, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::Access::COLOUR_ATTACHMENT_WRITE, backend::ImageLayout::COLOUR_ATTACHMENT)) {
-        _attachments.emplace(label, backend::Access::COLOUR_ATTACHMENT_WRITE, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::ImageLayout::COLOUR_ATTACHMENT);
+    if (writes(label, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::Access::COLOUR_ATTACHMENT_WRITE | backend::Access::COLOUR_ATTACHMENT_READ, backend::ImageLayout::COLOUR_ATTACHMENT)) {
+        _attachments.emplace(label, backend::Access::COLOUR_ATTACHMENT_WRITE | backend::Access::COLOUR_ATTACHMENT_READ, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::ImageLayout::COLOUR_ATTACHMENT);
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->usage = resource->usage | backend::ImageUsage::COLOUR_ATTACHMENT;
     }
 }
 
 void cala::RenderPass::addDepthAttachment(const char *label) {
-    if (writes(label, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::Access::DEPTH_STENCIL_WRITE, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT)) {
-        _attachments.emplace(label, backend::Access::DEPTH_STENCIL_WRITE, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+    if (writes(label, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::LATE_FRAGMENT, backend::Access::DEPTH_STENCIL_READ | backend::Access::DEPTH_STENCIL_WRITE, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT)) {
+        _attachments.emplace(label, backend::Access::DEPTH_STENCIL_READ | backend::Access::DEPTH_STENCIL_WRITE, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::LATE_FRAGMENT, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->usage = resource->usage | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT;
     }
 }
 
 void cala::RenderPass::addDepthReadAttachment(const char *label) {
-    if (reads(label, false, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT)) {
-        _attachments.emplace(label, backend::Access::DEPTH_STENCIL_READ, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+    if (reads(label, false, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::LATE_FRAGMENT, backend::Access::DEPTH_STENCIL_READ | backend::Access::DEPTH_STENCIL_WRITE, backend::ImageLayout::DEPTH_STENCIL_READ_ONLY)) {
+        _attachments.emplace(label, backend::Access::DEPTH_STENCIL_READ | backend::Access::DEPTH_STENCIL_WRITE, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::LATE_FRAGMENT, backend::ImageLayout::DEPTH_STENCIL_READ_ONLY);
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->usage = resource->usage | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT;
     }
@@ -368,8 +369,8 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
                     accessPass->_invalidate.push({
                         attachment.first,
                         accessIndex,
-                        backend::PipelineStage::TOP,
-                        nextAccess.stage,
+                        backend::PipelineStage::ALL_COMMANDS,
+                        nextAccess.stage | backend::PipelineStage::BOTTOM,
                         backend::Access::NONE,
                         nextAccess.access,
                         backend::ImageLayout::UNDEFINED,
@@ -380,18 +381,16 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
         }
     }
 
-#ifdef 0
-    for (i32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
-        auto& pass = _orderedPasses[passIndex];
-        _engine->logger().info("Pass: {}", pass->_passName);
-        for (auto& barrier : pass->_invalidate) {
-            _engine->logger().info("Invalidate: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
-        }
-        for (auto& barrier : pass->_flush) {
-            _engine->logger().info("Flush: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
-        }
-    }
-#endif
+//    for (i32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
+//        auto& pass = _orderedPasses[passIndex];
+//        _engine->logger().info("Pass: {}", pass->_passName);
+//        for (auto& barrier : pass->_invalidate) {
+//            _engine->logger().info("Invalidate: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
+//        }
+//        for (auto& barrier : pass->_flush) {
+//            _engine->logger().info("Flush: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
+//        }
+//    }
 
     for (auto& attachment : _attachmentMap) {
         u32 index = attachment.second.index;
@@ -402,7 +401,6 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
             assert(index < _externalResources.size() && _externalResources[index]);
             _externalResources[index]->devirtualize(_engine, _swapchain);
         }
-//        attachment.second->devirtualize(_engine, _swapchain);
     }
 
     for (u32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
@@ -417,6 +415,38 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
             ende::Vector<backend::vulkan::RenderPass::Attachment> attachments;
             for (auto &attachment: pass->_attachments) {
 
+                RenderPass::Barrier* invalidate = nullptr;
+                RenderPass::Barrier* flush = nullptr;
+
+                for (auto& barrier : pass->_invalidate) {
+                    if (barrier.name == attachment.name) {
+                        invalidate = &barrier;
+                        break;
+                    }
+                }
+                for (auto& barrier : pass->_flush) {
+                    if (barrier.name == attachment.name) {
+                        flush = &barrier;
+                        break;
+                    }
+                }
+
+                backend::ImageLayout internal = attachment.layout;
+                backend::ImageLayout initial = internal;
+                backend::ImageLayout final = internal;
+
+//                if (invalidate) {
+//                    initial = invalidate->srcLayout;
+//                    invalidate->dstLayout = invalidate->srcLayout;
+//                }
+//                if (flush) {
+//                    final = flush->dstLayout;
+//                    flush->dstLayout = flush->srcLayout;
+//                }
+
+
+
+
                 auto resource = getResource<ImageResource>(attachment.name);
 
                 bool depth = backend::isDepthFormat(resource->format);
@@ -425,12 +455,20 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
                 attachmentRenderPass.format = resource->format;
                 attachmentRenderPass.samples = VK_SAMPLE_COUNT_1_BIT;
                 attachmentRenderPass.loadOp = resource->clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-                attachmentRenderPass.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+                attachmentRenderPass.storeOp = internal == backend::ImageLayout::DEPTH_STENCIL_READ_ONLY ||
+                                                internal == backend::ImageLayout::SHADER_READ_ONLY ?
+                                                VK_ATTACHMENT_STORE_OP_NONE : VK_ATTACHMENT_STORE_OP_STORE;
+
+//                attachmentRenderPass.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
                 attachmentRenderPass.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
                 attachmentRenderPass.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-                attachmentRenderPass.initialLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-                attachmentRenderPass.finalLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-                attachmentRenderPass.internalLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                attachmentRenderPass.initialLayout = backend::vulkan::getImageLayout(initial);
+                attachmentRenderPass.internalLayout = backend::vulkan::getImageLayout(internal);
+                attachmentRenderPass.finalLayout = backend::vulkan::getImageLayout(final);
+//                attachmentRenderPass.initialLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+//                attachmentRenderPass.finalLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+//                attachmentRenderPass.internalLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
                 resource->clear = false;
                 attachments.push(attachmentRenderPass);

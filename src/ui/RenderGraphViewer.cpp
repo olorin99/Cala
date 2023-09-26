@@ -38,7 +38,7 @@ void cala::ui::RenderGraphViewer::render() {
         for (auto& input : pass->_inputs) {
             ids.back()[input.name] = id;
             ax::NodeEditor::BeginPin(id++, ax::NodeEditor::PinKind::Input);
-            ImGui::Text("%s", input);
+            ImGui::Text("%s", input.name);
             ax::NodeEditor::EndPin();
         }
 
@@ -47,7 +47,7 @@ void cala::ui::RenderGraphViewer::render() {
         for (auto& output : pass->_outputs) {
             ids.back()[output.name] = id;
             ax::NodeEditor::BeginPin(id++, ax::NodeEditor::PinKind::Output);
-            ImGui::Text("%s", output);
+            ImGui::Text("%s", output.name);
             ax::NodeEditor::EndPin();
         }
 

@@ -94,9 +94,11 @@ namespace cala::backend::vulkan {
             bool KHR_pipeline_library = false;
             bool KHR_deferred_host_operations = false;
 
+            bool EXT_debug_report = false;
             bool EXT_debug_marker = false;
             bool EXT_memory_budget = false;
             bool EXT_mesh_shader = false;
+            bool EXT_load_store_op_none = false;
 
             bool AMD_buffer_marker = false;
             bool AMD_device_coherent_memory = false;

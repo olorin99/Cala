@@ -84,7 +84,7 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "Cala";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_2;
+    appInfo.apiVersion = VK_API_VERSION_1_3;
 
     auto instanceExtensions = platform.requiredExtensions();
 #ifndef NDEBUG
@@ -94,13 +94,13 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
 
 //    instanceExtensions.push(VK_EXT_validation_features);
 
-//    VkValidationFeatureEnableEXT v[2] = {VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT, VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT};
+    VkValidationFeatureEnableEXT v[2] = {VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT, VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT};
 //////    auto v = VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT;
 //
-//    VkValidationFeaturesEXT validationFeatures{};
-//    validationFeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
-//    validationFeatures.pEnabledValidationFeatures = v;
-//    validationFeatures.enabledValidationFeatureCount = 2;
+    VkValidationFeaturesEXT validationFeatures{};
+    validationFeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+    validationFeatures.pEnabledValidationFeatures = v;
+    validationFeatures.enabledValidationFeatureCount = 2;
 
     //create instance with required instanceExtensions
     VkInstanceCreateInfo instanceCreateInfo{};
@@ -110,7 +110,7 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     instanceCreateInfo.ppEnabledLayerNames = validationLayers;
     instanceCreateInfo.enabledExtensionCount = instanceExtensions.size();
     instanceCreateInfo.ppEnabledExtensionNames = instanceExtensions.data();
-//    instanceCreateInfo.pNext = &validationFeatures;
+    instanceCreateInfo.pNext = &validationFeatures;
 
     VK_TRY(vkCreateInstance(&instanceCreateInfo, nullptr, &_instance));
 
@@ -223,13 +223,17 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
         _supportedExtensions.KHR_pipeline_library = checkExtensions(supportedDeviceExtensions, VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
         _supportedExtensions.KHR_deferred_host_operations = checkExtensions(supportedDeviceExtensions, VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
 
-        _supportedExtensions.EXT_debug_marker = checkExtensions(supportedDeviceExtensions, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+        _supportedExtensions.EXT_debug_report = checkExtensions(supportedDeviceExtensions, VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+        _supportedExtensions.EXT_debug_marker = _supportedExtensions.EXT_debug_report && checkExtensions(supportedDeviceExtensions, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
         _supportedExtensions.EXT_memory_budget = checkExtensions(supportedDeviceExtensions, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
         _supportedExtensions.EXT_mesh_shader = checkExtensions(supportedDeviceExtensions, VK_EXT_MESH_SHADER_EXTENSION_NAME);
+        _supportedExtensions.EXT_load_store_op_none = checkExtensions(supportedDeviceExtensions, VK_EXT_LOAD_STORE_OP_NONE_EXTENSION_NAME);
 
         _supportedExtensions.AMD_buffer_marker = checkExtensions(supportedDeviceExtensions, VK_AMD_BUFFER_MARKER_EXTENSION_NAME);
         _supportedExtensions.AMD_device_coherent_memory = checkExtensions(supportedDeviceExtensions, VK_AMD_DEVICE_COHERENT_MEMORY_EXTENSION_NAME);
     }
+
+    _supportedExtensions.AMD_buffer_marker = false;
 
 
 
@@ -238,6 +242,8 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     deviceExtensions.push(VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
     if (_supportedExtensions.EXT_memory_budget)
         deviceExtensions.push(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
+//    if (_supportedExtensions.EXT_load_store_op_none)
+//        deviceExtensions.push(VK_EXT_LOAD_STORE_OP_NONE_EXTENSION_NAME);
 #ifndef NDEBUG
     if (_supportedExtensions.EXT_debug_marker)
         deviceExtensions.push(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
@@ -263,6 +269,11 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     createInfo.ppEnabledLayerNames = validationLayers;
 #endif
 
+//    VkPhysicalDeviceVulkan11Features vulkan11Features{};
+//    vulkan11Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+
+//    vulkan11Features.
+
     VkPhysicalDeviceVulkan12Features vulkan12Features{};
 
     createInfo.pNext = &vulkan12Features;
@@ -276,8 +287,10 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     vulkan12Features.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
     vulkan12Features.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
     vulkan12Features.descriptorBindingVariableDescriptorCount = VK_TRUE;
-
     vulkan12Features.hostQueryReset = VK_TRUE;
+
+//    VkPhysicalDeviceVulkan13Features vulkan13Features{};
+//    vulkan13Features.sType - VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
 
     VK_TRY(vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_logicalDevice));
 
@@ -314,6 +327,8 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     vulkanFunctions.vkMapMemory                         = vkMapMemory;
     vulkanFunctions.vkUnmapMemory                       = vkUnmapMemory;
     vulkanFunctions.vkCmdCopyBuffer                     = vkCmdCopyBuffer;
+    vulkanFunctions.vkGetDeviceBufferMemoryRequirements = vkGetDeviceBufferMemoryRequirements;
+    vulkanFunctions.vkGetDeviceImageMemoryRequirements  = vkGetDeviceImageMemoryRequirements;
 
     allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
     if (_supportedExtensions.EXT_memory_budget)
