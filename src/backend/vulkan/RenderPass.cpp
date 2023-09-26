@@ -30,8 +30,9 @@ cala::backend::vulkan::RenderPass::RenderPass(Device& driver, ende::Span<Attachm
             attachmentDescriptions[colourAttachmentCount].finalLayout = attachments[i].finalLayout;
             colourReferences[colourAttachmentCount].attachment = i;
             colourReferences[colourAttachmentCount].layout = attachments[i].internalLayout;
+            if (attachmentDescriptions[colourAttachmentCount].loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
+                _clearValues.push({0.f, 0.f, 0.f, 1.f});
             colourAttachmentCount++;
-            _clearValues.push({0.f, 0.f, 0.f, 1.f});
             _colourAttachments++;
         } else {
             depthAttachment.format = getFormat(attachments[i].format);
@@ -45,7 +46,8 @@ cala::backend::vulkan::RenderPass::RenderPass(Device& driver, ende::Span<Attachm
             depthReference.attachment = i;
             depthReference.layout = attachments[i].internalLayout;
             depthPresent = true;
-            _clearValues.push({1.f, 0.f});
+            if (depthAttachment.loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
+                _clearValues.push({1.f, 0.f});
         }
     }
 

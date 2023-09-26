@@ -94,13 +94,13 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
 
 //    instanceExtensions.push(VK_EXT_validation_features);
 
-    VkValidationFeatureEnableEXT v[2] = {VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT, VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT};
+    VkValidationFeatureEnableEXT v[5] = {VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT, VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT, VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT};
 //////    auto v = VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT;
 //
     VkValidationFeaturesEXT validationFeatures{};
     validationFeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
     validationFeatures.pEnabledValidationFeatures = v;
-    validationFeatures.enabledValidationFeatureCount = 2;
+    validationFeatures.enabledValidationFeatureCount = 3;
 
     //create instance with required instanceExtensions
     VkInstanceCreateInfo instanceCreateInfo{};

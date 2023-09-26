@@ -363,7 +363,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     auto& pointShadows = _graph.addPass("point_shadows");
 
     pointShadows.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
-    pointShadows.addSampledImageWrite("pointDepth", backend::PipelineStage::FRAGMENT_SHADER);
+    pointShadows.addStorageImageWrite("pointDepth", backend::PipelineStage::FRAGMENT_SHADER);
     pointShadows.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
     pointShadows.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER);
     pointShadows.addIndirectBufferRead("shadowDrawCommands");
