@@ -24,6 +24,8 @@ namespace cala::backend::vulkan {
             f32 maxLod = 10.f;
             VkBorderColor borderColour = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
             bool unnormalizedCoordinates = false;
+
+            bool operator==(const CreateInfo& rhs) const;
         };
 
         Sampler(Device& driver, CreateInfo info);

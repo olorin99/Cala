@@ -104,8 +104,8 @@ namespace cala {
 
         ende::time::SystemTime _startTime;
 
-        backend::vulkan::Sampler _lodSampler;
-        backend::vulkan::Sampler _irradianceSampler;
+        backend::vulkan::SamplerHandle _lodSampler;
+        backend::vulkan::SamplerHandle _irradianceSampler;
 
         backend::vulkan::RenderPass _shadowPass;
 

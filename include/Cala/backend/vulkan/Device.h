@@ -85,7 +85,7 @@ namespace cala::backend::vulkan {
 
         BufferHandle resizeBuffer(BufferHandle handle, u32 size, bool transfer = false);
 
-        ImageHandle createImage(Image::CreateInfo info, Sampler* sampler = nullptr);
+        ImageHandle createImage(Image::CreateInfo info);
 
 
 
@@ -98,6 +98,8 @@ namespace cala::backend::vulkan {
         ProgramHandle createProgram(ShaderProgram&& program);
 
 
+        SamplerHandle getSampler(Sampler::CreateInfo info);
+
 
 
         Sampler& defaultSampler() { return _defaultSampler; }
@@ -109,7 +111,9 @@ namespace cala::backend::vulkan {
 
         void updateBindlessBuffer(u32 index);
 
-        void updateBindlessImage(u32 index, Image::View& image, Sampler& sampler);
+        void updateBindlessImage(u32 index, Image::View& image, bool sampled = true, bool storage = true);
+
+        void updateBindlessSampler(u32 index);
 
         VkDescriptorSetLayout bindlessLayout() const { return _bindlessLayout; }
         VkDescriptorSet bindlessSet() const { return _bindlessSet; }
@@ -158,6 +162,7 @@ namespace cala::backend::vulkan {
         friend BufferHandle;
         friend ImageHandle;
         friend ProgramHandle;
+        friend SamplerHandle;
         friend ui::ResourceViewer;
         friend CommandBuffer;
 
@@ -203,6 +208,8 @@ namespace cala::backend::vulkan {
         std::vector<std::pair<std::unique_ptr<ShaderProgram>, ProgramHandle::Counter*>> _programs;
         ende::Vector<u32> _freePrograms;
         ende::Vector<std::pair<i32, i32>> _programsToDestroy;
+
+        ende::Vector<std::pair<Sampler::CreateInfo, std::unique_ptr<Sampler>>> _samplers;
 
         tsl::robin_map<CommandBuffer::DescriptorKey, std::pair<VkDescriptorSet, i32>, ende::util::MurmurHash<CommandBuffer::DescriptorKey>> _descriptorSets;
         VkDescriptorPool _descriptorPool;

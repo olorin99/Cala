@@ -42,6 +42,21 @@ cala::backend::vulkan::ShaderProgram *cala::backend::vulkan::ProgramHandle ::ope
 }
 
 template <>
-bool cala::backend::vulkan::ProgramHandle ::isValid() const {
+bool cala::backend::vulkan::ProgramHandle::isValid() const {
     return _device->_programs[_index].first && _device->_programs[_index].first->layout() != VK_NULL_HANDLE;
+}
+
+template <>
+cala::backend::vulkan::Sampler &cala::backend::vulkan::SamplerHandle::operator*() noexcept {
+    return *_device->_samplers[_index].second;
+}
+
+template <>
+cala::backend::vulkan::Sampler *cala::backend::vulkan::SamplerHandle ::operator->() noexcept {
+    return _device->_samplers[_index].second.get();
+}
+
+template <>
+bool cala::backend::vulkan::SamplerHandle::isValid() const {
+    return _device->_samplers[_index].second && _device->_samplers[_index].second->sampler() != VK_NULL_HANDLE;
 }

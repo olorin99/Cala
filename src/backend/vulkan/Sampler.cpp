@@ -42,3 +42,18 @@ cala::backend::vulkan::Sampler &cala::backend::vulkan::Sampler::operator=(Sample
     std::swap(_sampler, rhs._sampler);
     return *this;
 }
+
+bool cala::backend::vulkan::Sampler::CreateInfo::operator==(const cala::backend::vulkan::Sampler::CreateInfo &rhs) const {
+    return filter == rhs.filter &&
+            addressMode == rhs.addressMode &&
+            anisotropy == rhs.anisotropy &&
+            maxAnisotropy == rhs.maxAnisotropy &&
+            compare == rhs.compare &&
+            compareOp == rhs.compareOp &&
+            mipmapMode == rhs.mipmapMode &&
+            mipLodBias == rhs.mipLodBias &&
+            minLod == rhs.minLod &&
+            maxLod == rhs.maxLod &&
+            borderColour == rhs.borderColour &&
+            unnormalizedCoordinates == rhs.unnormalizedCoordinates;
+}

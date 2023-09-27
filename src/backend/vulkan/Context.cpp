@@ -281,6 +281,7 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     vulkan12Features.runtimeDescriptorArray = VK_TRUE;
     vulkan12Features.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
     vulkan12Features.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
+    vulkan12Features.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
     vulkan12Features.descriptorBindingVariableDescriptorCount = VK_TRUE;
     vulkan12Features.hostQueryReset = VK_TRUE;
     vulkan12Features.timelineSemaphore = VK_TRUE;

@@ -30,14 +30,14 @@ cala::Engine::Engine(backend::Platform &platform)
       _device(platform, _logger),
       _startTime(ende::time::SystemTime::now()),
       _shadowPass(_device, {&shadowPassAttachment, 1 }),
-      _lodSampler(_device, {
+      _lodSampler(_device.getSampler({
           .maxLod = 10
-      }),
-      _irradianceSampler(_device, {
+      })),
+      _irradianceSampler(_device.getSampler({
           .filter = VK_FILTER_LINEAR,
           .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
           .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
-      }),
+      })),
       _vertexOffset(0),
       _indexOffset(0),
       _stagingReady(false)
@@ -145,7 +145,7 @@ cala::Engine::Engine(backend::Platform &platform)
         1, 6,
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST,
         backend::ImageType::IMAGE2D
-        }, &_irradianceSampler);
+        });
 
     f32 irradianceData[4];
     std::memset(irradianceData, 0, sizeof(f32) * 4);
@@ -159,7 +159,7 @@ cala::Engine::Engine(backend::Platform &platform)
         5, 6,
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST | backend::ImageUsage::TRANSFER_SRC,
         backend::ImageType::IMAGE2D
-        }, &_lodSampler);
+        });
 
     f32 prefilterData[4 * 512 * 512];
     std::memset(prefilterData, 0, sizeof(f32) * 4 * 512 * 512);
@@ -242,7 +242,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::convertToCubeMap(backend::vulka
 
 
         cmd.bindProgram(_equirectangularToCubeMap);
-        cmd.bindImage(1, 0, equirectangularView, _lodSampler);
+        cmd.bindImage(1, 0, equirectangularView, *_lodSampler);
         cmd.bindImage(1, 1, cubeView, _device.defaultSampler(), true);
 
         cmd.bindPipeline();
@@ -266,7 +266,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::generateIrradianceMap(backend::
         backend::Format::RGBA32_SFLOAT,
         1, 6,
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
-    }, &_irradianceSampler);
+    });
     _device.immediate([&](backend::vulkan::CommandBuffer& cmd) {
         auto irradianceBarrier = irradianceMap->barrier(backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, { &irradianceBarrier, 1 });
@@ -274,7 +274,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::generateIrradianceMap(backend::
         cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, { &cubeBarrier, 1 });
 
         cmd.bindProgram(_irradianceProgram);
-        cmd.bindImage(1, 0, _device.getImageView(cubeMap), _lodSampler, true);
+        cmd.bindImage(1, 0, _device.getImageView(cubeMap), *_lodSampler, true);
         cmd.bindImage(1, 1, _device.getImageView(irradianceMap), _device.defaultSampler(), true);
         cmd.bindPipeline();
         cmd.bindDescriptors();
@@ -294,7 +294,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::generatePrefilteredIrradiance(b
         backend::Format::RGBA32_SFLOAT,
         10, 6,
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
-    }, &_lodSampler);
+    });
     backend::vulkan::Image::View mipViews[10] = {
             prefilteredMap->newView(0),
             prefilteredMap->newView(1),
@@ -315,7 +315,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::generatePrefilteredIrradiance(b
 
         for (u32 mip = 0; mip < prefilteredMap->mips(); mip++) {
             cmd.bindProgram(_prefilterProgram);
-            cmd.bindImage(1, 0, _device.getImageView(cubeMap), _lodSampler);
+            cmd.bindImage(1, 0, _device.getImageView(cubeMap), *_lodSampler);
             cmd.bindImage(1, 1, mipViews[mip], _device.defaultSampler(), true);
             f32 roughness = (f32)mip / (f32)prefilteredMap->mips();
             cmd.pushConstants(backend::ShaderStage::COMPUTE, { &roughness, sizeof(f32) });

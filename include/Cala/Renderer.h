@@ -98,6 +98,10 @@ namespace cala {
             i32 irradianceIndex = -1;
             i32 prefilterIndex = -1;
             i32 brdfIndex = -1;
+            i32 nearestRepeatSampler = -1;
+            i32 linearRepeatSampler = -1;
+            i32 lodSampler = -1;
+            i32 shadowSampler = -1;
         };
 
         RendererGlobal _globalData;

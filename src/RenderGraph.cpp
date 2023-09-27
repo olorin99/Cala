@@ -19,15 +19,15 @@ void cala::ImageResource::devirtualize(cala::Engine* engine, backend::vulkan::Sw
         handle = engine->device().createImage({
             width, height, depth, format, 1, 1, usage
         });
-        engine->device().immediate([&](backend::vulkan::CommandBuffer& cmd) {
-            if (backend::isDepthFormat(format)) {
-                auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
-                cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, { &b, 1 });
-            } else {
-                auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::COLOUR_ATTACHMENT);
-                cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, { &b, 1 });
-            }
-        });
+//        engine->device().immediate([&](backend::vulkan::CommandBuffer& cmd) {
+//            if (backend::isDepthFormat(format)) {
+//                auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+//                cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, { &b, 1 });
+//            } else {
+//                auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::COLOUR_ATTACHMENT);
+//                cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, { &b, 1 });
+//            }
+//        });
     }
 }
 

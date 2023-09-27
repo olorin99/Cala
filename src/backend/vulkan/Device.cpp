@@ -38,22 +38,24 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
     constexpr u32 maxBindless = 1000;
 
     VkDescriptorPoolSize poolSizes[] = {
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxBindless },
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, maxBindless }
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, maxBindless },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, maxBindless },
+            { VK_DESCRIPTOR_TYPE_SAMPLER, maxBindless },
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, maxBindless }
     };
 
     VkDescriptorPoolCreateInfo poolCreateInfo{};
     poolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
     poolCreateInfo.maxSets = maxBindless;
-    poolCreateInfo.poolSizeCount = 2;
+    poolCreateInfo.poolSizeCount = 4;
     poolCreateInfo.pPoolSizes = poolSizes;
     VK_TRY(vkCreateDescriptorPool(_context.device(), &poolCreateInfo, nullptr, &_bindlessPool));
 
-    VkDescriptorSetLayoutBinding bindlessLayoutBinding[2] = {};
+    VkDescriptorSetLayoutBinding bindlessLayoutBinding[4] = {};
 
     // images
-    bindlessLayoutBinding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    bindlessLayoutBinding[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     bindlessLayoutBinding[0].descriptorCount = maxBindless;
     bindlessLayoutBinding[0].binding = 0;
     bindlessLayoutBinding[0].stageFlags = VK_SHADER_STAGE_ALL;
@@ -66,22 +68,38 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
     bindlessLayoutBinding[1].stageFlags = VK_SHADER_STAGE_ALL;
     bindlessLayoutBinding[1].pImmutableSamplers = nullptr;
 
+    // samplers
+    bindlessLayoutBinding[2].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    bindlessLayoutBinding[2].descriptorCount = maxBindless;
+    bindlessLayoutBinding[2].binding = 2;
+    bindlessLayoutBinding[2].stageFlags = VK_SHADER_STAGE_ALL;
+    bindlessLayoutBinding[2].pImmutableSamplers = nullptr;
+
+    // storage images
+    bindlessLayoutBinding[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    bindlessLayoutBinding[3].descriptorCount = maxBindless;
+    bindlessLayoutBinding[3].binding = 3;
+    bindlessLayoutBinding[3].stageFlags = VK_SHADER_STAGE_ALL;
+    bindlessLayoutBinding[3].pImmutableSamplers = nullptr;
+
 
 
     VkDescriptorSetLayoutCreateInfo bindlessLayoutCreateInfo{};
     bindlessLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    bindlessLayoutCreateInfo.bindingCount = 2;
+    bindlessLayoutCreateInfo.bindingCount = 4;
     bindlessLayoutCreateInfo.pBindings = bindlessLayoutBinding;
     bindlessLayoutCreateInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
     bindlessLayoutCreateInfo.pNext = nullptr;
 
-    VkDescriptorBindingFlags bindingFlags[2] = {
+    VkDescriptorBindingFlags bindingFlags[4] = {
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
             VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
             VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
     };
     VkDescriptorSetLayoutBindingFlagsCreateInfo extendedInfo{};
     extendedInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
-    extendedInfo.bindingCount = 2;
+    extendedInfo.bindingCount = 4;
     extendedInfo.pBindingFlags = bindingFlags;
     bindlessLayoutCreateInfo.pNext = &extendedInfo;
 
@@ -351,7 +369,7 @@ bool cala::backend::vulkan::Device::gc() {
             VkImage image = _images[index].first->_image;
             VmaAllocation allocation = _images[index].first->_allocation;
             _imageViews[index] = backend::vulkan::Image::View();
-            updateBindlessImage(index, _imageViews[0], _defaultSampler);
+            updateBindlessImage(index, _imageViews[0]);
             if (image != VK_NULL_HANDLE)
                 vmaDestroyImage(context().allocator(), image, allocation);
             else
@@ -466,7 +484,7 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::resizeBuffer(
     return newHandle;
 }
 
-cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Image::CreateInfo info, Sampler *sampler) {
+cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Image::CreateInfo info) {
     u32 index = 0;
 
     VkImage image;
@@ -551,11 +569,9 @@ cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Im
 
     assert(_images.size() == _imageViews.size());
 
-    backend::vulkan::Sampler* chosenSampler = sampler;
-    if (!chosenSampler)
-        chosenSampler = backend::isDepthFormat(info.format) ? &_defaultShadowSampler : &_defaultSampler;
-
-    updateBindlessImage(index, _imageViews[index], *chosenSampler);
+    bool isSampled = (info.usage & ImageUsage::SAMPLED) == ImageUsage::SAMPLED;
+    bool isStorage = (info.usage & ImageUsage::STORAGE) == ImageUsage::STORAGE;
+    updateBindlessImage(index, _imageViews[index], isSampled, isStorage);
 
     _bytesAllocatedPerFrame += (info.width * info.height * info.depth * formatToSize(info.format));
 
@@ -595,6 +611,19 @@ cala::backend::vulkan::ProgramHandle cala::backend::vulkan::Device::createProgra
 
 void cala::backend::vulkan::Device::destroyProgram(i32 handle) {
     _programsToDestroy.push(std::make_pair(FRAMES_IN_FLIGHT + 1, handle));
+}
+
+
+cala::backend::vulkan::SamplerHandle cala::backend::vulkan::Device::getSampler(Sampler::CreateInfo info) {
+    for (i32 index = 0; index < _samplers.size(); index++) {
+        if (_samplers[index].first == info)
+            return { this, index, nullptr };
+    }
+
+    u32 index = _samplers.size();
+    _samplers.emplace(std::make_pair(info, std::make_unique<Sampler>(*this, info)));
+    updateBindlessSampler(index);
+    return { this, static_cast<i32>(index), nullptr };
 }
 
 
@@ -644,20 +673,54 @@ void cala::backend::vulkan::Device::updateBindlessBuffer(u32 index) {
     vkUpdateDescriptorSets(_context.device(), 1, &descriptorWrite, 0, nullptr);
 }
 
-void cala::backend::vulkan::Device::updateBindlessImage(u32 index, Image::View &image, Sampler& sampler) {
-    VkWriteDescriptorSet descriptorWrite{};
+void cala::backend::vulkan::Device::updateBindlessImage(u32 index, Image::View &image, bool sampled, bool storage) {
+    VkWriteDescriptorSet descriptorWrite[2] = { {}, {} };
+    i32 writeNum = 0;
+
+    if (sampled) {
+        VkDescriptorImageInfo sampledImageInfo{};
+        sampledImageInfo.imageView = image.view;
+        sampledImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        descriptorWrite[writeNum].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite[writeNum].descriptorCount = 1;
+        descriptorWrite[writeNum].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        descriptorWrite[writeNum].dstArrayElement = index;
+        descriptorWrite[writeNum].dstSet = _bindlessSet;
+        descriptorWrite[writeNum].dstBinding = 0;
+        descriptorWrite[writeNum].pImageInfo = &sampledImageInfo;
+        writeNum++;
+    }
+
+    if (storage) {
+        VkDescriptorImageInfo storageImageInfo{};
+        storageImageInfo.imageView = image.view;
+        storageImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+        descriptorWrite[writeNum].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite[writeNum].descriptorCount = 1;
+        descriptorWrite[writeNum].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        descriptorWrite[writeNum].dstArrayElement = index;
+        descriptorWrite[writeNum].dstSet = _bindlessSet;
+        descriptorWrite[writeNum].dstBinding = 3;
+        descriptorWrite[writeNum].pImageInfo = &storageImageInfo;
+    }
+
+    vkUpdateDescriptorSets(_context.device(), writeNum, descriptorWrite, 0, nullptr);
+}
+
+void cala::backend::vulkan::Device::updateBindlessSampler(u32 index) {
+    VkWriteDescriptorSet  descriptorWrite{};
     VkDescriptorImageInfo imageInfo{};
 
-    imageInfo.imageView = image.view;
-    imageInfo.sampler = sampler.sampler();
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo.sampler = _samplers[index].second->sampler();
 
     descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptorWrite.descriptorCount = 1;
-    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
     descriptorWrite.dstArrayElement = index;
     descriptorWrite.dstSet = _bindlessSet;
-    descriptorWrite.dstBinding = 0;
+    descriptorWrite.dstBinding = 2;
     descriptorWrite.pImageInfo = &imageInfo;
 
     vkUpdateDescriptorSets(_context.device(), 1, &descriptorWrite, 0, nullptr);

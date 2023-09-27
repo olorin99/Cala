@@ -119,6 +119,26 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         _globalData.brdfIndex = -1;
     }
 
+    _globalData.nearestRepeatSampler = _engine->device().getSampler({
+        .filter = VK_FILTER_NEAREST,
+        .addressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT
+    }).index();
+
+    _globalData.linearRepeatSampler = _engine->device().getSampler({
+        .filter = VK_FILTER_LINEAR,
+        .addressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT
+    }).index();
+
+    _globalData.lodSampler = _engine->device().getSampler({
+        .maxLod = 10
+    }).index();
+
+    _globalData.shadowSampler = _engine->device().getSampler({
+        .filter = VK_FILTER_NEAREST,
+        .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+        .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
+    }).index();
+
     _globalDataBuffer[_engine->device().frameIndex()]->data({ &_globalData, sizeof(_globalData) });
 
     bool debugViewEnabled = _renderSettings.debugNormals || _renderSettings.debugRoughness || _renderSettings.debugMetallic || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugWireframe || _renderSettings.debugNormalLines;
@@ -157,13 +177,13 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
         _graph.addResource("shadowDrawCommands", drawCommandsResource, true);
 
-//        ImageResource voxelGridResource;
-//        voxelGridResource.format = backend::Format::RGBA32_SFLOAT;
-//        voxelGridResource.width = 100;
-//        voxelGridResource.height = 100;
-//        voxelGridResource.depth = 100;
-//        voxelGridResource.matchSwapchain = false;
-//        _graph.addResource("voxelGrid", voxelGridResource);
+        ImageResource voxelGridResource;
+        voxelGridResource.format = backend::Format::RGBA32_SFLOAT;
+        voxelGridResource.width = 100;
+        voxelGridResource.height = 100;
+        voxelGridResource.depth = 100;
+        voxelGridResource.matchSwapchain = false;
+        _graph.addResource("voxelGrid", voxelGridResource);
     }
 
 

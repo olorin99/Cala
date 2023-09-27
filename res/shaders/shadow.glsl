@@ -3,7 +3,7 @@
 
 float calcShadows(uint index, vec3 viewDir, vec3 offset, float bias, float range) {
     float shadow = 1.0;
-    if(texture(cubeMaps[index], viewDir + offset).r < length(viewDir) / range - bias) {
+    if(texture(samplerCube(cubeMaps[index], samplers[globalData.shadowSampler]), viewDir + offset).r < length(viewDir) / range - bias) {
         shadow = 0.0;
     }
     return shadow;

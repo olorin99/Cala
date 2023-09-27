@@ -10,6 +10,7 @@ namespace cala::backend::vulkan {
     class Buffer;
     class Image;
     class ShaderProgram;
+    class Sampler;
 
     template <typename T>
     class Handle {
@@ -91,6 +92,7 @@ namespace cala::backend::vulkan {
     using BufferHandle = Handle<Buffer>;
     using ImageHandle = Handle<Image>;
     using ProgramHandle = Handle<ShaderProgram>;
+    using SamplerHandle = Handle<Sampler>;
 
 }
 

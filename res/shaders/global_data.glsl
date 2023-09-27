@@ -12,6 +12,10 @@ struct GlobalData {
     int irradianceIndex;
     int prefilterIndex;
     int brdfIndex;
+    int nearestRepeatSampler;
+    int linearRepeatSampler;
+    int lodSampler;
+    int shadowSampler;
 };
 
 layout (set = 1, binding = 0) uniform Global {
