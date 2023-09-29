@@ -18,6 +18,15 @@ layout (location = 0) out VsOut {
 
 #include "transforms_data.glsl"
 
+layout (push_constant) uniform PushData {
+    mat4 orthographic;
+    uvec4 tileSizes;
+    uvec2 screenSize;
+    int lightGridIndex;
+    int lightIndicesIndex;
+    int voxelGridIndex;
+};
+
 void main() {
     mat4 model = bindlessBuffersTransforms[globalData.transformsBufferIndex].transforms[gl_BaseInstance];
 
@@ -28,11 +37,11 @@ void main() {
 
     CameraData camera = bindlessBuffersCamera[globalData.cameraBufferIndex].camera;
 
-    vsOut.FragPos = (model * vec4(inPosition, 1.0)).xyz;
+    vsOut.FragPos = (orthographic * model * vec4(inPosition, 1.0)).xyz;
     vsOut.TexCoords = inTexCoords;
     vsOut.TBN = mat3(T, B, N);
     vsOut.ViewPos = camera.position;
     vsOut.drawID = gl_BaseInstance;
 
-    gl_Position = camera.projection * camera.view * model * vec4(inPosition, 1.0);
+    gl_Position = orthographic * model * vec4(inPosition, 1.0);
 }

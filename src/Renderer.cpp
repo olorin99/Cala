@@ -511,6 +511,120 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         }
     });
 
+    {
+        ImageResource colourAttachment;
+        colourAttachment.format = backend::Format::RGBA32_SFLOAT;
+        colourAttachment.matchSwapchain = false;
+        colourAttachment.width = 100;
+        colourAttachment.height = 100;
+        _graph.addResource("voxelOutput", colourAttachment);
+
+
+        auto& voxelGIPass = _graph.addPass("voxelGI");
+
+        voxelGIPass.addStorageImageWrite("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER);
+        voxelGIPass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+        voxelGIPass.addIndirectBufferRead("drawCommands");
+        voxelGIPass.addStorageBufferRead("lightIndices", backend::PipelineStage::FRAGMENT_SHADER);
+        voxelGIPass.addStorageBufferRead("lightGrid", backend::PipelineStage::FRAGMENT_SHADER);
+        voxelGIPass.addStorageBufferRead("lightGlobalResource", backend::PipelineStage::FRAGMENT_SHADER);
+        voxelGIPass.addIndirectBufferRead("materialCounts");
+        voxelGIPass.addSampledImageRead("pointDepth", backend::PipelineStage::FRAGMENT_SHADER);
+
+        voxelGIPass.addColourAttachment("voxelOutput");
+
+        voxelGIPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            auto global = graph.getResource<BufferResource>("global");
+            auto drawCommands = graph.getResource<BufferResource>("drawCommands");
+            auto lightGrid = graph.getResource<BufferResource>("lightGrid");
+            auto lightIndices = graph.getResource<BufferResource>("lightIndices");
+            auto materialCounts = graph.getResource<BufferResource>("materialCounts");
+            auto voxelGrid = graph.getResource<ImageResource>("voxelGrid");
+            cmd.clearDescriptors();
+            if (scene._renderables.empty())
+                return;
+
+            cmd.bindBuffer(1, 0, global->handle);
+
+            auto& renderable = scene._renderables[0].second.first;
+
+            cmd.bindBindings(renderable.bindings);
+            cmd.bindAttributes(renderable.attributes);
+
+            for (u32 i = 0; i < scene._materialCounts.size(); i++) {
+                Material* material = &_engine->_materials[i];
+                if (!material)
+                    continue;
+                cmd.bindProgram(material->getVariant(Material::Variant::VOXELGI));
+                cmd.bindRasterState(material->getRasterState());
+                cmd.bindDepthState({ false });
+                cmd.bindBuffer(2, 0, material->buffer(), true);
+
+                struct VoxelizePush {
+                    ende::math::Mat4f orthographic;
+                    ende::math::Vec<4, u32> tileSizes;
+                    ende::math::Vec<2, u32> screenSize;
+                    i32 lightGridIndex;
+                    i32 lightIndicesIndex;
+                    i32 voxelGridIndex;
+                } push;
+                push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
+                push.screenSize = { _swapchain->extent().width, _swapchain->extent().height };
+                push.lightGridIndex = lightGrid->handle.index();
+                push.lightIndicesIndex = lightIndices->handle.index();
+                push.voxelGridIndex = voxelGrid->handle.index();
+
+                f32 voxelWorldBounds = 10;
+                push.orthographic = ende::math::orthographic(-voxelWorldBounds, voxelWorldBounds, -voxelWorldBounds, voxelWorldBounds, -voxelWorldBounds, voxelWorldBounds);
+//                Transform transform({ -50, 0, 0 });
+//                push.orthographic = push.orthographic * transform.local();
+
+                cmd.pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::FRAGMENT, { &push, sizeof(push) });
+
+                cmd.bindPipeline();
+                cmd.bindDescriptors();
+
+                cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
+                cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
+                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, i * (sizeof(u32) * 2), scene._materialCounts[i].count);
+            }
+        });
+
+
+        ImageResource colourAttachment1;
+        colourAttachment1.format = backend::Format::RGBA32_SFLOAT;
+        _graph.addResource("voxelVisualised", colourAttachment1);
+
+
+        auto& voxelVisualisePass = _graph.addPass("voxelVisualisation");
+
+        voxelVisualisePass.addColourAttachment("voxelVisualised");
+//        voxelVisualisePass.addColourAttachment("backbuffer");
+
+        voxelVisualisePass.addStorageImageRead("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER);
+        voxelVisualisePass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+
+        voxelVisualisePass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            auto global = graph.getResource<BufferResource>("global");
+            auto voxelGrid = graph.getResource<ImageResource>("voxelGrid");
+            cmd.clearDescriptors();
+            cmd.bindBuffer(1, 0, global->handle);
+            cmd.bindBindings(nullptr);
+            cmd.bindAttributes(nullptr);
+            cmd.bindBlendState({ true });
+            cmd.bindProgram(_engine->getProgram(Engine::ProgramType::VOXEL_VISUALISE));
+            struct VoxelPush {
+                i32 voxelGridIndex;
+            } push;
+            push.voxelGridIndex = voxelGrid->handle.index();
+            cmd.pushConstants(backend::ShaderStage::FRAGMENT, { &push, sizeof(push) });
+            cmd.bindPipeline();
+            cmd.bindDescriptors();
+            cmd.draw(3, 1, 0, 0, false);
+            cmd.bindBlendState({ false });
+        });
+    }
+
 
     auto& cullPass = _graph.addPass("cull");
 
@@ -590,6 +704,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         forwardPass.addStorageBufferRead("lightGrid", backend::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addStorageBufferRead("lightGlobalResource", backend::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addIndirectBufferRead("materialCounts");
+
+        forwardPass.addStorageImageRead("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addStorageImageRead("voxelVisualised", backend::PipelineStage::FRAGMENT_SHADER);
 
         forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
 

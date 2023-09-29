@@ -86,7 +86,8 @@ namespace cala {
             DEBUG_CLUSTER,
             DEBUG_NORMALS,
             DEBUG_WORLDPOS,
-            SOLID_COLOUR
+            SOLID_COLOUR,
+            VOXEL_VISUALISE
         };
 
 
@@ -128,6 +129,7 @@ namespace cala {
         backend::vulkan::ProgramHandle _normalsDebugProgram;
         backend::vulkan::ProgramHandle _worldPosDebugProgram;
         backend::vulkan::ProgramHandle _solidColourProgram;
+        backend::vulkan::ProgramHandle _voxelVisualisationProgram;
 
         backend::vulkan::ImageHandle _brdfImage;
         backend::vulkan::ImageHandle _defaultIrradiance;

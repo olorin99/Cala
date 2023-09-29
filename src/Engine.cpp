@@ -136,6 +136,12 @@ cala::Engine::Engine(backend::Platform &platform)
             { "../../res/shaders/solid_colour.frag"_path, backend::ShaderStage::FRAGMENT }
         });
     }
+    {
+        _voxelVisualisationProgram = loadProgram({
+            { "../../res/shaders/fullscreen.vert"_path, backend::ShaderStage::VERTEX },
+            { "../../res/shaders/voxel/visualise.frag"_path, backend::ShaderStage::FRAGMENT }
+        });
+    }
 
     _brdfImage = _device.createImage({ 512, 512, 1, backend::Format::RG16_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE });
 
@@ -698,6 +704,18 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
         });
         material->setVariant(Material::Variant::ROUGHNESS, roughnessHandle);
 
+        backend::vulkan::ProgramHandle voxelGIHandle = loadProgram({
+            { "../../res/shaders/voxel/voxelize.vert"_path, backend::ShaderStage::VERTEX },
+            { "../../res/shaders/voxel/voxelize.geom"_path, backend::ShaderStage::GEOMETRY },
+            { "../../res/shaders/voxel/voxelize.frag"_path, backend::ShaderStage::FRAGMENT, {
+                { "MATERIAL_DATA", materialData },
+                { "MATERIAL_DEFINITION", materialDefinition },
+                { "MATERIAL_LOAD", materialLoad },
+                { "MATERIAL_EVAL", litEval },
+            }, includes }
+        });
+        material->setVariant(Material::Variant::VOXELGI, voxelGIHandle);
+
         return material;
     } catch (std::exception& e) {
         _device.logger().error("Error with material: {}", *path);
@@ -745,6 +763,8 @@ cala::backend::vulkan::ProgramHandle cala::Engine::getProgram(cala::Engine::Prog
             return _worldPosDebugProgram;
         case ProgramType::SOLID_COLOUR:
             return _solidColourProgram;
+        case ProgramType::VOXEL_VISUALISE:
+            return _voxelVisualisationProgram;
     }
     return _solidColourProgram;
 }

@@ -55,6 +55,7 @@ namespace cala {
             NORMAL,
             ROUGHNESS,
             METALLIC,
+            VOXELGI,
             MAX
         };
 

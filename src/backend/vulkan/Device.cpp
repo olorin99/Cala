@@ -704,6 +704,7 @@ void cala::backend::vulkan::Device::updateBindlessImage(u32 index, Image::View &
         descriptorWrite[writeNum].dstSet = _bindlessSet;
         descriptorWrite[writeNum].dstBinding = 3;
         descriptorWrite[writeNum].pImageInfo = &storageImageInfo;
+        writeNum++;
     }
 
     vkUpdateDescriptorSets(_context.device(), writeNum, descriptorWrite, 0, nullptr);

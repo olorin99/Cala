@@ -52,7 +52,8 @@ vec3 unreal(vec3 x) {
 void main() {
 
     ivec2 globCoords = ivec2(gl_GlobalInvocationID.xy);
-    vec2 texCoords = globCoords / vec2(1920.0, 1080.0);
+//    vec2 texCoords = globCoords / vec2(1920.0, 1080.0);
+    vec2 texCoords = globCoords / imageSize(backbuffer);
 
     vec3 hdr = imageLoad(hdrMap, globCoords).rgb;
 

@@ -23,11 +23,11 @@ void main() {
     vec3 p2 = gsIn[2].FragPos - gsIn[0].FragPos;
     vec3 p = abs(cross(p1, p2));
     for (int i = 0; i < gl_in.length(); i++) {
-        gsOut.FragPos = gsIn[index].FragPos;
-        gsOut.TexCoords = gsIn[index].TexCoords;
-        gsOut.TBN = gsIn[index].TBN;
-        gsOut.ViewPos = gsIn[index].ViewPos;
-        gsOut.drawID = gsIn[index].drawID;
+        gsOut.FragPos = gsIn[i].FragPos;
+        gsOut.TexCoords = gsIn[i].TexCoords;
+        gsOut.TBN = gsIn[i].TBN;
+        gsOut.ViewPos = gsIn[i].ViewPos;
+        gsOut.drawID = gsIn[i].drawID;
         if (p.z > p.x && p.z > p.y) {
             gl_Position = vec4(gl_in[i].gl_Position.xy, 0, 1);
         } else if (p.x > p.y && p.x > p.z) {
@@ -35,7 +35,7 @@ void main() {
         } else {
             gl_Position = vec4(gl_in[i].gl_Position.xz, 0, 1);
         }
-        EmitVertex;
+        EmitVertex();
     }
-    EndPrimitive;
+    EndPrimitive();
 }

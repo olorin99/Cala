@@ -9,18 +9,22 @@ layout (location = 0) in VsOut {
 
 layout (location = 0) out vec4 FragColour;
 
-layout (set = 0, binding = 0) uniform samplerCube cubeMaps[];
-layout (set = 0, binding = 0) uniform sampler2D textureMaps[];
-layout (set = 0, binding = 0) uniform image3D voxelGrid[];
+layout (set = 0, binding = 0) uniform textureCube cubeMaps[];
+layout (set = 0, binding = 0) uniform texture2D textureMaps[];
+layout (set = 0, binding = 2) uniform sampler samplers[];
+layout (set = 0, binding = 3) uniform writeonly image3D voxelGrid[];
 
 #include "camera.glsl"
 
 #include "global_data.glsl"
 
 layout (push_constant) uniform PushData {
-    int voxelGridIndex;
+    mat4 orthographic;
+    uvec4 tileSizes;
+    uvec2 screenSize;
     int lightGridIndex;
     int lightIndicesIndex;
+    int voxelGridIndex;
 };
 
 #include "util.glsl"
@@ -43,7 +47,7 @@ layout (set = 2, binding = 0) readonly buffer MatData {
 #include "mesh_data.glsl"
 
 vec3 scaleAndBias(vec3 p) {
-    return 0.5f * p + vec3(0.5);
+    return vec3(p.xy * 0.5 + 0.5, p.z);
 }
 
 bool isInsideCube(vec3 p, float e) {
@@ -51,16 +55,26 @@ bool isInsideCube(vec3 p, float e) {
 }
 
 void main() {
-    if (!isInsideCube(fsIn.FragPos, 0)) {
-        return;
-    }
+//    if (!isInsideCube(fsIn.FragPos, 0)) {
+//        return;
+//    }
 
     Mesh mesh = bindlessBufferMesh[globalData.meshBufferIndex].meshData[fsIn.drawID];
     MaterialData materialData = materials[mesh.materialInstanceIndex];
     Material material = loadMaterial(materialData);
     vec4 colour = evalMaterial(material);
 
-    vec3 voxel = scaleAndBias(fsIn.FragPos);
+    vec3 voxelPos = scaleAndBias(fsIn.FragPos);
     ivec3 dim = imageSize(voxelGrid[voxelGridIndex]);
-    imageStore(voxelGrid[voxelGridIndex], ivec3(dim * voxel), colour);
+    ivec3 voxelCoords = ivec3(dim * voxelPos);
+    voxelCoords = min(voxelCoords, dim);
+    imageStore(voxelGrid[voxelGridIndex], voxelCoords, colour);
+//    FragColour = ivec4(dim * voxel, 1.0);
+//    FragColour = colour;
+//    FragColour = vec4(fsIn.FragPos, 1.0);
+    FragColour = vec4(voxelPos, 1.0);
+//    FragColour = vec4(gl_FragCoord.xyz, 1.0);
+//    FragColour = vec4(gl_FragCoord.xy, gl_FragCoord.z * dim.z, 1.0);
+//    FragColour = vec4(dim, 1.0);
+//    FragColour = vec4(dim * voxel, 1.0);
 }
