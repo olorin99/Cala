@@ -142,6 +142,8 @@ namespace cala::backend::vulkan {
 
         f64 milliseconds() const { return static_cast<f64>(_lastFrameTime.microseconds()) / 1000.f; }
 
+        u32 framesInFlight() const { return FRAMES_IN_FLIGHT; }
+
         struct Stats {
             u32 buffersInUse = 0;
             u32 allocatedBuffers = 0;
@@ -156,7 +158,7 @@ namespace cala::backend::vulkan {
 
         spdlog::logger& logger() { return _logger; }
 
-        void printMarkers();
+        void printMarkers(u32 frame);
 
     private:
         friend BufferHandle;
@@ -219,7 +221,7 @@ namespace cala::backend::vulkan {
         BufferHandle _markerBuffer[FRAMES_IN_FLIGHT];
         u32 _offset = 0;
         u32 _marker = 1;
-        ende::Vector<std::pair<std::string_view, u32>> _markedCmds;
+        ende::Vector<std::pair<std::string_view, u32>> _markedCmds[FRAMES_IN_FLIGHT];
 
 
         u32 _bytesAllocatedPerFrame;

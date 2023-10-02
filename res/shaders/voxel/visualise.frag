@@ -5,9 +5,6 @@ layout (location = 0) in VsOut {
 
 layout (location = 0) out vec4 FragColour;
 
-layout (set = 0, binding = 0) uniform textureCube cubeMaps[];
-layout (set = 0, binding = 0) uniform texture2D textureMaps[];
-layout (set = 0, binding = 2) uniform sampler samplers[];
 layout (rgba32f, set = 0, binding = 3) uniform readonly image3D voxelGrid[];
 
 #include "camera.glsl"
@@ -15,11 +12,12 @@ layout (rgba32f, set = 0, binding = 3) uniform readonly image3D voxelGrid[];
 #include "global_data.glsl"
 
 layout (push_constant) uniform PushData {
+    mat4 voxelOrthographic;
     int voxelGridIndex;
 };
 
 vec3 scaleAndBias(vec3 p) {
-    return vec3(p.xy * 0.5 + 0.5, p.z);
+    return vec3(p.xy * 2 - 1, p.z);
 }
 
 bool isInsideCube(vec3 p, float e) {
@@ -31,32 +29,44 @@ void main() {
     //        return;
     //    }
 
-//    CameraData camera = bindlessBuffersCamera[globalData.cameraBufferIndex].camera;
+    CameraData camera = bindlessBuffersCamera[globalData.cameraBufferIndex].camera;
 
-//    vec3 origin = camera.position;
+    vec3 origin = camera.position;
 
-//    vec4 p = camera.view * vec4(fsIn.TexCoords, 0, 1);
+    vec4 p = inverse(camera.projection * camera.view) * vec4(fsIn.TexCoords * 2 - 1, 0, 1);
+    p /= p.w;
 
-//    vec3 direction = p.xyz - origin;
-//    vec3 direction = p.xyz;
 
-//    vec4 unprojected = camera.projection * camera.view * vec4(fsIn.TexCoords, 0, 1);
-//    unprojected.xyz /= unprojected.w;
-//    vec3 direction = unprojected.xyz - origin;
-    vec3 direction = vec3(fsIn.TexCoords, 1);
-//    vec3 direction = unprojected.xyz;
+    vec3 direction = normalize(p.xyz - origin);
 
-//    vec3 voxelPos = scaleAndBias(fsIn.FragPos);
-//    ivec3 dim = imageSize(voxelGrid[voxelGridIndex]);
-//    ivec3 voxelCoords = ivec3(dim * voxelPos);
-//    voxelCoords = min(voxelCoords, dim);
-//    imageStore(voxelGrid[voxelGridIndex], voxelCoords, colour);
-    //    FragColour = ivec4(dim * voxel, 1.0);
-    //    FragColour = colour;
-    //    FragColour = vec4(fsIn.FragPos, 1.0);
-    FragColour = vec4(direction, 1.0);
-    //    FragColour = vec4(gl_FragCoord.xyz, 1.0);
-    //    FragColour = vec4(gl_FragCoord.xy, gl_FragCoord.z * dim.z, 1.0);
-    //    FragColour = vec4(dim, 1.0);
-    //    FragColour = vec4(dim * voxel, 1.0);
+    vec4 colour = vec4(0.0);
+//    vec3 colour = direction;
+
+    for (int step = 1; step < 100 && colour.a < 0.99f; step++) {
+//        vec3 currentPos = origin + direction * step * 0.1;
+        vec3 currentPos = origin + direction * step;
+//        vec3 currentPos = origin + direction;
+        vec4 i = voxelOrthographic * vec4(currentPos, 1.0);
+        vec3 voxelPos = i.xyz * 0.5 + 0.5;
+//        colour += vecvoxelPos;
+//        colour = currentPos;
+//        if (!isInsideCube(voxelPos, 0)) {
+//            colour = vec4(1.0);
+//            break;
+//        }
+        ivec3 dim = imageSize(voxelGrid[voxelGridIndex]);
+        ivec3 voxelCoords = ivec3(dim * voxelPos);
+        voxelCoords = min(voxelCoords, dim);
+//        vec4 c = vec4(voxelPos, 1.0);
+//        colour = voxelCoords;
+        vec4 c = imageLoad(voxelGrid[voxelGridIndex], voxelCoords);
+        colour += (1.0f - colour.a) * c;
+//        colour = c.xyz;
+//        if (c != vec4(0.0)) {
+//            colour = c.xyz;
+//            break;
+//        }
+    }
+
+    FragColour = colour;
 }

@@ -209,26 +209,26 @@ cala::backend::vulkan::Device::~Device() {
 
 
 cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFrame() {
-#ifndef NDEBUG
-    if (_markerBuffer) {
-        std::memset(_markerBuffer[frameIndex()]->persistentMapping(), 0, _markerBuffer[frameIndex()]->size());
-        _offset = 0;
-        _marker = 1;
-        _markedCmds.clear();
-    }
-#endif
-
     _frameCount++;
     _bytesAllocatedPerFrame = 0;
 
     if (!waitFrame(frameIndex())) {
-        printMarkers();
+        printMarkers(frameIndex());
         _logger.error("Error waiting for frame ({}), index ({})", _frameCount, frameIndex());
         return {
             _frameCount,
             nullptr
         };
     }
+
+#ifndef NDEBUG
+    if (_markerBuffer) {
+        std::memset(_markerBuffer[frameIndex()]->persistentMapping(), 0, _markerBuffer[frameIndex()]->size());
+        _offset = 0;
+        _marker = 1;
+        _markedCmds[frameIndex()].clear();
+    }
+#endif
 
     vmaSetCurrentFrameIndex(_context.allocator(), _frameCount);
 
@@ -310,7 +310,7 @@ void cala::backend::vulkan::Device::endSingleTimeCommands(CommandBuffer& buffer)
     VK_TRY(vkCreateFence(context().device(), &fenceCreateInfo, nullptr, &fence));
     if (!buffer.submit(nullptr, fence)) {
         _logger.error("Error submitting command buffer");
-        printMarkers();
+        printMarkers(frameIndex());
         throw std::runtime_error("Error submitting immediate command buffer");
     }
 
@@ -1035,17 +1035,17 @@ cala::backend::vulkan::Device::Stats cala::backend::vulkan::Device::stats() cons
     };
 }
 
-void cala::backend::vulkan::Device::printMarkers() {
-    if (!_markerBuffer[frameIndex()])
+void cala::backend::vulkan::Device::printMarkers(u32 frame) {
+    if (!_markerBuffer[frame])
         return;
 
     ende::fs::File file;
-    file.open("markers.log"_path);
+    file.open("markers.log"_path, ende::fs::out);
 
-    u32* markers = static_cast<u32*>(_markerBuffer[frameIndex()]->persistentMapping());
-    for (u32 i = 0; i < _markerBuffer[frameIndex()]->size() / sizeof(u32); i++) {
+    u32* markers = static_cast<u32*>(_markerBuffer[frame]->persistentMapping());
+    for (u32 i = 0; i < _markerBuffer[frame]->size() / sizeof(u32); i++) {
         u32 marker = markers[i];
-        auto cmd = marker < _markedCmds.size() ? _markedCmds[i] : std::make_pair( "NullCmd", 0 );
+        auto cmd = marker < _markedCmds[frame].size() ? _markedCmds[i][frame] : std::make_pair( "NullCmd", 0 );
         file.write(std::format("Command: {}\nMarker[{}]: {}\n", cmd.first, i, marker));
         _logger.warn("Command: {}\nMarker[{}]: {}", cmd.first, i, marker);
         if (marker == 0)

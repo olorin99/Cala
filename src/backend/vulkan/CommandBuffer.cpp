@@ -508,7 +508,7 @@ bool cala::backend::vulkan::CommandBuffer::submit(ende::Span<VkSemaphore> wait, 
     auto res = vkQueueSubmit(_queue, 1, &submitInfo, fence);
     if (res == VK_ERROR_DEVICE_LOST) {
         _device->logger().error("Device lost on queue submit");
-        _device->printMarkers();
+        _device->printMarkers(_device->frameIndex());
         throw std::runtime_error("Device lost on queue submit");
     }
     return res == VK_SUCCESS;
@@ -549,7 +549,7 @@ bool cala::backend::vulkan::CommandBuffer::submit(VkSemaphore timeline, u64 wait
     auto res = vkQueueSubmit(_queue, 1, &submitInfo, VK_NULL_HANDLE);
     if (res == VK_ERROR_DEVICE_LOST) {
         _device->logger().error("Device lost on queue submit");
-        _device->printMarkers();
+        _device->printMarkers(_device->frameIndex());
         throw std::runtime_error("Device lost on queue submit");
     }
     return res == VK_SUCCESS;
@@ -561,13 +561,13 @@ bool cala::backend::vulkan::CommandBuffer::PipelineEqual::operator()(const Pipel
 
 void cala::backend::vulkan::CommandBuffer::writeBufferMarker(cala::backend::PipelineStage stage, std::string_view cmd) {
 #ifndef NDEBUG
-1    if (_device->context().getSupportedExtensions().AMD_buffer_marker && _device->_markerBuffer[_device->frameIndex()]) {
+    if (_device->context().getSupportedExtensions().AMD_buffer_marker && _device->_markerBuffer[_device->frameIndex()]) {
         vkCmdWriteBufferMarkerAMD(_buffer, getPipelineStage(stage), _device->_markerBuffer[_device->frameIndex()]->buffer(), _device->_offset, _device->_marker);
 
-        if (_device->_markedCmds.size() >= _device->_marker) {
-            _device->_markedCmds[_device->_offset / sizeof(u32)] = std::make_pair(cmd, _device->_marker);
+        if (_device->_markedCmds[_device->frameIndex()].size() >= _device->_marker) {
+            _device->_markedCmds[_device->_offset / sizeof(u32)][_device->frameIndex()] = std::make_pair(cmd, _device->_marker);
         } else {
-            _device->_markedCmds.push(std::make_pair(cmd, _device->_marker));
+            _device->_markedCmds[_device->frameIndex()].push(std::make_pair(cmd, _device->_marker));
         }
         _device->_offset += sizeof(u32);
         _device->_marker++;

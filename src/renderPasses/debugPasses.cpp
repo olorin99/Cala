@@ -14,6 +14,7 @@ void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene
     normalsPass.addIndirectBufferRead("materialCounts");
     normalsPass.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
     normalsPass.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    normalsPass.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     normalsPass.setExecuteFunction([&](cala::backend::vulkan::CommandBuffer& cmd, cala::RenderGraph& graph) {
         auto global = graph.getResource<cala::BufferResource>("global");
@@ -54,6 +55,7 @@ void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
     debugRoughness.addIndirectBufferRead("materialCounts");
     debugRoughness.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
     debugRoughness.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    debugRoughness.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugRoughness.setExecuteFunction([&](cala::backend::vulkan::CommandBuffer& cmd, cala::RenderGraph& graph) {
         auto global = graph.getResource<cala::BufferResource>("global");
@@ -93,6 +95,7 @@ void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sce
     debugMetallic.addIndirectBufferRead("materialCounts");
     debugMetallic.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
     debugMetallic.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    debugMetallic.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugMetallic.setExecuteFunction([&](cala::backend::vulkan::CommandBuffer& cmd, cala::RenderGraph& graph) {
         auto global = graph.getResource<cala::BufferResource>("global");
@@ -132,6 +135,7 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene&
     debugUnlit.addIndirectBufferRead("materialCounts");
     debugUnlit.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
     debugUnlit.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    debugUnlit.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugUnlit.setExecuteFunction([&](cala::backend::vulkan::CommandBuffer& cmd, cala::RenderGraph& graph) {
         auto global = graph.getResource<cala::BufferResource>("global");
@@ -171,6 +175,7 @@ void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala
     debugWorldPos.addIndirectBufferRead("materialCounts");
     debugWorldPos.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
     debugWorldPos.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    debugWorldPos.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugWorldPos.setExecuteFunction([&](cala::backend::vulkan::CommandBuffer& cmd, cala::RenderGraph& graph) {
         auto global = graph.getResource<cala::BufferResource>("global");
@@ -207,6 +212,7 @@ void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
     debugWireframe.addIndirectBufferRead("materialCounts");
     debugWireframe.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
     debugWireframe.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    debugWireframe.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::GEOMETRY_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugWireframe.setExecuteFunction([settings, &engine, &scene](cala::backend::vulkan::CommandBuffer& cmd, cala::RenderGraph& graph) {
         auto global = graph.getResource<cala::BufferResource>("global");
@@ -246,6 +252,7 @@ void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::
     debugNormalLines.addIndirectBufferRead("materialCounts");
     debugNormalLines.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
     debugNormalLines.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    debugNormalLines.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::GEOMETRY_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugNormalLines.setExecuteFunction([settings, &engine, &scene](cala::backend::vulkan::CommandBuffer& cmd, cala::RenderGraph& graph) {
         auto global = graph.getResource<cala::BufferResource>("global");
