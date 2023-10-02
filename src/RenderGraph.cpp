@@ -102,6 +102,7 @@ bool cala::RenderPass::reads(const char *label, bool storage, backend::PipelineS
         return false;
     }
     else {
+//        _inputs.emplace(label, backend::Access::MEMORY_READ | backend::Access::MEMORY_WRITE, backend::PipelineStage::ALL_COMMANDS, layout);
         _inputs.emplace(label, access, stage, layout);
         return true;
     }
@@ -116,6 +117,7 @@ bool cala::RenderPass::writes(const char *label, backend::PipelineStage stage, b
         return false;
     }
     else {
+//        _outputs.emplace(label, backend::Access::MEMORY_READ | backend::Access::MEMORY_WRITE, backend::PipelineStage::ALL_COMMANDS, layout);
         _outputs.emplace(label, access, stage, layout);
         return true;
     }

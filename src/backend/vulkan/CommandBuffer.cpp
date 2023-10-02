@@ -561,8 +561,8 @@ bool cala::backend::vulkan::CommandBuffer::PipelineEqual::operator()(const Pipel
 
 void cala::backend::vulkan::CommandBuffer::writeBufferMarker(cala::backend::PipelineStage stage, std::string_view cmd) {
 #ifndef NDEBUG
-    if (_device->context().getSupportedExtensions().AMD_buffer_marker && _device->_markerBuffer) {
-        vkCmdWriteBufferMarkerAMD(_buffer, getPipelineStage(stage), _device->_markerBuffer->buffer(), _device->_offset, _device->_marker);
+1    if (_device->context().getSupportedExtensions().AMD_buffer_marker && _device->_markerBuffer[_device->frameIndex()]) {
+        vkCmdWriteBufferMarkerAMD(_buffer, getPipelineStage(stage), _device->_markerBuffer[_device->frameIndex()]->buffer(), _device->_offset, _device->_marker);
 
         if (_device->_markedCmds.size() >= _device->_marker) {
             _device->_markedCmds[_device->_offset / sizeof(u32)] = std::make_pair(cmd, _device->_marker);

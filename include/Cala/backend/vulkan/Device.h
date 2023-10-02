@@ -216,7 +216,7 @@ namespace cala::backend::vulkan {
 
         tsl::robin_map<CommandBuffer::PipelineKey, VkPipeline, ende::util::MurmurHash<CommandBuffer::PipelineKey>, CommandBuffer::PipelineEqual> _pipelines;
 
-        BufferHandle _markerBuffer;
+        BufferHandle _markerBuffer[FRAMES_IN_FLIGHT];
         u32 _offset = 0;
         u32 _marker = 1;
         ende::Vector<std::pair<std::string_view, u32>> _markedCmds;

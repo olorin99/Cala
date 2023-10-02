@@ -231,7 +231,7 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
         _supportedExtensions.AMD_device_coherent_memory = checkExtensions(supportedDeviceExtensions, VK_AMD_DEVICE_COHERENT_MEMORY_EXTENSION_NAME);
     }
 
-    _supportedExtensions.AMD_buffer_marker = false;
+//    _supportedExtensions.AMD_buffer_marker = false;
 
 
 

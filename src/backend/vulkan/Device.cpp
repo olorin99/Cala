@@ -137,10 +137,12 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
 
 #ifndef NDEBUG
     if (_context.getSupportedExtensions().AMD_buffer_marker && _context.getSupportedExtensions().AMD_device_coherent_memory) {
-        _markerBuffer = createBuffer(sizeof(u32) * 1000, BufferUsage::TRANSFER_DST, MemoryProperties::READBACK, true, {
-            .requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-            .preferredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT
-        });
+        for (auto& buffer : _markerBuffer) {
+            buffer = createBuffer(sizeof(u32) * 1000, BufferUsage::TRANSFER_DST, MemoryProperties::READBACK, true, {
+                    .requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                    .preferredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT
+            });
+        }
     }
 #endif
 
@@ -149,7 +151,8 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
 cala::backend::vulkan::Device::~Device() {
     VK_TRY(vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS))); //ensures last frame finished before destroying stuff
 
-    _markerBuffer = BufferHandle{};
+    for (auto& markerBuffer : _markerBuffer)
+        markerBuffer = BufferHandle{};
 
     for (auto& poolArray : _commandPools) {
         for (auto& pool : poolArray)
@@ -208,7 +211,7 @@ cala::backend::vulkan::Device::~Device() {
 cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFrame() {
 #ifndef NDEBUG
     if (_markerBuffer) {
-        std::memset(_markerBuffer->persistentMapping(), 0, _markerBuffer->size());
+        std::memset(_markerBuffer[frameIndex()]->persistentMapping(), 0, _markerBuffer[frameIndex()]->size());
         _offset = 0;
         _marker = 1;
         _markedCmds.clear();
@@ -1033,14 +1036,14 @@ cala::backend::vulkan::Device::Stats cala::backend::vulkan::Device::stats() cons
 }
 
 void cala::backend::vulkan::Device::printMarkers() {
-    if (!_markerBuffer)
+    if (!_markerBuffer[frameIndex()])
         return;
 
     ende::fs::File file;
     file.open("markers.log"_path);
 
-    u32* markers = static_cast<u32*>(_markerBuffer->persistentMapping());
-    for (u32 i = 0; i < _markerBuffer->size() / sizeof(u32); i++) {
+    u32* markers = static_cast<u32*>(_markerBuffer[frameIndex()]->persistentMapping());
+    for (u32 i = 0; i < _markerBuffer[frameIndex()]->size() / sizeof(u32); i++) {
         u32 marker = markers[i];
         auto cmd = marker < _markedCmds.size() ? _markedCmds[i] : std::make_pair( "NullCmd", 0 );
         file.write(std::format("Command: {}\nMarker[{}]: {}\n", cmd.first, i, marker));
