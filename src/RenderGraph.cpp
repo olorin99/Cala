@@ -380,6 +380,21 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
                     });
                 }
             }
+        } else { // sync with external writes/reads
+            auto [accessPassIndex, accessIndex, nextAccess] = findNextAccess(-1, attachment.first);
+            if (accessPassIndex < 0)
+                continue;
+            auto& accessPass = _orderedPasses[accessPassIndex];
+            accessPass->_invalidate.push({
+                attachment.first,
+                accessIndex,
+                backend::PipelineStage::ALL_COMMANDS,
+                nextAccess.stage,
+                backend::Access::MEMORY_READ | backend::Access::MEMORY_WRITE,
+                nextAccess.access,
+                backend::ImageLayout::UNDEFINED,
+                nextAccess.layout
+            });
         }
     }
 
