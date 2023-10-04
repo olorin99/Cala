@@ -149,6 +149,7 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
 }
 
 cala::backend::vulkan::Device::~Device() {
+    signalTimeline(std::numeric_limits<u64>::max());
     VK_TRY(vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS))); //ensures last frame finished before destroying stuff
 
     for (auto& markerBuffer : _markerBuffer)
@@ -222,7 +223,7 @@ cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFra
     }
 
 #ifndef NDEBUG
-    if (_markerBuffer) {
+    if (_markerBuffer[frameIndex()]) {
         std::memset(_markerBuffer[frameIndex()]->persistentMapping(), 0, _markerBuffer[frameIndex()]->size());
         _offset = 0;
         _marker = 1;
@@ -247,6 +248,7 @@ ende::time::Duration cala::backend::vulkan::Device::endFrame() {
 }
 
 bool cala::backend::vulkan::Device::waitFrame(u64 frame, u64 timeout) {
+    PROFILE_NAMED("Device::waitFrame");
     u64 waitValue = _frameValues[frame];
     return waitTimeline(waitValue, timeout);
 }
@@ -680,8 +682,8 @@ void cala::backend::vulkan::Device::updateBindlessImage(u32 index, Image::View &
     VkWriteDescriptorSet descriptorWrite[2] = { {}, {} };
     i32 writeNum = 0;
 
+    VkDescriptorImageInfo sampledImageInfo{};
     if (sampled) {
-        VkDescriptorImageInfo sampledImageInfo{};
         sampledImageInfo.imageView = image.view;
         sampledImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -695,8 +697,8 @@ void cala::backend::vulkan::Device::updateBindlessImage(u32 index, Image::View &
         writeNum++;
     }
 
+    VkDescriptorImageInfo storageImageInfo{};
     if (storage) {
-        VkDescriptorImageInfo storageImageInfo{};
         storageImageInfo.imageView = image.view;
         storageImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 

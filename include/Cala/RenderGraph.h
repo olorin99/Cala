@@ -11,6 +11,8 @@ namespace cala {
     class RenderGraph;
 
     struct Resource {
+
+        bool dirty = true;
         bool transient = true;
 
         virtual ~Resource() = default;
@@ -43,6 +45,8 @@ namespace cala {
         bool operator==(Resource* rhs) override;
 
         bool operator!=(Resource* rhs) override;
+
+        void addUsage(backend::ImageUsage use);
     };
 
     struct BufferResource : public Resource {
@@ -67,7 +71,7 @@ namespace cala {
     private:
         bool reads(const char* label, bool storage = false, backend::PipelineStage stage = backend::PipelineStage::TOP, backend::Access access = backend::Access::MEMORY_READ, backend::ImageLayout layout = backend::ImageLayout::UNDEFINED);
 
-        bool writes(const char* label, backend::PipelineStage stage = backend::PipelineStage::TOP, backend::Access access = backend::Access::MEMORY_WRITE, backend::ImageLayout layout = backend::ImageLayout::UNDEFINED);
+        bool writes(const char* label, backend::PipelineStage stage = backend::PipelineStage::TOP, backend::Access access = backend::Access::MEMORY_WRITE, backend::ImageLayout layout = backend::ImageLayout::UNDEFINED, bool clear = false);
     public:
 
         void addColourAttachment(const char* label);
@@ -80,7 +84,7 @@ namespace cala {
 
         void addStorageImageRead(const char* label, backend::PipelineStage stage);
 
-        void addStorageImageWrite(const char* label, backend::PipelineStage stage);
+        void addStorageImageWrite(const char* label, backend::PipelineStage stage, bool clear = false);
 
         void addStorageBufferRead(const char* label, backend::PipelineStage stage);
 
@@ -111,6 +115,7 @@ namespace cala {
             backend::Access access;
             backend::PipelineStage stage;
             backend::ImageLayout layout;
+            bool clear;
         };
 
         ende::Vector<PassResource> _inputs;
@@ -137,6 +142,7 @@ namespace cala {
         u32 _passTimer;
 
         cala::backend::vulkan::Framebuffer* _framebuffer;
+        bool compute = false;
 
     };
 
@@ -147,7 +153,7 @@ namespace cala {
 
         ~RenderGraph();
 
-        RenderPass& addPass(const char* name);
+        RenderPass& addPass(const char* name, bool compute = false);
 
         void setBackbuffer(const char* label);
 

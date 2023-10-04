@@ -67,6 +67,8 @@ void main() {
     vec3 voxelPos = scaleAndBias(fsIn.FragPos);
     ivec3 dim = imageSize(voxelGrid[voxelGridIndex]);
     ivec3 voxelCoords = ivec3(dim * voxelPos);
+    if (voxelCoords.x > dim.x || voxelCoords.y > dim.y || voxelCoords.x < 0 || voxelCoords.y < 0)
+        return;
     voxelCoords = min(voxelCoords, dim);
     imageStore(voxelGrid[voxelGridIndex], voxelCoords, colour);
 //    FragColour = ivec4(dim * voxel, 1.0);

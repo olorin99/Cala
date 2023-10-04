@@ -42,31 +42,32 @@ void main() {
     vec4 colour = vec4(0.0);
 //    vec3 colour = direction;
 
-    for (int step = 1; step < 100 && colour.a < 0.99f; step++) {
-//        vec3 currentPos = origin + direction * step * 0.1;
-        vec3 currentPos = origin + direction * step;
-//        vec3 currentPos = origin + direction;
-        vec4 i = voxelOrthographic * vec4(currentPos, 1.0);
-        vec3 voxelPos = i.xyz * 0.5 + 0.5;
-//        colour += vecvoxelPos;
-//        colour = currentPos;
-//        if (!isInsideCube(voxelPos, 0)) {
-//            colour = vec4(1.0);
-//            break;
-//        }
-        ivec3 dim = imageSize(voxelGrid[voxelGridIndex]);
-        ivec3 voxelCoords = ivec3(dim * voxelPos);
-        voxelCoords = min(voxelCoords, dim);
-//        vec4 c = vec4(voxelPos, 1.0);
-//        colour = voxelCoords;
-        vec4 c = imageLoad(voxelGrid[voxelGridIndex], voxelCoords);
-        colour += (1.0f - colour.a) * c;
-//        colour = c.xyz;
-//        if (c != vec4(0.0)) {
-//            colour = c.xyz;
-//            break;
-//        }
-    }
+//    for (int step = 1; step < 100 && colour.a < 0.99f; step++) {
+////        vec3 currentPos = origin + direction * step * 0.1;
+//        vec3 currentPos = origin + direction * step;
+////        vec3 currentPos = origin + direction;
+//        vec4 i = voxelOrthographic * vec4(currentPos, 1.0);
+//        vec3 voxelPos = i.xyz * 0.5 + 0.5;
+////        colour += vecvoxelPos;
+////        colour = currentPos;
+////        if (!isInsideCube(voxelPos, 0)) {
+////            colour = vec4(1.0);
+////            break;
+////        }
+//        ivec3 dim = imageSize(voxelGrid[voxelGridIndex]);
+//        ivec3 voxelCoords = ivec3(dim * voxelPos);
+//        voxelCoords = min(voxelCoords, dim);
+//        voxelCoords = max(voxelCoords, ivec3(0));
+////        vec4 c = vec4(voxelPos, 1.0);
+////        colour = voxelCoords;
+//        vec4 c = imageLoad(voxelGrid[voxelGridIndex], voxelCoords);
+//        colour += (1.0f - colour.a) * c;
+////        colour = c.xyz;
+////        if (c != vec4(0.0)) {
+////            colour = c.xyz;
+////            break;
+////        }
+//    }
 
     FragColour = colour;
 }

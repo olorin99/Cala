@@ -138,8 +138,9 @@ cala::Engine::Engine(backend::Platform &platform)
     }
     {
         _voxelVisualisationProgram = loadProgram({
-            { "../../res/shaders/fullscreen.vert"_path, backend::ShaderStage::VERTEX },
-            { "../../res/shaders/voxel/visualise.frag"_path, backend::ShaderStage::FRAGMENT }
+//            { "../../res/shaders/fullscreen.vert"_path, backend::ShaderStage::VERTEX },
+//            { "../../res/shaders/voxel/visualise.frag"_path, backend::ShaderStage::FRAGMENT }
+            { "../../res/shaders/voxel/visualise.comp"_path, backend::ShaderStage::COMPUTE }
         });
     }
 
@@ -628,6 +629,7 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
         std::string normalEval = loadMaterialString(materialSource, "normal").value();
         std::string roughnessEval = loadMaterialString(materialSource, "roughness").value();
         std::string metallicEval = loadMaterialString(materialSource, "metallic").value();
+        std::string voxelizeEval = loadMaterialString(materialSource, "voxelize").value();
 
         std::vector<std::string> includes;
         {
@@ -706,12 +708,12 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
 
         backend::vulkan::ProgramHandle voxelGIHandle = loadProgram({
             { "../../res/shaders/voxel/voxelize.vert"_path, backend::ShaderStage::VERTEX },
-            { "../../res/shaders/voxel/voxelize.geom"_path, backend::ShaderStage::GEOMETRY },
+//            { "../../res/shaders/voxel/voxelize.geom"_path, backend::ShaderStage::GEOMETRY },
             { "../../res/shaders/voxel/voxelize.frag"_path, backend::ShaderStage::FRAGMENT, {
                 { "MATERIAL_DATA", materialData },
                 { "MATERIAL_DEFINITION", materialDefinition },
                 { "MATERIAL_LOAD", materialLoad },
-                { "MATERIAL_EVAL", litEval },
+                { "MATERIAL_EVAL", voxelizeEval },
             }, includes }
         });
         material->setVariant(Material::Variant::VOXELGI, voxelGIHandle);

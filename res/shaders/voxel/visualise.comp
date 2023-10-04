@@ -1,0 +1,55 @@
+
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+layout (rgba32f, set = 0, binding = 3) uniform readonly image3D voxelGrid[];
+
+#include "camera.glsl"
+
+#include "global_data.glsl"
+
+layout (push_constant) uniform PushData {
+    mat4 voxelOrthographic;
+    int voxelGridIndex;
+};
+
+layout (set = 2, binding = 0) uniform writeonly image2D backbuffer;
+
+
+void main() {
+    ivec2 globCoords = ivec2(gl_GlobalInvocationID.xy);
+    vec2 texCoords = vec2(globCoords) / vec2(imageSize(backbuffer));
+
+    CameraData camera = bindlessBuffersCamera[globalData.cameraBufferIndex].camera;
+
+    vec3 origin = camera.position;
+
+    vec4 p = inverse(camera.projection * camera.view) * vec4(texCoords * 2 - 1, 0, 1);
+    p /= p.w;
+
+    vec3 direction = normalize(p.xyz - origin);
+//    vec4 colour = vec4(texCoords, 0.0, 1.0);
+
+    vec4 colour = vec4(0.0);
+
+    for (int step = 1; step < 1000 && colour.a < 0.99f; step++) {
+        vec3 currentPos = origin + direction * step * 0.1;
+        vec4 i = voxelOrthographic * vec4(currentPos, 1.0);
+        vec3 voxelPos = i.xyz * 0.5 + 0.5;
+        if (voxelPos.x < 0 || voxelPos.y < 0 || voxelPos.z < 0)
+            continue;
+
+        ivec3 dim = imageSize(voxelGrid[voxelGridIndex]);
+        ivec3 voxelCoords = ivec3(dim * voxelPos);
+        if (voxelCoords.x > dim.x || voxelCoords.y > dim.y || voxelCoords.z > dim.z)
+            break;
+
+        voxelCoords = min(voxelCoords, dim);
+        voxelCoords = max(voxelCoords, ivec3(0));
+
+        vec4 c = imageLoad(voxelGrid[voxelGridIndex], voxelCoords);
+        colour += (1.0f - colour.a) * c;
+    }
+
+
+    imageStore(backbuffer, globCoords, colour);
+}

@@ -70,8 +70,8 @@ namespace cala::backend::vulkan {
 
             View(View&& rhs) noexcept;
             View& operator=(View&& rhs) noexcept;
-            View(const View&) = delete;
-            View& operator=(const View&) = delete;
+//            View(const View&) = delete;
+//            View& operator=(const View&) = delete;
 
             Image* parent() const { return _image; }
         private:

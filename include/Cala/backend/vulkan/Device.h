@@ -37,6 +37,10 @@ namespace cala::backend::vulkan {
 
         u32 frameIndex() const { return _frameCount % FRAMES_IN_FLIGHT; }
 
+        u32 prevFrameIndex() const { return (_frameCount - 1) % FRAMES_IN_FLIGHT; }
+
+        u32 nextFrameIndex() const { return (_frameCount + 1) % FRAMES_IN_FLIGHT; }
+
         bool waitFrame(u64 frame, u64 timeout = 1000000000);
 
         bool wait(u64 timeout = 1000000000); // waits for all frames

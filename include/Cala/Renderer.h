@@ -28,6 +28,7 @@ namespace cala {
             bool skybox = true;
             bool freezeFrustum = false;
             bool ibl = false;
+            bool vxgi = false;
 
             bool debugUnlit = false;
             bool debugClusters = false;
@@ -37,6 +38,7 @@ namespace cala {
             bool debugWorldPos = false;
             bool debugWireframe = false;
             bool debugNormalLines = false;
+            bool debugVxgi = false;
             std::array<f32, 4> wireframeColour = { 1.f, 1.f, 1.f, 1.f };
             f32 wireframeThickness = 1.f;
             f32 normalLength = 0.1;

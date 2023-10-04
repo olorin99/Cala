@@ -94,11 +94,11 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
 
 //    instanceExtensions.push(VK_EXT_validation_features);
 
-//    VkValidationFeatureEnableEXT v[5] = {VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT, VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT, VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT};
-//    VkValidationFeaturesEXT validationFeatures{};
-//    validationFeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
-//    validationFeatures.pEnabledValidationFeatures = v;
-//    validationFeatures.enabledValidationFeatureCount = 3;
+    VkValidationFeatureEnableEXT v[5] = {VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT, VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT, VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT};
+    VkValidationFeaturesEXT validationFeatures{};
+    validationFeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+    validationFeatures.pEnabledValidationFeatures = v;
+    validationFeatures.enabledValidationFeatureCount = 3;
 
     //create instance with required instanceExtensions
     VkInstanceCreateInfo instanceCreateInfo{};
@@ -231,7 +231,7 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
         _supportedExtensions.AMD_device_coherent_memory = checkExtensions(supportedDeviceExtensions, VK_AMD_DEVICE_COHERENT_MEMORY_EXTENSION_NAME);
     }
 
-//    _supportedExtensions.AMD_buffer_marker = false;
+    _supportedExtensions.AMD_buffer_marker = false;
 
 
 
