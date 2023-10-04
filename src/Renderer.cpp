@@ -179,6 +179,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         _graph.addResource("drawCommands", drawCommandsResource, true);
 
         _graph.addResource("shadowDrawCommands", drawCommandsResource, true);
+        _graph.addResource("vxgiDrawCommands", drawCommandsResource, true);
 
         ImageResource voxelGridResource;
         voxelGridResource.format = backend::Format::RGBA32_SFLOAT;
@@ -531,6 +532,40 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     {
         if (_renderSettings.vxgi) {
+//            auto& cullPass = _graph.addPass("vxgiCull");
+//
+//            cullPass.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
+//            cullPass.addStorageBufferRead("transforms", backend::PipelineStage::COMPUTE_SHADER);
+//            cullPass.addStorageBufferRead("meshData", backend::PipelineStage::COMPUTE_SHADER);
+//            cullPass.addStorageBufferWrite("materialCounts", backend::PipelineStage::COMPUTE_SHADER);
+//            cullPass.addStorageBufferWrite("vxgiDrawCommands", backend::PipelineStage::COMPUTE_SHADER);
+//            cullPass.addStorageBufferRead("camera", backend::PipelineStage::COMPUTE_SHADER);
+//
+//            cullPass.setDebugColour({0.3, 0.3, 1, 1});
+//
+//            cullPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+//                auto global = graph.getResource<BufferResource>("global");
+//                auto materialCounts = graph.getResource<BufferResource>("materialCounts");
+//                auto drawCommands = graph.getResource<BufferResource>("vxgiDrawCommands");
+//
+//                ende::math::Mat4f perspective = ende::math::orthographic<f32>(_renderSettings.voxelBounds.first.x(), _renderSettings.voxelBounds.second.x(), _renderSettings.voxelBounds.first.y(), _renderSettings.voxelBounds.second.y(), _renderSettings.voxelBounds.first.z(), _renderSettings.voxelBounds.second.z());
+//                ende::math::Frustum frustum(perspective);
+//
+//                cmd.clearDescriptors();
+//                cmd.bindProgram(_engine->_cullProgram);
+//                cmd.bindBindings(nullptr);
+//                cmd.bindAttributes(nullptr);
+//                cmd.pushConstants(backend::ShaderStage::COMPUTE, { &frustum, sizeof(frustum) });
+//                cmd.bindBuffer(1, 0, global->handle);
+//                cmd.bindBuffer(2, 0, drawCommands->handle, true);
+//                cmd.bindBuffer(2, 1, _drawCountBuffer[_engine->device().frameIndex()], true);
+//                cmd.bindBuffer(2, 2, materialCounts->handle, true);
+//                cmd.bindPipeline();
+//                cmd.bindDescriptors();
+//                cmd.dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
+//            });
+
+
             auto& voxelGIPass = _graph.addPass("voxelGI");
 
 //        voxelGIPass.addStorageImageRead("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER);
@@ -586,10 +621,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     push.lightIndicesIndex = lightIndices->handle.index();
                     push.voxelGridIndex = voxelGrid->handle.index();
 
-                    f32 voxelWorldBounds = 10;
-                    push.orthographic = ende::math::orthographic(-voxelWorldBounds, voxelWorldBounds, -voxelWorldBounds, voxelWorldBounds, -voxelWorldBounds, voxelWorldBounds);
-//                Transform transform({ -50, 0, 0 });
-//                push.orthographic = push.orthographic * transform.local();
+                    push.orthographic = ende::math::orthographic<f32>(_renderSettings.voxelBounds.first.x(), _renderSettings.voxelBounds.second.x(), _renderSettings.voxelBounds.first.y(), _renderSettings.voxelBounds.second.y(), _renderSettings.voxelBounds.first.z(), _renderSettings.voxelBounds.second.z());
 
                     cmd.pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::FRAGMENT, { &push, sizeof(push) });
 
@@ -635,14 +667,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     i32 voxelGridIndex;
                 } push;
                 push.voxelGridIndex = voxelGrid->handle.index();
-//            push.inverseViewProjection = camera.viewProjection().inverse();
-                f32 voxelWorldBounds = 10;
-                push.voxelOrthographic = ende::math::orthographic(-voxelWorldBounds, voxelWorldBounds, -voxelWorldBounds, voxelWorldBounds, -voxelWorldBounds, voxelWorldBounds);
+                push.voxelOrthographic = ende::math::orthographic<f32>(_renderSettings.voxelBounds.first.x(), _renderSettings.voxelBounds.second.x(), _renderSettings.voxelBounds.first.y(), _renderSettings.voxelBounds.second.y(), _renderSettings.voxelBounds.first.z(), _renderSettings.voxelBounds.second.z());
                 cmd.pushConstants(backend::ShaderStage::COMPUTE, { &push, sizeof(push) });
                 cmd.bindPipeline();
                 cmd.bindDescriptors();
                 cmd.dispatchCompute(std::ceil(voxelVisualised->width / 32.f), std::ceil(voxelVisualised->height / 32.f), 1);
-//            cmd.draw(3, 1, 0, 0, false);
             });
         }
     }

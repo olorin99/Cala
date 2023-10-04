@@ -4,6 +4,7 @@ layout (location = 0) in VsOut {
     vec2 TexCoords;
     mat3 TBN;
     vec3 ViewPos;
+    vec3 ClipPos;
     flat uint drawID;
 } fsIn;
 
@@ -51,32 +52,22 @@ vec3 scaleAndBias(vec3 p) {
 }
 
 bool isInsideCube(vec3 p, float e) {
-    return abs(p.x) < 1 + e && abs(p.y) < 1 + e && abs(p.z) < 1 + e;
+    return p.x < 1 + e && p.y < 1 + e && p.z < 1 + e && p.x > 0 - e && p.y > 0 - e && p.z > 0 - e;
 }
 
 void main() {
-//    if (!isInsideCube(fsIn.FragPos, 0)) {
-//        return;
-//    }
+    vec3 voxelPos = scaleAndBias(fsIn.ClipPos);
+    if (!isInsideCube(voxelPos, 0))
+        return;
 
     Mesh mesh = bindlessBufferMesh[globalData.meshBufferIndex].meshData[fsIn.drawID];
     MaterialData materialData = materials[mesh.materialInstanceIndex];
     Material material = loadMaterial(materialData);
     vec4 colour = evalMaterial(material);
 
-    vec3 voxelPos = scaleAndBias(fsIn.FragPos);
     ivec3 dim = imageSize(voxelGrid[voxelGridIndex]);
     ivec3 voxelCoords = ivec3(dim * voxelPos);
-    if (voxelCoords.x > dim.x || voxelCoords.y > dim.y || voxelCoords.x < 0 || voxelCoords.y < 0)
-        return;
     voxelCoords = min(voxelCoords, dim);
     imageStore(voxelGrid[voxelGridIndex], voxelCoords, colour);
-//    FragColour = ivec4(dim * voxel, 1.0);
-//    FragColour = colour;
-//    FragColour = vec4(fsIn.FragPos, 1.0);
     FragColour = vec4(voxelPos, 1.0);
-//    FragColour = vec4(gl_FragCoord.xyz, 1.0);
-//    FragColour = vec4(gl_FragCoord.xy, gl_FragCoord.z * dim.z, 1.0);
-//    FragColour = vec4(dim, 1.0);
-//    FragColour = vec4(dim * voxel, 1.0);
 }

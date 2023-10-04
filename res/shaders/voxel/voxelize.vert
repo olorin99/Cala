@@ -9,6 +9,7 @@ layout (location = 0) out VsOut {
     vec2 TexCoords;
     mat3 TBN;
     vec3 ViewPos;
+    vec3 ClipPos;
     flat uint drawID;
 } vsOut;
 
@@ -37,10 +38,11 @@ void main() {
 
     CameraData camera = bindlessBuffersCamera[globalData.cameraBufferIndex].camera;
 
-    vsOut.FragPos = (orthographic * model * vec4(inPosition, 1.0)).xyz;
+    vsOut.FragPos = (model * vec4(inPosition, 1.0)).xyz;
     vsOut.TexCoords = inTexCoords;
     vsOut.TBN = mat3(T, B, N);
     vsOut.ViewPos = camera.position;
+    vsOut.ClipPos = (orthographic * model * vec4(inPosition, 1.0)).xyz;
     vsOut.drawID = gl_BaseInstance;
 
     gl_Position = orthographic * model * vec4(inPosition, 1.0);

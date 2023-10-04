@@ -17,6 +17,15 @@ void cala::ui::RendererSettingsWindow::render() {
     ImGui::Checkbox("Freeze Frustum,", &rendererSettings.freezeFrustum);
     ImGui::Checkbox("IBL,", &rendererSettings.ibl);
     ImGui::Checkbox("VXGI", &rendererSettings.vxgi);
+    if (rendererSettings.vxgi) {
+        auto minBounds = rendererSettings.voxelBounds.first;
+        ImGui::SliderInt3("minBounds", &minBounds[0], -100, 0);
+        auto maxBounds = rendererSettings.voxelBounds.second;
+        ImGui::SliderInt3("maxBounds", &maxBounds[0], 0, 100);
+
+        rendererSettings.voxelBounds.first = minBounds;
+        rendererSettings.voxelBounds.second = maxBounds;
+    }
     bool vsync = _swapchain->getVsync();
     if (ImGui::Checkbox("Vsync", &vsync)) {
         _engine->device().wait();

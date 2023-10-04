@@ -708,7 +708,7 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
 
         backend::vulkan::ProgramHandle voxelGIHandle = loadProgram({
             { "../../res/shaders/voxel/voxelize.vert"_path, backend::ShaderStage::VERTEX },
-//            { "../../res/shaders/voxel/voxelize.geom"_path, backend::ShaderStage::GEOMETRY },
+            { "../../res/shaders/voxel/voxelize.geom"_path, backend::ShaderStage::GEOMETRY },
             { "../../res/shaders/voxel/voxelize.frag"_path, backend::ShaderStage::FRAGMENT, {
                 { "MATERIAL_DATA", materialData },
                 { "MATERIAL_DEFINITION", materialDefinition },

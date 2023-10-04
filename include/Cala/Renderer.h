@@ -29,6 +29,7 @@ namespace cala {
             bool freezeFrustum = false;
             bool ibl = false;
             bool vxgi = false;
+            std::pair<ende::math::Vec<3, i32>, ende::math::Vec<3, i32>> voxelBounds = { { -10, -10, -10 }, { 10, 10, 10 } };
 
             bool debugUnlit = false;
             bool debugClusters = false;
