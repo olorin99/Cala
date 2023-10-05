@@ -73,7 +73,6 @@ namespace cala {
         backend::vulkan::Swapchain* _swapchain;
 
         backend::vulkan::BufferHandle _cameraBuffer[2];
-        backend::vulkan::BufferHandle _drawCountBuffer[2];
         backend::vulkan::BufferHandle _globalDataBuffer[2];
 
         backend::vulkan::ImageHandle _shadowTarget;
@@ -93,6 +92,7 @@ namespace cala {
         struct RendererGlobal {
             f32 gamma = 2.2;
             u32 time = 0;
+            u32 maxDrawCount = 0;
             i32 tranformsBufferIndex = -1;
             i32 meshBufferIndex = -1;
             i32 materialBufferIndex = -1;

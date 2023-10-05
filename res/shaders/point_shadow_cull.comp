@@ -24,7 +24,6 @@ layout (set = 2, binding = 0) writeonly buffer DrawCommands {
 
 layout (set = 2, binding = 1) buffer Output {
     uint drawCount;
-    uint maxDrawCount;
 };
 
 bool frustumCheck(vec3 pos, float radius) {
@@ -38,12 +37,14 @@ bool frustumCheck(vec3 pos, float radius) {
 
 void main() {
     uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x;
-    if (idx >= maxDrawCount)
-    return;
+    if (idx >= globalData.maxDrawCount)
+        return;
 
     if (idx == 0) {
         atomicExchange(drawCount, 0);
     }
+
+    barrier();
 
     Mesh mesh = bindlessBufferMesh[globalData.meshBufferIndex].meshData[idx];
     vec3 center = (mesh.max.xyz + mesh.min.xyz) * 0.5;

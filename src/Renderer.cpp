@@ -14,8 +14,6 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
     _swapchain(nullptr),
     _cameraBuffer{engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true),
                   engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true)},
-    _drawCountBuffer{engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING, true),
-                     engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING, true)},
     _globalDataBuffer{engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true),
                       engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true)},
     _graph(engine),
@@ -102,9 +100,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     auto cameraData = camera.data();
     _cameraBuffer[_engine->device().frameIndex()]->data({ &cameraData, sizeof(cameraData) });
 
-    u32 drawCount = scene._renderables.size();
-    _drawCountBuffer[_engine->device().frameIndex()]->data({ &drawCount, sizeof(drawCount) }, sizeof(u32));
-
+    _globalData.maxDrawCount = scene._renderables.size();
     _globalData.tranformsBufferIndex = scene._modelBuffer[_engine->device().frameIndex()].index();
     _globalData.meshBufferIndex = scene._meshDataBuffer[_engine->device().frameIndex()].index();
     _globalData.lightBufferIndex = scene._lightBuffer[_engine->device().frameIndex()].index();
@@ -180,6 +176,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
         _graph.addResource("shadowDrawCommands", drawCommandsResource, true);
         _graph.addResource("vxgiDrawCommands", drawCommandsResource, true);
+
+        BufferResource drawCountResource;
+        drawCountResource.size = sizeof(u32);
+        drawCountResource.transient = false;
+        drawCountResource.usage = backend::BufferUsage::INDIRECT | backend::BufferUsage::STORAGE;
+        _graph.addResource("drawCount", drawCountResource, true);
 
         ImageResource voxelGridResource;
         voxelGridResource.format = backend::Format::RGBA32_SFLOAT;
@@ -297,7 +299,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     cullLights.addStorageBufferRead("clusters", backend::PipelineStage::COMPUTE_SHADER);
     cullLights.addStorageBufferWrite("lightGrid", backend::PipelineStage::COMPUTE_SHADER);
     cullLights.addStorageBufferWrite("lightIndices", backend::PipelineStage::COMPUTE_SHADER);
-    cullLights.addStorageBufferRead("lightGlobalResource", backend::PipelineStage::COMPUTE_SHADER);
+    cullLights.addStorageBufferWrite("lightGlobalResource", backend::PipelineStage::COMPUTE_SHADER, true);
     cullLights.addStorageBufferRead("camera", backend::PipelineStage::COMPUTE_SHADER);
 
     cullLights.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
@@ -426,6 +428,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     pointShadows.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
         auto global = graph.getResource<BufferResource>("global");
         auto drawCommands = graph.getResource<BufferResource>("shadowDrawCommands");
+        auto drawCount = graph.getResource<BufferResource>("drawCount");
         u32 shadowIndex = 0;
         for (u32 i = 0; i < scene._lights.size(); i++) {
             auto& light = scene._lights[i].second;
@@ -466,7 +469,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd.pushConstants(backend::ShaderStage::COMPUTE, { &shadowFrustum, sizeof(shadowFrustum) });
                     cmd.bindBuffer(1, 0, global->handle);
                     cmd.bindBuffer(2, 0, drawCommands->handle, true);
-                    cmd.bindBuffer(2, 1, _drawCountBuffer[_engine->device().frameIndex()], true);
+                    cmd.bindBuffer(2, 1, drawCount->handle, true);
                     cmd.bindPipeline();
                     cmd.bindDescriptors();
                     cmd.dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
@@ -511,7 +514,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd.bindDescriptors();
                     cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
                     cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
-                    cmd.drawIndirectCount(drawCommands->handle, 0, _drawCountBuffer[_engine->device().frameIndex()], 0, scene._renderables.size());
+                    cmd.drawIndirectCount(drawCommands->handle, 0, drawCount->handle, 0, scene._renderables.size());
 
                     cmd.end(*_shadowFramebuffer);
 
@@ -574,7 +577,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             voxelGIPass.addIndirectBufferRead("drawCommands");
             voxelGIPass.addStorageBufferRead("lightIndices", backend::PipelineStage::FRAGMENT_SHADER);
             voxelGIPass.addStorageBufferRead("lightGrid", backend::PipelineStage::FRAGMENT_SHADER);
-            voxelGIPass.addStorageBufferRead("lightGlobalResource", backend::PipelineStage::FRAGMENT_SHADER);
             voxelGIPass.addIndirectBufferRead("materialCounts");
             voxelGIPass.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
@@ -699,8 +701,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd.pushConstants(backend::ShaderStage::COMPUTE, { &_cullingFrustum, sizeof(_cullingFrustum) });
         cmd.bindBuffer(1, 0, global->handle);
         cmd.bindBuffer(2, 0, drawCommands->handle, true);
-        cmd.bindBuffer(2, 1, _drawCountBuffer[_engine->device().frameIndex()], true);
-        cmd.bindBuffer(2, 2, materialCounts->handle, true);
+        cmd.bindBuffer(2, 1, materialCounts->handle, true);
         cmd.bindPipeline();
         cmd.bindDescriptors();
         cmd.dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
@@ -755,7 +756,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         forwardPass.addIndirectBufferRead("drawCommands");
         forwardPass.addStorageBufferRead("lightIndices", backend::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addStorageBufferRead("lightGrid", backend::PipelineStage::FRAGMENT_SHADER);
-        forwardPass.addStorageBufferRead("lightGlobalResource", backend::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addIndirectBufferRead("materialCounts");
         forwardPass.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
