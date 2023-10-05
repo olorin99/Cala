@@ -7,19 +7,45 @@
 
 cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     : _engine(engine),
-    _meshDataBuffer{engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true),
-                 engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true)},
-    _modelBuffer{engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true),
-                 engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true)},
-    _lightBuffer{engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true),
-                 engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true)},
-    _lightCountBuffer{engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true),
-                 engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true)},
-    _materialCountBuffer{engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING, true),
-                 engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING, true)},
+//    _meshDataBuffer{engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true),
+//                 engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true)},
+//    _modelBuffer{engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true),
+//                 engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true)},
+//    _lightBuffer{engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true),
+//                 engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true)},
+//    _lightCountBuffer{engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true),
+//                 engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true)},
+//    _materialCountBuffer{engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING, true),
+//                 engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING, true)},
     _directionalLightCount(0),
     _lightsDirtyFrame(2)
-{}
+{
+    for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
+        _meshDataBuffer[i] = engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true);
+        std::string debugLabel = "MeshDataBuffer: " + std::to_string(i);
+        engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_meshDataBuffer[i]->buffer(), debugLabel);
+    }
+    for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
+        _modelBuffer[i] = engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true);
+        std::string debugLabel = "ModelBuffer: " + std::to_string(i);
+        engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_modelBuffer[i]->buffer(), debugLabel);
+    }
+    for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
+        _lightBuffer[i] = engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true);
+        std::string debugLabel = "LightBuffer: " + std::to_string(i);
+        engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_lightBuffer[i]->buffer(), debugLabel);
+    }
+    for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
+        _lightCountBuffer[i] = engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true);
+        std::string debugLabel = "LightCountBuffer: " + std::to_string(i);
+        engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_lightCountBuffer[i]->buffer(), debugLabel);
+    }
+    for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
+        _materialCountBuffer[i] = engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING, true);
+        std::string debugLabel = "MaterialCountBuffer: " + std::to_string(i);
+        engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_materialCountBuffer[i]->buffer(), debugLabel);
+    }
+}
 
 
 void cala::Scene::addRenderable(cala::Scene::Renderable &&renderable, cala::Transform *transform) {
@@ -104,12 +130,18 @@ void cala::Scene::prepare(cala::Camera& camera) {
     // resize buffers to fit and update persistent mappings
     if (objectCount * sizeof(MeshData) >= _meshDataBuffer[frame]->size()) {
         _meshDataBuffer[frame] = _engine->device().resizeBuffer(_meshDataBuffer[frame], objectCount * sizeof(MeshData) * 2);
+        std::string debugLabel = "MeshDataBuffer: " + std::to_string(frame);
+        _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_meshDataBuffer[frame]->buffer(), debugLabel);
     }
     if (objectCount * sizeof(ende::math::Mat4f) >= _modelBuffer[frame]->size()) {
         _modelBuffer[frame] = _engine->device().resizeBuffer(_modelBuffer[frame], objectCount * sizeof(ende::math::Mat4f) * 2);
+        std::string debugLabel = "ModelBuffer: " + std::to_string(frame);
+        _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_modelBuffer[frame]->buffer(), debugLabel);
     }
     if (_materialCounts.size() * sizeof(MaterialCount) > _materialCountBuffer[frame]->size()) {
         _materialCountBuffer[frame] = _engine->device().resizeBuffer(_materialCountBuffer[frame], _materialCounts.size() * sizeof(MaterialCount));
+        std::string debugLabel = "MaterialCountBuffer: " + std::to_string(frame);
+        _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_materialCountBuffer[frame]->buffer(), debugLabel);
     }
 
     for (u32 i = 0; i < _renderables.size(); i++) {
@@ -190,6 +222,8 @@ void cala::Scene::prepare(cala::Camera& camera) {
         }
         if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame]->size()) {
             _lightBuffer[frame] = _engine->device().resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(Light::Data) * 2);
+            std::string debugLabel = "LightBuffer: " + std::to_string(frame);
+            _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_lightBuffer[frame]->buffer(), debugLabel);
         }
         u32 lightCount[2] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount) };
         _lightCountBuffer[frame]->data({ lightCount, sizeof(u32) * 2 });

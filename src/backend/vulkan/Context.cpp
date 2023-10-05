@@ -366,6 +366,12 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     if (queueIndex(queueIndices[3], QueueType::PRESENT))
         vkGetDeviceQueue(_logicalDevice, queueIndices[3], 0, &_presentQueue);
 
+    setDebugName(VK_OBJECT_TYPE_QUEUE, (u64)_graphicsQueue, "GraphicsQueue");
+    if (_graphicsQueue != _computeQueue)
+        setDebugName(VK_OBJECT_TYPE_QUEUE, (u64)_computeQueue, "ComputeQueue");
+    if (_graphicsQueue != _computeQueue && _computeQueue != _transferQueue)
+        setDebugName(VK_OBJECT_TYPE_QUEUE, (u64)_transferQueue, "TransferQueue");
+
     VkQueryPoolCreateInfo queryPoolCreateInfo{};
     queryPoolCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
     queryPoolCreateInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
@@ -435,18 +441,14 @@ void cala::backend::vulkan::Context::endDebugLabel(VkCommandBuffer buffer) const
 }
 
 
-void cala::backend::vulkan::Context::setDebugName(u32 type, u64 object, std::string_view name) {
+void cala::backend::vulkan::Context::setDebugName(u32 type, u64 object, std::string_view name) const {
 #ifndef NDEBUG
-//    if (_supportedExtensions.EXT_debug_marker) {
-////        static auto setNameObject = (PFN_vkDebugMarkerSetObjectNameEXT)vkGetInstanceProcAddr(_instance, "vkDebugMarkerSetObjectNameEXT");
-//        VkDebugMarkerObjectNameInfoEXT nameInfo{};
-//        nameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;
-//        nameInfo.objectType = static_cast<VkDebugReportObjectTypeEXT>(type);
-//        nameInfo.object = object;
-//        nameInfo.pObjectName = name.data();
-////        setNameObject(_logicalDevice, &nameInfo);
-//    vkDebugMarkerSetObjectNameEXT(_logicalDevice, &nameInfo);
-//    }
+    VkDebugUtilsObjectNameInfoEXT objectNameInfo{};
+    objectNameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+    objectNameInfo.objectType = (VkObjectType)type;
+    objectNameInfo.pObjectName = name.begin();
+    objectNameInfo.objectHandle = object;
+    vkSetDebugUtilsObjectNameEXT(_logicalDevice, &objectNameInfo);
 #endif
 }
 

@@ -33,7 +33,7 @@ namespace cala::backend::vulkan {
 
         void endDebugLabel(VkCommandBuffer buffer) const;
 
-        void setDebugName(u32 type, u64 object, std::string_view name);
+        void setDebugName(u32 type, u64 object, std::string_view name) const;
 
 
         //internal objects

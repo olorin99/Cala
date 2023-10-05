@@ -145,6 +145,7 @@ cala::Engine::Engine(backend::Platform &platform)
     }
 
     _brdfImage = _device.createImage({ 512, 512, 1, backend::Format::RG16_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE });
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)_brdfImage->image(), "brdf");
 
     _defaultIrradiance = _device.createImage({
         1, 1, 1,
@@ -153,6 +154,7 @@ cala::Engine::Engine(backend::Platform &platform)
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST,
         backend::ImageType::IMAGE2D
         });
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)_defaultIrradiance->image(), "defaultIrradiance");
 
     f32 irradianceData[4];
     std::memset(irradianceData, 0, sizeof(f32) * 4);
@@ -167,6 +169,7 @@ cala::Engine::Engine(backend::Platform &platform)
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST | backend::ImageUsage::TRANSFER_SRC,
         backend::ImageType::IMAGE2D
         });
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)_defaultPrefilter->image(), "defaultPrefilter");
 
     f32 prefilterData[4 * 512 * 512];
     std::memset(prefilterData, 0, sizeof(f32) * 4 * 512 * 512);
@@ -197,6 +200,11 @@ cala::Engine::Engine(backend::Platform &platform)
     _globalIndexBuffer = _device.createBuffer(10000, backend::BufferUsage::INDEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE);
     _indexStagingBuffer = _device.createBuffer(10000, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING);
 
+    _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalVertexBuffer->buffer(), "globalVertexBuffer");
+    _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_vertexStagingBuffer->buffer(), "vertexStagingBuffer");
+    _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalIndexBuffer->buffer(), "globalIndexBuffer");
+    _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_indexStagingBuffer->buffer(), "indexStagingBuffer");
+
     _cube = new Mesh(shapes::cube().mesh(this));
 
 }
@@ -206,10 +214,14 @@ bool cala::Engine::gc() {
 
     if (_stagingReady) {
 
-        if (_vertexStagingBuffer->size() > _globalVertexBuffer->size())
+        if (_vertexStagingBuffer->size() > _globalVertexBuffer->size()) {
             _globalVertexBuffer = _device.resizeBuffer(_globalVertexBuffer, _vertexStagingBuffer->size(), true);
-        if (_indexStagingBuffer->size() > _globalIndexBuffer->size())
+            _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalVertexBuffer->buffer(), "globalVertexBuffer");
+        }
+        if (_indexStagingBuffer->size() > _globalIndexBuffer->size()) {
             _globalIndexBuffer = _device.resizeBuffer(_globalIndexBuffer, _indexStagingBuffer->size(), true);
+            _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalIndexBuffer->buffer(), "globalIndexBuffer");
+        }
 
         _device.immediate([&](backend::vulkan::CommandBuffer& cmd) { //TODO: async transfer queue
             VkBufferCopy vertexCopy{};

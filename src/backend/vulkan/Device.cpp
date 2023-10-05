@@ -32,6 +32,8 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
     timelineCreateInfo.flags = 0;
     vkCreateSemaphore(_context.device(), &timelineCreateInfo, nullptr, &_timelineSemaphore);
 
+    _context.setDebugName(VK_OBJECT_TYPE_SEMAPHORE, (u64)_timelineSemaphore, "TimelineSemaphore");
+
     for (auto& value : _frameValues)
         value = _timelineValue;
 
@@ -51,6 +53,7 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
     poolCreateInfo.poolSizeCount = 4;
     poolCreateInfo.pPoolSizes = poolSizes;
     VK_TRY(vkCreateDescriptorPool(_context.device(), &poolCreateInfo, nullptr, &_bindlessPool));
+    _context.setDebugName(VK_OBJECT_TYPE_DESCRIPTOR_POOL, (u64)_bindlessPool, "BindlessPool");
 
     VkDescriptorSetLayoutBinding bindlessLayoutBinding[4] = {};
 
@@ -104,6 +107,7 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
     bindlessLayoutCreateInfo.pNext = &extendedInfo;
 
     VK_TRY(vkCreateDescriptorSetLayout(_context.device(), &bindlessLayoutCreateInfo, nullptr, &_bindlessLayout));
+    _context.setDebugName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (u64)_bindlessLayout, "BindlessLayout");
 
     VkDescriptorSetAllocateInfo bindlessAllocate{};
     bindlessAllocate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -111,14 +115,8 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
     bindlessAllocate.pSetLayouts = &_bindlessLayout;
     bindlessAllocate.descriptorPool = _bindlessPool;
 
-//    VkDescriptorSetVariableDescriptorCountAllocateInfo countInfo{};
-//    countInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
-//    countInfo.descriptorSetCount = 1;
-//    u32 maxBinding = maxBindless - 1;
-//    countInfo.pDescriptorCounts = &maxBinding;
-//    bindlessAllocate.pNext = &countInfo;
-
     VK_TRY(vkAllocateDescriptorSets(_context.device(), &bindlessAllocate, &_bindlessSet));
+    _context.setDebugName(VK_OBJECT_TYPE_DESCRIPTOR_SET, (u64)_bindlessSet, "BindlessSet");
 
     VkDescriptorPoolSize poolSizes2[] = {
             {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10000},
@@ -137,11 +135,14 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
 
 #ifndef NDEBUG
     if (_context.getSupportedExtensions().AMD_buffer_marker && _context.getSupportedExtensions().AMD_device_coherent_memory) {
+        u32 i = 0;
         for (auto& buffer : _markerBuffer) {
             buffer = createBuffer(sizeof(u32) * 1000, BufferUsage::TRANSFER_DST, MemoryProperties::READBACK, true, {
                     .requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                     .preferredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT
             });
+            std::string debugLabel = "MarkerBuffer: " + std::to_string(i++);
+            _context.setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)buffer->buffer(), debugLabel);
         }
     }
 #endif
@@ -264,6 +265,11 @@ bool cala::backend::vulkan::Device::waitTimeline(u64 value, u64 timeout) {
     waitInfo.pSemaphores = &_timelineSemaphore;
     waitInfo.pValues = &value;
     auto result = vkWaitSemaphores(_context.device(), &waitInfo, timeout);
+    if (result == VK_ERROR_DEVICE_LOST) {
+        _logger.error("Device Lost - Frame: {}", _frameCount);
+        printMarkers(frameIndex());
+        throw std::runtime_error("Device Lost");
+    }
     return VK_SUCCESS == result;
 }
 
@@ -463,7 +469,7 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
 
     updateBindlessBuffer(index);
 
-    _context.setDebugName(VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, (u64)buffer, "Buffer: " + std::to_string(index));
+    _context.setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)buffer, "Buffer: " + std::to_string(index));
 
     return { this, static_cast<i32>(index), _buffers[index].second };
 }
@@ -580,8 +586,8 @@ cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Im
 
     _bytesAllocatedPerFrame += (info.width * info.height * info.depth * formatToSize(info.format));
 
-    _context.setDebugName(VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, (u64)image, "Image: " + std::to_string(index));
-    _context.setDebugName(VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, (u64)_imageViews[index].view, "ImageView: " + std::to_string(index));
+    _context.setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)image, "Image: " + std::to_string(index));
+    _context.setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_imageViews[index].view, "ImageView: " + std::to_string(index));
 
     return { this, static_cast<i32>(index), _images[index].second };
 }

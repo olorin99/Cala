@@ -2,7 +2,7 @@
 #include <Ende/profile/profile.h>
 #include <Cala/backend/vulkan/primitives.h>
 
-void cala::ImageResource::devirtualize(cala::Engine* engine, backend::vulkan::Swapchain* swapchain) {
+void cala::ImageResource::devirtualize(cala::Engine* engine, backend::vulkan::Swapchain* swapchain, const char* label) {
     auto extent = swapchain->extent();
     if (transient)
         clear = true;
@@ -19,6 +19,10 @@ void cala::ImageResource::devirtualize(cala::Engine* engine, backend::vulkan::Sw
         handle = engine->device().createImage({
             width, height, depth, format, 1, 1, usage
         });
+        engine->device().context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)handle->image(), label);
+        std::string viewLabel = label;
+        viewLabel += "_view";
+        engine->device().context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)engine->device().getImageView(handle).view, viewLabel);
         dirty = false;
 //        engine->device().immediate([&](backend::vulkan::CommandBuffer& cmd) {
 //            if (backend::isDepthFormat(format)) {
@@ -65,9 +69,11 @@ void cala::ImageResource::addUsage(backend::ImageUsage use) {
     }
 }
 
-void cala::BufferResource::devirtualize(Engine *engine, backend::vulkan::Swapchain* swapchain) {
-    if (!handle)
+void cala::BufferResource::devirtualize(Engine *engine, backend::vulkan::Swapchain* swapchain, const char* label) {
+    if (!handle) {
         handle = engine->device().createBuffer(size, usage);
+        engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)handle->buffer(), label);
+    }
 }
 
 void cala::BufferResource::destroyResource(cala::Engine *engine) {
@@ -432,10 +438,10 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
         u32 index = attachment.second.index;
         if (attachment.second.internal) {
             assert(index < _internalResources.size() && _internalResources[index]);
-            _internalResources[index]->devirtualize(_engine, _swapchain);
+            _internalResources[index]->devirtualize(_engine, _swapchain, attachment.first);
         } else {
             assert(index < _externalResources.size() && _externalResources[index]);
-            _externalResources[index]->devirtualize(_engine, _swapchain);
+            _externalResources[index]->devirtualize(_engine, _swapchain, attachment.first);
         }
     }
 

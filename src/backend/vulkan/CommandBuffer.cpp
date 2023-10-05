@@ -362,7 +362,7 @@ void cala::backend::vulkan::CommandBuffer::draw(u32 count, u32 instanceCount, u3
     else
         vkCmdDraw(_buffer, count, instanceCount, first, firstInstance);
     ++_drawCallCount;
-    writeBufferMarker(PipelineStage::FRAGMENT_SHADER, "vkCmdDraw");
+    writeBufferMarker(PipelineStage::VERTEX_SHADER | PipelineStage::GEOMETRY_SHADER | PipelineStage::FRAGMENT_SHADER, "vkCmdDraw");
 }
 
 void cala::backend::vulkan::CommandBuffer::drawIndirect(BufferHandle buffer, u32 offset, u32 drawCount, u32 stride) {
@@ -374,7 +374,7 @@ void cala::backend::vulkan::CommandBuffer::drawIndirect(BufferHandle buffer, u32
         stride = sizeof(u32) * 4;
     vkCmdDrawIndirect(_buffer, buffer->buffer(), offset, drawCount, stride);
     ++_drawCallCount;
-    writeBufferMarker(PipelineStage::FRAGMENT_SHADER, "vkCmdDrawIndirect");
+    writeBufferMarker(PipelineStage::VERTEX_SHADER | PipelineStage::GEOMETRY_SHADER | PipelineStage::FRAGMENT_SHADER, "vkCmdDrawIndirect");
 }
 
 void cala::backend::vulkan::CommandBuffer::drawIndirectCount(BufferHandle buffer, u32 bufferOffset, BufferHandle countBuffer, u32 countOffset, u32 maxDrawCount, u32 stride) {
@@ -394,7 +394,7 @@ void cala::backend::vulkan::CommandBuffer::drawIndirectCount(BufferHandle buffer
         vkCmdDrawIndirectCount(_buffer, buffer->buffer(), bufferOffset, countBuffer->buffer(), countOffset, maxDrawCount, stride);
     }
     ++_drawCallCount;
-    writeBufferMarker(PipelineStage::FRAGMENT_SHADER, "vkCmdDrawIndirectCount");
+    writeBufferMarker(PipelineStage::VERTEX_SHADER | PipelineStage::GEOMETRY_SHADER | PipelineStage::FRAGMENT_SHADER, "vkCmdDrawIndirectCount");
 }
 
 void cala::backend::vulkan::CommandBuffer::dispatchCompute(u32 x, u32 y, u32 z) {

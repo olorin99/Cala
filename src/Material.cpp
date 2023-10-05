@@ -6,7 +6,10 @@ cala::Material::Material(cala::Engine* engine, u32 id, u32 size)
       _id(id),
       _dirty(true),
       _materialBuffer(engine->device().createBuffer(256, backend::BufferUsage::STORAGE | backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING))
-{}
+{
+    std::string debugLabel = "Material: " + std::to_string(_id);
+    _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_materialBuffer->buffer(), debugLabel);
+}
 
 cala::MaterialInstance cala::Material::instance() {
     u32 offset = _data.size();
@@ -17,8 +20,11 @@ cala::MaterialInstance cala::Material::instance() {
 
 void cala::Material::upload() {
     if (_dirty) {
-        if (_data.size() > _materialBuffer->size())
+        if (_data.size() > _materialBuffer->size()) {
             _materialBuffer = _engine->device().resizeBuffer(_materialBuffer, _data.size(), true);
+            std::string debugLabel = "Material: " + std::to_string(_id);
+            _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_materialBuffer->buffer(), debugLabel);
+        }
         _materialBuffer->data(_data);
         _dirty = false;
     }

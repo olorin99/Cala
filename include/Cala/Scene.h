@@ -57,11 +57,11 @@ namespace cala {
 
         i32 _lightsDirtyFrame;
 
-        backend::vulkan::BufferHandle _meshDataBuffer[2];
-        backend::vulkan::BufferHandle _modelBuffer[2];
-        backend::vulkan::BufferHandle _lightBuffer[2];
-        backend::vulkan::BufferHandle _lightCountBuffer[2];
-        backend::vulkan::BufferHandle _materialCountBuffer[2];
+        backend::vulkan::BufferHandle _meshDataBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
+        backend::vulkan::BufferHandle _modelBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
+        backend::vulkan::BufferHandle _lightBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
+        backend::vulkan::BufferHandle _lightCountBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
+        backend::vulkan::BufferHandle _materialCountBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
         backend::vulkan::ImageHandle _skyLightMap;
         backend::vulkan::Image::View _skyLightMapView;
         backend::vulkan::ImageHandle _skyLightIrradiance;

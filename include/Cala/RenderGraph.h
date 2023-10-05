@@ -17,7 +17,7 @@ namespace cala {
 
         virtual ~Resource() = default;
 
-        virtual void devirtualize(Engine* engine, backend::vulkan::Swapchain* swapchain) = 0;
+        virtual void devirtualize(Engine* engine, backend::vulkan::Swapchain* swapchain, const char* label = nullptr) = 0;
 
         virtual void destroyResource(Engine* engine) = 0;
 
@@ -38,7 +38,7 @@ namespace cala {
         backend::ImageLayout layout = backend::ImageLayout::UNDEFINED;
         backend::vulkan::ImageHandle handle;
 
-        void devirtualize(Engine* engine, backend::vulkan::Swapchain* swapchain) override;
+        void devirtualize(Engine* engine, backend::vulkan::Swapchain* swapchain, const char* label = nullptr) override;
 
         void destroyResource(Engine* engine) override;
 
@@ -56,7 +56,7 @@ namespace cala {
 
         backend::vulkan::BufferHandle handle;
 
-        void devirtualize(Engine* engine, backend::vulkan::Swapchain* swapchain) override;
+        void devirtualize(Engine* engine, backend::vulkan::Swapchain* swapchain, const char* label = nullptr) override;
 
         void destroyResource(Engine* engine) override;
 
