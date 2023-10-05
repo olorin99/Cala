@@ -69,9 +69,9 @@ namespace cala::backend::vulkan {
 
         ende::Span<const char> deviceName() const { return _deviceName; }
 
-        f32 timestampPeriod() const { return _timestampPeriod; }
+        f32 timestampPeriod() const { return _limits.timestampPeriod; }
 
-        f32 maxAnisotropy() const { return _maxAnisotropy; }
+        f32 maxAnisotropy() const { return _limits.maxSamplerAnisotropy; }
 
         struct PipelineStatistics {
             u64 inputAssemblyVertices = 0;
@@ -106,6 +106,31 @@ namespace cala::backend::vulkan {
 
         Extensions getSupportedExtensions() const { return _supportedExtensions; }
 
+        struct Limits {
+            u32 maxImageDimensions1D = 0;
+            u32 maxImageDimensions2D = 0;
+            u32 maxImageDimensions3D = 0;
+            u32 maxImageDimensionsCube = 0;
+
+            u32 maxDescriptorSetSamplers = 0;
+            u32 maxDescriptorSetUniformBuffers = 0;
+            u32 maxDescriptorSetStorageBuffers = 0;
+            u32 maxDescriptorSetSampledImages = 0;
+            u32 maxDescriptorSetStorageImages = 0;
+
+            u32 maxBindlessSamplers = 0;
+            u32 maxBindlessUniformBuffers = 0;
+            u32 maxBindlessStorageBuffers = 0;
+            u32 maxBindlessSampledImages = 0;
+            u32 maxBindlessStorageImages = 0;
+
+            f32 maxSamplerAnisotropy = 0;
+
+            f32 timestampPeriod = 0;
+        };
+
+        Limits getLimits() const { return _limits; }
+
     private:
 
         u32 memoryIndex(u32 filter, VkMemoryPropertyFlags properties);
@@ -134,10 +159,9 @@ namespace cala::backend::vulkan {
         const char* _vendor;
         PhysicalDeviceType _deviceType;
         std::string _deviceName;
-        f32 _timestampPeriod;
-        f32 _maxAnisotropy;
 
         Extensions _supportedExtensions = {};
+        Limits _limits = {};
 
     };
 

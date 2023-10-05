@@ -169,8 +169,17 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
         queueCreateInfos.push(queueCreateInfo);
     }
 
-    VkPhysicalDeviceProperties deviceProperties{};
-    vkGetPhysicalDeviceProperties(_physicalDevice, &deviceProperties);
+    VkPhysicalDeviceProperties2 deviceProperties2{};
+    VkPhysicalDeviceDescriptorIndexingProperties indexingProperties{};
+    indexingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES;
+
+    deviceProperties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+    deviceProperties2.pNext = &indexingProperties;
+
+    vkGetPhysicalDeviceProperties2(_physicalDevice, &deviceProperties2);
+
+    VkPhysicalDeviceProperties deviceProperties = deviceProperties2.properties;
+
     _apiVersion = deviceProperties.apiVersion;
     _driverVersion = deviceProperties.driverVersion;
     switch (deviceProperties.vendorID) {
@@ -195,8 +204,27 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     }
     _deviceType = static_cast<PhysicalDeviceType>(deviceProperties.deviceType);
     _deviceName = deviceProperties.deviceName;
-    _timestampPeriod = deviceProperties.limits.timestampPeriod;
-    _maxAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
+
+    _limits.maxImageDimensions1D = deviceProperties.limits.maxImageDimension1D;
+    _limits.maxImageDimensions2D = deviceProperties.limits.maxImageDimension2D;
+    _limits.maxImageDimensions3D = deviceProperties.limits.maxImageDimension3D;
+    _limits.maxImageDimensionsCube = deviceProperties.limits.maxImageDimensionCube;
+
+    _limits.maxDescriptorSetSamplers = deviceProperties.limits.maxDescriptorSetSamplers;
+    _limits.maxDescriptorSetUniformBuffers = deviceProperties.limits.maxDescriptorSetUniformBuffers;
+    _limits.maxDescriptorSetStorageBuffers = deviceProperties.limits.maxDescriptorSetStorageBuffers;
+    _limits.maxDescriptorSetSampledImages = deviceProperties.limits.maxDescriptorSetSampledImages;
+    _limits.maxDescriptorSetStorageImages = deviceProperties.limits.maxDescriptorSetStorageImages;
+
+    _limits.maxBindlessSamplers = indexingProperties.maxDescriptorSetUpdateAfterBindSamplers;
+    _limits.maxBindlessUniformBuffers = indexingProperties.maxDescriptorSetUpdateAfterBindUniformBuffers;
+    _limits.maxBindlessStorageBuffers = indexingProperties.maxDescriptorSetUpdateAfterBindStorageBuffers;
+    _limits.maxBindlessSampledImages = indexingProperties.maxDescriptorSetUpdateAfterBindSampledImages;
+    _limits.maxBindlessStorageImages = indexingProperties.maxDescriptorSetUpdateAfterBindStorageImages;
+
+    _limits.maxSamplerAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
+
+    _limits.timestampPeriod = deviceProperties.limits.timestampPeriod;
 
 
     u32 supportedDeviceExtensionsCount = 0;
