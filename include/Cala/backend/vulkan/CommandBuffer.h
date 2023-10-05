@@ -119,11 +119,11 @@ namespace cala::backend::vulkan {
         void dispatchCompute(u32 x, u32 y, u32 z);
 
 
-        void pipelineBarrier(PipelineStage srcStage, PipelineStage dstStage, VkDependencyFlags dependencyFlags, ende::Span<VkBufferMemoryBarrier> bufferBarriers, ende::Span<VkImageMemoryBarrier> imageBarriers);
+        void pipelineBarrier(ende::Span<VkBufferMemoryBarrier2> bufferBarriers, ende::Span<VkImageMemoryBarrier2> imageBarriers);
 
-        void pipelineBarrier(PipelineStage srcStage, PipelineStage dstStage, ende::Span<Image::Barrier> imageBarriers);
+        void pipelineBarrier(ende::Span<Image::Barrier> imageBarriers);
 
-        void pipelineBarrier(PipelineStage srcStage, PipelineStage dstStage, ende::Span<Buffer::Barrier> bufferBarriers);
+        void pipelineBarrier(ende::Span<Buffer::Barrier> bufferBarriers);
 
         void pushDebugLabel(std::string_view label, std::array<f32, 4> colour = {0, 1, 0, 1});
 

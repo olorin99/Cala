@@ -77,11 +77,15 @@ namespace cala::backend::vulkan {
 
         struct Barrier {
             Buffer* buffer;
+            PipelineStage srcStage;
+            PipelineStage dstStage;
             Access srcAccess;
             Access dstAccess;
         };
 
-        Barrier barrier(Access dstAccess);
+        Barrier barrier(PipelineStage srcStage, PipelineStage dstStage, Access dstAccess);
+
+        Barrier barrier(PipelineStage srcStage, PipelineStage dstStage, Access srcAccess, Access dstAccess);
 
         void invalidate() { _invalidated = true; }
 

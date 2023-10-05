@@ -58,12 +58,12 @@ namespace cala::backend::vulkan {
         return static_cast<VkShaderStageFlagBits>(stage);
     }
 
-    constexpr inline VkAccessFlagBits getAccessFlags(Access flags) {
-        return static_cast<VkAccessFlagBits>(flags);
+    constexpr inline VkAccessFlagBits2 getAccessFlags(Access flags) {
+        return static_cast<VkAccessFlagBits2>(flags);
     }
 
-    constexpr inline VkPipelineStageFlagBits getPipelineStage(PipelineStage stage) {
-        return static_cast<VkPipelineStageFlagBits>(stage);
+    constexpr inline VkPipelineStageFlagBits2 getPipelineStage(PipelineStage stage) {
+        return static_cast<VkPipelineStageFlagBits2>(stage);
     }
 
 }

@@ -570,25 +570,25 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
                     range.baseArrayLayer = 0;
                     range.levelCount = VK_REMAINING_MIP_LEVELS;
                     range.layerCount = VK_REMAINING_ARRAY_LAYERS;
-                    auto b = resource->handle->barrier(barrier.srcAccess, backend::Access::TRANSFER_WRITE, barrier.srcLayout, backend::ImageLayout::GENERAL);
+                    auto b = resource->handle->barrier(backend::PipelineStage::ALL_COMMANDS, backend::PipelineStage::ALL_COMMANDS, barrier.srcAccess, backend::Access::TRANSFER_WRITE, barrier.srcLayout, backend::ImageLayout::GENERAL);
 //                    cmd.pipelineBarrier(barrier.srcStage, backend::PipelineStage::TRANSFER, { &b, 1 });
-                    cmd.pipelineBarrier(backend::PipelineStage::ALL_COMMANDS, backend::PipelineStage::ALL_COMMANDS, { &b, 1 });
+                    cmd.pipelineBarrier({ &b, 1 });
 
                     vkCmdClearColorImage(cmd.buffer(), resource->handle->image(), backend::vulkan::getImageLayout(backend::ImageLayout::GENERAL), &clearColour, 1, &range);
 
-                    b = resource->handle->barrier(backend::Access::TRANSFER_WRITE, barrier.dstAccess, backend::ImageLayout::GENERAL, barrier.dstLayout);
-                    cmd.pipelineBarrier(backend::PipelineStage::ALL_COMMANDS, barrier.dstStage, { &b, 1 });
+                    b = resource->handle->barrier(backend::PipelineStage::ALL_COMMANDS, barrier.dstStage, backend::Access::TRANSFER_WRITE, barrier.dstAccess, backend::ImageLayout::GENERAL, barrier.dstLayout);
+                    cmd.pipelineBarrier({ &b, 1 });
                 }
             } else {
                 if (barrier.dstLayout != backend::ImageLayout::UNDEFINED) {
                     if (auto resource = getResource<ImageResource>(barrier.name); resource) {
-                        auto b = resource->handle->barrier(barrier.srcAccess, barrier.dstAccess, barrier.srcLayout, barrier.dstLayout);
-                        cmd.pipelineBarrier(barrier.srcStage, barrier.dstStage, { &b, 1 });
+                        auto b = resource->handle->barrier(barrier.srcStage, barrier.dstStage, barrier.srcAccess, barrier.dstAccess, barrier.srcLayout, barrier.dstLayout);
+                        cmd.pipelineBarrier({ &b, 1 });
                     }
                 } else {
                     if (auto resource = getResource<BufferResource>(barrier.name); resource) {
-                        auto b = resource->handle->barrier(barrier.dstAccess);
-                        cmd.pipelineBarrier(barrier.srcStage, barrier.dstStage, { &b, 1 });
+                        auto b = resource->handle->barrier(barrier.srcStage, barrier.dstStage, barrier.srcAccess, barrier.dstAccess);
+                        cmd.pipelineBarrier({ &b, 1 });
                     }
                 }
             }
@@ -627,13 +627,13 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
         for (auto& barrier : pass->_flush) {
             if (barrier.dstLayout != backend::ImageLayout::UNDEFINED) {
                 if (auto resource = getResource<ImageResource>(barrier.name); resource) {
-                    auto b = resource->handle->barrier(barrier.srcAccess, barrier.dstAccess, barrier.srcLayout, barrier.dstLayout);
-                    cmd.pipelineBarrier(barrier.srcStage, barrier.dstStage, { &b, 1 });
+                    auto b = resource->handle->barrier(barrier.srcStage, barrier.dstStage, barrier.srcAccess, barrier.dstAccess, barrier.srcLayout, barrier.dstLayout);
+                    cmd.pipelineBarrier({ &b, 1 });
                 }
             } else {
                 if (auto resource = getResource<BufferResource>(barrier.name); resource) {
-                    auto b = resource->handle->barrier(barrier.dstAccess);
-                    cmd.pipelineBarrier(barrier.srcStage, barrier.dstStage, { &b, 1 });
+                    auto b = resource->handle->barrier(barrier.srcStage, barrier.dstStage, barrier.srcAccess, barrier.dstAccess);
+                    cmd.pipelineBarrier({ &b, 1 });
                 }
             }
         }
@@ -647,13 +647,13 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
     if (!backbuffer)
         return false;
 
-    auto barrier = backbuffer->handle->barrier(backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::TRANSFER_READ, backend::ImageLayout::TRANSFER_SRC);
-    cmd.pipelineBarrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::PipelineStage::TRANSFER, { &barrier, 1 });
+    auto barrier = backbuffer->handle->barrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::PipelineStage::TRANSFER, backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::TRANSFER_READ, backend::ImageLayout::TRANSFER_SRC);
+    cmd.pipelineBarrier({ &barrier, 1 });
 
     _swapchain->blitImageToFrame(index, cmd, *backbuffer->handle);
 
-    barrier = backbuffer->handle->barrier(backend::Access::TRANSFER_READ, backend::Access::NONE, backend::ImageLayout::COLOUR_ATTACHMENT);
-    cmd.pipelineBarrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::BOTTOM, { &barrier, 1 });
+    barrier = backbuffer->handle->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::BOTTOM, backend::Access::TRANSFER_READ, backend::Access::NONE, backend::ImageLayout::COLOUR_ATTACHMENT);
+    cmd.pipelineBarrier({ &barrier, 1 });
     return true;
 }
 
