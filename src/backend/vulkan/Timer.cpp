@@ -14,11 +14,11 @@ void cala::backend::vulkan::Timer::start(CommandBuffer &cmd) {
     _cmdBuffer = &cmd;
     _result = 0;
     vkCmdResetQueryPool(cmd.buffer(), _driver->context().timestampPool(), _index * 2, 2);
-    vkCmdWriteTimestamp(cmd.buffer(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, _driver->context().timestampPool(), _index * 2);
+    vkCmdWriteTimestamp2(cmd.buffer(), VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, _driver->context().timestampPool(), _index * 2);
 }
 
 void cala::backend::vulkan::Timer::stop() {
-    vkCmdWriteTimestamp(_cmdBuffer->buffer(), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, _driver->context().timestampPool(), _index * 2 + 1);
+    vkCmdWriteTimestamp2(_cmdBuffer->buffer(), VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, _driver->context().timestampPool(), _index * 2 + 1);
 }
 
 u64 cala::backend::vulkan::Timer::result() {

@@ -87,7 +87,15 @@ namespace cala::backend {
         SHADER_READ_ONLY = 5,
         TRANSFER_SRC = 6,
         TRANSFER_DST = 7,
-        PREINITIALIZED = 8
+        PREINITIALIZED = 8,
+        DEPTH_READ_ONLY_STENCIL_ATTACHMENT = 1000117000,
+        DEPTH_ATTACHMENT_STENCIL_READ_ONLY = 1000117001,
+        DEPTH_ATTACHMENT = 1000241000,
+        DEPTH_READ_ONLY = 1000241001,
+        STENCIL_ATTACHMENT = 1000241002,
+        STENCIL_READ_ONLY = 1000241003,
+        READ_ONLY = 1000314000,
+        ATTACHMENT = 1000314001
     };
 
     enum class BufferUsage {
@@ -417,6 +425,22 @@ namespace cala::backend {
                 return tostr(ImageLayout::TRANSFER_DST);
             case ImageLayout::PREINITIALIZED:
                 return tostr(ImageLayout::PREINITIALIZED);
+            case ImageLayout::DEPTH_READ_ONLY_STENCIL_ATTACHMENT:
+                return tostr(ImageLayout::DEPTH_READ_ONLY_STENCIL_ATTACHMENT);
+            case ImageLayout::DEPTH_ATTACHMENT_STENCIL_READ_ONLY:
+                return tostr(ImageLayout::DEPTH_ATTACHMENT_STENCIL_READ_ONLY);
+            case ImageLayout::DEPTH_ATTACHMENT:
+                return tostr(ImageLayout::DEPTH_ATTACHMENT);
+            case ImageLayout::DEPTH_READ_ONLY:
+                return tostr(ImageLayout::DEPTH_READ_ONLY);
+            case ImageLayout::STENCIL_ATTACHMENT:
+                return tostr(ImageLayout::STENCIL_ATTACHMENT);
+            case ImageLayout::STENCIL_READ_ONLY:
+                return tostr(ImageLayout::STENCIL_READ_ONLY);
+            case ImageLayout::READ_ONLY:
+                return tostr(ImageLayout::READ_ONLY);
+            case ImageLayout::ATTACHMENT:
+                return tostr(ImageLayout::ATTACHMENT);
         }
         return tostr(ImageLayout::UNDEFINED);
     }

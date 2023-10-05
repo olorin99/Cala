@@ -147,7 +147,6 @@ void cala::RenderPass::addColourAttachment(const char *label) {
         _attachments.emplace(label, backend::Access::COLOUR_ATTACHMENT_WRITE | backend::Access::COLOUR_ATTACHMENT_READ, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::ImageLayout::COLOUR_ATTACHMENT);
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->addUsage(backend::ImageUsage::COLOUR_ATTACHMENT);
-//            resource->usage = resource->usage | backend::ImageUsage::COLOUR_ATTACHMENT;
     }
 }
 
@@ -156,7 +155,6 @@ void cala::RenderPass::addDepthAttachment(const char *label) {
         _attachments.emplace(label, backend::Access::DEPTH_STENCIL_READ | backend::Access::DEPTH_STENCIL_WRITE, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::LATE_FRAGMENT, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->addUsage(backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT);
-//            resource->usage = resource->usage | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT;
     }
 }
 
@@ -165,7 +163,6 @@ void cala::RenderPass::addDepthReadAttachment(const char *label) {
         _attachments.emplace(label, backend::Access::DEPTH_STENCIL_READ, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::LATE_FRAGMENT, backend::ImageLayout::DEPTH_STENCIL_READ_ONLY);
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->addUsage(backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT);
-//            resource->usage = resource->usage | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT;
     }
 }
 
@@ -173,7 +170,6 @@ void cala::RenderPass::addIndirectBufferRead(const char *label) {
     if (reads(label, true, backend::PipelineStage::DRAW_INDIRECT, backend::Access::INDIRECT_READ)) {
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->addUsage(backend::ImageUsage::STORAGE);
-//            resource->usage = resource->usage | backend::ImageUsage::STORAGE;
     }
 }
 
@@ -181,7 +177,6 @@ void cala::RenderPass::addStorageImageRead(const char *label, backend::PipelineS
     if (reads(label, true, stage, backend::Access::SHADER_READ, backend::ImageLayout::GENERAL)) {
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->addUsage(backend::ImageUsage::STORAGE);
-//            resource->usage = resource->usage | backend::ImageUsage::STORAGE;
     }
 }
 
@@ -189,7 +184,6 @@ void cala::RenderPass::addStorageImageWrite(const char *label, backend::Pipeline
     if (writes(label, stage, backend::Access::SHADER_WRITE | backend::Access::SHADER_READ, backend::ImageLayout::GENERAL, clear)) {
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->addUsage(backend::ImageUsage::STORAGE);
-//            resource->usage = resource->usage | backend::ImageUsage::STORAGE;
     }
 }
 
@@ -208,10 +202,9 @@ void cala::RenderPass::addStorageBufferWrite(const char *label, backend::Pipelin
 }
 
 void cala::RenderPass::addSampledImageRead(const char *label, backend::PipelineStage stage) {
-    if (reads(label, false, stage, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY)) {
+    if (reads(label, false, stage, backend::Access::SAMPLED_READ, backend::ImageLayout::SHADER_READ_ONLY)) {
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->addUsage(backend::ImageUsage::SAMPLED);
-//            resource->usage = resource->usage | backend::ImageUsage::SAMPLED;
     }
 }
 
@@ -219,7 +212,6 @@ void cala::RenderPass::addSampledImageWrite(const char *label, backend::Pipeline
     if (writes(label, stage, backend::Access::SHADER_WRITE | backend::Access::SHADER_READ, backend::ImageLayout::GENERAL)) {
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->addUsage(backend::ImageUsage::SAMPLED);
-//            resource->usage = resource->usage | backend::ImageUsage::SAMPLED;
     }
 }
 
