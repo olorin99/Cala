@@ -759,7 +759,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         forwardPass.addIndirectBufferRead("materialCounts");
         forwardPass.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
-//        forwardPass.addStorageImageRead("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER);
+        if (_renderSettings.vxgi)
+            forwardPass.addStorageImageRead("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER);
 //        forwardPass.addStorageImageRead("voxelVisualised", backend::PipelineStage::FRAGMENT_SHADER);
 
         forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
