@@ -194,8 +194,8 @@ void cala::RenderPass::addStorageBufferRead(const char *label, backend::Pipeline
     }
 }
 
-void cala::RenderPass::addStorageBufferWrite(const char *label, backend::PipelineStage stage) {
-    if (writes(label, stage, backend::Access::SHADER_WRITE | backend::Access::SHADER_READ)) {
+void cala::RenderPass::addStorageBufferWrite(const char *label, backend::PipelineStage stage, bool clear) {
+    if (writes(label, stage, backend::Access::SHADER_WRITE | backend::Access::SHADER_READ, backend::ImageLayout::UNDEFINED, clear)) {
         if (auto resource = _graph->getResource<BufferResource>(label); resource)
             resource->usage = resource->usage | backend::BufferUsage::STORAGE;
     }
@@ -569,6 +569,14 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
                     vkCmdClearColorImage(cmd.buffer(), resource->handle->image(), backend::vulkan::getImageLayout(backend::ImageLayout::GENERAL), &clearColour, 1, &range);
 
                     b = resource->handle->barrier(backend::PipelineStage::ALL_COMMANDS, barrier.dstStage, backend::Access::TRANSFER_WRITE, barrier.dstAccess, backend::ImageLayout::GENERAL, barrier.dstLayout);
+                    cmd.pipelineBarrier({ &b, 1 });
+                } else if (auto resource1 = getResource<BufferResource>(barrier.name); resource1) {
+                    auto b = resource1->handle->barrier(backend::PipelineStage::ALL_COMMANDS, backend::PipelineStage::ALL_COMMANDS, barrier.srcAccess, backend::Access::TRANSFER_WRITE);
+                    cmd.pipelineBarrier({ &b, 1 });
+
+                    vkCmdFillBuffer(cmd.buffer(), resource1->handle->buffer(), 0, resource1->size, 0);
+
+                    b = resource1->handle->barrier(backend::PipelineStage::ALL_COMMANDS, barrier.dstStage, backend::Access::TRANSFER_WRITE, barrier.dstAccess);
                     cmd.pipelineBarrier({ &b, 1 });
                 }
             } else {
