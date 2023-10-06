@@ -233,6 +233,18 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     materialCountResource.usage = scene._materialCountBuffer[_engine->device().frameIndex()]->usage();
     _graph.addResource("materialCounts", materialCountResource, false);
 
+    BufferResource vertexBufferResource;
+    vertexBufferResource.handle = _engine->_globalVertexBuffer;
+    vertexBufferResource.size = _engine->_globalVertexBuffer->size();
+    vertexBufferResource.usage = _engine->_globalVertexBuffer->usage();
+    _graph.addResource("vertexBuffer", vertexBufferResource, false);
+
+    BufferResource indexBufferResource;
+    indexBufferResource.handle = _engine->_globalIndexBuffer;
+    indexBufferResource.size = _engine->_globalIndexBuffer->size();
+    indexBufferResource.usage = _engine->_globalIndexBuffer->usage();
+    _graph.addResource("indexBuffer", indexBufferResource, false);
+
     BufferResource cameraResource;
     cameraResource.handle = _cameraBuffer[_engine->device().frameIndex()];
     cameraResource.size = _cameraBuffer[_engine->device().frameIndex()]->size();
@@ -423,6 +435,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     pointShadows.addSampledImageWrite("pointDepth", backend::PipelineStage::FRAGMENT_SHADER);
     pointShadows.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
     pointShadows.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER);
+    pointShadows.addVertexBufferRead("vertexBuffer");
+    pointShadows.addIndexBufferRead("indexBuffer");
     pointShadows.addIndirectBufferRead("shadowDrawCommands");
 
     pointShadows.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
@@ -514,7 +528,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd.bindDescriptors();
                     cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
                     cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
-                    cmd.drawIndirectCount(drawCommands->handle, 0, drawCount->handle, 0, scene._renderables.size());
+                    cmd.drawIndirectCount(drawCommands->handle, 0, drawCount->handle, 0);
 
                     cmd.end(*_shadowFramebuffer);
 
@@ -575,6 +589,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             voxelGIPass.addStorageImageWrite("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER, true);
             voxelGIPass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
             voxelGIPass.addIndirectBufferRead("drawCommands");
+            voxelGIPass.addVertexBufferRead("vertexBuffer");
+            voxelGIPass.addIndexBufferRead("indexBuffer");
             voxelGIPass.addStorageBufferRead("lightIndices", backend::PipelineStage::FRAGMENT_SHADER);
             voxelGIPass.addStorageBufferRead("lightGrid", backend::PipelineStage::FRAGMENT_SHADER);
             voxelGIPass.addIndirectBufferRead("materialCounts");
@@ -632,7 +648,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                     cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
                     cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
-                    cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, i * (sizeof(u32) * 2), scene._materialCounts[i].count);
+
+                    u32 drawCommandOffset = scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand);
+                    u32 countOffset = i * (sizeof(u32) * 2);
+                    cmd.drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
                 }
             });
         }
@@ -716,6 +735,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         depthPrePass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
         depthPrePass.addIndirectBufferRead("drawCommands");
         depthPrePass.addIndirectBufferRead("materialCounts");
+        depthPrePass.addVertexBufferRead("vertexBuffer");
+        depthPrePass.addIndexBufferRead("indexBuffer");
         depthPrePass.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
         depthPrePass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
@@ -735,7 +756,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
             cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
-                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
+                u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
+                u32 countOffset = material * (sizeof(u32) * 2);
+                cmd.drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
             }
         });
     }
@@ -757,6 +780,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         forwardPass.addStorageBufferRead("lightIndices", backend::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addStorageBufferRead("lightGrid", backend::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addIndirectBufferRead("materialCounts");
+        forwardPass.addVertexBufferRead("vertexBuffer");
+        forwardPass.addIndexBufferRead("indexBuffer");
         forwardPass.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
 //        forwardPass.addStorageImageRead("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER);
@@ -808,7 +833,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                 cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
                 cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
-                cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, i * (sizeof(u32) * 2), scene._materialCounts[i].count);
+
+                u32 drawCommandOffset = scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand);
+                u32 countOffset = i * (sizeof(u32) * 2);
+                cmd.drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
             }
         });
     }

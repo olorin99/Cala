@@ -107,7 +107,7 @@ cala::RenderPass::~RenderPass() {
 }
 
 
-bool cala::RenderPass::reads(const char *label, bool storage, backend::PipelineStage stage, backend::Access access, backend::ImageLayout layout) {
+bool cala::RenderPass::reads(const char *label, backend::PipelineStage stage, backend::Access access, backend::ImageLayout layout) {
     auto it = _graph->_attachmentMap.find(label);
     if (_graph->_attachmentMap.end() == it) {
         std::string err = "unable to find ";
@@ -159,7 +159,7 @@ void cala::RenderPass::addDepthAttachment(const char *label) {
 }
 
 void cala::RenderPass::addDepthReadAttachment(const char *label) {
-    if (reads(label, false, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::LATE_FRAGMENT, backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_READ_ONLY)) {
+    if (reads(label, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::LATE_FRAGMENT, backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_READ_ONLY)) {
         _attachments.emplace(label, backend::Access::DEPTH_STENCIL_READ, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::LATE_FRAGMENT, backend::ImageLayout::DEPTH_STENCIL_READ_ONLY);
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->addUsage(backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT);
@@ -167,14 +167,30 @@ void cala::RenderPass::addDepthReadAttachment(const char *label) {
 }
 
 void cala::RenderPass::addIndirectBufferRead(const char *label) {
-    if (reads(label, true, backend::PipelineStage::DRAW_INDIRECT, backend::Access::INDIRECT_READ)) {
+    if (reads(label, backend::PipelineStage::DRAW_INDIRECT, backend::Access::INDIRECT_READ)) {
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->addUsage(backend::ImageUsage::STORAGE);
     }
 }
 
+void cala::RenderPass::addVertexBufferRead(const char *label) {
+    if (reads(label, backend::PipelineStage::VERTEX_INPUT, backend::Access::VERTEX_READ)) {
+        if (auto resource = _graph->getResource<BufferResource>(label); resource) {
+            resource->usage = resource->usage | backend::BufferUsage::VERTEX;
+        }
+    }
+}
+
+void cala::RenderPass::addIndexBufferRead(const char *label) {
+    if (reads(label, backend::PipelineStage::INDEX_INPUT, backend::Access::INDEX_READ)) {
+        if (auto resource = _graph->getResource<BufferResource>(label); resource) {
+            resource->usage = resource->usage | backend::BufferUsage::INDEX;
+        }
+    }
+}
+
 void cala::RenderPass::addStorageImageRead(const char *label, backend::PipelineStage stage) {
-    if (reads(label, true, stage, backend::Access::SHADER_READ, backend::ImageLayout::GENERAL)) {
+    if (reads(label, stage, backend::Access::SHADER_READ, backend::ImageLayout::GENERAL)) {
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->addUsage(backend::ImageUsage::STORAGE);
     }
@@ -188,7 +204,7 @@ void cala::RenderPass::addStorageImageWrite(const char *label, backend::Pipeline
 }
 
 void cala::RenderPass::addStorageBufferRead(const char *label, backend::PipelineStage stage) {
-    if (reads(label, true, stage, backend::Access::SHADER_READ)) {
+    if (reads(label, stage, backend::Access::SHADER_READ)) {
         if (auto resource = _graph->getResource<BufferResource>(label); resource)
             resource->usage = resource->usage | backend::BufferUsage::STORAGE;
     }
@@ -202,7 +218,7 @@ void cala::RenderPass::addStorageBufferWrite(const char *label, backend::Pipelin
 }
 
 void cala::RenderPass::addSampledImageRead(const char *label, backend::PipelineStage stage) {
-    if (reads(label, false, stage, backend::Access::SAMPLED_READ, backend::ImageLayout::SHADER_READ_ONLY)) {
+    if (reads(label, stage, backend::Access::SAMPLED_READ, backend::ImageLayout::SHADER_READ_ONLY)) {
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->addUsage(backend::ImageUsage::SAMPLED);
     }
@@ -415,16 +431,16 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
         }
     }
 
-//    for (i32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
-//        auto& pass = _orderedPasses[passIndex];
-//        _engine->logger().info("Pass: {}", pass->_passName);
-//        for (auto& barrier : pass->_invalidate) {
-//            _engine->logger().info("Invalidate: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
-//        }
-//        for (auto& barrier : pass->_flush) {
-//            _engine->logger().info("Flush: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
-//        }
-//    }
+    for (i32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
+        auto& pass = _orderedPasses[passIndex];
+        _engine->logger().info("Pass: {}", pass->_passName);
+        for (auto& barrier : pass->_invalidate) {
+            _engine->logger().info("Invalidate: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
+        }
+        for (auto& barrier : pass->_flush) {
+            _engine->logger().info("Flush: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
+        }
+    }
 
     for (auto& attachment : _attachmentMap) {
         u32 index = attachment.second.index;

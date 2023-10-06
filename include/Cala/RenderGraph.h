@@ -69,7 +69,7 @@ namespace cala {
     public:
 
     private:
-        bool reads(const char* label, bool storage = false, backend::PipelineStage stage = backend::PipelineStage::TOP, backend::Access access = backend::Access::MEMORY_READ, backend::ImageLayout layout = backend::ImageLayout::UNDEFINED);
+        bool reads(const char* label, backend::PipelineStage stage = backend::PipelineStage::TOP, backend::Access access = backend::Access::MEMORY_READ, backend::ImageLayout layout = backend::ImageLayout::UNDEFINED);
 
         bool writes(const char* label, backend::PipelineStage stage = backend::PipelineStage::TOP, backend::Access access = backend::Access::MEMORY_WRITE, backend::ImageLayout layout = backend::ImageLayout::UNDEFINED, bool clear = false);
     public:
@@ -81,6 +81,10 @@ namespace cala {
         void addDepthReadAttachment(const char* label);
 
         void addIndirectBufferRead(const char* label);
+
+        void addVertexBufferRead(const char* label);
+
+        void addIndexBufferRead(const char* label);
 
         void addStorageImageRead(const char* label, backend::PipelineStage stage);
 

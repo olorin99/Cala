@@ -377,7 +377,7 @@ void cala::backend::vulkan::CommandBuffer::drawIndirect(BufferHandle buffer, u32
     writeBufferMarker(PipelineStage::VERTEX_SHADER | PipelineStage::GEOMETRY_SHADER | PipelineStage::FRAGMENT_SHADER, "vkCmdDrawIndirect");
 }
 
-void cala::backend::vulkan::CommandBuffer::drawIndirectCount(BufferHandle buffer, u32 bufferOffset, BufferHandle countBuffer, u32 countOffset, u32 maxDrawCount, u32 stride) {
+void cala::backend::vulkan::CommandBuffer::drawIndirectCount(BufferHandle buffer, u32 bufferOffset, BufferHandle countBuffer, u32 countOffset, u32 stride) {
     assert(!_pipelineDirty);
     assert(!_descriptorDirty);
     if (_pipelineKey.compute) throw std::runtime_error("Trying to draw when compute pipeline is bound");
@@ -386,11 +386,13 @@ void cala::backend::vulkan::CommandBuffer::drawIndirectCount(BufferHandle buffer
     if (_indexBuffer) {
         if (stride == 0)
             stride = sizeof(VkDrawIndexedIndirectCommand);
+        u32 maxDrawCount = (buffer->size() - bufferOffset) / stride;
         vkCmdDrawIndexedIndirectCount(_buffer, buffer->buffer(), bufferOffset, countBuffer->buffer(), countOffset, maxDrawCount, stride);
     }
     else {
         if (stride == 0)
             stride = sizeof(VkDrawIndirectCommand);
+        u32 maxDrawCount = (buffer->size() - bufferOffset) / stride;
         vkCmdDrawIndirectCount(_buffer, buffer->buffer(), bufferOffset, countBuffer->buffer(), countOffset, maxDrawCount, stride);
     }
     ++_drawCallCount;
