@@ -412,7 +412,7 @@ void cala::backend::vulkan::CommandBuffer::clearImage(cala::backend::vulkan::Ima
     range.baseMipLevel = 0;
     range.baseArrayLayer = 0;
     range.levelCount = VK_REMAINING_MIP_LEVELS;
-    range.baseArrayLayer = VK_REMAINING_ARRAY_LAYERS;
+    range.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
     vkCmdClearColorImage(_buffer, image->image(), VK_IMAGE_LAYOUT_GENERAL, &clearColour, 1, &range);
 }
