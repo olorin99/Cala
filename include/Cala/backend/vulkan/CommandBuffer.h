@@ -115,7 +115,7 @@ namespace cala::backend::vulkan {
 
         void drawIndirect(BufferHandle buffer, u32 offset, u32 drawCount, u32 stride = 0);
 
-        void drawIndirectCount(BufferHandle buffer, u32 bufferOffset, BufferHandle countBuffer, u32 countOffset, u32 maxDrawCount, u32 stride = sizeof(VkDrawIndexedIndirectCommand));
+        void drawIndirectCount(BufferHandle buffer, u32 bufferOffset, BufferHandle countBuffer, u32 countOffset, u32 stride = 0);
 
         void dispatchCompute(u32 x, u32 y, u32 z);
 

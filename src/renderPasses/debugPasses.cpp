@@ -39,7 +39,10 @@ void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene
             cmd.bindBuffer(2, 0, engine.getMaterial(material)->buffer(), true);
             cmd.bindPipeline();
             cmd.bindDescriptors();
-            cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
+
+            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
+            u32 countOffset = material * (sizeof(u32) * 2);
+            cmd.drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
         }
     });
 }
@@ -79,7 +82,10 @@ void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
             cmd.bindBuffer(2, 0, engine.getMaterial(material)->buffer(), true);
             cmd.bindPipeline();
             cmd.bindDescriptors();
-            cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
+
+            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
+            u32 countOffset = material * (sizeof(u32) * 2);
+            cmd.drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
         }
     });
 }
@@ -119,7 +125,10 @@ void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sce
             cmd.bindBuffer(2, 0, engine.getMaterial(material)->buffer(), true);
             cmd.bindPipeline();
             cmd.bindDescriptors();
-            cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
+
+            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
+            u32 countOffset = material * (sizeof(u32) * 2);
+            cmd.drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
         }
     });
 }
@@ -159,7 +168,10 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene&
             cmd.bindBuffer(2, 0, engine.getMaterial(material)->buffer(), true);
             cmd.bindPipeline();
             cmd.bindDescriptors();
-            cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
+
+            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
+            u32 countOffset = material * (sizeof(u32) * 2);
+            cmd.drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
         }
     });
 }
@@ -196,7 +208,10 @@ void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala
             cmd.bindProgram(engine.getProgram(cala::Engine::ProgramType::DEBUG_WORLDPOS));
             cmd.bindPipeline();
             cmd.bindDescriptors();
-            cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
+
+            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
+            u32 countOffset = material * (sizeof(u32) * 2);
+            cmd.drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
         }
     });
 }
@@ -236,7 +251,10 @@ void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
             cmd.pushConstants(cala::backend::ShaderStage::FRAGMENT, { &settings.wireframeColour, sizeof(settings.wireframeColour) });
             cmd.bindPipeline();
             cmd.bindDescriptors();
-            cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
+
+            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
+            u32 countOffset = material * (sizeof(u32) * 2);
+            cmd.drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
         }
     });
 }
@@ -274,7 +292,10 @@ void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::
             cmd.pushConstants(cala::backend::ShaderStage::GEOMETRY, { &settings.normalLength, sizeof(settings.normalLength) }, sizeof(settings.wireframeColour));
             cmd.bindPipeline();
             cmd.bindDescriptors();
-            cmd.drawIndirectCount(drawCommands->handle, scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand), materialCounts->handle, material * (sizeof(u32) * 2), scene._materialCounts[material].count);
+
+            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
+            u32 countOffset = material * (sizeof(u32) * 2);
+            cmd.drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
         }
     });
 }
