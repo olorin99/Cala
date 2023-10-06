@@ -87,6 +87,8 @@ namespace cala::backend::vulkan {
 
         struct Barrier {
             Image* image;
+            PipelineStage srcStage;
+            PipelineStage dstStage;
             Access srcAccess;
             Access dstAccess;
             ImageLayout srcLayout;
@@ -94,9 +96,9 @@ namespace cala::backend::vulkan {
             VkImageSubresourceRange subresourceRange;
         };
 
-        Barrier barrier(Access srcAccess, Access dstAccess, ImageLayout dstLayout, u32 layer = 0);
+        Barrier barrier(PipelineStage srcStage, PipelineStage dstStage, Access srcAccess, Access dstAccess, ImageLayout dstLayout, u32 layer = 0);
 
-        Barrier barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer = 0);
+        Barrier barrier(PipelineStage srcStage, PipelineStage dstStage, Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer = 0);
 
         void setLayout(VkImageLayout layout);
 

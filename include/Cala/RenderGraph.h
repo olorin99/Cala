@@ -88,7 +88,7 @@ namespace cala {
 
         void addStorageBufferRead(const char* label, backend::PipelineStage stage);
 
-        void addStorageBufferWrite(const char* label, backend::PipelineStage stage);
+        void addStorageBufferWrite(const char* label, backend::PipelineStage stage, bool clear = false);
 
         void addSampledImageRead(const char* label, backend::PipelineStage stage);
 

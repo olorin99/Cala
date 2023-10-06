@@ -22,17 +22,12 @@ layout (set = 2, binding = 0) writeonly buffer DrawCommands {
     IndexedIndirectCommand commands[];
 };
 
-layout (set = 2, binding = 1) buffer Output {
-    uint drawCount;
-    uint maxDrawCount;
-};
-
 struct MaterialCount {
     uint count;
     uint offset;
 };
 
-layout (set = 2, binding = 2) buffer MaterialCounts {
+layout (set = 2, binding = 1) buffer MaterialCounts {
     MaterialCount counts[];
 };
 
@@ -47,15 +42,16 @@ bool frustumCheck(vec3 pos, float radius) {
 
 void main() {
     uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x;
-    if (idx >= maxDrawCount)
+    if (idx >= globalData.maxDrawCount)
         return;
 
     if (idx == 0) {
-        atomicExchange(drawCount, 0);
         for (uint i = 0; i < counts.length(); i++) {
             atomicExchange(counts[i].count, 0);
         }
     }
+
+    barrier();
 
     Mesh mesh = bindlessBufferMesh[globalData.meshBufferIndex].meshData[idx];
     vec3 center = (mesh.max.xyz + mesh.min.xyz) * 0.5;
@@ -63,8 +59,7 @@ void main() {
     vec3 halfExtent = (mesh.max.xyz - mesh.min.xyz) * 0.5;
 
     if (frustumCheck(center, length(halfExtent))) {
-        uint a = atomicAdd(drawCount, 1);
-        uint b = atomicAdd(counts[mesh.materialIndex].count, 1);
+        uint a = atomicAdd(counts[mesh.materialIndex].count, 1);
         uint offset = counts[mesh.materialIndex].offset;
         IndexedIndirectCommand command;
         command.indexCount = mesh.indexCount;
@@ -72,6 +67,6 @@ void main() {
         command.vertexOffset = 0;
         command.firstInstance = idx;
         command.instanceCount = 1;
-        commands[offset + b] = command;
+        commands[offset + a] = command;
     }
 }

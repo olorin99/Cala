@@ -4,6 +4,7 @@
 struct GlobalData {
     float gamma;
     uint time;
+    uint maxDrawCount;
     int transformsBufferIndex;
     int meshBufferIndex;
     int materialBufferIndex;

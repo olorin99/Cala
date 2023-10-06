@@ -314,10 +314,12 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     vulkan12Features.hostQueryReset = VK_TRUE;
     vulkan12Features.timelineSemaphore = VK_TRUE;
 
-//    VkPhysicalDeviceVulkan13Features vulkan13Features{};
-//    vulkan13Features.sType - VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+    VkPhysicalDeviceVulkan13Features vulkan13Features{};
+    vulkan13Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+    vulkan13Features.synchronization2 = VK_TRUE;
 
     vulkan11Features.pNext = &vulkan12Features;
+    vulkan12Features.pNext = &vulkan13Features;
     createInfo.pNext = &vulkan11Features;
     VK_TRY(vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_logicalDevice));
 

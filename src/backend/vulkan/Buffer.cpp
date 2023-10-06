@@ -118,9 +118,21 @@ void cala::backend::vulkan::Buffer::View::data(ende::Span<const void> data, u32 
     _parent->data(data, _offset + offset);
 }
 
-cala::backend::vulkan::Buffer::Barrier cala::backend::vulkan::Buffer::barrier(Access dstAccess) {
+cala::backend::vulkan::Buffer::Barrier cala::backend::vulkan::Buffer::barrier(PipelineStage srcStage, PipelineStage dstStage, Access dstAccess) {
     Barrier b{};
+    b.srcStage = srcStage;
+    b.dstStage = dstStage;
     b.srcAccess = invalidated() ? Access::MEMORY_WRITE : Access::MEMORY_READ;
+    b.dstAccess = dstAccess;
+    b.buffer = this;
+    return b;
+}
+
+cala::backend::vulkan::Buffer::Barrier cala::backend::vulkan::Buffer::barrier(PipelineStage srcStage, PipelineStage dstStage, Access srcAccess, Access dstAccess) {
+    Barrier b{};
+    b.srcStage = srcStage;
+    b.dstStage = dstStage;
+    b.srcAccess = srcAccess;
     b.dstAccess = dstAccess;
     b.buffer = this;
     return b;

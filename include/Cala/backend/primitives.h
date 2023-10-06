@@ -87,7 +87,15 @@ namespace cala::backend {
         SHADER_READ_ONLY = 5,
         TRANSFER_SRC = 6,
         TRANSFER_DST = 7,
-        PREINITIALIZED = 8
+        PREINITIALIZED = 8,
+        DEPTH_READ_ONLY_STENCIL_ATTACHMENT = 1000117000,
+        DEPTH_ATTACHMENT_STENCIL_READ_ONLY = 1000117001,
+        DEPTH_ATTACHMENT = 1000241000,
+        DEPTH_READ_ONLY = 1000241001,
+        STENCIL_ATTACHMENT = 1000241002,
+        STENCIL_READ_ONLY = 1000241003,
+        READ_ONLY = 1000314000,
+        ATTACHMENT = 1000314001
     };
 
     enum class BufferUsage {
@@ -194,7 +202,7 @@ namespace cala::backend {
         ALL = 0x7FFFFFFF
     };
 
-    enum class Access {
+    enum class Access : u64 {
         NONE = 0,
         INDIRECT_READ = 0x00000001,
         INDEX_READ = 0x00000002,
@@ -212,7 +220,10 @@ namespace cala::backend {
         HOST_READ = 0x00002000,
         HOST_WRITE = 0x00004000,
         MEMORY_READ = 0x00008000,
-        MEMORY_WRITE = 0x00010000
+        MEMORY_WRITE = 0x00010000,
+        SAMPLED_READ = 0x100000000,
+        STORAGE_READ = 0x200000000,
+        STORAGE_WRITE = 0x400000000,
     };
 
     constexpr bool isReadAccess(Access access) {
@@ -228,6 +239,8 @@ namespace cala::backend {
             case Access::TRANSFER_READ:
             case Access::HOST_READ:
             case Access::MEMORY_READ:
+            case Access::SAMPLED_READ:
+            case Access::STORAGE_READ:
                 return true;
         }
         return false;
@@ -241,12 +254,14 @@ namespace cala::backend {
             case Access::TRANSFER_WRITE:
             case Access::HOST_WRITE:
             case Access::MEMORY_WRITE:
+            case Access::STORAGE_WRITE:
                 return true;
         }
         return false;
     }
 
-    enum class PipelineStage {
+    enum class PipelineStage : u64 {
+        NONE = 0,
         TOP = 0x00000001,
         DRAW_INDIRECT = 0x00000002,
         VERTEX_INPUT = 0x00000004,
@@ -263,7 +278,12 @@ namespace cala::backend {
         BOTTOM = 0x00002000,
         HOST = 0x00004000,
         ALL_GRAPHICS = 0x00008000,
-        ALL_COMMANDS = 0x00010000
+        ALL_COMMANDS = 0x00010000,
+        COPY = 0x100000000,
+        RESOLVE = 0x200000000,
+        BLIT = 0x400000000,
+        CLEAR = 0x800000000,
+        INDEX_INPUT = 0x1000000000
     };
 
     enum class AttribType {
@@ -405,6 +425,22 @@ namespace cala::backend {
                 return tostr(ImageLayout::TRANSFER_DST);
             case ImageLayout::PREINITIALIZED:
                 return tostr(ImageLayout::PREINITIALIZED);
+            case ImageLayout::DEPTH_READ_ONLY_STENCIL_ATTACHMENT:
+                return tostr(ImageLayout::DEPTH_READ_ONLY_STENCIL_ATTACHMENT);
+            case ImageLayout::DEPTH_ATTACHMENT_STENCIL_READ_ONLY:
+                return tostr(ImageLayout::DEPTH_ATTACHMENT_STENCIL_READ_ONLY);
+            case ImageLayout::DEPTH_ATTACHMENT:
+                return tostr(ImageLayout::DEPTH_ATTACHMENT);
+            case ImageLayout::DEPTH_READ_ONLY:
+                return tostr(ImageLayout::DEPTH_READ_ONLY);
+            case ImageLayout::STENCIL_ATTACHMENT:
+                return tostr(ImageLayout::STENCIL_ATTACHMENT);
+            case ImageLayout::STENCIL_READ_ONLY:
+                return tostr(ImageLayout::STENCIL_READ_ONLY);
+            case ImageLayout::READ_ONLY:
+                return tostr(ImageLayout::READ_ONLY);
+            case ImageLayout::ATTACHMENT:
+                return tostr(ImageLayout::ATTACHMENT);
         }
         return tostr(ImageLayout::UNDEFINED);
     }
@@ -445,6 +481,16 @@ namespace cala::backend {
                 return tostr(PipelineStage::ALL_GRAPHICS);
             case PipelineStage::ALL_COMMANDS:
                 return tostr(PipelineStage::ALL_COMMANDS);
+            case PipelineStage::COPY:
+                return tostr(PipelineStage::COPY);
+            case PipelineStage::RESOLVE:
+                return tostr(PipelineStage::RESOLVE);
+            case PipelineStage::BLIT:
+                return tostr(PipelineStage::BLIT);
+            case PipelineStage::CLEAR:
+                return tostr(PipelineStage::CLEAR);
+            case PipelineStage::INDEX_INPUT:
+                return tostr(PipelineStage::INDEX_INPUT);
         }
         return tostr(PipelineStage::TOP);
     }
@@ -487,6 +533,12 @@ namespace cala::backend {
                 return tostr(Access::MEMORY_READ);
             case Access::MEMORY_WRITE:
                 return tostr(Access::MEMORY_WRITE);
+            case Access::SAMPLED_READ:
+                return tostr(Access::SAMPLED_READ);
+            case Access::STORAGE_READ:
+                return tostr(Access::STORAGE_READ);
+            case Access::STORAGE_WRITE:
+                return tostr(Access::STORAGE_WRITE);
         }
         return tostr(Access::NONE);
     }

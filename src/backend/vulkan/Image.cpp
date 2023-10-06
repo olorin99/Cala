@@ -83,8 +83,8 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Device& driver, D
         range.baseArrayLayer = info.layer;
         range.layerCount = 1;
 
-        Barrier imageBarrier = barrier(Access::NONE, Access::TRANSFER_WRITE, ImageLayout::TRANSFER_DST);
-        buffer.pipelineBarrier(PipelineStage::TOP, PipelineStage::TRANSFER, { &imageBarrier, 1 });
+        Barrier imageBarrier = barrier(PipelineStage::TOP, PipelineStage::TRANSFER, Access::NONE, Access::TRANSFER_WRITE, ImageLayout::TRANSFER_DST);
+        buffer.pipelineBarrier({ &imageBarrier, 1 });
 
         VkBufferImageCopy copyRegion{};
         copyRegion.bufferOffset = 0;
@@ -101,8 +101,8 @@ void cala::backend::vulkan::Image::data(cala::backend::vulkan::Device& driver, D
 
         vkCmdCopyBufferToImage(buffer.buffer(), staging->buffer(), _image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
-        imageBarrier = barrier(Access::TRANSFER_WRITE, Access::SHADER_READ, ImageLayout::SHADER_READ_ONLY);
-        buffer.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::FRAGMENT_SHADER, { &imageBarrier, 1 });
+        imageBarrier = barrier(PipelineStage::TRANSFER, PipelineStage::FRAGMENT_SHADER, Access::TRANSFER_WRITE, Access::SHADER_READ, ImageLayout::SHADER_READ_ONLY);
+        buffer.pipelineBarrier({ &imageBarrier, 1 });
     });
 //    driver.destroyBuffer(staging);
     _layout = ImageLayout::SHADER_READ_ONLY;
@@ -174,8 +174,8 @@ void cala::backend::vulkan::Image::generateMips() {
 void cala::backend::vulkan::Image::generateMips(CommandBuffer &cmd) {
     // mip -> mip+1
 
-    Barrier b = barrier(Access::NONE, Access::TRANSFER_READ, ImageLayout::TRANSFER_SRC);
-    cmd.pipelineBarrier(PipelineStage::TOP, PipelineStage::TRANSFER, { &b, 1 });
+    Barrier b = barrier(PipelineStage::TOP, PipelineStage::TRANSFER, Access::NONE, Access::TRANSFER_READ, ImageLayout::TRANSFER_SRC);
+    cmd.pipelineBarrier({ &b, 1 });
 
     b.subresourceRange.layerCount = 1;
     b.subresourceRange.levelCount = 1;
@@ -187,12 +187,14 @@ void cala::backend::vulkan::Image::generateMips(CommandBuffer &cmd) {
         for (u32 mip = 1; mip < _mips; mip++) {
 
             b.subresourceRange.baseMipLevel = mip;
+            b.srcStage = PipelineStage::TRANSFER;
+            b.dstStage = PipelineStage::TRANSFER;
             b.srcLayout = ImageLayout::TRANSFER_SRC;
             b.dstLayout = ImageLayout::TRANSFER_DST;
             b.srcAccess = Access::TRANSFER_READ;
             b.dstAccess = Access::TRANSFER_WRITE;
 
-            cmd.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::TRANSFER, { &b, 1 });
+            cmd.pipelineBarrier({ &b, 1 });
 
             VkImageBlit blit{};
             blit.srcOffsets[0] = {0, 0, 0};
@@ -215,12 +217,14 @@ void cala::backend::vulkan::Image::generateMips(CommandBuffer &cmd) {
             vkCmdBlitImage(cmd.buffer(), _image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 
             b.subresourceRange.baseMipLevel = mip;
+            b.srcStage = PipelineStage::TRANSFER;
+            b.dstStage = PipelineStage::TRANSFER;
             b.srcLayout = ImageLayout::TRANSFER_DST;
             b.dstLayout = ImageLayout::TRANSFER_SRC;
             b.srcAccess = Access::TRANSFER_WRITE;
             b.dstAccess = Access::TRANSFER_READ;
 
-            cmd.pipelineBarrier(PipelineStage::TRANSFER, PipelineStage::TRANSFER, { &b, 1 });
+            cmd.pipelineBarrier({ &b, 1 });
 
         }
     }
@@ -350,7 +354,7 @@ cala::backend::vulkan::Image::View cala::backend::vulkan::Image::newView(u32 mip
 //    return memoryBarrier;
 //}
 
-cala::backend::vulkan::Image::Barrier cala::backend::vulkan::Image::barrier(Access srcAccess, Access dstAccess, ImageLayout dstLayout, u32 layer) {
+cala::backend::vulkan::Image::Barrier cala::backend::vulkan::Image::barrier(PipelineStage srcStage, PipelineStage dstStage, Access srcAccess, Access dstAccess, ImageLayout dstLayout, u32 layer) {
     Barrier b{};
     b.subresourceRange.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     b.subresourceRange.baseMipLevel = 0;
@@ -358,6 +362,8 @@ cala::backend::vulkan::Image::Barrier cala::backend::vulkan::Image::barrier(Acce
     b.subresourceRange.baseArrayLayer = layer;
     b.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
+    b.srcStage = srcStage;
+    b.dstStage = dstStage;
     b.srcAccess = srcAccess;
     b.dstAccess = dstAccess;
     b.srcLayout = layout();
@@ -366,7 +372,7 @@ cala::backend::vulkan::Image::Barrier cala::backend::vulkan::Image::barrier(Acce
     return b;
 }
 
-cala::backend::vulkan::Image::Barrier cala::backend::vulkan::Image::barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer) {
+cala::backend::vulkan::Image::Barrier cala::backend::vulkan::Image::barrier(PipelineStage srcStage, PipelineStage dstStage, Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer) {
     Barrier b{};
     b.subresourceRange.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     b.subresourceRange.baseMipLevel = 0;
@@ -374,6 +380,8 @@ cala::backend::vulkan::Image::Barrier cala::backend::vulkan::Image::barrier(Acce
     b.subresourceRange.baseArrayLayer = layer;
     b.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
+    b.srcStage = srcStage;
+    b.dstStage = dstStage;
     b.srcAccess = srcAccess;
     b.dstAccess = dstAccess;
     b.srcLayout = srcLayout;
