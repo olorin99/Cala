@@ -555,18 +555,11 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
 
             if (clear) {
                 if (auto resource = getResource<ImageResource>(barrier.name); resource) {
-                    VkClearColorValue clearColour = { 0.f, 0.f, 0.f, 0.f };
-                    VkImageSubresourceRange range{};
-                    range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                    range.baseMipLevel = 0;
-                    range.baseArrayLayer = 0;
-                    range.levelCount = VK_REMAINING_MIP_LEVELS;
-                    range.layerCount = VK_REMAINING_ARRAY_LAYERS;
                     auto b = resource->handle->barrier(backend::PipelineStage::ALL_COMMANDS, backend::PipelineStage::ALL_COMMANDS, barrier.srcAccess, backend::Access::TRANSFER_WRITE, barrier.srcLayout, backend::ImageLayout::GENERAL);
-//                    cmd.pipelineBarrier(barrier.srcStage, backend::PipelineStage::TRANSFER, { &b, 1 });
+
                     cmd.pipelineBarrier({ &b, 1 });
 
-                    vkCmdClearColorImage(cmd.buffer(), resource->handle->image(), backend::vulkan::getImageLayout(backend::ImageLayout::GENERAL), &clearColour, 1, &range);
+                    cmd.clearImage(resource->handle);
 
                     b = resource->handle->barrier(backend::PipelineStage::ALL_COMMANDS, barrier.dstStage, backend::Access::TRANSFER_WRITE, barrier.dstAccess, backend::ImageLayout::GENERAL, barrier.dstLayout);
                     cmd.pipelineBarrier({ &b, 1 });
@@ -574,7 +567,7 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
                     auto b = resource1->handle->barrier(backend::PipelineStage::ALL_COMMANDS, backend::PipelineStage::ALL_COMMANDS, barrier.srcAccess, backend::Access::TRANSFER_WRITE);
                     cmd.pipelineBarrier({ &b, 1 });
 
-                    vkCmdFillBuffer(cmd.buffer(), resource1->handle->buffer(), 0, resource1->size, 0);
+                    cmd.clearBuffer(resource1->handle);
 
                     b = resource1->handle->barrier(backend::PipelineStage::ALL_COMMANDS, barrier.dstStage, backend::Access::TRANSFER_WRITE, barrier.dstAccess);
                     cmd.pipelineBarrier({ &b, 1 });
@@ -592,30 +585,7 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
                     }
                 }
             }
-
         }
-
-//        for (auto& output : pass->_outputs) {
-//            if (output.clear) {
-//                if (auto resource = getResource<ImageResource>(output.name); resource) {
-//                    VkClearColorValue clearColour = { 0.f, 0.f, 0.f, 0.f };
-//                    VkImageSubresourceRange range{};
-//                    range.aspectMask = backend::isDepthFormat(resource->format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-//                    range.baseMipLevel = 0;
-//                    range.baseArrayLayer = 0;
-//                    range.levelCount = VK_REMAINING_MIP_LEVELS;
-//                    range.layerCount = VK_REMAINING_ARRAY_LAYERS;
-//
-//                    auto b = resource->handle->barrier(backend::Access::NONE, backend::Access::MEMORY_WRITE | backend::Access::MEMORY_READ, backend::ImageLayout::GENERAL);
-//                    cmd.pipelineBarrier(backend::PipelineStage::ALL_COMMANDS, backend::PipelineStage::ALL_COMMANDS, { &b, 1 });
-//
-//                    vkCmdClearColorImage(cmd.buffer(), resource->handle->image(), backend::vulkan::getImageLayout(backend::ImageLayout::GENERAL), &clearColour, 1, &range);
-//
-//                    b = resource->handle->barrier(backend::Access::MEMORY_WRITE | backend::Access::MEMORY_READ, backend::Access::MEMORY_WRITE | backend::Access::MEMORY_READ | output.access, output.layout);
-//                    cmd.pipelineBarrier(backend::PipelineStage::ALL_COMMANDS, backend::PipelineStage::ALL_COMMANDS, { &b, 1 });
-//                }
-//            }
-//        }
 
         if (!pass->compute && pass->_framebuffer)
             cmd.begin(*pass->_framebuffer);

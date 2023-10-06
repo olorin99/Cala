@@ -405,6 +405,22 @@ void cala::backend::vulkan::CommandBuffer::dispatchCompute(u32 x, u32 y, u32 z) 
     writeBufferMarker(PipelineStage::COMPUTE_SHADER, "vkCmdDispatch");
 }
 
+void cala::backend::vulkan::CommandBuffer::clearImage(cala::backend::vulkan::ImageHandle image, const ende::math::Vec4f& clearValue) {
+    VkClearColorValue clearColour = { clearValue.x(), clearValue.y(), clearValue.z(), clearValue.w() };
+    VkImageSubresourceRange range{};
+    range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    range.baseMipLevel = 0;
+    range.baseArrayLayer = 0;
+    range.levelCount = VK_REMAINING_MIP_LEVELS;
+    range.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+    vkCmdClearColorImage(_buffer, image->image(), VK_IMAGE_LAYOUT_GENERAL, &clearColour, 1, &range);
+}
+
+void cala::backend::vulkan::CommandBuffer::clearBuffer(cala::backend::vulkan::BufferHandle buffer, u32 clearValue) {
+    vkCmdFillBuffer(_buffer, buffer->buffer(), 0, buffer->size(), clearValue);
+}
+
 void cala::backend::vulkan::CommandBuffer::pipelineBarrier(ende::Span<VkBufferMemoryBarrier2> bufferBarriers, ende::Span<VkImageMemoryBarrier2> imageBarriers) {
     VkDependencyInfo info{};
     info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
@@ -414,8 +430,6 @@ void cala::backend::vulkan::CommandBuffer::pipelineBarrier(ende::Span<VkBufferMe
     info.pImageMemoryBarriers = imageBarriers.data();
 
     vkCmdPipelineBarrier2(_buffer, &info);
-
-//    vkCmdPipelineBarrier(_buffer, getPipelineStage(srcStage), getPipelineStage(dstStage), dependencyFlags, 0, nullptr, bufferBarriers.size(), bufferBarriers.data(), imageBarriers.size(), imageBarriers.data());
 }
 
 void cala::backend::vulkan::CommandBuffer::pipelineBarrier(ende::Span<Image::Barrier> imageBarriers) {
@@ -443,7 +457,6 @@ void cala::backend::vulkan::CommandBuffer::pipelineBarrier(ende::Span<Image::Bar
     info.pImageMemoryBarriers = barriers;
 
     vkCmdPipelineBarrier2(_buffer, &info);
-//    vkCmdPipelineBarrier(_buffer, getPipelineStage(srcStage), getPipelineStage(dstStage), 0, 0, nullptr, 0, nullptr, imageBarriers.size(), barriers);
 }
 
 void cala::backend::vulkan::CommandBuffer::pipelineBarrier(ende::Span<Buffer::Barrier> bufferBarriers) {
@@ -469,7 +482,6 @@ void cala::backend::vulkan::CommandBuffer::pipelineBarrier(ende::Span<Buffer::Ba
     info.pBufferMemoryBarriers = barriers;
 
     vkCmdPipelineBarrier2(_buffer, &info);
-//    vkCmdPipelineBarrier(_buffer, getPipelineStage(srcStage), getPipelineStage(dstStage), 0, 0, nullptr, bufferBarriers.size(), barriers, 0, nullptr);
 }
 
 void cala::backend::vulkan::CommandBuffer::pushDebugLabel(std::string_view label, std::array<f32, 4> colour) {

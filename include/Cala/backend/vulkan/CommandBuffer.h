@@ -13,6 +13,7 @@
 #include <cstring>
 #include <Ende/util/hash.h>
 #include "../third_party/tsl/robin_map.h"
+#include "Ende/math/Vec.h"
 
 namespace cala::backend::vulkan {
 
@@ -117,6 +118,11 @@ namespace cala::backend::vulkan {
         void drawIndirectCount(BufferHandle buffer, u32 bufferOffset, BufferHandle countBuffer, u32 countOffset, u32 maxDrawCount, u32 stride = sizeof(VkDrawIndexedIndirectCommand));
 
         void dispatchCompute(u32 x, u32 y, u32 z);
+
+
+        void clearImage(ImageHandle image, const ende::math::Vec4f& clearValue = { 0.f, 0.f, 0.f, 0.f });
+
+        void clearBuffer(BufferHandle buffer, u32 clearValue = 0);
 
 
         void pipelineBarrier(ende::Span<VkBufferMemoryBarrier2> bufferBarriers, ende::Span<VkImageMemoryBarrier2> imageBarriers);
