@@ -162,7 +162,7 @@ namespace cala::backend::vulkan {
 
         spdlog::logger& logger() { return _logger; }
 
-        void printMarkers(u32 frame);
+        void printMarkers();
 
     private:
         friend BufferHandle;

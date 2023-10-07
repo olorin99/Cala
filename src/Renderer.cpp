@@ -59,7 +59,7 @@ bool cala::Renderer::beginFrame(cala::backend::vulkan::Swapchain* swapchain) {
     auto result = _swapchain->nextImage();
     if (!result) {
         _engine->logger().error("Device Lost - Frame: {}", _frameInfo.frame);
-        _engine->device().printMarkers((_frameInfo.frame - 1) % _engine->device().framesInFlight());
+        _engine->device().printMarkers();
         throw std::runtime_error("Device Lost");
     }
     _swapchainFrame = result.value();
@@ -74,7 +74,7 @@ f64 cala::Renderer::endFrame() {
     u64 signalValue = _engine->device().getNextTimelineValue();
     if (!_frameInfo.cmd->submit(_engine->device().getTimelineSemaphore(), waitValue, signalValue, _swapchainFrame.imageAquired)) {
         _engine->logger().error("Error submitting command buffer");
-        _engine->device().printMarkers(_engine->device().frameIndex());
+        _engine->device().printMarkers();
         throw std::runtime_error("Error submitting command buffer");
     }
     _engine->device().setFrameValue(_engine->device().frameIndex(), signalValue);
@@ -139,7 +139,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _globalDataBuffer[_engine->device().frameIndex()]->data({ &_globalData, sizeof(_globalData) });
 
     bool debugViewEnabled = _renderSettings.debugNormals || _renderSettings.debugRoughness || _renderSettings.debugMetallic || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugVxgi;
-//    debugViewEnabled = false;
+    debugViewEnabled = false;
 
     backend::vulkan::CommandBuffer& cmd = *_frameInfo.cmd;
 
@@ -182,21 +182,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         drawCountResource.transient = false;
         drawCountResource.usage = backend::BufferUsage::INDIRECT | backend::BufferUsage::STORAGE;
         _graph.addResource("drawCount", drawCountResource, true);
-
-        ImageResource voxelGridResource;
-        voxelGridResource.format = backend::Format::RGBA32_SFLOAT;
-        voxelGridResource.width = 100;
-        voxelGridResource.height = 100;
-        voxelGridResource.depth = 100;
-        voxelGridResource.matchSwapchain = false;
-        _graph.addResource("voxelGrid", voxelGridResource);
-
-        ImageResource voxelOutput;
-        colourAttachment.format = backend::Format::RGBA32_SFLOAT;
-        colourAttachment.matchSwapchain = false;
-        colourAttachment.width = voxelGridResource.width;
-        colourAttachment.height = voxelGridResource.height;
-        _graph.addResource("voxelOutput", voxelOutput);
     }
 
 
@@ -250,6 +235,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     cameraResource.size = _cameraBuffer[_engine->device().frameIndex()]->size();
     cameraResource.usage = _cameraBuffer[_engine->device().frameIndex()]->usage();
     _graph.addResource("camera", cameraResource, false);
+
+    BufferResource lightsResource;
+    lightsResource.handle = scene._lightBuffer[_engine->device().frameIndex()];
+    lightsResource.size = scene._lightBuffer[_engine->device().frameIndex()]->size();
+    lightsResource.usage = scene._lightBuffer[_engine->device().frameIndex()]->usage();
+    _graph.addResource("lights", lightsResource, false);
 
 
     _graph.setBackbuffer("backbuffer");
@@ -311,6 +302,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     cullLights.addStorageBufferRead("clusters", backend::PipelineStage::COMPUTE_SHADER);
     cullLights.addStorageBufferWrite("lightGrid", backend::PipelineStage::COMPUTE_SHADER);
     cullLights.addStorageBufferWrite("lightIndices", backend::PipelineStage::COMPUTE_SHADER);
+    cullLights.addStorageBufferRead("lights", backend::PipelineStage::COMPUTE_SHADER);
     cullLights.addStorageBufferWrite("lightGlobalResource", backend::PipelineStage::COMPUTE_SHADER, true);
     cullLights.addStorageBufferRead("camera", backend::PipelineStage::COMPUTE_SHADER);
 
@@ -408,13 +400,13 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     if (_renderSettings.debugWireframe) {
         bool overlay = _renderSettings.tonemap;
         //TODO: overlay works however having both wireframe and normal lines with overlay crashes
-        overlay = false;
+//        overlay = false;
         debugWireframePass(_graph, *_engine, scene, _renderSettings, overlay ? "hdr" : "backbuffer");
     }
 
     if (_renderSettings.debugNormalLines) {
         bool overlay = _renderSettings.tonemap;
-        overlay = false;
+//        overlay = false;
         debugNormalLinesPass(_graph, *_engine, scene, _renderSettings, overlay ? "hdr" : "backbuffer");
     }
 
@@ -434,7 +426,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     pointShadows.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
     pointShadows.addSampledImageWrite("pointDepth", backend::PipelineStage::FRAGMENT_SHADER);
     pointShadows.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
-    pointShadows.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER);
+//    pointShadows.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER);
     pointShadows.addVertexBufferRead("vertexBuffer");
     pointShadows.addIndexBufferRead("indexBuffer");
     pointShadows.addIndirectBufferRead("shadowDrawCommands");
@@ -582,6 +574,21 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 //                cmd.dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
 //            });
 
+            ImageResource voxelGridResource;
+            voxelGridResource.format = backend::Format::RGBA32_SFLOAT;
+            voxelGridResource.width = 100;
+            voxelGridResource.height = 100;
+            voxelGridResource.depth = 100;
+            voxelGridResource.matchSwapchain = false;
+            _graph.addResource("voxelGrid", voxelGridResource);
+
+            ImageResource voxelOutput;
+            voxelOutput.format = backend::Format::RGBA32_SFLOAT;
+            voxelOutput.matchSwapchain = false;
+            voxelOutput.width = voxelGridResource.width;
+            voxelOutput.height = voxelGridResource.height;
+            _graph.addResource("voxelOutput", voxelOutput);
+
 
             auto& voxelGIPass = _graph.addPass("voxelGI");
 
@@ -591,8 +598,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             voxelGIPass.addIndirectBufferRead("drawCommands");
             voxelGIPass.addVertexBufferRead("vertexBuffer");
             voxelGIPass.addIndexBufferRead("indexBuffer");
+
+            voxelGIPass.addStorageBufferRead("meshData", backend::PipelineStage::FRAGMENT_SHADER);
             voxelGIPass.addStorageBufferRead("lightIndices", backend::PipelineStage::FRAGMENT_SHADER);
             voxelGIPass.addStorageBufferRead("lightGrid", backend::PipelineStage::FRAGMENT_SHADER);
+            voxelGIPass.addStorageBufferRead("lights", backend::PipelineStage::FRAGMENT_SHADER);
             voxelGIPass.addIndirectBufferRead("materialCounts");
             voxelGIPass.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
@@ -779,6 +789,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         forwardPass.addIndirectBufferRead("drawCommands");
         forwardPass.addStorageBufferRead("lightIndices", backend::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addStorageBufferRead("lightGrid", backend::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addStorageBufferRead("lights", backend::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addStorageBufferRead("meshData", backend::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addIndirectBufferRead("materialCounts");
         forwardPass.addVertexBufferRead("vertexBuffer");
         forwardPass.addIndexBufferRead("indexBuffer");
