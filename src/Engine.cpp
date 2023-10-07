@@ -27,7 +27,7 @@ cala::Engine::Engine(backend::Platform &platform)
         std::make_shared<spdlog::sinks::ansicolor_stdout_sink_mt>(),
         std::make_shared<spdlog::sinks::basic_file_sink_mt>("debug.log", true)
       }),
-      _device(platform, _logger),
+      _device(platform, _logger, { true }),
       _startTime(ende::time::SystemTime::now()),
       _shadowPass(_device, {&shadowPassAttachment, 1 }),
       _lodSampler(_device.getSampler({

@@ -22,13 +22,18 @@ namespace cala::backend::vulkan {
     class Device {
     public:
 
-        Device(Platform& platform, spdlog::logger& logger);
+        struct CreateInfo {
+            bool useTimeline = true;
+        };
+
+        Device(Platform& platform, spdlog::logger& logger, CreateInfo createInfo = { true });
 
         ~Device();
 
         struct FrameInfo {
             u64 frame = 0;
             CommandBuffer* cmd = nullptr;
+            VkFence fence = VK_NULL_HANDLE;
         };
 
         FrameInfo beginFrame();
@@ -46,6 +51,8 @@ namespace cala::backend::vulkan {
         bool wait(u64 timeout = 1000000000); // waits for all frames
 
         bool waitTimeline(u64 value, u64 timeout = 1000000000);
+
+        bool usingTimeline() const { return _timelineSemaphore != VK_NULL_HANDLE; }
 
         bool signalTimeline(u64 value);
 
@@ -178,6 +185,7 @@ namespace cala::backend::vulkan {
         VkSemaphore _timelineSemaphore;
         u64 _timelineValue;
         u64 _frameValues[FRAMES_IN_FLIGHT];
+        VkFence _frameFences[FRAMES_IN_FLIGHT];
         u64 _frameCount;
         ende::time::StopWatch _frameClock;
         ende::time::Duration _lastFrameTime;
