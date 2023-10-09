@@ -5,6 +5,7 @@
 #include <Cala/Material.h>
 #include <Cala/ImGuiContext.h>
 #include <Ende/profile/profile.h>
+#include <Ende/thread/thread.h>
 
 #include "renderPasses/debugPasses.h"
 #include "Cala/backend/vulkan/primitives.h"
@@ -60,6 +61,14 @@ bool cala::Renderer::beginFrame(cala::backend::vulkan::Swapchain* swapchain) {
     _swapchain = swapchain;
     assert(_swapchain);
     _frameInfo = _engine->device().beginFrame();
+
+    if (_renderSettings.boundedFrameTime) {
+        f64 frameTime = _engine->device().milliseconds();
+        f64 frameTimeDiff = frameTime - _renderSettings.millisecondTarget;
+        if (frameTimeDiff < 0)
+            ende::thread::sleep(ende::time::Duration::fromMilliseconds(-frameTimeDiff));
+    }
+
     if (!_frameInfo.cmd)
         return false;
 

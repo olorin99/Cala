@@ -18,6 +18,7 @@ namespace cala::ui {
         Engine* _engine;
         Renderer* _renderer;
         backend::vulkan::Swapchain* _swapchain;
+        i32 _targetFPS;
 
     };
 

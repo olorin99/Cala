@@ -31,6 +31,8 @@ namespace cala {
             bool vxgi = false;
             std::pair<ende::math::Vec<3, i32>, ende::math::Vec<3, i32>> voxelBounds = { { -10, -10, -10 }, { 10, 10, 10 } };
             bool gpuCulling = true;
+            bool boundedFrameTime = false;
+            f32 millisecondTarget = 1000.f / 240.f;
 
             bool debugUnlit = false;
             bool debugClusters = false;
