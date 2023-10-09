@@ -46,7 +46,11 @@ bool intersect(Light light, Cluster cluster) {
 }
 
 void main() {
-    globalIndexCount = 0;
+    if (0 == gl_GlobalInvocationID.x + gl_GlobalInvocationID.y + gl_GlobalInvocationID.z)
+        globalIndexCount = 0;
+
+    barrier();
+
     uint threadCount = gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z;
     uint lightCount = directLightCount + pointLightCount;
     uint tileIndex = gl_LocalInvocationIndex + gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z * gl_WorkGroupID.z;

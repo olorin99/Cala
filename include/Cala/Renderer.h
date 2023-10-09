@@ -30,6 +30,9 @@ namespace cala {
             bool ibl = false;
             bool vxgi = false;
             std::pair<ende::math::Vec<3, i32>, ende::math::Vec<3, i32>> voxelBounds = { { -10, -10, -10 }, { 10, 10, 10 } };
+            bool gpuCulling = true;
+            bool boundedFrameTime = false;
+            f32 millisecondTarget = 1000.f / 240.f;
 
             bool debugUnlit = false;
             bool debugClusters = false;
@@ -72,8 +75,8 @@ namespace cala {
         Engine* _engine;
         backend::vulkan::Swapchain* _swapchain;
 
-        backend::vulkan::BufferHandle _cameraBuffer[2];
-        backend::vulkan::BufferHandle _globalDataBuffer[2];
+        backend::vulkan::BufferHandle _cameraBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
+        backend::vulkan::BufferHandle _globalDataBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
 
         backend::vulkan::ImageHandle _shadowTarget;
         backend::vulkan::Framebuffer* _shadowFramebuffer;
@@ -92,6 +95,7 @@ namespace cala {
         struct RendererGlobal {
             f32 gamma = 2.2;
             u32 time = 0;
+            u32 gpuCulling = 1;
             u32 maxDrawCount = 0;
             i32 tranformsBufferIndex = -1;
             i32 meshBufferIndex = -1;

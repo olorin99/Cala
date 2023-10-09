@@ -4,7 +4,8 @@
 cala::ui::RendererSettingsWindow::RendererSettingsWindow(Engine* engine, Renderer *renderer, backend::vulkan::Swapchain* swapchain)
     : _engine(engine),
     _renderer(renderer),
-    _swapchain(swapchain)
+    _swapchain(swapchain),
+    _targetFPS(240)
 {}
 
 void cala::ui::RendererSettingsWindow::render() {
@@ -26,6 +27,11 @@ void cala::ui::RendererSettingsWindow::render() {
         rendererSettings.voxelBounds.first = minBounds;
         rendererSettings.voxelBounds.second = maxBounds;
     }
+    ImGui::Checkbox("GPU Culling", &rendererSettings.gpuCulling);
+    ImGui::Checkbox("Bounded FrameTime", &rendererSettings.boundedFrameTime);
+    ImGui::SliderInt("Target FPS", &_targetFPS, 5, 240);
+    rendererSettings.millisecondTarget = 1000.f / _targetFPS;
+
     bool vsync = _swapchain->getVsync();
     if (ImGui::Checkbox("Vsync", &vsync)) {
         _engine->device().wait();
