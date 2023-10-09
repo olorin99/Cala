@@ -58,7 +58,19 @@ void main() {
     center = (bindlessBuffersTransforms[globalData.transformsBufferIndex].transforms[idx] * vec4(center, 1.0)).xyz;
     vec3 halfExtent = (mesh.max.xyz - mesh.min.xyz) * 0.5;
 
-    if (frustumCheck(center, length(halfExtent))) {
+    if (globalData.gpuCulling > 0) {
+        if (frustumCheck(center, length(halfExtent))) {
+            uint a = atomicAdd(counts[mesh.materialIndex].count, 1);
+            uint offset = counts[mesh.materialIndex].offset;
+            IndexedIndirectCommand command;
+            command.indexCount = mesh.indexCount;
+            command.firstIndex = mesh.firstIndex;
+            command.vertexOffset = 0;
+            command.firstInstance = idx;
+            command.instanceCount = 1;
+            commands[offset + a] = command;
+        }
+    } else {
         uint a = atomicAdd(counts[mesh.materialIndex].count, 1);
         uint offset = counts[mesh.materialIndex].offset;
         IndexedIndirectCommand command;

@@ -12,15 +12,22 @@
 cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings)
     : _engine(engine),
     _swapchain(nullptr),
-    _cameraBuffer{engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true),
-                  engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true)},
-    _globalDataBuffer{engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true),
-                      engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true)},
+//    _cameraBuffer{engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true),
+//                  engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true)},
+//    _globalDataBuffer{engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true),
+//                      engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true)},
     _graph(engine),
     _renderSettings(settings),
     _cullingFrustum(ende::math::perspective(45.f, 1920.f / 1080.f, 0.1f, 1000.f, true))
 {
     _engine->device().setBindlessSetIndex(0);
+
+    for (auto& buffer : _cameraBuffer) {
+        buffer = engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true);
+    }
+    for (auto& buffer : _globalDataBuffer) {
+        buffer = engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true);
+    }
 
     _shadowTarget = _engine->device().createImage({
         1024, 1024, 1,
@@ -104,6 +111,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _cameraBuffer[_engine->device().frameIndex()]->data({ &cameraData, sizeof(cameraData) });
 
     _globalData.maxDrawCount = scene._renderables.size();
+    _globalData.gpuCulling = _renderSettings.gpuCulling;
+
     _globalData.tranformsBufferIndex = scene._modelBuffer[_engine->device().frameIndex()].index();
     _globalData.meshBufferIndex = scene._meshDataBuffer[_engine->device().frameIndex()].index();
     _globalData.lightBufferIndex = scene._lightBuffer[_engine->device().frameIndex()].index();

@@ -26,6 +26,7 @@ void cala::ui::RendererSettingsWindow::render() {
         rendererSettings.voxelBounds.first = minBounds;
         rendererSettings.voxelBounds.second = maxBounds;
     }
+    ImGui::Checkbox("GPU Culling", &rendererSettings.gpuCulling);
     bool vsync = _swapchain->getVsync();
     if (ImGui::Checkbox("Vsync", &vsync)) {
         _engine->device().wait();
