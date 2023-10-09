@@ -362,7 +362,9 @@ void cala::backend::vulkan::CommandBuffer::draw(u32 count, u32 instanceCount, u3
     else
         vkCmdDraw(_buffer, count, instanceCount, first, firstInstance);
     ++_drawCallCount;
-    writeBufferMarker(PipelineStage::VERTEX_SHADER | PipelineStage::GEOMETRY_SHADER | PipelineStage::FRAGMENT_SHADER, "vkCmdDraw");
+    writeBufferMarker(PipelineStage::VERTEX_SHADER, "vkCmdDrawIndirectCount::VERTEX");
+    writeBufferMarker(PipelineStage::GEOMETRY_SHADER, "vkCmdDrawIndirectCount::GEOMETRY");
+    writeBufferMarker(PipelineStage::FRAGMENT_SHADER, "vkCmdDrawIndirectCount::FRAGMENT");
 }
 
 void cala::backend::vulkan::CommandBuffer::drawIndirect(BufferHandle buffer, u32 offset, u32 drawCount, u32 stride) {
@@ -374,7 +376,9 @@ void cala::backend::vulkan::CommandBuffer::drawIndirect(BufferHandle buffer, u32
         stride = sizeof(u32) * 4;
     vkCmdDrawIndirect(_buffer, buffer->buffer(), offset, drawCount, stride);
     ++_drawCallCount;
-    writeBufferMarker(PipelineStage::VERTEX_SHADER | PipelineStage::GEOMETRY_SHADER | PipelineStage::FRAGMENT_SHADER, "vkCmdDrawIndirect");
+    writeBufferMarker(PipelineStage::VERTEX_SHADER, "vkCmdDrawIndirectCount::VERTEX");
+    writeBufferMarker(PipelineStage::GEOMETRY_SHADER, "vkCmdDrawIndirectCount::GEOMETRY");
+    writeBufferMarker(PipelineStage::FRAGMENT_SHADER, "vkCmdDrawIndirectCount::FRAGMENT");
 }
 
 void cala::backend::vulkan::CommandBuffer::drawIndirectCount(BufferHandle buffer, u32 bufferOffset, BufferHandle countBuffer, u32 countOffset, u32 stride) {
@@ -396,7 +400,9 @@ void cala::backend::vulkan::CommandBuffer::drawIndirectCount(BufferHandle buffer
         vkCmdDrawIndirectCount(_buffer, buffer->buffer(), bufferOffset, countBuffer->buffer(), countOffset, maxDrawCount, stride);
     }
     ++_drawCallCount;
-    writeBufferMarker(PipelineStage::VERTEX_SHADER | PipelineStage::GEOMETRY_SHADER | PipelineStage::FRAGMENT_SHADER, "vkCmdDrawIndirectCount");
+    writeBufferMarker(PipelineStage::VERTEX_SHADER, "vkCmdDrawIndirectCount::VERTEX");
+    writeBufferMarker(PipelineStage::GEOMETRY_SHADER, "vkCmdDrawIndirectCount::GEOMETRY");
+    writeBufferMarker(PipelineStage::FRAGMENT_SHADER, "vkCmdDrawIndirectCount::FRAGMENT");
 }
 
 void cala::backend::vulkan::CommandBuffer::dispatchCompute(u32 x, u32 y, u32 z) {
@@ -547,7 +553,7 @@ bool cala::backend::vulkan::CommandBuffer::submit(ende::Span<VkSemaphore> wait, 
     auto res = vkQueueSubmit(_queue, 1, &submitInfo, fence);
     if (res == VK_ERROR_DEVICE_LOST) {
         _device->logger().error("Device lost on queue submit");
-        _device->printMarkers(_device->frameIndex());
+        _device->printMarkers();
         throw std::runtime_error("Device lost on queue submit");
     }
     return res == VK_SUCCESS;
@@ -588,7 +594,7 @@ bool cala::backend::vulkan::CommandBuffer::submit(VkSemaphore timeline, u64 wait
     auto res = vkQueueSubmit(_queue, 1, &submitInfo, VK_NULL_HANDLE);
     if (res == VK_ERROR_DEVICE_LOST) {
         _device->logger().error("Device lost on queue submit");
-        _device->printMarkers(_device->frameIndex());
+        _device->printMarkers();
         throw std::runtime_error("Device lost on queue submit");
     }
     return res == VK_SUCCESS;
@@ -601,7 +607,7 @@ bool cala::backend::vulkan::CommandBuffer::PipelineEqual::operator()(const Pipel
 void cala::backend::vulkan::CommandBuffer::writeBufferMarker(cala::backend::PipelineStage stage, std::string_view cmd) {
 #ifndef NDEBUG
     if (_device->context().getSupportedExtensions().AMD_buffer_marker && _device->_markerBuffer[_device->frameIndex()]) {
-        vkCmdWriteBufferMarker2AMD(_buffer, getPipelineStage(stage), _device->_markerBuffer[_device->frameIndex()]->buffer(), _device->_offset, _device->_marker);
+        vkCmdWriteBufferMarkerAMD(_buffer, (VkPipelineStageFlagBits)getPipelineStage(stage), _device->_markerBuffer[_device->frameIndex()]->buffer(), _device->_offset, _device->_marker);
 
         if (_device->_markedCmds[_device->frameIndex()].size() >= _device->_marker) {
             _device->_markedCmds[_device->_offset / sizeof(u32)][_device->frameIndex()] = std::make_pair(cmd, _device->_marker);

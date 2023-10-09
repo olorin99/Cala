@@ -216,11 +216,12 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     _limits.maxDescriptorSetSampledImages = deviceProperties.limits.maxDescriptorSetSampledImages;
     _limits.maxDescriptorSetStorageImages = deviceProperties.limits.maxDescriptorSetStorageImages;
 
-    _limits.maxBindlessSamplers = indexingProperties.maxDescriptorSetUpdateAfterBindSamplers;
-    _limits.maxBindlessUniformBuffers = indexingProperties.maxDescriptorSetUpdateAfterBindUniformBuffers;
-    _limits.maxBindlessStorageBuffers = indexingProperties.maxDescriptorSetUpdateAfterBindStorageBuffers;
-    _limits.maxBindlessSampledImages = indexingProperties.maxDescriptorSetUpdateAfterBindSampledImages;
-    _limits.maxBindlessStorageImages = indexingProperties.maxDescriptorSetUpdateAfterBindStorageImages;
+    // Check against limits for case when driver doesnt report correct correct values (e.g. amdgpu-pro on linux)
+    _limits.maxBindlessSamplers = indexingProperties.maxDescriptorSetUpdateAfterBindSamplers < std::numeric_limits<u32>::max() - 10000 ? indexingProperties.maxDescriptorSetUpdateAfterBindSamplers : 10000;
+    _limits.maxBindlessUniformBuffers = indexingProperties.maxDescriptorSetUpdateAfterBindUniformBuffers < std::numeric_limits<u32>::max() - 10000 ? indexingProperties.maxDescriptorSetUpdateAfterBindUniformBuffers : 1000;
+    _limits.maxBindlessStorageBuffers = indexingProperties.maxDescriptorSetUpdateAfterBindStorageBuffers < std::numeric_limits<u32>::max() - 10000 ? indexingProperties.maxDescriptorSetUpdateAfterBindStorageBuffers : 1000;
+    _limits.maxBindlessSampledImages = indexingProperties.maxDescriptorSetUpdateAfterBindSampledImages < std::numeric_limits<u32>::max() - 10000 ? indexingProperties.maxDescriptorSetUpdateAfterBindSampledImages : 1000;
+    _limits.maxBindlessStorageImages = indexingProperties.maxDescriptorSetUpdateAfterBindStorageImages < std::numeric_limits<u32>::max() - 10000 ? indexingProperties.maxDescriptorSetUpdateAfterBindStorageImages : 1000;
 
     _limits.maxSamplerAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
 

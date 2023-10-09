@@ -3,7 +3,7 @@
 #include "Ende/filesystem/File.h"
 #include <Ende/profile/profile.h>
 
-cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog::logger& logger)
+cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog::logger& logger, CreateInfo createInfo)
     : _logger(logger),
       _context(this, platform),
       _commandPools{
@@ -18,24 +18,33 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
           .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
           .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
       }),
+      _timelineSemaphore(VK_NULL_HANDLE),
       _timelineValue(10)
 {
+    if (createInfo.useTimeline) {
+        VkSemaphoreTypeCreateInfo typeCreateInfo{};
+        typeCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+        typeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+        typeCreateInfo.initialValue = _timelineValue;
 
-    VkSemaphoreTypeCreateInfo typeCreateInfo{};
-    typeCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
-    typeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-    typeCreateInfo.initialValue = _timelineValue;
+        VkSemaphoreCreateInfo timelineCreateInfo{};
+        timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        timelineCreateInfo.pNext = &typeCreateInfo;
+        timelineCreateInfo.flags = 0;
+        vkCreateSemaphore(_context.device(), &timelineCreateInfo, nullptr, &_timelineSemaphore);
 
-    VkSemaphoreCreateInfo timelineCreateInfo{};
-    timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    timelineCreateInfo.pNext = &typeCreateInfo;
-    timelineCreateInfo.flags = 0;
-    vkCreateSemaphore(_context.device(), &timelineCreateInfo, nullptr, &_timelineSemaphore);
+        _context.setDebugName(VK_OBJECT_TYPE_SEMAPHORE, (u64)_timelineSemaphore, "TimelineSemaphore");
 
-    _context.setDebugName(VK_OBJECT_TYPE_SEMAPHORE, (u64)_timelineSemaphore, "TimelineSemaphore");
-
-    for (auto& value : _frameValues)
-        value = _timelineValue;
+        for (auto& value : _frameValues)
+            value = _timelineValue;
+    } else {
+        for (auto& fence : _frameFences) {
+            VkFenceCreateInfo fenceCreateInfo{};
+            fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+            fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+            vkCreateFence(_context.device(), &fenceCreateInfo, nullptr, &fence);
+        }
+    }
 
     VkDescriptorPoolSize poolSizes[] = {
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, _context.getLimits().maxBindlessSampledImages - 100 },
@@ -148,7 +157,8 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
 }
 
 cala::backend::vulkan::Device::~Device() {
-    signalTimeline(std::numeric_limits<u64>::max());
+    if (usingTimeline())
+        signalTimeline(std::numeric_limits<u64>::max());
     VK_TRY(vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS))); //ensures last frame finished before destroying stuff
 
     for (auto& markerBuffer : _markerBuffer)
@@ -201,7 +211,12 @@ cala::backend::vulkan::Device::~Device() {
     vkDestroyDescriptorPool(_context.device(), _descriptorPool, nullptr);
     vkDestroyDescriptorPool(_context.device(), _bindlessPool, nullptr);
 
-    vkDestroySemaphore(_context.device(), _timelineSemaphore, nullptr);
+    if (usingTimeline()) {
+        vkDestroySemaphore(_context.device(), _timelineSemaphore, nullptr);
+    } else {
+        for (auto& fence : _frameFences)
+            vkDestroyFence(_context.device(), fence, nullptr);
+    }
 
     for (auto& setLayout : _setLayouts)
         vkDestroyDescriptorSetLayout(_context.device(), setLayout.second, nullptr);
@@ -213,11 +228,12 @@ cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFra
     _bytesAllocatedPerFrame = 0;
 
     if (!waitFrame(frameIndex())) {
-        printMarkers(frameIndex());
+        printMarkers();
         _logger.error("Error waiting for frame ({}), index ({})", _frameCount, frameIndex());
         return {
             _frameCount,
-            nullptr
+            nullptr,
+            _frameFences[frameIndex()]
         };
     }
 
@@ -237,7 +253,8 @@ cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFra
 
     return {
         _frameCount,
-        &getCommandBuffer(frameIndex())
+        &getCommandBuffer(frameIndex()),
+        _frameFences[frameIndex()]
     };
 }
 
@@ -248,8 +265,20 @@ ende::time::Duration cala::backend::vulkan::Device::endFrame() {
 
 bool cala::backend::vulkan::Device::waitFrame(u64 frame, u64 timeout) {
     PROFILE_NAMED("Device::waitFrame");
-    u64 waitValue = _frameValues[frame];
-    return waitTimeline(waitValue, timeout);
+    if (usingTimeline()) {
+        u64 waitValue = _frameValues[frame];
+        return waitTimeline(waitValue, timeout);
+    } else {
+        VkFence fence = _frameFences[frame];
+        auto res = vkWaitForFences(_context.device(), 1, &fence, true, timeout);
+        if (res == VK_ERROR_DEVICE_LOST) {
+            _logger.error("Device lost on wait for fence");
+            printMarkers();
+            throw std::runtime_error("Device lost on wait for fence");
+        }
+        vkResetFences(_context.device(), 1, &fence);
+        return true;
+    }
 }
 
 bool cala::backend::vulkan::Device::wait(u64 timeout) {
@@ -265,7 +294,7 @@ bool cala::backend::vulkan::Device::waitTimeline(u64 value, u64 timeout) {
     auto result = vkWaitSemaphores(_context.device(), &waitInfo, timeout);
     if (result == VK_ERROR_DEVICE_LOST) {
         _logger.error("Device Lost - Frame: {}", _frameCount);
-        printMarkers(frameIndex());
+        printMarkers();
         throw std::runtime_error("Device Lost");
     }
     return VK_SUCCESS == result;
@@ -316,7 +345,7 @@ void cala::backend::vulkan::Device::endSingleTimeCommands(CommandBuffer& buffer)
     VK_TRY(vkCreateFence(context().device(), &fenceCreateInfo, nullptr, &fence));
     if (!buffer.submit(nullptr, fence)) {
         _logger.error("Error submitting command buffer");
-        printMarkers(frameIndex());
+        printMarkers();
         throw std::runtime_error("Error submitting immediate command buffer");
     }
 
@@ -1041,21 +1070,28 @@ cala::backend::vulkan::Device::Stats cala::backend::vulkan::Device::stats() cons
     };
 }
 
-void cala::backend::vulkan::Device::printMarkers(u32 frame) {
-    if (!_markerBuffer[frame])
-        return;
+void cala::backend::vulkan::Device::printMarkers() {
 
     ende::fs::File file;
     file.open("markers.log"_path, ende::fs::out);
 
-    u32* markers = static_cast<u32*>(_markerBuffer[frame]->persistentMapping());
-    for (u32 i = 0; i < _markerBuffer[frame]->size() / sizeof(u32); i++) {
-        u32 marker = markers[i];
-        auto cmd = marker < _markedCmds[frame].size() ? _markedCmds[i][frame] : std::make_pair( "NullCmd", 0 );
-        file.write(std::format("Command: {}\nMarker[{}]: {}\n", cmd.first, i, marker));
-        _logger.warn("Command: {}\nMarker[{}]: {}", cmd.first, i, marker);
-        if (marker == 0)
-            break;
+    for (u32 frame = 0; frame < FRAMES_IN_FLIGHT; frame++) {
+        file.write(std::format("Frame: {}", frame));
+        if (!_markerBuffer[frame])
+            return;
+
+        u32* markers = static_cast<u32*>(_markerBuffer[frame]->persistentMapping());
+        for (u32 i = 0; i < _markerBuffer[frame]->size() / sizeof(u32); i++) {
+            u32 marker = markers[i];
+            auto cmd = marker < _markedCmds[frame].size() ? _markedCmds[i][frame] : std::make_pair( "NullCmd", 0 );
+            file.write(std::format("Command: {}\nMarker[{}]: {}\n", cmd.first, i, marker));
+            _logger.warn("Command: {}\nMarker[{}]: {}", cmd.first, i, marker);
+            if (marker == 0)
+                break;
+        }
+
+        file.write("\n\n\n");
     }
+
     file.close();
 }

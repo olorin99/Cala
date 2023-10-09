@@ -174,7 +174,7 @@ bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFi
         auto res = vkQueuePresentKHR(_driver.context().getQueue(QueueType::PRESENT), &presentInfo);
         if (res == VK_ERROR_DEVICE_LOST) {
             _driver.logger().error("Device lost on queue submit");
-            _driver.printMarkers(_driver.frameIndex());
+            _driver.printMarkers();
             throw std::runtime_error("Device lost on queue submit");
         }
         return res == VK_SUCCESS;

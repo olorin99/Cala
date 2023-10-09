@@ -9,10 +9,6 @@ layout (location = 0) in VsOut {
 
 layout (location = 0) out vec4 FragColour;
 
-layout (set = 0, binding = 0) uniform samplerCube cubeMaps[];
-layout (set = 0, binding = 0) uniform sampler2D textureMaps[];
-
-
 layout (push_constant) uniform PushData {
     vec4 colour;
 };
