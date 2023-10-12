@@ -24,15 +24,6 @@ void cala::ImageResource::devirtualize(cala::Engine* engine, backend::vulkan::Sw
         viewLabel += "_view";
         engine->device().context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)engine->device().getImageView(handle).view, viewLabel);
         dirty = false;
-//        engine->device().immediate([&](backend::vulkan::CommandBuffer& cmd) {
-//            if (backend::isDepthFormat(format)) {
-//                auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
-//                cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, { &b, 1 });
-//            } else {
-//                auto b = handle->barrier(backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::COLOUR_ATTACHMENT);
-//                cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::TOP, { &b, 1 });
-//            }
-//        });
     }
 }
 
@@ -395,23 +386,38 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
     for (auto& attachment : _attachmentMap) {
         if (attachment.second.internal) {
             if (auto resource = getResource<ImageResource>(attachment.first); resource) {
-                if (resource->layout == backend::ImageLayout::UNDEFINED) {
-                    // find first use
-                    auto [accessPassIndex, accessIndex, nextAccess] = findNextAccess(-1, attachment.first);
-                    if (accessPassIndex < 0)
-                        continue;
-                    auto& accessPass = _orderedPasses[accessPassIndex];
-                    accessPass->_invalidate.push({
-                        attachment.first,
-                        accessIndex,
-                        backend::PipelineStage::ALL_COMMANDS,
-                        nextAccess.stage,
-                        backend::Access::NONE,
-                        nextAccess.access,
-                        backend::ImageLayout::UNDEFINED,
-                        nextAccess.layout
-                    });
-                }
+                // find first use
+                auto [accessPassIndex, accessIndex, nextAccess] = findNextAccess(-1, attachment.first);
+                if (accessPassIndex < 0)
+                    continue;
+                auto& accessPass = _orderedPasses[accessPassIndex];
+                accessPass->_invalidate.push({
+                    attachment.first,
+                    accessIndex,
+                    backend::PipelineStage::ALL_COMMANDS,
+                    nextAccess.stage,
+                    backend::Access::NONE,
+                    nextAccess.access,
+                    backend::ImageLayout::UNDEFINED,
+                    nextAccess.layout
+                });
+            }
+            if (auto resource = getResource<BufferResource>(attachment.first); resource) {
+                // find first use
+                auto [accessPassIndex, accessIndex, nextAccess] = findNextAccess(-1, attachment.first);
+                if (accessPassIndex < 0)
+                    continue;
+                auto& accessPass = _orderedPasses[accessPassIndex];
+                accessPass->_invalidate.push({
+                    attachment.first,
+                    accessIndex,
+                    backend::PipelineStage::ALL_COMMANDS,
+                    nextAccess.stage,
+                    backend::Access::NONE,
+                    nextAccess.access,
+                    backend::ImageLayout::UNDEFINED,
+                    nextAccess.layout
+                });
             }
         } else { // sync with external writes/reads
             auto [accessPassIndex, accessIndex, nextAccess] = findNextAccess(-1, attachment.first);
@@ -431,16 +437,16 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
         }
     }
 
-//    for (i32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
-//        auto& pass = _orderedPasses[passIndex];
-//        _engine->logger().info("Pass: {}", pass->_passName);
-//        for (auto& barrier : pass->_invalidate) {
-//            _engine->logger().info("Invalidate: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
-//        }
-//        for (auto& barrier : pass->_flush) {
-//            _engine->logger().info("Flush: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
-//        }
-//    }
+    for (i32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
+        auto& pass = _orderedPasses[passIndex];
+        _engine->logger().info("Pass: {}", pass->_passName);
+        for (auto& barrier : pass->_invalidate) {
+            _engine->logger().info("Invalidate: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
+        }
+        for (auto& barrier : pass->_flush) {
+            _engine->logger().info("Flush: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
+        }
+    }
 
     for (auto& attachment : _attachmentMap) {
         u32 index = attachment.second.index;
@@ -555,6 +561,8 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
     for (u32 i = 0; i < _orderedPasses.size(); i++) {
         auto& pass = _orderedPasses[i];
 
+        _engine->logger().info("Pass: {}", pass->_passName);
+
         auto& timer = _timers[_engine->device().frameIndex()][i];
         timer.first = pass->_passName;
         timer.second.start(cmd);
@@ -602,6 +610,14 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
                 }
             }
         }
+
+        backend::vulkan::CommandBuffer::MemoryBarrier memoryBarrier{};
+        memoryBarrier.srcStage = backend::PipelineStage::ALL_COMMANDS;
+        memoryBarrier.dstStage = backend::PipelineStage::ALL_COMMANDS;
+        memoryBarrier.srcAccess = backend::Access::MEMORY_WRITE | backend::Access::MEMORY_READ;
+        memoryBarrier.dstAccess = backend::Access::MEMORY_WRITE | backend::Access::MEMORY_READ;
+
+        cmd.pipelineBarrier({ &memoryBarrier, 1 });
 
         if (!pass->compute && pass->_framebuffer)
             cmd.begin(*pass->_framebuffer);

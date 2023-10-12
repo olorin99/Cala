@@ -492,6 +492,26 @@ void cala::backend::vulkan::CommandBuffer::pipelineBarrier(ende::Span<Buffer::Ba
     vkCmdPipelineBarrier2(_buffer, &info);
 }
 
+void cala::backend::vulkan::CommandBuffer::pipelineBarrier(ende::Span<MemoryBarrier> memoryBarriers) {
+    VkMemoryBarrier2 barriers[memoryBarriers.size()];
+    for (u32 i = 0; i < memoryBarriers.size(); i++) {
+        auto& b = barriers[i];
+        auto& barrier = memoryBarriers[i];
+        b.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
+        b.pNext = nullptr;
+        b.srcStageMask = getPipelineStage(barrier.srcStage);
+        b.dstStageMask = getPipelineStage(barrier.dstStage);
+        b.srcAccessMask = getAccessFlags(barrier.srcAccess);
+        b.dstAccessMask = getAccessFlags(barrier.dstAccess);
+    }
+    VkDependencyInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    info.memoryBarrierCount = memoryBarriers.size();
+    info.pMemoryBarriers = barriers;
+
+    vkCmdPipelineBarrier2(_buffer, &info);
+}
+
 void cala::backend::vulkan::CommandBuffer::pushDebugLabel(std::string_view label, std::array<f32, 4> colour) {
 #ifndef NDEBUG
     _debugLabels.push(label);

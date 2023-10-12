@@ -131,6 +131,15 @@ namespace cala::backend::vulkan {
 
         void pipelineBarrier(ende::Span<Buffer::Barrier> bufferBarriers);
 
+        struct MemoryBarrier {
+            PipelineStage srcStage;
+            PipelineStage dstStage;
+            Access srcAccess;
+            Access dstAccess;
+        };
+
+        void pipelineBarrier(ende::Span<MemoryBarrier> memoryBarriers);
+
         void pushDebugLabel(std::string_view label, std::array<f32, 4> colour = {0, 1, 0, 1});
 
         void popDebugLabel();

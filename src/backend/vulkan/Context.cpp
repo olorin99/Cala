@@ -74,7 +74,12 @@ bool checkDeviceSuitable(VkPhysicalDevice device, VkPhysicalDeviceFeatures* devi
 }
 
 cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, cala::backend::Platform& platform)
-    : _device(device)
+    : _device(device),
+    _physicalDevice(VK_NULL_HANDLE),
+    _logicalDevice(VK_NULL_HANDLE),
+    _graphicsQueue(VK_NULL_HANDLE),
+    _computeQueue(VK_NULL_HANDLE),
+    _transferQueue(VK_NULL_HANDLE)
 {
     VK_TRY(volkInitialize());
 
@@ -98,7 +103,7 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     VkValidationFeaturesEXT validationFeatures{};
     validationFeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
     validationFeatures.pEnabledValidationFeatures = v;
-    validationFeatures.enabledValidationFeatureCount = 3;
+    validationFeatures.enabledValidationFeatureCount = 1;
 
     //create instance with required instanceExtensions
     VkInstanceCreateInfo instanceCreateInfo{};
@@ -260,7 +265,7 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
         _supportedExtensions.AMD_device_coherent_memory = checkExtensions(supportedDeviceExtensions, VK_AMD_DEVICE_COHERENT_MEMORY_EXTENSION_NAME);
     }
 
-    _supportedExtensions.AMD_buffer_marker = false;
+//    _supportedExtensions.AMD_buffer_marker = false;
 
 
 
@@ -382,7 +387,7 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     }
 
     //cache queues for later use
-    u32 queueIndices[4];
+    u32 queueIndices[4] = {};
     if (queueIndex(queueIndices[0], QueueType::GRAPHICS))
         vkGetDeviceQueue(_logicalDevice, queueIndices[0], 0, &_graphicsQueue);
 
@@ -398,15 +403,15 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
         vkGetDeviceQueue(_logicalDevice, queueIndices[3], 0, &_presentQueue);
 
     setDebugName(VK_OBJECT_TYPE_QUEUE, (u64)_graphicsQueue, "GraphicsQueue");
-    if (_graphicsQueue != _computeQueue)
+    if (_graphicsQueue != _computeQueue && _computeQueue != VK_NULL_HANDLE)
         setDebugName(VK_OBJECT_TYPE_QUEUE, (u64)_computeQueue, "ComputeQueue");
-    if (_graphicsQueue != _computeQueue && _computeQueue != _transferQueue)
+    if (_graphicsQueue != _computeQueue && _computeQueue != _transferQueue && _transferQueue != VK_NULL_HANDLE)
         setDebugName(VK_OBJECT_TYPE_QUEUE, (u64)_transferQueue, "TransferQueue");
 
     VkQueryPoolCreateInfo queryPoolCreateInfo{};
     queryPoolCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
     queryPoolCreateInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
-    queryPoolCreateInfo.queryCount = 20 * 2;
+    queryPoolCreateInfo.queryCount = 50 * 2;
     _timestampQueryPool = VK_NULL_HANDLE;
     VK_TRY(vkCreateQueryPool(_logicalDevice, &queryPoolCreateInfo, nullptr, &_timestampQueryPool));
 

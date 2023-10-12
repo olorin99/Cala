@@ -6,7 +6,8 @@ using namespace cala;
 void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     auto& normalsPass = graph.addPass("debug_normals");
 
-    normalsPass.addColourAttachment("backbuffer");
+//    normalsPass.addColourAttachment("backbuffer");
+    normalsPass.addColourAttachment("hdr");
     normalsPass.addDepthAttachment("depth");
 
     normalsPass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
@@ -50,7 +51,8 @@ void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene
 void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     auto& debugRoughness = graph.addPass("debug_roughness");
 
-    debugRoughness.addColourAttachment("backbuffer");
+//    debugRoughness.addColourAttachment("backbuffer");
+    debugRoughness.addColourAttachment("hdr");
     debugRoughness.addDepthAttachment("depth");
 
     debugRoughness.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
@@ -93,7 +95,8 @@ void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
 void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     auto& debugMetallic = graph.addPass("debug_metallic");
 
-    debugMetallic.addColourAttachment("backbuffer");
+//    debugMetallic.addColourAttachment("backbuffer");
+    debugMetallic.addColourAttachment("hdr");
     debugMetallic.addDepthAttachment("depth");
 
     debugMetallic.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
@@ -136,7 +139,8 @@ void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sce
 void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     auto& debugUnlit = graph.addPass("debug_unlit");
 
-    debugUnlit.addColourAttachment("backbuffer");
+//    debugUnlit.addColourAttachment("backbuffer");
+    debugUnlit.addColourAttachment("hdr");
     debugUnlit.addDepthAttachment("depth");
 
     debugUnlit.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
@@ -179,7 +183,8 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene&
 void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     auto& debugWorldPos = graph.addPass("debug_worldPos");
 
-    debugWorldPos.addColourAttachment("backbuffer");
+//    debugWorldPos.addColourAttachment("backbuffer");
+    debugWorldPos.addColourAttachment("hdr");
     debugWorldPos.addDepthAttachment("depth");
 
     debugWorldPos.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);

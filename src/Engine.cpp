@@ -146,6 +146,7 @@ cala::Engine::Engine(backend::Platform &platform)
 
     _brdfImage = _device.createImage({ 512, 512, 1, backend::Format::RG16_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE });
     _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)_brdfImage->image(), "brdf");
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_device.getImageView(_brdfImage).view, "brdf_View");
 
     _defaultIrradiance = _device.createImage({
         1, 1, 1,
@@ -155,6 +156,7 @@ cala::Engine::Engine(backend::Platform &platform)
         backend::ImageType::IMAGE2D
         });
     _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)_defaultIrradiance->image(), "defaultIrradiance");
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_device.getImageView(_defaultIrradiance).view, "defaultIrradiance_View");
 
     f32 irradianceData[4];
     std::memset(irradianceData, 0, sizeof(f32) * 4);
@@ -170,6 +172,7 @@ cala::Engine::Engine(backend::Platform &platform)
         backend::ImageType::IMAGE2D
         });
     _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)_defaultPrefilter->image(), "defaultPrefilter");
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_device.getImageView(_defaultPrefilter).view, "defaultPrefilter_View");
 
     f32 prefilterData[4 * 512 * 512];
     std::memset(prefilterData, 0, sizeof(f32) * 4 * 512 * 512);
@@ -181,7 +184,7 @@ cala::Engine::Engine(backend::Platform &platform)
         cmd.pipelineBarrier({ &prefilterBarrier, 1 });
         _defaultPrefilter->generateMips(cmd);
 
-        auto brdfBarrier = _brdfImage->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
+        auto brdfBarrier = _brdfImage->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_WRITE | backend::Access::SHADER_READ, backend::ImageLayout::GENERAL);
         cmd.pipelineBarrier({ &brdfBarrier, 1 });
 
         cmd.bindProgram(_brdfProgram);
@@ -190,15 +193,15 @@ cala::Engine::Engine(backend::Platform &platform)
         cmd.bindDescriptors();
         cmd.dispatchCompute(512 / 32, 512 / 32, 1);
 
-        brdfBarrier = _brdfImage->barrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::SHADER_READ_ONLY);
+        brdfBarrier = _brdfImage->barrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::FRAGMENT_SHADER, backend::Access::SHADER_READ | backend::Access::SHADER_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
         cmd.pipelineBarrier({ &brdfBarrier, 1 });
 
     });
 
     _globalVertexBuffer = _device.createBuffer(10000, backend::BufferUsage::VERTEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE);
-    _vertexStagingBuffer = _device.createBuffer(10000, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING);
+    _vertexStagingBuffer = _device.createBuffer(10000, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING, true);
     _globalIndexBuffer = _device.createBuffer(10000, backend::BufferUsage::INDEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE);
-    _indexStagingBuffer = _device.createBuffer(10000, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING);
+    _indexStagingBuffer = _device.createBuffer(10000, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING, true);
 
     _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalVertexBuffer->buffer(), "globalVertexBuffer");
     _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_vertexStagingBuffer->buffer(), "vertexStagingBuffer");
@@ -224,6 +227,15 @@ bool cala::Engine::gc() {
         }
 
         _device.immediate([&](backend::vulkan::CommandBuffer& cmd) { //TODO: async transfer queue
+            backend::vulkan::Buffer::Barrier barriers[4];
+
+            barriers[0] = _globalVertexBuffer->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_WRITE);
+            barriers[1] = _vertexStagingBuffer->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_READ);
+            barriers[2] = _globalIndexBuffer->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_WRITE);
+            barriers[3] = _indexStagingBuffer->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_READ);
+
+            cmd.pipelineBarrier({ barriers, 4 });
+
             VkBufferCopy vertexCopy{};
             vertexCopy.dstOffset = 0;
             vertexCopy.srcOffset = 0;
@@ -235,6 +247,13 @@ bool cala::Engine::gc() {
             indexCopy.srcOffset = 0;
             indexCopy.size = _indexStagingBuffer->size();
             vkCmdCopyBuffer(cmd.buffer(), _indexStagingBuffer->buffer(), _globalIndexBuffer->buffer(), 1, &indexCopy);
+
+            barriers[0] = _globalVertexBuffer->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::BOTTOM, backend::Access::TRANSFER_WRITE, backend::Access::NONE);
+            barriers[1] = _vertexStagingBuffer->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::BOTTOM, backend::Access::TRANSFER_READ, backend::Access::NONE);
+            barriers[2] = _globalIndexBuffer->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::BOTTOM, backend::Access::TRANSFER_WRITE, backend::Access::NONE);
+            barriers[3] = _indexStagingBuffer->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::BOTTOM, backend::Access::TRANSFER_READ, backend::Access::NONE);
+
+            cmd.pipelineBarrier({ barriers, 4 });
         });
 
         _stagingReady = false;
@@ -251,6 +270,8 @@ cala::backend::vulkan::ImageHandle cala::Engine::convertToCubeMap(backend::vulka
         10, 6,
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST
     });
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)cubeMap->image(), "cubeMap");
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_device.getImageView(cubeMap).view, "cubeMap_View");
     auto equirectangularView = equirectangular->newView();
     auto cubeView = cubeMap->newView(0, 10);
     _device.immediate([&](backend::vulkan::CommandBuffer& cmd) {
@@ -286,6 +307,8 @@ cala::backend::vulkan::ImageHandle cala::Engine::generateIrradianceMap(backend::
         1, 6,
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
     });
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)irradianceMap->image(), "irradianceMap");
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_device.getImageView(irradianceMap).view, "irradianceMap_View");
     _device.immediate([&](backend::vulkan::CommandBuffer& cmd) {
         auto irradianceBarrier = irradianceMap->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
         cmd.pipelineBarrier({ &irradianceBarrier, 1 });
@@ -299,9 +322,9 @@ cala::backend::vulkan::ImageHandle cala::Engine::generateIrradianceMap(backend::
         cmd.bindDescriptors();
         cmd.dispatchCompute(irradianceMap->width() / 32, irradianceMap->height() / 32, 6);
 
-        irradianceBarrier = irradianceMap->barrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::SHADER_READ_ONLY);
+        irradianceBarrier = irradianceMap->barrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::FRAGMENT_SHADER, backend::Access::SHADER_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
         cmd.pipelineBarrier({ &irradianceBarrier, 1 });
-        cubeBarrier = cubeMap->barrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, backend::Access::SHADER_READ, backend::Access::NONE, backend::ImageLayout::SHADER_READ_ONLY);
+        cubeBarrier = cubeMap->barrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::FRAGMENT_SHADER, backend::Access::SHADER_READ, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
         cmd.pipelineBarrier({ &cubeBarrier, 1 });
     });
     return irradianceMap;
@@ -314,6 +337,8 @@ cala::backend::vulkan::ImageHandle cala::Engine::generatePrefilteredIrradiance(b
         10, 6,
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
     });
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)prefilteredMap->image(), "prefilterMap");
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_device.getImageView(prefilteredMap).view, "prefilterMap_View");
     backend::vulkan::Image::View mipViews[10] = {
             prefilteredMap->newView(0),
             prefilteredMap->newView(1),
@@ -361,6 +386,9 @@ cala::backend::vulkan::ImageHandle cala::Engine::getShadowMap(u32 index) {
         1, 6,
         backend::ImageUsage::SAMPLED | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT | backend::ImageUsage::TRANSFER_DST
     });
+    std::string debugLabel = "ShadowMap: " + std::to_string(index);
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)map->image(), debugLabel);
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_device.getImageView(map).view, "shadowMap_View");
     _shadowMaps.push(map);
     _device.immediate([&](backend::vulkan::CommandBuffer& cmd) {
         auto cubeBarrier = map->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::SHADER_READ_ONLY);
@@ -377,11 +405,15 @@ void cala::Engine::updateMaterialdata() {
 
 u32 cala::Engine::uploadVertexData(ende::Span<f32> data) {
     u32 currentOffset = _vertexOffset;
-    if (currentOffset + data.size() >= _vertexStagingBuffer->size())
+    if (currentOffset + data.size() >= _vertexStagingBuffer->size()) {
         _vertexStagingBuffer = _device.resizeBuffer(_vertexStagingBuffer, currentOffset + data.size(), true);
+        _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_vertexStagingBuffer->buffer(), "vertexStagingBuffer");
+    }
 
-    auto mapped = _vertexStagingBuffer->map(currentOffset, data.size());
-    std::memcpy(mapped.address, data.data(), data.size());
+//    auto mapped = _vertexStagingBuffer->map(currentOffset, data.size());
+//    std::memcpy(mapped.address, data.data(), data.size());
+//    std::memcpy(_vertexStagingBuffer->persistentMapping(), data.data(), data.size());
+    _vertexStagingBuffer->data(data, currentOffset);
 
     _vertexOffset += data.size();
     _stagingReady = true;
@@ -390,11 +422,15 @@ u32 cala::Engine::uploadVertexData(ende::Span<f32> data) {
 
 u32 cala::Engine::uploadIndexData(ende::Span<u32> data) {
     u32 currentOffset = _indexOffset;
-    if (currentOffset + data.size() >= _indexStagingBuffer->size())
+    if (currentOffset + data.size() >= _indexStagingBuffer->size()) {
         _indexStagingBuffer = _device.resizeBuffer(_indexStagingBuffer, currentOffset + data.size(), true);
+        _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_indexStagingBuffer->buffer(), "indexStagingBuffer");
+    }
 
-    auto mapped = _indexStagingBuffer->map(currentOffset, data.size());
-    std::memcpy(mapped.address, data.data(), data.size());
+//    auto mapped = _indexStagingBuffer->map(currentOffset, data.size());
+//    std::memcpy(mapped.address, data.data(), data.size());
+//    std::memcpy(_indexStagingBuffer->persistentMapping(), data.data(), data.size());
+    _indexStagingBuffer->data(data, currentOffset);
     _indexOffset += data.size();
     _stagingReady = true;
     return currentOffset;
