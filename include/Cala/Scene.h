@@ -1,7 +1,6 @@
 #ifndef CALA_SCENE_H
 #define CALA_SCENE_H
 
-#include <Ende/Vector.h>
 #include <Cala/backend/vulkan/Buffer.h>
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include <Cala/Transform.h>
@@ -27,8 +26,8 @@ namespace cala {
             u32 firstIndex = 0;
             u32 indexCount = 0;
             MaterialInstance* materialInstance = nullptr;
-            ende::Span<VkVertexInputBindingDescription> bindings = nullptr;
-            ende::Span<backend::Attribute> attributes = nullptr;
+            std::span<VkVertexInputBindingDescription> bindings = {};
+            std::span<backend::Attribute> attributes = {};
             bool castShadows = true;
             AABB aabb = {};
         };
@@ -51,8 +50,8 @@ namespace cala {
 
         Engine* _engine;
 
-        ende::Vector<std::pair<i32, std::pair<Renderable, Transform*>>> _renderables;
-        ende::Vector<std::pair<i32, Light>> _lights;
+        std::vector<std::pair<i32, std::pair<Renderable, Transform*>>> _renderables;
+        std::vector<std::pair<i32, Light>> _lights;
         u32 _directionalLightCount;
 
         i32 _lightsDirtyFrame;
@@ -77,15 +76,15 @@ namespace cala {
             ende::math::Vec4f min;
             ende::math::Vec4f max;
         };
-        ende::Vector<MeshData> _meshData;
-        ende::Vector<ende::math::Mat4f> _modelTransforms;
-        ende::Vector<Light::Data> _lightData;
+        std::vector<MeshData> _meshData;
+        std::vector<ende::math::Mat4f> _modelTransforms;
+        std::vector<Light::Data> _lightData;
 
         struct MaterialCount {
             u32 count = 0;
             u32 offset = 0;
         };
-        ende::Vector<MaterialCount> _materialCounts;
+        std::vector<MaterialCount> _materialCounts;
 
     };
 

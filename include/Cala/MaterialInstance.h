@@ -1,7 +1,6 @@
 #ifndef CALA_MATERIALINSTANCE_H
 #define CALA_MATERIALINSTANCE_H
 
-#include <Ende/Vector.h>
 #include <Cala/backend/vulkan/Image.h>
 #include <Cala/backend/vulkan/SamplerArray.h>
 
@@ -58,7 +57,7 @@ namespace cala {
     private:
         friend Material;
 
-        MaterialInstance(Material& material, u32 offset);
+        MaterialInstance(Material* material, u32 offset);
 
         Material* _material;
         u32 _offset;

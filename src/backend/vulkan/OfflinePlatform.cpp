@@ -6,9 +6,9 @@ cala::backend::vulkan::OfflinePlatform::OfflinePlatform(u32 width, u32 height, u
     _height(height)
 {}
 
-ende::Vector<const char *> cala::backend::vulkan::OfflinePlatform::requiredExtensions() {
-    ende::Vector<const char*> extensions;
-    extensions.push(VK_KHR_SURFACE_EXTENSION_NAME);
+std::vector<const char *> cala::backend::vulkan::OfflinePlatform::requiredExtensions() {
+    std::vector<const char*> extensions;
+    extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     return extensions;
 }
 

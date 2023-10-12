@@ -113,7 +113,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     if (!_renderSettings.freezeFrustum)
         _cullingFrustum = camera.frustum();
     auto cameraData = camera.data();
-    _cameraBuffer[_engine->device().frameIndex()]->data({ &cameraData, sizeof(cameraData) });
+    _cameraBuffer[_engine->device().frameIndex()]->data(std::span<Camera::Data>(&cameraData, 1));
 
     _globalData.maxDrawCount = scene._renderables.size();
     _globalData.gpuCulling = _renderSettings.gpuCulling;
@@ -153,7 +153,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
     }).index();
 
-    _globalDataBuffer[_engine->device().frameIndex()]->data({ &_globalData, sizeof(_globalData) });
+    _globalDataBuffer[_engine->device().frameIndex()]->data(std::span<RendererGlobal>(&_globalData, 1));
 
     bool debugViewEnabled = _renderSettings.debugNormals || _renderSettings.debugRoughness || _renderSettings.debugMetallic || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugVxgi;
     debugViewEnabled = false;
@@ -272,8 +272,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto clusters = graph.getResource<BufferResource>("clusters");
             cmd.clearDescriptors();
             cmd.bindProgram(_engine->_createClustersProgram);
-            cmd.bindBindings(nullptr);
-            cmd.bindAttributes(nullptr);
+            cmd.bindBindings({});
+            cmd.bindAttributes({});
             struct ClusterPush {
                 ende::math::Mat4f inverseProjection;
                 ende::math::Vec<4, u32> tileSizes;
@@ -287,7 +287,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             push.near = camera.near();
             push.far = camera.far();
 
-            cmd.pushConstants(backend::ShaderStage::COMPUTE, { &push, sizeof(push) });
+            cmd.pushConstants(backend::ShaderStage::COMPUTE, push);
             cmd.bindBuffer(1, 0, clusters->handle, true);
             cmd.bindPipeline();
             cmd.bindDescriptors();
@@ -331,8 +331,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         auto lightGlobalIndex = graph.getResource<BufferResource>("lightGlobalResource");
         cmd.clearDescriptors();
         cmd.bindProgram(_engine->_cullLightsProgram);
-        cmd.bindBindings(nullptr);
-        cmd.bindAttributes(nullptr);
+        cmd.bindBindings({});
+        cmd.bindAttributes({});
         struct ClusterPush {
             ende::math::Mat4f inverseProjection;
             ende::math::Vec<4, u32> tileSizes;
@@ -350,7 +350,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         push.lightGridIndex = lightGrid->handle.index();
         push.lightIndicesIndex = lightIndices->handle.index();
 
-        cmd.pushConstants(backend::ShaderStage::COMPUTE, { &push, sizeof(push) });
+        cmd.pushConstants(backend::ShaderStage::COMPUTE, push);
         cmd.bindBuffer(1, 0, global->handle);
         cmd.bindBuffer(1, 1, clusters->handle, true);
         cmd.bindBuffer(1, 2, lightGlobalIndex->handle, true);
@@ -374,8 +374,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto depthBuffer = graph.getResource<ImageResource>("depth");
             cmd.clearDescriptors();
             cmd.bindBuffer(1, 0, global->handle);
-            cmd.bindBindings(nullptr);
-            cmd.bindAttributes(nullptr);
+            cmd.bindBindings({});
+            cmd.bindAttributes({});
             cmd.bindBlendState({ true });
             cmd.bindProgram(_engine->_clusterDebugProgram);
             struct ClusterPush {
@@ -384,7 +384,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             } push;
             push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
             push.screenSize = { _swapchain->extent().width, _swapchain->extent().height };
-            cmd.pushConstants(backend::ShaderStage::FRAGMENT, { &push, sizeof(push) });
+            cmd.pushConstants(backend::ShaderStage::FRAGMENT, push);
             cmd.bindBuffer(1, 1, lightGrid->handle, true);
             cmd.bindImage(1, 2, _engine->device().getImageView(depthBuffer->handle), _engine->device().defaultShadowSampler());
             cmd.bindPipeline();
@@ -487,9 +487,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                     cmd.clearDescriptors();
                     cmd.bindProgram(_engine->_pointShadowCullProgram);
-                    cmd.bindBindings(nullptr);
-                    cmd.bindAttributes(nullptr);
-                    cmd.pushConstants(backend::ShaderStage::COMPUTE, { &shadowFrustum, sizeof(shadowFrustum) });
+                    cmd.bindBindings({});
+                    cmd.bindAttributes({});
+                    cmd.pushConstants(backend::ShaderStage::COMPUTE, shadowFrustum);
                     cmd.bindBuffer(1, 0, global->handle);
                     cmd.bindBuffer(2, 0, drawCommands->handle, true);
                     cmd.bindBuffer(2, 1, drawCount->handle, true);
@@ -525,7 +525,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         shadowCam.near(),
                         shadowCam.far()
                     };
-                    cmd.pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::FRAGMENT, { &shadowData, sizeof(shadowData) });
+                    cmd.pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::FRAGMENT, shadowData);
 
                     auto& renderable = scene._renderables[0].second.first;
                     cmd.bindBindings(renderable.bindings);
@@ -668,7 +668,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                     push.orthographic = ende::math::orthographic<f32>(_renderSettings.voxelBounds.first.x(), _renderSettings.voxelBounds.second.x(), _renderSettings.voxelBounds.first.y(), _renderSettings.voxelBounds.second.y(), _renderSettings.voxelBounds.first.z(), _renderSettings.voxelBounds.second.z());
 
-                    cmd.pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::FRAGMENT, { &push, sizeof(push) });
+                    cmd.pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::FRAGMENT, push);
 
                     cmd.bindPipeline();
                     cmd.bindDescriptors();
@@ -706,8 +706,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 //            auto voxelVisualised = graph.getResource<ImageResource>("voxelVisualised");
                 cmd.clearDescriptors();
                 cmd.bindProgram(_engine->getProgram(Engine::ProgramType::VOXEL_VISUALISE));
-                cmd.bindBindings(nullptr);
-                cmd.bindAttributes(nullptr);
+                cmd.bindBindings({});
+                cmd.bindAttributes({});
                 cmd.bindBuffer(1, 0, global->handle);
                 cmd.bindImage(2, 0, _engine->device().getImageView(voxelVisualised->handle), _engine->device().defaultSampler(), true);
                 struct VoxelPush {
@@ -716,7 +716,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 } push;
                 push.voxelGridIndex = voxelGrid->handle.index();
                 push.voxelOrthographic = ende::math::orthographic<f32>(_renderSettings.voxelBounds.first.x(), _renderSettings.voxelBounds.second.x(), _renderSettings.voxelBounds.first.y(), _renderSettings.voxelBounds.second.y(), _renderSettings.voxelBounds.first.z(), _renderSettings.voxelBounds.second.z());
-                cmd.pushConstants(backend::ShaderStage::COMPUTE, { &push, sizeof(push) });
+                cmd.pushConstants(backend::ShaderStage::COMPUTE, push);
                 cmd.bindPipeline();
                 cmd.bindDescriptors();
                 cmd.dispatchCompute(std::ceil(voxelVisualised->width / 32.f), std::ceil(voxelVisualised->height / 32.f), 1);
@@ -742,9 +742,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         auto drawCommands = graph.getResource<BufferResource>("drawCommands");
         cmd.clearDescriptors();
         cmd.bindProgram(_engine->_cullProgram);
-        cmd.bindBindings(nullptr);
-        cmd.bindAttributes(nullptr);
-        cmd.pushConstants(backend::ShaderStage::COMPUTE, { &_cullingFrustum, sizeof(_cullingFrustum) });
+        cmd.bindBindings({});
+        cmd.bindAttributes({});
+        cmd.pushConstants(backend::ShaderStage::COMPUTE, _cullingFrustum);
         cmd.bindBuffer(1, 0, global->handle);
         cmd.bindBuffer(2, 0, drawCommands->handle, true);
         cmd.bindBuffer(2, 1, materialCounts->handle, true);
@@ -856,7 +856,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 push.lightGridIndex = lightGrid->handle.index();
                 push.lightIndicesIndex = lightIndices->handle.index();
 
-                cmd.pushConstants(backend::ShaderStage::FRAGMENT, { &push, sizeof(push) });
+                cmd.pushConstants(backend::ShaderStage::FRAGMENT, push);
 
                 cmd.bindPipeline();
                 cmd.bindDescriptors();
@@ -885,8 +885,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto backbuffer = graph.getResource<ImageResource>("backbuffer");
             cmd.clearDescriptors();
             cmd.bindProgram(_engine->_tonemapProgram);
-            cmd.bindBindings(nullptr);
-            cmd.bindAttributes(nullptr);
+            cmd.bindBindings({});
+            cmd.bindAttributes({});
             cmd.bindBuffer(1, 0, global->handle);
             cmd.bindImage(2, 0, _engine->device().getImageView(hdrImage->handle), _engine->device().defaultSampler(), true);
             cmd.bindImage(2, 1, _engine->device().getImageView(backbuffer->handle), _engine->device().defaultSampler(), true);
@@ -917,7 +917,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd.bindAttributes(_engine->_cube->_attributes);
             cmd.bindBuffer(1, 0, global->handle);
             i32 skyMapIndex = scene._skyLightMap.index();
-            cmd.pushConstants(backend::ShaderStage::FRAGMENT, { &skyMapIndex, sizeof(skyMapIndex) });
+            cmd.pushConstants(backend::ShaderStage::FRAGMENT, skyMapIndex);
 
             cmd.bindPipeline();
             cmd.bindDescriptors();

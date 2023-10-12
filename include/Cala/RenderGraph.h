@@ -111,6 +111,8 @@ namespace cala {
 
         RenderPass(RenderGraph* graph, const char* name, u32 index);
 
+        RenderPass(RenderPass&& rhs) noexcept;
+
         RenderGraph* _graph;
         const char* _passName;
 
@@ -122,9 +124,9 @@ namespace cala {
             bool clear;
         };
 
-        ende::Vector<PassResource> _inputs;
-        ende::Vector<PassResource> _outputs;
-        ende::Vector<PassResource> _attachments;
+        std::vector<PassResource> _inputs;
+        std::vector<PassResource> _outputs;
+        std::vector<PassResource> _attachments;
 
         struct Barrier {
             const char* name;
@@ -137,8 +139,8 @@ namespace cala {
             backend::ImageLayout dstLayout = backend::ImageLayout::UNDEFINED;
         };
 
-        ende::Vector<Barrier> _invalidate; //inputs
-        ende::Vector<Barrier> _flush; //outputs
+        std::vector<Barrier> _invalidate; //inputs
+        std::vector<Barrier> _flush; //outputs
 
         std::function<void(backend::vulkan::CommandBuffer&, RenderGraph&)> _executeFunc;
 
@@ -167,7 +169,7 @@ namespace cala {
 
         void reset();
 
-        ende::Span<std::pair<const char*, backend::vulkan::Timer>> getTimers() {
+        std::span<std::pair<const char*, backend::vulkan::Timer>> getTimers() {
             u32 offIndex = _engine->device().frameIndex();
             assert(_orderedPasses.size() <= _timers[offIndex].size());
             return { _timers[offIndex].data(), static_cast<u32>(_orderedPasses.size()) };
@@ -189,10 +191,10 @@ namespace cala {
             auto it = _attachmentMap.find(label);
             if (_attachmentMap.end() == it) {
                 if (internal) {
-                    _internalResources.push(std::make_unique<T>(std::move(resource)));
+                    _internalResources.push_back(std::make_unique<T>(std::move(resource)));
                     _attachmentMap.emplace(label, ResourcePointer{ (u32)_internalResources.size() - 1, internal });
                 } else {
-                    _externalResources.push(std::make_unique<T>(std::move(resource)));
+                    _externalResources.push_back(std::make_unique<T>(std::move(resource)));
                     _attachmentMap.emplace(label, ResourcePointer{ (u32)_externalResources.size() - 1, internal });
                 }
             } else {
@@ -221,8 +223,8 @@ namespace cala {
         Engine* _engine;
         backend::vulkan::Swapchain* _swapchain;
 
-        ende::Vector<RenderPass> _passes;
-        ende::Vector<std::pair<const char*, backend::vulkan::Timer>> _timers[2];
+        std::vector<RenderPass> _passes;
+        std::vector<std::pair<const char*, backend::vulkan::Timer>> _timers[2];
 
         struct ResourcePointer {
             u32 index;
@@ -231,12 +233,12 @@ namespace cala {
 
         tsl::robin_map<const char*, ResourcePointer> _attachmentMap;
 
-        ende::Vector<std::unique_ptr<Resource>> _internalResources;
-        ende::Vector<std::unique_ptr<Resource>> _externalResources;
+        std::vector<std::unique_ptr<Resource>> _internalResources;
+        std::vector<std::unique_ptr<Resource>> _externalResources;
 
         const char* _backbuffer;
 
-        ende::Vector<RenderPass*> _orderedPasses;
+        std::vector<RenderPass*> _orderedPasses;
 
     };
 

@@ -71,10 +71,10 @@ cala::backend::vulkan::Image::View &cala::backend::vulkan::Image::View::operator
     return *this;
 }
 
-void cala::backend::vulkan::Image::data(cala::backend::vulkan::Device& driver, DataInfo info) {
+void cala::backend::vulkan::Image::_data(cala::backend::vulkan::Device& driver, DataInfo info, std::span<u8> data) {
 
     auto staging = driver.stagingBuffer(info.width * info.height * info.depth * info.format);
-    staging->data(info.data);
+    staging->data(data);
     driver.immediate([&](CommandBuffer& buffer) {
         VkImageSubresourceRange range;
         range.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;

@@ -43,7 +43,7 @@ ImageHandle loadImage(Engine& engine, const ende::fs::Path& path) {
 
     ImageHandle handle = engine.device().createImage({(u32)width, (u32)height, 1, backend::Format::RGBA8_UNORM});
 
-    handle->data(engine.device(), {0, (u32)width, (u32)height, 1, 4, {data, length}});
+    handle->data(engine.device(), {0, (u32)width, (u32)height, 1, 4}, std::span<u8>(data, length));
     stbi_image_free(data);
     return handle;
 }
@@ -53,10 +53,10 @@ ImageHandle loadImageHDR(Engine& engine, const ende::fs::Path& path) {
     i32 width, height, channels;
     f32* data = stbi_loadf((*path).c_str(), &width, &height, &channels, STBI_rgb_alpha);
     if (!data) throw "unable load image";
-    u32 length = width * height * 4 * 4;
+    u32 length = width * height * 4;
 
     ImageHandle handle = engine.device().createImage({(u32)width, (u32)height, 1, backend::Format::RGBA32_SFLOAT});
-    handle->data(engine.device(), {0, (u32)width, (u32)height, 1, (u32)4 * 4, {data, length}});
+    handle->data(engine.device(), {0, (u32)width, (u32)height, 1, (u32)4 * 4}, std::span(data, length));
     stbi_image_free(data);
     return handle;
 }
@@ -68,7 +68,7 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
     std::string warn;
     loader.LoadASCIIFromFile(&model, &err, &warn, *path);
 
-    ende::Vector<ImageHandle> images;
+    std::vector<ImageHandle> images;
     images.resize(model.images.size());
 
     auto loadImage = [&](tinygltf::Material& material, const std::string& name, backend::Format format) {
@@ -106,14 +106,13 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
         });
         images[index]->data(engine->device(), {
             0, (u32)image.width, (u32)image.height, 1, 4,
-            { buf, bufferSize}
-        });
+        }, std::span<u8>(buf, bufferSize));
         images[index]->generateMips();
         if (del)
             delete buf;
     };
 
-    ende::Vector<MaterialInstance> materials;
+    std::vector<MaterialInstance> materials;
     struct PbrMat {
         i32 albedoIndex = -1;
         i32 normalIndex = -1;
@@ -140,13 +139,13 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
         }
         MaterialInstance instance = material->instance();
         instance.setData(mat);
-        materials.push(std::move(instance));
+        materials.push_back(std::move(instance));
     }
 
-    ende::Vector<Vertex> vertices;
-    ende::Vector<u32> indices;
+    std::vector<Vertex> vertices;
+    std::vector<u32> indices;
 
-    ende::Vector<Model::Primitive> primitives;
+    std::vector<Model::Primitive> primitives;
 
     for (auto& node : model.nodes) {
         if (node.mesh > -1) {
@@ -227,7 +226,7 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
                         }
                         if (tangents)
                             vertex.tangent = { tangents[v * 4], tangents[v * 4 + 1], tangents[v * 4 + 2], tangents[v * 4 + 3] };
-                        vertices.push(vertex);
+                        vertices.push_back(vertex);
                     }
                 }
                 {
@@ -239,19 +238,19 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
                         case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT: {
                             u32* buf = (u32*)&buffer.data[accessor.byteOffset + view.byteOffset];
                             for (u32 index = 0; index < accessor.count; index++)
-                                indices.push(buf[index] + vertexStart);
+                                indices.push_back(buf[index] + vertexStart);
                             break;
                         }
                         case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: {
                             u16* buf = (u16*)&buffer.data[accessor.byteOffset + view.byteOffset];
                             for (u32 index = 0; index < accessor.count; index++)
-                                indices.push(buf[index] + vertexStart);
+                                indices.push_back(buf[index] + vertexStart);
                             break;
                         }
                         case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: {
                             u8* buf = (u8*)&buffer.data[accessor.byteOffset + view.byteOffset];
                             for (u32 index = 0; index < accessor.count; index++)
-                                indices.push(buf[index] + vertexStart);
+                                indices.push_back(buf[index] + vertexStart);
                             break;
                         }
                         default:
@@ -264,7 +263,7 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
                 prim.materialIndex = primitive.material;
                 prim.aabb.min = min;
                 prim.aabb.max = max;
-                primitives.push(prim);
+                primitives.push_back(prim);
             }
         }
     }
@@ -281,22 +280,16 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
             backend::Attribute{3, 0, backend::AttribType::Vec4f}
     };
 
-//    BufferHandle vertexBuffer = engine->createBuffer(vertices.size() * sizeof(Vertex), BufferUsage::VERTEX);
-//    BufferHandle indexBuffer = engine->createBuffer(indices.size() * sizeof(u32), BufferUsage::INDEX);
-//    vertexBuffer->data({ vertices.data(), static_cast<u32>(vertices.size() * sizeof(Vertex)) });
-//    indexBuffer->data({ indices.data(), static_cast<u32>(indices.size() * sizeof(u32)) });
-
-    u32 vertexOffset = engine->uploadVertexData({ reinterpret_cast<f32*>(vertices.data()), static_cast<u32>(vertices.size() * sizeof(Vertex)) });
+    std::span<f32> vs(reinterpret_cast<f32*>(vertices.data()), vertices.size() * sizeof(Vertex) / sizeof(f32));
+    u32 vertexOffset = engine->uploadVertexData(vs);
     for (auto& index : indices)
         index += vertexOffset / sizeof(Vertex);
-    u32 indexOffset = engine->uploadIndexData({ reinterpret_cast<u32*>(indices.data()), static_cast<u32>(indices.size() * sizeof(u32)) });
+    u32 indexOffset = engine->uploadIndexData(indices);
     for (auto& primitive : primitives)
         primitive.firstIndex += indexOffset / sizeof(u32);
 
 
     Model mesh;
-//    mesh.vertexBuffer = engine;
-//    mesh.indexBuffer = indexBuffer;
     mesh.primitives = std::move(primitives);
     mesh.images = std::move(images);
     mesh.materials = std::move(materials);
@@ -472,7 +465,7 @@ int main() {
     for (u32 i = 0; i < 10; i++) {
         roughnessImages[i] = engine.device().createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST, backend::ImageType::IMAGE2D});
         f32 metallicRoughnessData[] = { 0.f, static_cast<f32>(i) / 10.f, 0.f, 1.f };
-        roughnessImages[i]->data(engine.device(), {0, 1, 1, 1, 4 * 4, {metallicRoughnessData, sizeof(f32) * 4 } });
+        roughnessImages[i]->data(engine.device(), {0, 1, 1, 1, 4 * 4 }, std::span<f32>(metallicRoughnessData, 4));
 
         Material1Data materialData1 {
                 -1,
@@ -491,7 +484,7 @@ int main() {
     u32 depth = 10;
 
     Transform transform;
-    ende::Vector<Transform> transforms;
+    std::vector<Transform> transforms;
     transforms.reserve(width * height * depth * 10);
     for (u32 i = 0; i < width; i++) {
         auto xpos = transform.pos();
@@ -499,8 +492,8 @@ int main() {
             auto ypos = transform.pos();
             for (u32 k = 0; k < depth; k++) {
                 transform.addPos({0, 0, 3});
-                auto& t = transforms.push(transform);
-                scene.addRenderable(sphere, &instances[k], &t, false);
+                transforms.push_back(transform);
+                scene.addRenderable(sphere, &instances[k], &transforms.back(), false);
             }
             transform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
         }
@@ -515,10 +508,10 @@ int main() {
 
 
 
-    ende::Vector<Transform> lightTransforms;
+    std::vector<Transform> lightTransforms;
     lightTransforms.reserve(10000);
     for (u32 i = 0; i < 0; i++) {
-        lightTransforms.push(Transform({ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f)}));
+        lightTransforms.push_back(Transform({ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f)}));
         Light l(cala::Light::POINT, false, lightTransforms.back());
         l.setIntensity(ende::math::rand(10.f, 1000.f));
         l.setColour({ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f)});
@@ -590,8 +583,8 @@ int main() {
             ImGui::SliderInt("New Lights", &newLights, 0, 100);
             if (ImGui::Button("Add Lights")) {
                 for (u32 i = 0; i < newLights; i++) {
-                    auto& t = lightTransforms.push(Transform({ende::math::rand(-sceneBounds, sceneBounds), ende::math::rand(0.f, sceneBounds), ende::math::rand(-sceneBounds, sceneBounds)}));
-                    Light l(Light::LightType::POINT, false, t);
+                    lightTransforms.push_back(Transform({ende::math::rand(-sceneBounds, sceneBounds), ende::math::rand(0.f, sceneBounds), ende::math::rand(-sceneBounds, sceneBounds)}));
+                    Light l(Light::LightType::POINT, false, lightTransforms.back());
 //                l.setIntensity(ende::math::rand(0.1f, 5.f));
 //                l.setIntensity(0.1f);
                     l.setRange(1);
@@ -612,8 +605,8 @@ int main() {
             if (ImGui::Button("Add 10")) {
                 transform.setPos({ (f32)width * 3, 0, 0 });
                 for (u32 i = 0; i < depth; i++) {
-                    auto& t = transforms.push(transform);
-                    scene.addRenderable(cube, &matInstance, &t, false);
+                    transforms.push_back(transform);
+                    scene.addRenderable(cube, &matInstance, &transforms.back(), false);
                     transform.addPos({0, 0, 3});
                 }
                 width += 3;

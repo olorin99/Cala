@@ -8,7 +8,6 @@
 
 #include <Cala/backend/vulkan/primitives.h>
 #include <Cala/backend/vulkan/Device.h>
-#include <Ende/Vector.h>
 
 class VulkanContextException : public std::exception {
 public:
@@ -93,9 +92,9 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
 
     auto instanceExtensions = platform.requiredExtensions();
 #ifndef NDEBUG
-    instanceExtensions.push(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
-    instanceExtensions.push(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    instanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
 //    instanceExtensions.push(VK_EXT_validation_features);
 
@@ -138,7 +137,7 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     if (deviceCount == 0)
         throw VulkanContextException("No GPUs found with vulkan support");
 
-    ende::Vector<VkPhysicalDevice> devices(deviceCount);
+    std::vector<VkPhysicalDevice> devices(deviceCount);
     VK_TRY(vkEnumeratePhysicalDevices(_instance, &deviceCount, devices.data()));
 
     VkPhysicalDeviceFeatures deviceFeatures;
@@ -154,16 +153,16 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
 
     u32 queuCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queuCount, nullptr);
-    ende::Vector<VkQueueFamilyProperties> familyProperties(queuCount);
+    std::vector<VkQueueFamilyProperties> familyProperties(queuCount);
     vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queuCount, familyProperties.data());
 
     u32 priCount = std::max_element(familyProperties.begin(), familyProperties.end(), [](const auto& a, const auto& b) {
         return a.queueCount < b.queueCount;
     })->queueCount;
 
-    ende::Vector<f32> priorities(priCount, 1.f);
+    std::vector<f32> priorities(priCount, 1.f);
 
-    ende::Vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     for (u32 i = 0; i < familyProperties.size(); i++) {
         VkDeviceQueueCreateInfo queueCreateInfo{};
         queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -171,7 +170,7 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
         queueCreateInfo.queueCount = familyProperties[i].queueCount;
         queueCreateInfo.pQueuePriorities = priorities.data();
 
-        queueCreateInfos.push(queueCreateInfo);
+        queueCreateInfos.push_back(queueCreateInfo);
     }
 
     VkPhysicalDeviceProperties2 deviceProperties2{};
@@ -235,10 +234,10 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
 
     u32 supportedDeviceExtensionsCount = 0;
     vkEnumerateDeviceExtensionProperties(_physicalDevice, nullptr, &supportedDeviceExtensionsCount, nullptr);
-    ende::Vector<VkExtensionProperties> supportedDeviceExtensions(supportedDeviceExtensionsCount);
+    std::vector<VkExtensionProperties> supportedDeviceExtensions(supportedDeviceExtensionsCount);
     vkEnumerateDeviceExtensionProperties(_physicalDevice, nullptr, &supportedDeviceExtensionsCount, supportedDeviceExtensions.data());
 
-    auto checkExtensions = [](const ende::Vector<VkExtensionProperties>& supportedExtensions, const char* name) {
+    auto checkExtensions = [](const std::vector<VkExtensionProperties>& supportedExtensions, const char* name) {
         for (auto& extension : supportedExtensions) {
             if (strcmp(extension.extensionName, name) == 0)
                 return true;
@@ -269,20 +268,20 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
 
 
 
-    ende::Vector<const char*> deviceExtensions;
-    deviceExtensions.push(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    std::vector<const char*> deviceExtensions;
+    deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 //    deviceExtensions.push(VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
     if (_supportedExtensions.EXT_memory_budget)
-        deviceExtensions.push(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
+        deviceExtensions.push_back(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
 //    if (_supportedExtensions.EXT_load_store_op_none)
 //        deviceExtensions.push(VK_EXT_LOAD_STORE_OP_NONE_EXTENSION_NAME);
 #ifndef NDEBUG
     if (_supportedExtensions.EXT_debug_marker)
-        deviceExtensions.push(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+        deviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
     if (_supportedExtensions.AMD_buffer_marker)
-        deviceExtensions.push(VK_AMD_BUFFER_MARKER_EXTENSION_NAME);
+        deviceExtensions.push_back(VK_AMD_BUFFER_MARKER_EXTENSION_NAME);
     if (_supportedExtensions.AMD_device_coherent_memory)
-        deviceExtensions.push(VK_AMD_DEVICE_COHERENT_MEMORY_EXTENSION_NAME);
+        deviceExtensions.push_back(VK_AMD_DEVICE_COHERENT_MEMORY_EXTENSION_NAME);
 #endif
 
     VkDeviceCreateInfo createInfo{};
@@ -499,7 +498,7 @@ bool cala::backend::vulkan::Context::queueIndex(u32& index, QueueType type, Queu
 
     u32 count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &count, nullptr);
-    ende::Vector<VkQueueFamilyProperties> familyProperties(count);
+    std::vector<VkQueueFamilyProperties> familyProperties(count);
     vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &count, familyProperties.data());
 
     u32 i = 0;

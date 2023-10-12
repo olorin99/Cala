@@ -2,7 +2,7 @@
 #define CALA_BUFFER_H
 
 #include <Cala/backend/primitives.h>
-#include <Ende/Span.h>
+#include <span>
 #include <volk.h>
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
@@ -45,7 +45,19 @@ namespace cala::backend::vulkan {
 
         void unmap();
 
-        void data(ende::Span<const void> data, u32 offset = 0);
+        void _data(u8, std::span<u8> data, u32 offset = 0);
+
+        void _data(u8, std::span<const u8> data, u32 offset = 0);
+
+        template<typename T>
+        void data(std::span<T> data, u32 offset = 0) {
+            _data(0, std::span<u8>(reinterpret_cast<u8*>(data.data()), data.size() * sizeof(T)), offset);
+        }
+
+        template<typename T>
+        void data(std::span<const T> data, u32 offset = 0) {
+            _data(0, std::span<const u8>(reinterpret_cast<const u8*>(data.data()), data.size() * sizeof(T)), offset);
+        }
 
 
         class View {
@@ -58,7 +70,7 @@ namespace cala::backend::vulkan {
 
             Mapped map(u32 offset = 0, u32 size = 0);
 
-            void data(ende::Span<const void> data, u32 offset = 0);
+            void data(std::span<const void> data, u32 offset = 0);
 
             u32 size() const { return _size; }
 

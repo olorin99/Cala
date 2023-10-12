@@ -3,7 +3,7 @@
 
 #include <volk.h>
 #include <Ende/platform.h>
-#include <Ende/Vector.h>
+#include <vector>
 
 namespace cala::backend {
 
@@ -12,7 +12,7 @@ namespace cala::backend {
 
         virtual ~Platform() = default;
 
-        virtual ende::Vector<const char*> requiredExtensions() { return {}; }
+        virtual std::vector<const char*> requiredExtensions() { return {}; }
 
         virtual VkSurfaceKHR surface(VkInstance instance) { return VK_NULL_HANDLE; }
 

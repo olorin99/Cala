@@ -92,6 +92,27 @@ cala::RenderPass::RenderPass(RenderGraph *graph, const char *name, u32 index)
     _framebuffer(nullptr)
 {}
 
+cala::RenderPass::RenderPass(cala::RenderPass &&rhs) noexcept
+    : _graph(nullptr),
+    _passName(),
+    _debugColour({ 1, 0, 0, 1 }),
+    _passTimer(0),
+    _framebuffer(nullptr)
+{
+    std::swap(_graph, rhs._graph);
+    std::swap(_passName, rhs._passName);
+    std::swap(_inputs, rhs._inputs);
+    std::swap(_outputs, rhs._outputs);
+    std::swap(_attachments, rhs._attachments);
+    std::swap(_invalidate, rhs._invalidate);
+    std::swap(_flush, rhs._flush);
+    std::swap(_executeFunc, rhs._executeFunc);
+    std::swap(_debugColour, rhs._debugColour);
+    std::swap(_passTimer, rhs._passTimer);
+    std::swap(_framebuffer, rhs._framebuffer);
+    std::swap(compute, rhs.compute);
+}
+
 cala::RenderPass::~RenderPass() {
 //    delete _framebuffer;
 //    delete _renderPass;
@@ -108,7 +129,7 @@ bool cala::RenderPass::reads(const char *label, backend::PipelineStage stage, ba
     }
     else {
 //        _inputs.emplace(label, backend::Access::MEMORY_READ | backend::Access::MEMORY_WRITE, backend::PipelineStage::ALL_COMMANDS, layout);
-        _inputs.emplace(label, access, stage, layout, false);
+        _inputs.emplace_back(label, access, stage, layout, false);
         return true;
     }
 }
@@ -123,7 +144,7 @@ bool cala::RenderPass::writes(const char *label, backend::PipelineStage stage, b
     }
     else {
 //        _outputs.emplace(label, backend::Access::MEMORY_READ | backend::Access::MEMORY_WRITE, backend::PipelineStage::ALL_COMMANDS, layout);
-        _outputs.emplace(label, access, stage, layout, clear);
+        _outputs.emplace_back(label, access, stage, layout, clear);
         return true;
     }
 }
@@ -135,7 +156,7 @@ bool cala::RenderPass::writes(const char *label, backend::PipelineStage stage, b
 void cala::RenderPass::addColourAttachment(const char *label) {
     //TODO: error handling
     if (writes(label, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::Access::COLOUR_ATTACHMENT_WRITE | backend::Access::COLOUR_ATTACHMENT_READ, backend::ImageLayout::COLOUR_ATTACHMENT)) {
-        _attachments.emplace(label, backend::Access::COLOUR_ATTACHMENT_WRITE | backend::Access::COLOUR_ATTACHMENT_READ, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::ImageLayout::COLOUR_ATTACHMENT);
+        _attachments.emplace_back(label, backend::Access::COLOUR_ATTACHMENT_WRITE | backend::Access::COLOUR_ATTACHMENT_READ, backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::ImageLayout::COLOUR_ATTACHMENT);
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->addUsage(backend::ImageUsage::COLOUR_ATTACHMENT);
     }
@@ -143,7 +164,7 @@ void cala::RenderPass::addColourAttachment(const char *label) {
 
 void cala::RenderPass::addDepthAttachment(const char *label) {
     if (writes(label, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::LATE_FRAGMENT, backend::Access::DEPTH_STENCIL_READ | backend::Access::DEPTH_STENCIL_WRITE, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT)) {
-        _attachments.emplace(label, backend::Access::DEPTH_STENCIL_READ | backend::Access::DEPTH_STENCIL_WRITE, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::LATE_FRAGMENT, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+        _attachments.emplace_back(label, backend::Access::DEPTH_STENCIL_READ | backend::Access::DEPTH_STENCIL_WRITE, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::LATE_FRAGMENT, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->addUsage(backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT);
     }
@@ -151,7 +172,7 @@ void cala::RenderPass::addDepthAttachment(const char *label) {
 
 void cala::RenderPass::addDepthReadAttachment(const char *label) {
     if (reads(label, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::LATE_FRAGMENT, backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_READ_ONLY)) {
-        _attachments.emplace(label, backend::Access::DEPTH_STENCIL_READ, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::LATE_FRAGMENT, backend::ImageLayout::DEPTH_STENCIL_READ_ONLY);
+        _attachments.emplace_back(label, backend::Access::DEPTH_STENCIL_READ, backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::LATE_FRAGMENT, backend::ImageLayout::DEPTH_STENCIL_READ_ONLY);
         if (auto resource = _graph->getResource<ImageResource>(label); resource)
             resource->addUsage(backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT);
     }
@@ -248,8 +269,8 @@ cala::RenderGraph::~RenderGraph() {
 cala::RenderPass &cala::RenderGraph::addPass(const char *name, bool compute) {
     u32 index = _passes.size();
     while (_timers[_engine->device().frameIndex()].size() <= index)
-        _timers[_engine->device().frameIndex()].push(std::make_pair("", backend::vulkan::Timer(_engine->device())));
-    _passes.push(RenderPass(this, name, index));
+        _timers[_engine->device().frameIndex()].emplace_back(std::make_pair("", backend::vulkan::Timer(_engine->device())));
+    _passes.emplace_back(this, name, index);
     _timers[_engine->device().frameIndex()][index].first = name;
     assert(_passes.size() <= _timers[_engine->device().frameIndex()].size());
     _passes.back().compute = compute;
@@ -266,15 +287,15 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
     assert(_swapchain);
     _orderedPasses.clear();
 
-    tsl::robin_map<const char*, ende::Vector<u32>> outputs;
+    tsl::robin_map<const char*, std::vector<u32>> outputs;
     for (u32 i = 0; i < _passes.size(); i++) {
         auto& pass = _passes[i];
         for (auto& output : pass._outputs)
-            outputs[output.name].push(i);
+            outputs[output.name].push_back(i);
     }
 
-    ende::Vector<bool> visited(_passes.size(), false);
-    ende::Vector<bool> onStack(_passes.size(), false);
+    std::vector<bool> visited(_passes.size(), false);
+    std::vector<bool> onStack(_passes.size(), false);
 
     std::function<bool(u32)> dfs = [&](u32 index) -> bool {
         visited[index] = true;
@@ -291,7 +312,7 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
                 }
             }
         }
-        _orderedPasses.push(&_passes[index]);
+        _orderedPasses.push_back(&_passes[index]);
         onStack[index] = false;
         return true;
     };
@@ -327,7 +348,7 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
                 continue;
             auto& accessPass = _orderedPasses[accessPassIndex];
             if (backend::isReadAccess(nextAccess.access)) {
-                accessPass->_invalidate.push({
+                accessPass->_invalidate.push_back({
                     currentAccess.name,
                     accessIndex,
                     currentAccess.stage,
@@ -338,7 +359,7 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
                     nextAccess.layout
                 });
             } else {
-                pass->_flush.push({
+                pass->_flush.push_back({
                     currentAccess.name,
                     accessIndex,
                     currentAccess.stage,
@@ -358,7 +379,7 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
                 continue;
             auto& accessPass = _orderedPasses[accessPassIndex];
             if (backend::isReadAccess(nextAccess.access)) {
-                accessPass->_invalidate.push({
+                accessPass->_invalidate.push_back({
                     currentAccess.name,
                     accessIndex,
                     currentAccess.stage,
@@ -369,7 +390,7 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
                     nextAccess.layout
                 });
             } else {
-                pass->_flush.push({
+                pass->_flush.push_back({
                     currentAccess.name,
                     accessIndex,
                     currentAccess.stage,
@@ -391,7 +412,7 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
                 if (accessPassIndex < 0)
                     continue;
                 auto& accessPass = _orderedPasses[accessPassIndex];
-                accessPass->_invalidate.push({
+                accessPass->_invalidate.push_back({
                     attachment.first,
                     accessIndex,
                     backend::PipelineStage::ALL_COMMANDS,
@@ -408,7 +429,7 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
                 if (accessPassIndex < 0)
                     continue;
                 auto& accessPass = _orderedPasses[accessPassIndex];
-                accessPass->_invalidate.push({
+                accessPass->_invalidate.push_back({
                     attachment.first,
                     accessIndex,
                     backend::PipelineStage::ALL_COMMANDS,
@@ -424,7 +445,7 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
             if (accessPassIndex < 0)
                 continue;
             auto& accessPass = _orderedPasses[accessPassIndex];
-            accessPass->_invalidate.push({
+            accessPass->_invalidate.push_back({
                 attachment.first,
                 accessIndex,
                 backend::PipelineStage::ALL_COMMANDS,
@@ -465,12 +486,12 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
             continue;
 //        if (!pass->_framebuffer && !pass->_attachments.empty()) {
         if (!pass->_attachments.empty()) {
-            ende::Vector<VkImageView> attachmentImages;
-            ende::Vector<u32> attachmentHashes;
+            std::vector<VkImageView> attachmentImages;
+            std::vector<u32> attachmentHashes;
             u32 width = 0;
             u32 height = 0;
             backend::vulkan::RenderPass* renderPass = nullptr;
-            ende::Vector<backend::vulkan::RenderPass::Attachment> attachments;
+            std::vector<backend::vulkan::RenderPass::Attachment> attachments;
             for (auto &attachment: pass->_attachments) {
 
                 RenderPass::Barrier* invalidate = nullptr;
@@ -529,7 +550,7 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
 //                attachmentRenderPass.internalLayout = depth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
                 resource->clear = false;
-                attachments.push(attachmentRenderPass);
+                attachments.push_back(attachmentRenderPass);
 
                 if (resource->matchSwapchain) {
                     auto extent = _swapchain->extent();
@@ -539,8 +560,8 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
                     width = resource->width;
                     height = resource->height;
                 }
-                attachmentImages.push(_engine->device().getImageView(resource->handle).view);
-                attachmentHashes.push(resource->handle.index());
+                attachmentImages.push_back(_engine->device().getImageView(resource->handle).view);
+                attachmentHashes.push_back(resource->handle.index());
             }
             renderPass = _engine->device().getRenderPass(attachments);
             pass->_framebuffer = _engine->device().getFramebuffer(renderPass, attachmentImages, attachmentHashes, width, height);

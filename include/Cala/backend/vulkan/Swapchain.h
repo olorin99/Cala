@@ -6,7 +6,6 @@
 #include <Cala/backend/vulkan/RenderPass.h>
 #include <Cala/backend/vulkan/Framebuffer.h>
 #include <Cala/backend/vulkan/Platform.h>
-#include <Ende/Vector.h>
 #include "Handle.h"
 
 namespace cala::backend::vulkan {
@@ -74,16 +73,16 @@ namespace cala::backend::vulkan {
         VkExtent2D _extent;
         u64 _frame;
 
-        ende::Vector<VkImage> _images;
-        ende::Vector<VkImageView> _imageViews;
-        ende::Vector<VkSemaphore> _semaphores;
-        ende::Vector<VmaAllocation> _allocations;
+        std::vector<VkImage> _images;
+        std::vector<VkImageView> _imageViews;
+        std::vector<VkSemaphore> _semaphores;
+        std::vector<VmaAllocation> _allocations;
 
         ImageHandle _depthImage;
         Image::View _depthView;
 
         RenderPass* _renderPass;
-        ende::Vector<Framebuffer*> _framebuffers;
+        std::vector<Framebuffer*> _framebuffers;
 
         bool _vsync;
 

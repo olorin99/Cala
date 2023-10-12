@@ -2,7 +2,6 @@
 #define CALA_MESH_H
 
 #include <Cala/backend/vulkan/Buffer.h>
-#include <Ende/Vector.h>
 #include <Cala/Engine.h>
 #include <optional>
 

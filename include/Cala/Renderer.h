@@ -56,7 +56,7 @@ namespace cala {
 
         void render(Scene& scene, Camera& camera, ImGuiContext* imGui = nullptr);
 
-        ende::Span<std::pair<const char*, backend::vulkan::Timer>> timers() { return _graph.getTimers(); }
+        std::span<std::pair<const char*, backend::vulkan::Timer>> timers() { return _graph.getTimers(); }
 
         struct Stats {
             u32 drawCallCount = 0;

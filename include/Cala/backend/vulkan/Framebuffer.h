@@ -13,7 +13,7 @@ namespace cala::backend::vulkan {
     class Framebuffer {
     public:
 
-        Framebuffer(VkDevice device, RenderPass& renderPass, ende::Span<VkImageView> attachments, u32 width, u32 height);
+        Framebuffer(VkDevice device, RenderPass& renderPass, std::span<VkImageView> attachments, u32 width, u32 height);
 
         Framebuffer(VkDevice device, RenderPass& renderPass, MaterialInstance* instance, u32 width, u32 height);
 
@@ -31,7 +31,7 @@ namespace cala::backend::vulkan {
         VkDevice _device;
         VkFramebuffer _framebuffer;
         RenderPass& _renderPass;
-        ende::Span<VkImageView> _attachments;
+        std::span<VkImageView> _attachments;
         u32 _width;
         u32 _height;
 

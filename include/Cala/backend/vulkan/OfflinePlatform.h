@@ -11,7 +11,7 @@ namespace cala::backend::vulkan {
 
         OfflinePlatform(u32 width, u32 height, u32 flags = 0);
 
-        ende::Vector<const char*> requiredExtensions() override;
+        std::vector<const char*> requiredExtensions() override;
 
         VkSurfaceKHR surface(VkInstance instance) override;
 

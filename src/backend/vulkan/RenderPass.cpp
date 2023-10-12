@@ -4,7 +4,7 @@
 
 static u32 glob_id = 1;
 
-cala::backend::vulkan::RenderPass::RenderPass(Device& driver, ende::Span<Attachment> attachments)
+cala::backend::vulkan::RenderPass::RenderPass(Device& driver, std::span<Attachment> attachments)
     : _device(driver.context().device()),
     _renderPass(VK_NULL_HANDLE),
     _colourAttachments(0),
@@ -32,7 +32,7 @@ cala::backend::vulkan::RenderPass::RenderPass(Device& driver, ende::Span<Attachm
             colourReferences[colourAttachmentCount].layout = attachments[i].internalLayout;
             if (attachmentDescriptions[colourAttachmentCount].loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
                 while (_clearValues.size() <= i)
-                    _clearValues.push({0.f, 0.f, 0.f, 1.f});
+                    _clearValues.push_back({0.f, 0.f, 0.f, 1.f});
             colourAttachmentCount++;
             _colourAttachments++;
         } else {
@@ -49,7 +49,7 @@ cala::backend::vulkan::RenderPass::RenderPass(Device& driver, ende::Span<Attachm
             depthPresent = true;
             if (depthAttachment.loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
                 while (_clearValues.size() <= i)
-                    _clearValues.push({1.f, 0.f});
+                    _clearValues.push_back({1.f, 0.f});
         }
     }
 
@@ -91,7 +91,7 @@ cala::backend::vulkan::RenderPass::RenderPass(Device& driver, ende::Span<Attachm
 
     VK_TRY(vkCreateRenderPass(_device, &createInfo, nullptr, &_renderPass));
 
-    _attachments.insert(_attachments.begin(), attachments);
+    _attachments.insert(_attachments.begin(), attachments.begin(), attachments.end());
 }
 
 cala::backend::vulkan::RenderPass::~RenderPass() {
@@ -123,7 +123,7 @@ cala::backend::vulkan::RenderPass &cala::backend::vulkan::RenderPass::operator==
 }
 
 
-VkFramebuffer cala::backend::vulkan::RenderPass::framebuffer(ende::Span<VkImageView> attachments, u32 width, u32 height) {
+VkFramebuffer cala::backend::vulkan::RenderPass::framebuffer(std::span<VkImageView> attachments, u32 width, u32 height) {
     VkFramebufferCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 

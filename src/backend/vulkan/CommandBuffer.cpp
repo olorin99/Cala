@@ -21,7 +21,8 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(Device& device, VkQueue queu
 }
 
 cala::backend::vulkan::CommandBuffer::~CommandBuffer() {
-    vkDestroySemaphore(_device->context().device(), _signal, nullptr);
+    if (_device && _signal != VK_NULL_HANDLE)
+        vkDestroySemaphore(_device->context().device(), _signal, nullptr);
 }
 
 cala::backend::vulkan::CommandBuffer::CommandBuffer(CommandBuffer &&rhs) noexcept
@@ -156,7 +157,7 @@ void cala::backend::vulkan::CommandBuffer::bindProgram(ProgramHandle program) {
     _pipelineDirty = true;
 }
 
-void cala::backend::vulkan::CommandBuffer::bindAttributes(ende::Span<Attribute> attributes) {
+void cala::backend::vulkan::CommandBuffer::bindAttributes(std::span<Attribute> attributes) {
     assert(attributes.size() <= MAX_VERTEX_INPUT_ATTRIBUTES && "number of supplied vertex input attributes is greater than valid count");
     VkVertexInputAttributeDescription attributeDescriptions[MAX_VERTEX_INPUT_ATTRIBUTES]{};
     u32 attribIndex = 0;
@@ -200,7 +201,7 @@ void cala::backend::vulkan::CommandBuffer::bindAttributes(ende::Span<Attribute> 
     _pipelineDirty = true;
 }
 
-void cala::backend::vulkan::CommandBuffer::bindBindings(ende::Span<VkVertexInputBindingDescription> bindings) {
+void cala::backend::vulkan::CommandBuffer::bindBindings(std::span<VkVertexInputBindingDescription> bindings) {
     assert(bindings.size() <= MAX_VERTEX_INPUT_BINDINGS && "number of supplied vertex input bindings is greater than valid count");
     memset(_pipelineKey.bindings, 0, sizeof(_pipelineKey.bindings));
     memcpy(_pipelineKey.bindings, bindings.data(), bindings.size() * sizeof(VkVertexInputBindingDescription));
@@ -208,15 +209,15 @@ void cala::backend::vulkan::CommandBuffer::bindBindings(ende::Span<VkVertexInput
     _pipelineDirty = true;
 }
 
-void cala::backend::vulkan::CommandBuffer::bindAttributeDescriptions(ende::Span<VkVertexInputAttributeDescription> attributes) {
+void cala::backend::vulkan::CommandBuffer::bindAttributeDescriptions(std::span<VkVertexInputAttributeDescription> attributes) {
     memset(_pipelineKey.attributes, 0, sizeof(_pipelineKey.attributes));
     memcpy(_pipelineKey.attributes, attributes.data(), attributes.size() * sizeof(VkVertexInputAttributeDescription));
     _pipelineKey.attributeCount = attributes.size();
     _pipelineDirty = true;
 }
 
-void cala::backend::vulkan::CommandBuffer::bindVertexArray(ende::Span<VkVertexInputBindingDescription> bindings,
-                                                           ende::Span<VkVertexInputAttributeDescription> attributes) {
+void cala::backend::vulkan::CommandBuffer::bindVertexArray(std::span<VkVertexInputBindingDescription> bindings,
+                                                           std::span<VkVertexInputAttributeDescription> attributes) {
     bindBindings(bindings);
     bindAttributeDescriptions(attributes);
 }
@@ -301,7 +302,7 @@ void cala::backend::vulkan::CommandBuffer::bindImage(u32 set, u32 binding, Image
     _descriptorDirty = true;
 }
 
-void cala::backend::vulkan::CommandBuffer::pushConstants(ShaderStage stage, ende::Span<const void> data, u32 offset) {
+void cala::backend::vulkan::CommandBuffer::pushConstants(ShaderStage stage, std::span<const u8> data, u32 offset) {
     assert(offset + data.size() <= 128);
     vkCmdPushConstants(_buffer, _pipelineKey.layout, getShaderStage(stage), offset, data.size(), data.data());
 }
@@ -336,7 +337,7 @@ void cala::backend::vulkan::CommandBuffer::bindVertexBuffer(u32 first, BufferHan
     _indexBuffer = {};
 }
 
-void cala::backend::vulkan::CommandBuffer::bindVertexBuffers(u32 first, ende::Span<VkBuffer> buffers, ende::Span<VkDeviceSize> offsets) {
+void cala::backend::vulkan::CommandBuffer::bindVertexBuffers(u32 first, std::span<VkBuffer> buffers, std::span<VkDeviceSize> offsets) {
     assert(buffers.size() == offsets.size());
     vkCmdBindVertexBuffers(_buffer, first, buffers.size(), buffers.data(), offsets.data());
     _indexBuffer = {};
@@ -429,7 +430,7 @@ void cala::backend::vulkan::CommandBuffer::clearBuffer(cala::backend::vulkan::Bu
     vkCmdFillBuffer(_buffer, buffer->buffer(), 0, buffer->size(), clearValue);
 }
 
-void cala::backend::vulkan::CommandBuffer::pipelineBarrier(ende::Span<VkBufferMemoryBarrier2> bufferBarriers, ende::Span<VkImageMemoryBarrier2> imageBarriers) {
+void cala::backend::vulkan::CommandBuffer::pipelineBarrier(std::span<VkBufferMemoryBarrier2> bufferBarriers, std::span<VkImageMemoryBarrier2> imageBarriers) {
     VkDependencyInfo info{};
     info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
     info.bufferMemoryBarrierCount = bufferBarriers.size();
@@ -440,7 +441,7 @@ void cala::backend::vulkan::CommandBuffer::pipelineBarrier(ende::Span<VkBufferMe
     vkCmdPipelineBarrier2(_buffer, &info);
 }
 
-void cala::backend::vulkan::CommandBuffer::pipelineBarrier(ende::Span<Image::Barrier> imageBarriers) {
+void cala::backend::vulkan::CommandBuffer::pipelineBarrier(std::span<Image::Barrier> imageBarriers) {
     VkImageMemoryBarrier2 barriers[imageBarriers.size()];
     for (u32 i = 0; i < imageBarriers.size(); i++) {
         auto& b = barriers[i];
@@ -467,7 +468,7 @@ void cala::backend::vulkan::CommandBuffer::pipelineBarrier(ende::Span<Image::Bar
     vkCmdPipelineBarrier2(_buffer, &info);
 }
 
-void cala::backend::vulkan::CommandBuffer::pipelineBarrier(ende::Span<Buffer::Barrier> bufferBarriers) {
+void cala::backend::vulkan::CommandBuffer::pipelineBarrier(std::span<Buffer::Barrier> bufferBarriers) {
     VkBufferMemoryBarrier2 barriers[bufferBarriers.size()];
     for (u32 i = 0; i < bufferBarriers.size(); i++) {
         auto& b = barriers[i];
@@ -492,7 +493,7 @@ void cala::backend::vulkan::CommandBuffer::pipelineBarrier(ende::Span<Buffer::Ba
     vkCmdPipelineBarrier2(_buffer, &info);
 }
 
-void cala::backend::vulkan::CommandBuffer::pipelineBarrier(ende::Span<MemoryBarrier> memoryBarriers) {
+void cala::backend::vulkan::CommandBuffer::pipelineBarrier(std::span<MemoryBarrier> memoryBarriers) {
     VkMemoryBarrier2 barriers[memoryBarriers.size()];
     for (u32 i = 0; i < memoryBarriers.size(); i++) {
         auto& b = barriers[i];
@@ -514,7 +515,7 @@ void cala::backend::vulkan::CommandBuffer::pipelineBarrier(ende::Span<MemoryBarr
 
 void cala::backend::vulkan::CommandBuffer::pushDebugLabel(std::string_view label, std::array<f32, 4> colour) {
 #ifndef NDEBUG
-    _debugLabels.push(label);
+    _debugLabels.push_back(label);
     _device->context().beginDebugLabel(_buffer, label, colour);
 #endif
 }
@@ -522,7 +523,7 @@ void cala::backend::vulkan::CommandBuffer::pushDebugLabel(std::string_view label
 void cala::backend::vulkan::CommandBuffer::popDebugLabel() {
 #ifndef NDEBUG
     _device->context().endDebugLabel(_buffer);
-    _debugLabels.pop();
+    _debugLabels.pop_back();
 #endif
 }
 
@@ -539,7 +540,7 @@ void cala::backend::vulkan::CommandBuffer::stopPipelineStatistics() {
 
 
 
-bool cala::backend::vulkan::CommandBuffer::submit(ende::Span<VkSemaphore> wait, VkFence fence) {
+bool cala::backend::vulkan::CommandBuffer::submit(std::span<VkSemaphore> wait, VkFence fence) {
     PROFILE_NAMED("CommandBuffer::Submit");
 
     end();
@@ -632,7 +633,7 @@ void cala::backend::vulkan::CommandBuffer::writeBufferMarker(cala::backend::Pipe
         if (_device->_markedCmds[_device->frameIndex()].size() >= _device->_marker) {
             _device->_markedCmds[_device->_offset / sizeof(u32)][_device->frameIndex()] = std::make_pair(cmd, _device->_marker);
         } else {
-            _device->_markedCmds[_device->frameIndex()].push(std::make_pair(cmd, _device->_marker));
+            _device->_markedCmds[_device->frameIndex()].push_back(std::make_pair(cmd, _device->_marker));
         }
         _device->_offset += sizeof(u32);
         _device->_marker++;

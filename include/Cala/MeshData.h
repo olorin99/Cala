@@ -2,7 +2,6 @@
 #define CALA_MESHDATA_H
 
 #include <Ende/platform.h>
-#include <Ende/Vector.h>
 #include <array>
 #include <Cala/backend/vulkan/Buffer.h>
 #include <Cala/Mesh.h>
@@ -46,8 +45,8 @@ namespace cala {
 
     private:
 
-        ende::Vector<Vertex> _vertices;
-        ende::Vector<u32> _indices;
+        std::vector<Vertex> _vertices;
+        std::vector<u32> _indices;
 
     };
 

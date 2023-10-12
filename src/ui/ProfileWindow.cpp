@@ -50,10 +50,10 @@ void cala::ui::ProfileWindow::render() {
                 }
             }
 
-            ende::Vector<std::pair<const char*, std::pair<f64, u32>>> dataVec;
+            std::vector<std::pair<const char*, std::pair<f64, u32>>> dataVec;
 
             for (auto& func : data) {
-                dataVec.push(std::make_pair(func.first, std::make_pair(func.second.first, func.second.second)));
+                dataVec.push_back(std::make_pair(func.first, std::make_pair(func.second.first, func.second.second)));
             }
             std::sort(dataVec.begin(), dataVec.end(), [](std::pair<const char*, std::pair<f64, u32>> lhs, std::pair<const char*, std::pair<f64, u32>> rhs) -> bool {
                 return lhs.first > rhs.first;

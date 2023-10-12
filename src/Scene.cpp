@@ -42,7 +42,7 @@ void cala::Scene::addRenderable(cala::Scene::Renderable &&renderable, cala::Tran
     u32 key = 0;
 
     assert(transform);
-    _renderables.push(std::make_pair(2, std::make_pair(renderable, transform)));
+    _renderables.push_back(std::make_pair(2, std::make_pair(renderable, transform)));
 }
 
 void cala::Scene::addRenderable(cala::Mesh &mesh, cala::MaterialInstance *materialInstance, cala::Transform *transform, bool castShadow) {
@@ -79,7 +79,7 @@ void cala::Scene::addRenderable(Model &model, Transform *transform, bool castSha
 u32 cala::Scene::addLight(cala::Light &light) {
     if (light.type() == Light::DIRECTIONAL)
         ++_directionalLightCount;
-    _lights.push(std::make_pair(2, std::move(light)));
+    _lights.push_back(std::make_pair(2, std::move(light)));
     _lightsDirtyFrame = 2;
     return _lights.size() - 1;
 }
@@ -208,7 +208,7 @@ void cala::Scene::prepare(cala::Camera& camera) {
             else
                 data.shadowIndex = -1;
 
-            _lightData.push(data);
+            _lightData.push_back(data);
         }
         if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame]->size()) {
             _lightBuffer[frame] = _engine->device().resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(Light::Data) * 2);
@@ -216,7 +216,8 @@ void cala::Scene::prepare(cala::Camera& camera) {
             _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_lightBuffer[frame]->buffer(), debugLabel);
         }
         u32 lightCount[2] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount) };
-        _lightCountBuffer[frame]->data({ lightCount, sizeof(u32) * 2 });
+        std::span<u32> ls = lightCount;
+        _lightCountBuffer[frame]->data(ls);
 //        ende::log::info("lightData size: {}", _lightBuffer[frame]->size());
         assert(_lightData.size() * sizeof(Light::Data) <= _lightBuffer[frame]->size());
 //        assignMemory(_lightBuffer[frame]->persistentMapping(), 0, _lights.size());

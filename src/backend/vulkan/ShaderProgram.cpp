@@ -13,7 +13,7 @@ class FileFinder {
 public:
 
     void addSearchPath(const std::string& path) {
-        search_path.push(path);
+        search_path.push_back(path);
     }
 
     std::string FindReadableFilepath(const std::string& filename) const {
@@ -49,7 +49,7 @@ public:
     }
 
 private:
-    ende::Vector<std::string> search_path;
+    std::vector<std::string> search_path;
 
 };
 
@@ -171,7 +171,7 @@ cala::backend::vulkan::ShaderProgram::Builder::Builder(cala::backend::vulkan::De
 {}
 
 cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStageSPV(const std::vector<u32>& code, ShaderStage stage) {
-    _stages.push({code, stage});
+    _stages.push_back({code, stage});
     return *this;
 }
 
@@ -222,7 +222,7 @@ cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProg
 cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Builder::compile() {
     ShaderProgram program(_device);
 
-    ende::Vector<VkPushConstantRange> pushConstants;
+    std::vector<VkPushConstantRange> pushConstants;
 
     for (auto& stage : _stages) {
         // reflection
@@ -245,7 +245,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
                 program._interface.pushConstants.members[name] = {offset, memberSize};
                 blockOffset = std::min(blockOffset, offset);
             }
-            pushConstants.push({});
+            pushConstants.push_back({});
             pushConstants.back().offset = blockOffset;
             pushConstants.back().size = size;
             pushConstants.back().stageFlags |= getShaderStage(stage.second);
@@ -354,7 +354,7 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
         stageCreateInfo.module = shader;
         stageCreateInfo.pName = "main";
 
-        program._stages.push(stageCreateInfo);
+        program._stages.push_back(stageCreateInfo);
         program._stageFlags |= stage.second;
     }
 

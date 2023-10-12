@@ -2,7 +2,6 @@
 #define CALA_SHADERPROGRAM_H
 
 #include <volk.h>
-#include <Ende/Vector.h>
 #include <Cala/backend/ShaderInterface.h>
 #include <Cala/backend/primitives.h>
 #include <vector>
@@ -29,7 +28,7 @@ namespace cala::backend::vulkan {
 
         private:
             Device* _device;
-            ende::Vector<std::pair<std::vector<u32>, ShaderStage>> _stages;
+            std::vector<std::pair<std::vector<u32>, ShaderStage>> _stages;
 
         };
 
@@ -60,7 +59,7 @@ namespace cala::backend::vulkan {
         friend CommandBuffer;
 
         Device* _device;
-        ende::Vector<VkPipelineShaderStageCreateInfo> _stages;
+        std::vector<VkPipelineShaderStageCreateInfo> _stages;
         VkDescriptorSetLayout _setLayout[MAX_SET_COUNT];
         VkPipelineLayout _layout;
 

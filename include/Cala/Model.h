@@ -21,12 +21,12 @@ namespace cala {
             AABB aabb;
         };
 
-        ende::Vector<Primitive> primitives;
-        ende::Vector<MaterialInstance> materials;
+        std::vector<Primitive> primitives;
+        std::vector<MaterialInstance> materials;
 
         backend::vulkan::BufferHandle vertexBuffer;
         backend::vulkan::BufferHandle indexBuffer;
-        ende::Vector<backend::vulkan::ImageHandle> images;
+        std::vector<backend::vulkan::ImageHandle> images;
 
         VkVertexInputBindingDescription _binding;
         std::array<backend::Attribute, 4> _attributes;

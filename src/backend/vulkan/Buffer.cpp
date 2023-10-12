@@ -80,7 +80,19 @@ void cala::backend::vulkan::Buffer::unmap() {
     vmaUnmapMemory(_device->context().allocator(), _allocation);
 }
 
-void cala::backend::vulkan::Buffer::data(ende::Span<const void> data, u32 offset) {
+void cala::backend::vulkan::Buffer::_data(u8, std::span<u8> data, u32 offset) {
+    if (data.size() == 0 || size() - offset == 0)
+        return;
+    if (_mapped.address)
+        std::memcpy(static_cast<char*>(_mapped.address) + offset, data.data(), data.size());
+    else {
+        auto mapped = map(offset, data.size());
+        std::memcpy(mapped.address, data.data(), data.size());
+    }
+    invalidate();
+}
+
+void cala::backend::vulkan::Buffer::_data(u8, std::span<const u8> data, u32 offset) {
     if (data.size() == 0 || size() - offset == 0)
         return;
     if (_mapped.address)
@@ -112,10 +124,6 @@ cala::backend::vulkan::Buffer::View::View(cala::backend::vulkan::Buffer &buffer,
 
 cala::backend::vulkan::Buffer::Mapped cala::backend::vulkan::Buffer::View::map(u32 offset, u32 size) {
     return _parent->map(_offset + offset, _size + size);
-}
-
-void cala::backend::vulkan::Buffer::View::data(ende::Span<const void> data, u32 offset) {
-    _parent->data(data, _offset + offset);
 }
 
 cala::backend::vulkan::Buffer::Barrier cala::backend::vulkan::Buffer::barrier(PipelineStage srcStage, PipelineStage dstStage, Access dstAccess) {

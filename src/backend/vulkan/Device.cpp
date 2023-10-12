@@ -343,7 +343,7 @@ void cala::backend::vulkan::Device::endSingleTimeCommands(CommandBuffer& buffer)
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceCreateInfo.pNext = nullptr;
     VK_TRY(vkCreateFence(context().device(), &fenceCreateInfo, nullptr, &fence));
-    if (!buffer.submit(nullptr, fence)) {
+    if (!buffer.submit({}, fence)) {
         _logger.error("Error submitting command buffer");
         printMarkers();
         throw std::runtime_error("Error submitting immediate command buffer");
@@ -392,7 +392,7 @@ bool cala::backend::vulkan::Device::gc() {
                 _logger.warn("attempted to destroy buffer ({}) which has invalid allocation", index);
             _buffers[index].first->_allocation = nullptr;
             _buffers[index].first = std::make_unique<Buffer>(this);
-            _freeBuffers.push(index);
+            _freeBuffers.push_back(index);
             _buffersToDestroy.erase(it--);
             _logger.info("destroyed buffer ({})", index);
         } else
@@ -414,7 +414,7 @@ bool cala::backend::vulkan::Device::gc() {
                 _logger.warn("attempted to destroy image ({}) which is invalid", index);
             _images[index].first->_allocation = nullptr;
             _images[index].first = std::make_unique<Image>(this);
-            _freeImages.push(index);
+            _freeImages.push_back(index);
             _imagesToDestroy.erase(it--);
             _logger.info("destroyed image ({})", index);
         } else
@@ -427,7 +427,7 @@ bool cala::backend::vulkan::Device::gc() {
         if (frame <= 0) {
             u32 index = handle;
             _programs[index].first = std::make_unique<ShaderProgram>(this);
-            _freePrograms.push(index);
+            _freePrograms.push_back(index);
             _programsToDestroy.erase(it--);
             _logger.info("destroyed program ({})", index);
         } else
@@ -475,12 +475,13 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
 
     VK_TRY(vmaCreateBuffer(context().allocator(), &bufferInfo, &allocInfo, &buffer, &allocation, nullptr));
     if (!_freeBuffers.empty()) {
-        index = _freeBuffers.pop().value();
+        index = _freeBuffers.back();
+        _freeBuffers.pop_back();
         _buffers[index].first = std::make_unique<Buffer>(this);
         _buffers[index].second->count = 1;
     } else {
         index = _buffers.size();
-        _buffers.emplace(std::make_pair(std::make_unique<Buffer>(this), new BufferHandle::Counter{1, [this](i32 index) {
+        _buffers.emplace_back(std::make_pair(std::make_unique<Buffer>(this), new BufferHandle::Counter{1, [this](i32 index) {
             destroyBuffer(index);
         }}));
     }
@@ -502,7 +503,7 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
 }
 
 void cala::backend::vulkan::Device::destroyBuffer(i32 handle) {
-    _buffersToDestroy.push(std::make_pair(FRAMES_IN_FLIGHT + 1, handle));
+    _buffersToDestroy.push_back(std::make_pair(FRAMES_IN_FLIGHT + 1, handle));
 }
 
 cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::resizeBuffer(BufferHandle handle, u32 size, bool transfer) {
@@ -580,12 +581,13 @@ cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Im
     VK_TRY(vmaCreateImage(context().allocator(), &imageInfo, &allocInfo, &image, &allocation, nullptr));
 
     if (!_freeImages.empty()) {
-        index = _freeImages.pop().value();
+        index = _freeImages.back();
+        _freeBuffers.pop_back();
         _images[index].first = std::make_unique<Image>(this);
         _images[index].second->count = 1;
     } else {
         index = _images.size();
-        _images.emplace(std::make_pair(std::make_unique<Image>(this), new ImageHandle::Counter{ 1, [this](i32 index) {
+        _images.emplace_back(std::make_pair(std::make_unique<Image>(this), new ImageHandle::Counter{ 1, [this](i32 index) {
             destroyImage(index);
         }}));
     }
@@ -620,7 +622,7 @@ cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Im
 }
 
 void cala::backend::vulkan::Device::destroyImage(i32 handle) {
-    _imagesToDestroy.push(std::make_pair(FRAMES_IN_FLIGHT + 1, handle));
+    _imagesToDestroy.push_back(std::make_pair(FRAMES_IN_FLIGHT + 1, handle));
 }
 
 cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::getImageHandle(u32 index) {
@@ -648,7 +650,7 @@ cala::backend::vulkan::ProgramHandle cala::backend::vulkan::Device::createProgra
 }
 
 void cala::backend::vulkan::Device::destroyProgram(i32 handle) {
-    _programsToDestroy.push(std::make_pair(FRAMES_IN_FLIGHT + 1, handle));
+    _programsToDestroy.push_back(std::make_pair(FRAMES_IN_FLIGHT + 1, handle));
 }
 
 
@@ -659,7 +661,7 @@ cala::backend::vulkan::SamplerHandle cala::backend::vulkan::Device::getSampler(S
     }
 
     u32 index = _samplers.size();
-    _samplers.emplace(std::make_pair(info, std::make_unique<Sampler>(*this, info)));
+    _samplers.emplace_back(std::make_pair(info, std::make_unique<Sampler>(*this, info)));
     updateBindlessSampler(index);
     return { this, static_cast<i32>(index), nullptr };
 }
@@ -667,7 +669,7 @@ cala::backend::vulkan::SamplerHandle cala::backend::vulkan::Device::getSampler(S
 
 
 
-VkDescriptorSetLayout cala::backend::vulkan::Device::getSetLayout(ende::Span <VkDescriptorSetLayoutBinding> bindings) {
+VkDescriptorSetLayout cala::backend::vulkan::Device::getSetLayout(std::span<VkDescriptorSetLayoutBinding> bindings) {
     SetLayoutKey key{};
     for (u32 i = 0; i < bindings.size(); i++) {
         key.bindings[i] = bindings[i];
@@ -771,7 +773,7 @@ void cala::backend::vulkan::Device::setBindlessSetIndex(u32 index) {
     _bindlessIndex = index;
 }
 
-cala::backend::vulkan::RenderPass* cala::backend::vulkan::Device::getRenderPass(ende::Span<RenderPass::Attachment> attachments) {
+cala::backend::vulkan::RenderPass* cala::backend::vulkan::Device::getRenderPass(std::span<RenderPass::Attachment> attachments) {
 //    u64 hash = ende::util::murmur3(reinterpret_cast<u32*>(attachments.data()), attachments.size() * sizeof(RenderPass::Attachment), attachments.size());
     u64 hash = 0;
     for (auto& attachment : attachments) {
@@ -791,7 +793,7 @@ cala::backend::vulkan::RenderPass* cala::backend::vulkan::Device::getRenderPass(
     return a.first.value();
 }
 
-cala::backend::vulkan::Framebuffer *cala::backend::vulkan::Device::getFramebuffer(RenderPass *renderPass, ende::Span<VkImageView> attachmentImages, ende::Span<u32> attachmentHashes, u32 width, u32 height) {
+cala::backend::vulkan::Framebuffer *cala::backend::vulkan::Device::getFramebuffer(RenderPass *renderPass, std::span<VkImageView> attachmentImages, std::span<u32> attachmentHashes, u32 width, u32 height) {
     u64 hash = ((u64)renderPass->id() << 32);
     for (auto& attachment : attachmentHashes)
         hash |= attachment;

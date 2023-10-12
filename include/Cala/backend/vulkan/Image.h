@@ -3,7 +3,7 @@
 
 #include <volk.h>
 #include <Ende/platform.h>
-#include <Ende/Span.h>
+#include <span>
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
 #include "../../third_party/vk_mem_alloc.h"
@@ -35,7 +35,6 @@ namespace cala::backend::vulkan {
             u32 height = 1;
             u32 depth = 1;
             u32 format = 4; //byte size of values per pixel TODO: change to enum
-            ende::Span<void> data = nullptr;
             u32 layer = 0; // move up in struct just here for backward compat
         };
 
@@ -47,7 +46,12 @@ namespace cala::backend::vulkan {
 
         Image& operator=(Image&& rhs) noexcept;
 
-        void data(Device& driver, DataInfo info);
+        void _data(Device& driver, DataInfo info, std::span<u8> data);
+
+        template <typename T>
+        void data(Device& device, DataInfo info, std::span<T> data) {
+            _data(device, info, std::span<u8>(reinterpret_cast<u8*>(data.data()), data.size() * sizeof(T)));
+        }
 
         void* map(u32 format = 4);
 

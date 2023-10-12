@@ -15,7 +15,7 @@ namespace cala::backend::vulkan {
 
         ~SDLPlatform() override;
 
-        ende::Vector<const char *> requiredExtensions() override;
+        std::vector<const char *> requiredExtensions() override;
 
         VkSurfaceKHR surface(VkInstance instance) override;
 

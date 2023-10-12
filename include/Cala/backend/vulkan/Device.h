@@ -6,7 +6,6 @@
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include <Cala/backend/vulkan/CommandPool.h>
 #include "Platform.h"
-#include <Ende/Vector.h>
 #include <Cala/backend/vulkan/Handle.h>
 #include <Ende/time/StopWatch.h>
 #include <spdlog/spdlog.h>
@@ -118,7 +117,7 @@ namespace cala::backend::vulkan {
         Sampler& defaultShadowSampler() { return _defaultShadowSampler; }
 
 
-        VkDescriptorSetLayout getSetLayout(ende::Span<VkDescriptorSetLayoutBinding> bindings);
+        VkDescriptorSetLayout getSetLayout(std::span<VkDescriptorSetLayoutBinding> bindings);
 
         void updateBindlessBuffer(u32 index);
 
@@ -134,9 +133,9 @@ namespace cala::backend::vulkan {
         i32 getBindlessIndex() const { return _bindlessIndex; }
 
 
-        RenderPass* getRenderPass(ende::Span<RenderPass::Attachment> attachments);
+        RenderPass* getRenderPass(std::span<RenderPass::Attachment> attachments);
 
-        Framebuffer* getFramebuffer(RenderPass* renderPass, ende::Span<VkImageView> attachments, ende::Span<u32> attachmentHashes, u32 width, u32 height);
+        Framebuffer* getFramebuffer(RenderPass* renderPass, std::span<VkImageView> attachments, std::span<u32> attachmentHashes, u32 width, u32 height);
 
         void clearFramebuffers();
 
@@ -207,23 +206,23 @@ namespace cala::backend::vulkan {
         i32 _bindlessIndex;
 
 
-        ende::Vector<std::pair<std::unique_ptr<Buffer>, BufferHandle::Counter*>> _buffers;
-        ende::Vector<u32> _freeBuffers;
-        ende::Vector<std::pair<i32, i32>> _buffersToDestroy;
+        std::vector<std::pair<std::unique_ptr<Buffer>, BufferHandle::Counter*>> _buffers;
+        std::vector<u32> _freeBuffers;
+        std::vector<std::pair<i32, i32>> _buffersToDestroy;
 
-        ende::Vector<std::pair<std::unique_ptr<Image>, ImageHandle::Counter*>> _images;
-        ende::Vector<Image::View> _imageViews;
-        ende::Vector<u32> _freeImages;
-        ende::Vector<std::pair<i32, i32>> _imagesToDestroy;
+        std::vector<std::pair<std::unique_ptr<Image>, ImageHandle::Counter*>> _images;
+        std::vector<Image::View> _imageViews;
+        std::vector<u32> _freeImages;
+        std::vector<std::pair<i32, i32>> _imagesToDestroy;
 
         Sampler _defaultSampler;
         Sampler _defaultShadowSampler;
 
         std::vector<std::pair<std::unique_ptr<ShaderProgram>, ProgramHandle::Counter*>> _programs;
-        ende::Vector<u32> _freePrograms;
-        ende::Vector<std::pair<i32, i32>> _programsToDestroy;
+        std::vector<u32> _freePrograms;
+        std::vector<std::pair<i32, i32>> _programsToDestroy;
 
-        ende::Vector<std::pair<Sampler::CreateInfo, std::unique_ptr<Sampler>>> _samplers;
+        std::vector<std::pair<Sampler::CreateInfo, std::unique_ptr<Sampler>>> _samplers;
 
         tsl::robin_map<CommandBuffer::DescriptorKey, std::pair<VkDescriptorSet, i32>, ende::util::MurmurHash<CommandBuffer::DescriptorKey>> _descriptorSets;
         VkDescriptorPool _descriptorPool;
@@ -233,7 +232,7 @@ namespace cala::backend::vulkan {
         BufferHandle _markerBuffer[FRAMES_IN_FLIGHT];
         u32 _offset = 0;
         u32 _marker = 1;
-        ende::Vector<std::pair<std::string_view, u32>> _markedCmds[FRAMES_IN_FLIGHT];
+        std::vector<std::pair<std::string_view, u32>> _markedCmds[FRAMES_IN_FLIGHT];
 
 
         u32 _bytesAllocatedPerFrame;

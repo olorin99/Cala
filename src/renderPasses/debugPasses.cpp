@@ -253,7 +253,7 @@ void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
         cmd.bindIndexBuffer(engine.indexBuffer());
         for (u32 material = 0; material < scene._materialCounts.size(); material++) {
             cmd.bindProgram(engine.getProgram(cala::Engine::ProgramType::SOLID_COLOUR));
-            cmd.pushConstants(cala::backend::ShaderStage::FRAGMENT, { &settings.wireframeColour, sizeof(settings.wireframeColour) });
+            cmd.pushConstants(cala::backend::ShaderStage::FRAGMENT, settings.wireframeColour);
             cmd.bindPipeline();
             cmd.bindDescriptors();
 
@@ -293,8 +293,8 @@ void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::
         cmd.bindIndexBuffer(engine.indexBuffer());
         for (u32 material = 0; material < scene._materialCounts.size(); material++) {
             cmd.bindProgram(engine.getProgram(cala::Engine::ProgramType::DEBUG_NORMALS));
-            cmd.pushConstants(cala::backend::ShaderStage::FRAGMENT, { &settings.wireframeColour, sizeof(settings.wireframeColour) });
-            cmd.pushConstants(cala::backend::ShaderStage::GEOMETRY, { &settings.normalLength, sizeof(settings.normalLength) }, sizeof(settings.wireframeColour));
+            cmd.pushConstants(cala::backend::ShaderStage::FRAGMENT, settings.wireframeColour);
+            cmd.pushConstants(cala::backend::ShaderStage::GEOMETRY, settings.normalLength, sizeof(settings.wireframeColour));
             cmd.bindPipeline();
             cmd.bindDescriptors();
 

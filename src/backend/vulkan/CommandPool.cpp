@@ -7,6 +7,7 @@ cala::backend::vulkan::CommandPool::CommandPool(Device *device, QueueType queueT
     _queueType(queueType),
     _index(0)
 {
+    _buffers.reserve(100);
     VkCommandPoolCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     u32 index = 0;
@@ -40,7 +41,7 @@ cala::backend::vulkan::CommandBuffer &cala::backend::vulkan::CommandPool::getBuf
     allocInfo.commandBufferCount = 1;
     VkCommandBuffer buffer;
     VK_TRY(vkAllocateCommandBuffers(_device->context().device(), &allocInfo, &buffer));
-    _buffers.emplace(*_device, _device->context().getQueue(_queueType), buffer);
+    _buffers.emplace_back(*_device, _device->context().getQueue(_queueType), buffer);
     ++_index;
     return _buffers.back();
 }

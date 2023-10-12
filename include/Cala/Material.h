@@ -4,7 +4,6 @@
 #include <Cala/backend/vulkan/Device.h>
 #include <Cala/backend/vulkan/ShaderProgram.h>
 #include <Cala/backend/vulkan/CommandBuffer.h>
-#include <Ende/Vector.h>
 #include "../third_party/tsl/robin_map.h"
 #include <Cala/MaterialInstance.h>
 #include <Cala/Engine.h>
@@ -24,6 +23,10 @@ namespace cala {
     public:
 
         Material(Engine* engine, u32 id, u32 size = 0);
+
+        Material(Material&& rhs) noexcept;
+
+        Material& operator=(Material&& rhs) noexcept;
 
         MaterialInstance instance();
 
@@ -75,7 +78,7 @@ namespace cala {
         backend::vulkan::CommandBuffer::BlendState _blendState;
 
         bool _dirty;
-        ende::Vector<u8> _data;
+        std::vector<u8> _data;
         backend::vulkan::BufferHandle _materialBuffer;
 
         u32 _setSize;

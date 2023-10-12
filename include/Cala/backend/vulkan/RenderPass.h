@@ -2,8 +2,8 @@
 #define CALA_RENDERPASS_H
 
 #include <volk.h>
-#include <Ende/Vector.h>
-#include <Ende/Span.h>
+#include <vector>
+#include <span>
 #include <Cala/backend/primitives.h>
 
 namespace cala::backend::vulkan {
@@ -25,7 +25,7 @@ namespace cala::backend::vulkan {
             VkImageLayout internalLayout;
         };
 
-        RenderPass(Device& driver, ende::Span<Attachment> attachments);
+        RenderPass(Device& driver, std::span<Attachment> attachments);
 
         ~RenderPass();
 
@@ -39,13 +39,13 @@ namespace cala::backend::vulkan {
 
         VkRenderPass renderPass() const { return _renderPass; }
 
-        VkFramebuffer framebuffer(ende::Span<VkImageView> attachments, u32 width, u32 height);
+        VkFramebuffer framebuffer(std::span<VkImageView> attachments, u32 width, u32 height);
 
-        ende::Span<const VkClearValue> clearValues() const { return _clearValues; }
+        std::span<const VkClearValue> clearValues() const { return _clearValues; }
 
         u32 colourAttachmentCount() const { return _colourAttachments; }
 
-        ende::Span<Attachment> attachments() { return _attachments; }
+        std::span<Attachment> attachments() { return _attachments; }
 
         u32 id() const { return _id; }
 
@@ -53,11 +53,11 @@ namespace cala::backend::vulkan {
 
         VkDevice _device;
         VkRenderPass _renderPass;
-        ende::Vector<VkClearValue> _clearValues;
+        std::vector<VkClearValue> _clearValues;
         u32 _colourAttachments;
         u32 _depthAttachments;
 
-        ende::Vector<Attachment> _attachments;
+        std::vector<Attachment> _attachments;
         const u32 _id;
 
     };

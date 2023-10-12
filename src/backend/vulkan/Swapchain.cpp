@@ -1,4 +1,4 @@
-#include <Ende/Vector.h>
+
 #include <Cala/backend/vulkan/primitives.h>
 #include "Cala/backend/vulkan/Swapchain.h"
 #include <Cala/backend/vulkan/Device.h>
@@ -15,7 +15,7 @@ VkSurfaceCapabilitiesKHR getCapabilities(VkPhysicalDevice device, VkSurfaceKHR s
 VkSurfaceFormatKHR getSurfaceFormat(VkPhysicalDevice device, VkSurfaceKHR surface) {
     u32 count = 0;
     vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &count, nullptr);
-    ende::Vector<VkSurfaceFormatKHR> formats(count);
+    std::vector<VkSurfaceFormatKHR> formats(count);
     vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &count, formats.data());
 
     if (formats.size() == 1 && formats[0].format == VK_FORMAT_UNDEFINED)
@@ -30,7 +30,7 @@ VkSurfaceFormatKHR getSurfaceFormat(VkPhysicalDevice device, VkSurfaceKHR surfac
 VkPresentModeKHR getPresentMode(VkPhysicalDevice device, VkSurfaceKHR surface, VkPresentModeKHR preference = VK_PRESENT_MODE_MAILBOX_KHR) {
     u32 count = 0;
     vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &count, nullptr);
-    ende::Vector<VkPresentModeKHR> modes(count);
+    std::vector<VkPresentModeKHR> modes(count);
     vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &count, modes.data());
 
     for (auto& mode : modes) {
@@ -114,7 +114,7 @@ cala::backend::vulkan::Swapchain::Swapchain(Device &driver, Platform& platform, 
     for (auto& view : _imageViews) {
         VkImageView framebufferAttachments[2] = { view, _depthView.view };
         u32 hashes[2] = { 0, 0 };
-        _framebuffers.emplace(_driver.getFramebuffer(_renderPass, framebufferAttachments, hashes, _extent.width, _extent.height));
+        _framebuffers.emplace_back(_driver.getFramebuffer(_renderPass, framebufferAttachments, hashes, _extent.width, _extent.height));
     }
 }
 
@@ -140,7 +140,8 @@ cala::backend::vulkan::Swapchain::~Swapchain() {
 
 
 std::expected<cala::backend::vulkan::Swapchain::Frame, i32> cala::backend::vulkan::Swapchain::nextImage() {
-    auto image = _semaphores.pop().value();
+    auto image = _semaphores.back();
+    _semaphores.pop_back();
     u32 index = 0;
     if (_surface != VK_NULL_HANDLE) {
         VkResult result = vkAcquireNextImageKHR(_driver.context().device(), _swapchain, std::numeric_limits<u64>::max(), image, VK_NULL_HANDLE, &index);
@@ -155,7 +156,7 @@ std::expected<cala::backend::vulkan::Swapchain::Frame, i32> cala::backend::vulka
 }
 
 bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFinish) {
-    _semaphores.push(frame.imageAquired);
+    _semaphores.push_back(frame.imageAquired);
     std::rotate(_semaphores.begin(), _semaphores.end() - 1, _semaphores.end());
 
     if (_surface != VK_NULL_HANDLE) {
@@ -199,7 +200,7 @@ bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {
     for (auto& view : _imageViews) {
         VkImageView framebufferAttachments[2] = { view, _depthView.view };
         u32 hashes[2] = { 0, 0 };
-        _framebuffers.emplace(_driver.getFramebuffer(_renderPass, framebufferAttachments, hashes, _extent.width, _extent.height));
+        _framebuffers.emplace_back(_driver.getFramebuffer(_renderPass, framebufferAttachments, hashes, _extent.width, _extent.height));
     }
     return true;
 }
@@ -223,7 +224,7 @@ void cala::backend::vulkan::Swapchain::blitImageToFrame(u32 index, CommandBuffer
     memoryBarrier.image = _images[index];
     memoryBarrier.subresourceRange = range;
 
-    buffer.pipelineBarrier(nullptr, { &memoryBarrier, 1});
+    buffer.pipelineBarrier({}, { &memoryBarrier, 1});
 
     VkImageSubresourceLayers srcSubresource{};
     srcSubresource.aspectMask = isDepthFormat(src.format()) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
@@ -253,7 +254,7 @@ void cala::backend::vulkan::Swapchain::blitImageToFrame(u32 index, CommandBuffer
     memoryBarrier.dstAccessMask = getAccessFlags(Access::NONE);
     memoryBarrier.oldLayout = getImageLayout(ImageLayout::TRANSFER_DST);
     memoryBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    buffer.pipelineBarrier(nullptr, { &memoryBarrier, 1});
+    buffer.pipelineBarrier({}, { &memoryBarrier, 1});
 }
 
 void cala::backend::vulkan::Swapchain::copyImageToFrame(u32 index, CommandBuffer &buffer, Image &src) {
@@ -281,7 +282,7 @@ void cala::backend::vulkan::Swapchain::copyImageToFrame(u32 index, CommandBuffer
     memoryBarrier.image = _images[index];
     memoryBarrier.subresourceRange = range;
 
-    buffer.pipelineBarrier(nullptr, { &memoryBarrier, 1});
+    buffer.pipelineBarrier({}, { &memoryBarrier, 1});
 
     VkImageCopy region{};
 
@@ -306,7 +307,7 @@ void cala::backend::vulkan::Swapchain::copyImageToFrame(u32 index, CommandBuffer
     memoryBarrier.dstAccessMask = getAccessFlags(Access::NONE);
     memoryBarrier.oldLayout = getImageLayout(ImageLayout::TRANSFER_DST);
     memoryBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    buffer.pipelineBarrier(nullptr, { &memoryBarrier, 1});
+    buffer.pipelineBarrier({}, { &memoryBarrier, 1});
 }
 
 void cala::backend::vulkan::Swapchain::copyFrameToImage(u32 index, cala::backend::vulkan::CommandBuffer &buffer, cala::backend::vulkan::Image &dst) {
@@ -473,10 +474,10 @@ bool cala::backend::vulkan::Swapchain::createSemaphores() {
             if (vkCreateSemaphore(_driver.context().device(), &createInfo, nullptr, &imageAcquired) != VK_SUCCESS)
                 return false;
 
-            _semaphores.push(imageAcquired);
+            _semaphores.push_back(imageAcquired);
         }
     } else {
-        _semaphores.push(VK_NULL_HANDLE);
+        _semaphores.push_back(VK_NULL_HANDLE);
     }
 
     return true;

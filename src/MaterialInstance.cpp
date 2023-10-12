@@ -2,14 +2,15 @@
 #include <Cala/Material.h>
 #include <Cala/backend/vulkan/CommandBuffer.h>
 
-cala::MaterialInstance::MaterialInstance(Material &material, u32 offset)
-    : _material(&material),
+cala::MaterialInstance::MaterialInstance(Material *material, u32 offset)
+    : _material(material),
       _offset(offset)
 //      _samplers(material._engine->device())
 {}
 
 cala::MaterialInstance::MaterialInstance(MaterialInstance &&rhs) noexcept
-//    : _samplers(rhs._material->_engine->device())
+    : _material(nullptr),
+    _offset(0)
 {
     std::swap(_material, rhs._material);
     std::swap(_offset, rhs._offset);

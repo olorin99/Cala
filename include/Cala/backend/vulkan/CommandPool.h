@@ -26,7 +26,7 @@ namespace cala::backend::vulkan {
 
         Device* _device;
         VkCommandPool _pool;
-        ende::Vector<CommandBuffer> _buffers;
+        std::vector<CommandBuffer> _buffers;
         QueueType _queueType;
         u32 _index;
 

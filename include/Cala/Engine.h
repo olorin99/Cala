@@ -1,7 +1,6 @@
 #ifndef CALA_ENGINE_H
 #define CALA_ENGINE_H
 
-#include <Ende/Vector.h>
 #include <Ende/Shared.h>
 #include <Cala/backend/vulkan/Buffer.h>
 #include <Cala/backend/vulkan/Image.h>
@@ -38,9 +37,9 @@ namespace cala {
 
         backend::vulkan::ImageHandle generatePrefilteredIrradiance(backend::vulkan::ImageHandle cubeMap);
 
-        u32 uploadVertexData(ende::Span<f32> data);
+        u32 uploadVertexData(std::span<f32> data);
 
-        u32 uploadIndexData(ende::Span<u32> data);
+        u32 uploadIndexData(std::span<u32> data);
 
         struct ShaderInfo {
             ende::fs::Path path;
@@ -48,7 +47,7 @@ namespace cala {
             std::vector<std::pair<const char*, std::string>> macros = {};
             std::vector<std::string> includes = {};
         };
-        backend::vulkan::ProgramHandle loadProgram(const ende::Vector<ShaderInfo>& shaderInfo);
+        backend::vulkan::ProgramHandle loadProgram(const std::vector<ShaderInfo>& shaderInfo);
 
         Material* createMaterial(u32 size);
 
@@ -57,6 +56,7 @@ namespace cala {
             return createMaterial(sizeof(T));
         }
 
+        //TODO: Return handle cause pointers may not be stable
         Material* loadMaterial(const ende::fs::Path& path, u32 size);
 
         template <typename T>
@@ -66,7 +66,7 @@ namespace cala {
 
         Material* getMaterial(u32 index);
 
-        u32 materialCount() const { return _materials.size(); }
+        u32 materialCount() const;
 
         spdlog::logger& logger() { return _logger; }
 
@@ -145,9 +145,9 @@ namespace cala {
 
         Mesh* _cube;
 
-        ende::Vector<backend::vulkan::ImageHandle> _shadowMaps;
+        std::vector<backend::vulkan::ImageHandle> _shadowMaps;
 
-        ende::Vector<Material> _materials;
+        std::vector<Material> _materials;
 
         backend::vulkan::ImageHandle getShadowMap(u32 index);
 

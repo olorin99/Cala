@@ -7,14 +7,14 @@ cala::ui::RenderGraphViewer::RenderGraphViewer(cala::RenderGraph *graph)
 {}
 
 void cala::ui::RenderGraphViewer::render() {
-    tsl::robin_map<const char*, ende::Vector<u32>> inputs;
+    tsl::robin_map<const char*, std::vector<u32>> inputs;
     for (u32 i = 0; i < _graph->_orderedPasses.size(); i++) {
         auto& pass = _graph->_passes[i];
         for (auto& input : pass._inputs)
-            inputs[input.name].push(i);
+            inputs[input.name].push_back(i);
     }
 
-    ende::Vector<tsl::robin_map<const char*, u32>> ids;
+    std::vector<tsl::robin_map<const char*, u32>> ids;
 
     u32 id = 1;
 
@@ -25,7 +25,7 @@ void cala::ui::RenderGraphViewer::render() {
     f32 y = 0;
 
     for (auto& pass : _graph->_orderedPasses) {
-        ids.emplace();
+        ids.emplace_back();
 
         u32 nodeID = id;
 

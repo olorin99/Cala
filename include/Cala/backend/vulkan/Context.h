@@ -3,8 +3,7 @@
 
 #include <volk.h>
 #include <string>
-#include <Ende/Vector.h>
-#include <Ende/Span.h>
+#include <span>
 #include <Cala/backend/primitives.h>
 #include <Cala/backend/vulkan/Platform.h>
 
@@ -67,7 +66,7 @@ namespace cala::backend::vulkan {
 
         const char* deviceTypeString() const;
 
-        ende::Span<const char> deviceName() const { return _deviceName; }
+        std::span<const char> deviceName() const { return _deviceName; }
 
         f32 timestampPeriod() const { return _limits.timestampPeriod; }
 

@@ -1,7 +1,7 @@
 #include "Cala/backend/vulkan/Framebuffer.h"
 #include <Cala/MaterialInstance.h>
 
-cala::backend::vulkan::Framebuffer::Framebuffer(VkDevice device, RenderPass &renderPass, ende::Span<VkImageView> attachments, u32 width, u32 height)
+cala::backend::vulkan::Framebuffer::Framebuffer(VkDevice device, RenderPass &renderPass, std::span<VkImageView> attachments, u32 width, u32 height)
     : _device(device),
     _framebuffer(VK_NULL_HANDLE),
     _renderPass(renderPass),

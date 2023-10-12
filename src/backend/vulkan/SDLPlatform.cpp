@@ -1,8 +1,8 @@
-#include <Ende/Vector.h>
-
+#include <vector>
 #define VK_USE_PLATFORM_XLIB_KHR
 #include "Cala/backend/vulkan/SDLPlatform.h"
 #include <SDL2/SDL_vulkan.h>
+#include <stdexcept>
 
 cala::backend::vulkan::SDLPlatform::SDLPlatform(const char *windowTitle, u32 width, u32 height, u32 flags)
     : _window(nullptr),
@@ -19,10 +19,10 @@ cala::backend::vulkan::SDLPlatform::~SDLPlatform() {
     SDL_DestroyWindow(_window);
 }
 
-ende::Vector<const char *> cala::backend::vulkan::SDLPlatform::requiredExtensions() {
+std::vector<const char *> cala::backend::vulkan::SDLPlatform::requiredExtensions() {
     u32 extensionCount = 0;
     SDL_Vulkan_GetInstanceExtensions(_window, &extensionCount, nullptr);
-    ende::Vector<const char*> extensionNames(extensionCount);
+    std::vector<const char*> extensionNames(extensionCount);
     SDL_Vulkan_GetInstanceExtensions(_window, &extensionCount, extensionNames.data());
     return std::move(extensionNames);
 }

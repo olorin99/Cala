@@ -53,13 +53,13 @@ namespace cala::backend::vulkan {
 
         void bindProgram(ProgramHandle program);
 
-        void bindAttributes(ende::Span<Attribute> attributes);
+        void bindAttributes(std::span<Attribute> attributes);
 
-        void bindBindings(ende::Span<VkVertexInputBindingDescription> bindings);
+        void bindBindings(std::span<VkVertexInputBindingDescription> bindings);
 
-        void bindAttributeDescriptions(ende::Span<VkVertexInputAttributeDescription> attributes);
+        void bindAttributeDescriptions(std::span<VkVertexInputAttributeDescription> attributes);
 
-        void bindVertexArray(ende::Span<VkVertexInputBindingDescription> bindings, ende::Span<VkVertexInputAttributeDescription> attributes);
+        void bindVertexArray(std::span<VkVertexInputBindingDescription> bindings, std::span<VkVertexInputAttributeDescription> attributes);
 
 
         void bindViewPort(const ViewPort& viewport);
@@ -98,13 +98,18 @@ namespace cala::backend::vulkan {
 
         void bindImage(u32 set, u32 binding, Image::View& image, Sampler& sampler, bool storage = false);
 
-        void pushConstants(ShaderStage stage, ende::Span<const void> data, u32 offset = 0);
+        void pushConstants(ShaderStage stage, std::span<const u8> data, u32 offset = 0);
+
+        template <typename T>
+        void pushConstants(ShaderStage stage, const T& data, u32 offset = 0) {
+            pushConstants(stage, std::span<const u8>(reinterpret_cast<const u8*>(&data), sizeof(data)), offset);
+        }
 
         void bindDescriptors();
         void clearDescriptors();
 
         void bindVertexBuffer(u32 first, BufferHandle buffer, u32 offset = 0);
-        void bindVertexBuffers(u32 first, ende::Span<VkBuffer> buffers, ende::Span<VkDeviceSize> offsets);
+        void bindVertexBuffers(u32 first, std::span<VkBuffer> buffers, std::span<VkDeviceSize> offsets);
 
 //        void bindVertexBuffer(u32 first, BufferHandle buffer, u32 offset);
 
@@ -125,11 +130,11 @@ namespace cala::backend::vulkan {
         void clearBuffer(BufferHandle buffer, u32 clearValue = 0);
 
 
-        void pipelineBarrier(ende::Span<VkBufferMemoryBarrier2> bufferBarriers, ende::Span<VkImageMemoryBarrier2> imageBarriers);
+        void pipelineBarrier(std::span<VkBufferMemoryBarrier2> bufferBarriers, std::span<VkImageMemoryBarrier2> imageBarriers);
 
-        void pipelineBarrier(ende::Span<Image::Barrier> imageBarriers);
+        void pipelineBarrier(std::span<Image::Barrier> imageBarriers);
 
-        void pipelineBarrier(ende::Span<Buffer::Barrier> bufferBarriers);
+        void pipelineBarrier(std::span<Buffer::Barrier> bufferBarriers);
 
         struct MemoryBarrier {
             PipelineStage srcStage;
@@ -138,7 +143,7 @@ namespace cala::backend::vulkan {
             Access dstAccess;
         };
 
-        void pipelineBarrier(ende::Span<MemoryBarrier> memoryBarriers);
+        void pipelineBarrier(std::span<MemoryBarrier> memoryBarriers);
 
         void pushDebugLabel(std::string_view label, std::array<f32, 4> colour = {0, 1, 0, 1});
 
@@ -149,7 +154,7 @@ namespace cala::backend::vulkan {
         void stopPipelineStatistics();
 
 
-        bool submit(ende::Span<VkSemaphore> wait = nullptr, VkFence fence = VK_NULL_HANDLE);
+        bool submit(std::span<VkSemaphore> wait = {}, VkFence fence = VK_NULL_HANDLE);
 
         bool submit(VkSemaphore timeline = VK_NULL_HANDLE, u64 waitValue = 0, u64 signalValue = 0, VkSemaphore waitSemaphore = VK_NULL_HANDLE);
 
@@ -228,7 +233,7 @@ namespace cala::backend::vulkan {
         u32 _drawCallCount;
 
 #ifndef NDEBUG
-        ende::Vector<std::string_view> _debugLabels;
+        std::vector<std::string_view> _debugLabels;
 #endif
 
     };

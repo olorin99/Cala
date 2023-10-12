@@ -161,7 +161,7 @@ cala::Engine::Engine(backend::Platform &platform)
     f32 irradianceData[4];
     std::memset(irradianceData, 0, sizeof(f32) * 4);
     for (u32 i = 0; i < 6; i++)
-        _defaultIrradiance->data(_device, {0, 1, 1, 1, 4 * 4, {irradianceData, sizeof(f32) * 4 }, i });
+        _defaultIrradiance->data(_device, {0, 1, 1, 1, 4 * 4, i }, std::span<f32>(irradianceData, 4));
 
 
     _defaultPrefilter = _device.createImage({
@@ -177,7 +177,7 @@ cala::Engine::Engine(backend::Platform &platform)
     f32 prefilterData[4 * 512 * 512];
     std::memset(prefilterData, 0, sizeof(f32) * 4 * 512 * 512);
     for (u32 i = 0; i < 6; i++)
-        _defaultPrefilter->data(_device, {0, 512, 512, 1, 4 * 4, {prefilterData, sizeof(f32) * 4 * 512 * 512 }, i });
+        _defaultPrefilter->data(_device, {0, 512, 512, 1, 4 * 4, i }, std::span<f32>(prefilterData, 4 * 512 * 512 ));
 
     _device.immediate([&](backend::vulkan::CommandBuffer& cmd) {
         auto prefilterBarrier = _defaultPrefilter->barrier(backend::PipelineStage::TOP, backend::PipelineStage::BOTTOM, backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::TRANSFER_DST);
@@ -209,6 +209,8 @@ cala::Engine::Engine(backend::Platform &platform)
     _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_indexStagingBuffer->buffer(), "indexStagingBuffer");
 
     _cube = new Mesh(shapes::cube().mesh(this));
+
+    _materials.reserve(10);
 
 }
 
@@ -362,7 +364,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::generatePrefilteredIrradiance(b
             cmd.bindImage(1, 0, _device.getImageView(cubeMap), *_lodSampler);
             cmd.bindImage(1, 1, mipViews[mip], _device.defaultSampler(), true);
             f32 roughness = (f32)mip / (f32)prefilteredMap->mips();
-            cmd.pushConstants(backend::ShaderStage::COMPUTE, { &roughness, sizeof(f32) });
+            cmd.pushConstants(backend::ShaderStage::COMPUTE, roughness);
             cmd.bindPipeline();
             cmd.bindDescriptors();
             f32 computeDim = 512.f * std::pow(0.5, mip);
@@ -389,7 +391,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::getShadowMap(u32 index) {
     std::string debugLabel = "ShadowMap: " + std::to_string(index);
     _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)map->image(), debugLabel);
     _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_device.getImageView(map).view, "shadowMap_View");
-    _shadowMaps.push(map);
+    _shadowMaps.push_back(map);
     _device.immediate([&](backend::vulkan::CommandBuffer& cmd) {
         auto cubeBarrier = map->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::SHADER_READ_ONLY);
         cmd.pipelineBarrier({ &cubeBarrier, 1 });
@@ -403,42 +405,36 @@ void cala::Engine::updateMaterialdata() {
 }
 
 
-u32 cala::Engine::uploadVertexData(ende::Span<f32> data) {
+u32 cala::Engine::uploadVertexData(std::span<f32> data) {
     u32 currentOffset = _vertexOffset;
     if (currentOffset + data.size() >= _vertexStagingBuffer->size()) {
-        _vertexStagingBuffer = _device.resizeBuffer(_vertexStagingBuffer, currentOffset + data.size(), true);
+        _vertexStagingBuffer = _device.resizeBuffer(_vertexStagingBuffer, currentOffset + data.size() * sizeof(f32), true);
         _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_vertexStagingBuffer->buffer(), "vertexStagingBuffer");
     }
 
-//    auto mapped = _vertexStagingBuffer->map(currentOffset, data.size());
-//    std::memcpy(mapped.address, data.data(), data.size());
-//    std::memcpy(_vertexStagingBuffer->persistentMapping(), data.data(), data.size());
     _vertexStagingBuffer->data(data, currentOffset);
 
-    _vertexOffset += data.size();
+    _vertexOffset += data.size() * sizeof(f32);
     _stagingReady = true;
     return currentOffset;
 }
 
-u32 cala::Engine::uploadIndexData(ende::Span<u32> data) {
+u32 cala::Engine::uploadIndexData(std::span<u32> data) {
     u32 currentOffset = _indexOffset;
     if (currentOffset + data.size() >= _indexStagingBuffer->size()) {
-        _indexStagingBuffer = _device.resizeBuffer(_indexStagingBuffer, currentOffset + data.size(), true);
+        _indexStagingBuffer = _device.resizeBuffer(_indexStagingBuffer, currentOffset + data.size() * sizeof(u32), true);
         _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_indexStagingBuffer->buffer(), "indexStagingBuffer");
     }
 
-//    auto mapped = _indexStagingBuffer->map(currentOffset, data.size());
-//    std::memcpy(mapped.address, data.data(), data.size());
-//    std::memcpy(_indexStagingBuffer->persistentMapping(), data.data(), data.size());
     _indexStagingBuffer->data(data, currentOffset);
-    _indexOffset += data.size();
+    _indexOffset += data.size() * sizeof(u32);
     _stagingReady = true;
     return currentOffset;
 }
 
 cala::Material *cala::Engine::createMaterial(u32 size) {
     u32 id = _materials.size();
-    _materials.emplace(this, id, size);
+    _materials.emplace_back(this, id, size);
     return &_materials.back();
 }
 
@@ -773,7 +769,7 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
     }
 }
 
-cala::backend::vulkan::ProgramHandle cala::Engine::loadProgram(const ende::Vector<ShaderInfo>& shaderInfo) {
+cala::backend::vulkan::ProgramHandle cala::Engine::loadProgram(const std::vector<ShaderInfo>& shaderInfo) {
     auto programBuilder = backend::vulkan::ShaderProgram::create(&_device);
 
     for (auto& info : shaderInfo) {
@@ -817,4 +813,8 @@ cala::backend::vulkan::ProgramHandle cala::Engine::getProgram(cala::Engine::Prog
             return _voxelVisualisationProgram;
     }
     return _solidColourProgram;
+}
+
+u32 cala::Engine::materialCount() const {
+    return _materials.size();
 }
