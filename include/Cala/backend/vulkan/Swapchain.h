@@ -6,6 +6,7 @@
 #include <Cala/backend/vulkan/RenderPass.h>
 #include <Cala/backend/vulkan/Framebuffer.h>
 #include <Cala/backend/vulkan/Platform.h>
+#include <Cala/backend/vulkan/Semaphore.h>
 #include "Handle.h"
 
 namespace cala::backend::vulkan {
@@ -19,16 +20,20 @@ namespace cala::backend::vulkan {
 
         ~Swapchain();
 
+        struct SemaphorePair {
+            Semaphore acquire;
+            Semaphore present;
+        };
         struct Frame {
             u64 id = 0;
             u32 index = 0;
-            VkSemaphore imageAquired = VK_NULL_HANDLE;
+            SemaphorePair semaphores = {{nullptr}, {nullptr}};
             Framebuffer* framebuffer = nullptr;
         };
 
         std::expected<Frame, i32> nextImage();
 
-        bool present(Frame frame, VkSemaphore renderFinish);
+        bool present(Frame frame);
 
         bool resize(u32 width, u32 height);
 
@@ -75,7 +80,7 @@ namespace cala::backend::vulkan {
 
         std::vector<VkImage> _images;
         std::vector<VkImageView> _imageViews;
-        std::vector<VkSemaphore> _semaphores;
+        std::vector<SemaphorePair> _semaphores;
         std::vector<VmaAllocation> _allocations;
 
         ImageHandle _depthImage;

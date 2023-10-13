@@ -18,7 +18,9 @@ add_library(Cala src/backend/vulkan/Context.cpp include/Cala/backend/vulkan/Cont
         src/renderPasses/debugPasses.cpp
         src/renderPasses/debugPasses.h
         src/ui/RenderGraphViewer.cpp
-        include/Cala/ui/RenderGraphViewer.h)
+        include/Cala/ui/RenderGraphViewer.h
+        src/backend/vulkan/Semaphore.cpp
+        include/Cala/backend/vulkan/Semaphore.h)
 
 target_include_directories(Cala
         PUBLIC

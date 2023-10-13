@@ -74,7 +74,7 @@ bool cala::Renderer::beginFrame(cala::backend::vulkan::Swapchain* swapchain) {
         _engine->device().printMarkers();
         throw std::runtime_error("Device Lost");
     }
-    _swapchainFrame = result.value();
+    _swapchainFrame = std::move(result.value());
     _frameInfo.cmd->begin();
     _globalData.time = _engine->getRunningTime().milliseconds();
     return true;
@@ -84,15 +84,19 @@ f64 cala::Renderer::endFrame() {
     _frameInfo.cmd->end();
     if (_engine->device().usingTimeline()) {
         u64 waitValue = _engine->device().getFrameValue(_engine->device().prevFrameIndex());
-        u64 signalValue = _engine->device().getNextTimelineValue();
-        if (!_frameInfo.cmd->submit(_engine->device().getTimelineSemaphore(), waitValue, signalValue, _swapchainFrame.imageAquired)) {
+        u64 signalValue = _engine->device().getTimelineSemaphore().increment();
+//        if (!_frameInfo.cmd->submit(_engine->device().getTimelineSemaphore(), waitValue, signalValue, &_swapchainFrame.semaphores.acquire, &_swapchainFrame.semaphores.present)) {
+        std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 2> wait({ { &_engine->device().getTimelineSemaphore(), waitValue }, { &_swapchainFrame.semaphores.acquire, 0 } });
+        std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 2> signal({ { &_engine->device().getTimelineSemaphore(), signalValue }, { &_swapchainFrame.semaphores.present, 0 } });
+        if (!_frameInfo.cmd->submit(wait, signal)) {
             _engine->logger().error("Error submitting command buffer");
             _engine->device().printMarkers();
             throw std::runtime_error("Error submitting command buffer");
         }
         _engine->device().setFrameValue(_engine->device().frameIndex(), signalValue);
     } else {
-        if (!_frameInfo.cmd->submit({ &_swapchainFrame.imageAquired, 1 }, _frameInfo.fence)) {
+        auto semaphore = _swapchainFrame.semaphores.acquire.semaphore();
+        if (!_frameInfo.cmd->submit({ &semaphore, 1 }, _frameInfo.fence)) {
             _engine->logger().error("Error submitting command buffer");
             _engine->device().printMarkers();
             throw std::runtime_error("Error submitting command buffer");
@@ -100,7 +104,7 @@ f64 cala::Renderer::endFrame() {
     }
 
     assert(_swapchain);
-    _swapchain->present(_swapchainFrame, _frameInfo.cmd->signal());
+    _swapchain->present(std::move(_swapchainFrame));
     _engine->device().endFrame();
 
     _stats.drawCallCount = _frameInfo.cmd->drawCalls();

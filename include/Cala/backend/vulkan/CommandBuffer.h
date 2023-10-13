@@ -9,7 +9,7 @@
 #include <Cala/backend/vulkan/Buffer.h>
 #include <Cala/backend/vulkan/Image.h>
 #include <Cala/backend/vulkan/Sampler.h>
-
+#include <Cala/backend/vulkan/Semaphore.h>
 #include <cstring>
 #include <Ende/util/hash.h>
 #include "../third_party/tsl/robin_map.h"
@@ -156,9 +156,13 @@ namespace cala::backend::vulkan {
 
         bool submit(std::span<VkSemaphore> wait = {}, VkFence fence = VK_NULL_HANDLE);
 
-        bool submit(VkSemaphore timeline = VK_NULL_HANDLE, u64 waitValue = 0, u64 signalValue = 0, VkSemaphore waitSemaphore = VK_NULL_HANDLE);
+        bool submit(Semaphore& timeline, u64 waitValue = 0, u64 signalValue = 0, Semaphore* waitSemaphore = nullptr, Semaphore* signalSemaphore = nullptr);
 
-        VkSemaphore signal() const { return _signal; }
+        struct SemaphoreSubmit {
+            Semaphore* semaphore = nullptr;
+            u64 value = 0;
+        };
+        bool submit(std::span<SemaphoreSubmit> waitSemaphores, std::span<SemaphoreSubmit> signalSemaphores);
 
         bool active() const { return _active; }
 
@@ -173,7 +177,6 @@ namespace cala::backend::vulkan {
 
         Device* _device;
         VkCommandBuffer _buffer;
-        VkSemaphore _signal;
         VkQueue _queue;
         bool _active;
 

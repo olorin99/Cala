@@ -18,23 +18,10 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
           .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
           .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
       }),
-      _timelineSemaphore(VK_NULL_HANDLE),
+      _timelineSemaphore(this, createInfo.useTimeline ? 10 : -1),
       _timelineValue(10)
 {
     if (createInfo.useTimeline) {
-        VkSemaphoreTypeCreateInfo typeCreateInfo{};
-        typeCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
-        typeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-        typeCreateInfo.initialValue = _timelineValue;
-
-        VkSemaphoreCreateInfo timelineCreateInfo{};
-        timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-        timelineCreateInfo.pNext = &typeCreateInfo;
-        timelineCreateInfo.flags = 0;
-        vkCreateSemaphore(_context.device(), &timelineCreateInfo, nullptr, &_timelineSemaphore);
-
-        _context.setDebugName(VK_OBJECT_TYPE_SEMAPHORE, (u64)_timelineSemaphore, "TimelineSemaphore");
-
         for (auto& value : _frameValues)
             value = _timelineValue;
     } else {
@@ -158,7 +145,7 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
 
 cala::backend::vulkan::Device::~Device() {
     if (usingTimeline())
-        signalTimeline(std::numeric_limits<u64>::max());
+        _timelineSemaphore.signal(std::numeric_limits<u64>::max());
     VK_TRY(vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS))); //ensures last frame finished before destroying stuff
 
     for (auto& markerBuffer : _markerBuffer)
@@ -211,9 +198,7 @@ cala::backend::vulkan::Device::~Device() {
     vkDestroyDescriptorPool(_context.device(), _descriptorPool, nullptr);
     vkDestroyDescriptorPool(_context.device(), _bindlessPool, nullptr);
 
-    if (usingTimeline()) {
-        vkDestroySemaphore(_context.device(), _timelineSemaphore, nullptr);
-    } else {
+    if (!usingTimeline()) {
         for (auto& fence : _frameFences)
             vkDestroyFence(_context.device(), fence, nullptr);
     }
@@ -267,7 +252,7 @@ bool cala::backend::vulkan::Device::waitFrame(u64 frame, u64 timeout) {
     PROFILE_NAMED("Device::waitFrame");
     if (usingTimeline()) {
         u64 waitValue = _frameValues[frame];
-        return waitTimeline(waitValue, timeout);
+        return _timelineSemaphore.wait(waitValue, timeout);
     } else {
         VkFence fence = _frameFences[frame];
         auto res = vkWaitForFences(_context.device(), 1, &fence, true, timeout);
@@ -283,46 +268,6 @@ bool cala::backend::vulkan::Device::waitFrame(u64 frame, u64 timeout) {
 
 bool cala::backend::vulkan::Device::wait(u64 timeout) {
     return VK_SUCCESS == vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS));
-}
-
-bool cala::backend::vulkan::Device::waitTimeline(u64 value, u64 timeout) {
-    VkSemaphoreWaitInfo waitInfo{};
-    waitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
-    waitInfo.semaphoreCount = 1;
-    waitInfo.pSemaphores = &_timelineSemaphore;
-    waitInfo.pValues = &value;
-    auto result = vkWaitSemaphores(_context.device(), &waitInfo, timeout);
-    if (result == VK_ERROR_DEVICE_LOST) {
-        _logger.error("Device Lost - Frame: {}", _frameCount);
-        printMarkers();
-        throw std::runtime_error("Device Lost");
-    }
-    return VK_SUCCESS == result;
-}
-
-bool cala::backend::vulkan::Device::signalTimeline(u64 value) {
-    VkSemaphoreSignalInfo signalInfo{};
-    signalInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO;
-    signalInfo.semaphore = _timelineSemaphore;
-    signalInfo.value = value;
-    auto result = vkSignalSemaphore(_context.device(), &signalInfo);
-    _timelineValue = value;
-    return VK_SUCCESS == result;
-}
-
-u64 cala::backend::vulkan::Device::queryGPUTimelineValue() {
-    u64 value = 0;
-    vkGetSemaphoreCounterValue(_context.device(), _timelineSemaphore, &value);
-    return value;
-}
-
-u64 cala::backend::vulkan::Device::queryCPUTimelineValue() {
-    return _timelineValue;
-}
-
-u64 cala::backend::vulkan::Device::getNextTimelineValue() {;
-    _timelineValue += 10;
-    return _timelineValue;
 }
 
 cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::stagingBuffer(u32 size) {

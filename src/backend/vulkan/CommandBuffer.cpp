@@ -6,7 +6,6 @@
 cala::backend::vulkan::CommandBuffer::CommandBuffer(Device& device, VkQueue queue, VkCommandBuffer buffer)
     : _device(&device),
     _buffer(buffer),
-    _signal(VK_NULL_HANDLE),
     _queue(queue),
     _active(false),
     _indexBuffer{},
@@ -20,15 +19,11 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(Device& device, VkQueue queu
     _pipelineKey.viewPort.maxDepth = 1.f;
 }
 
-cala::backend::vulkan::CommandBuffer::~CommandBuffer() {
-    if (_device && _signal != VK_NULL_HANDLE)
-        vkDestroySemaphore(_device->context().device(), _signal, nullptr);
-}
+cala::backend::vulkan::CommandBuffer::~CommandBuffer() {}
 
 cala::backend::vulkan::CommandBuffer::CommandBuffer(CommandBuffer &&rhs) noexcept
     : _device(nullptr),
     _buffer(VK_NULL_HANDLE),
-    _signal(VK_NULL_HANDLE),
     _queue(VK_NULL_HANDLE),
     _active(false),
     _indexBuffer{},
@@ -38,7 +33,6 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(CommandBuffer &&rhs) noexcep
 {
     std::swap(_device, rhs._device);
     std::swap(_buffer, rhs._buffer);
-    std::swap(_signal, rhs._signal);
     std::swap(_queue, rhs._queue);
     std::swap(_active, rhs._active);
     std::swap(_indexBuffer, rhs._indexBuffer);
@@ -57,7 +51,6 @@ cala::backend::vulkan::CommandBuffer::CommandBuffer(CommandBuffer &&rhs) noexcep
 cala::backend::vulkan::CommandBuffer &cala::backend::vulkan::CommandBuffer::operator=(CommandBuffer &&rhs) noexcept {
     std::swap(_device, rhs._device);
     std::swap(_buffer, rhs._buffer);
-    std::swap(_signal, rhs._signal);
     std::swap(_queue, rhs._queue);
     std::swap(_active, rhs._active);
     std::swap(_indexBuffer, rhs._indexBuffer);
@@ -80,10 +73,6 @@ bool cala::backend::vulkan::CommandBuffer::begin() {
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     _active = vkBeginCommandBuffer(_buffer, &beginInfo) == VK_SUCCESS;
-    vkDestroySemaphore(_device->context().device(), _signal, nullptr);
-    VkSemaphoreCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    VK_TRY(vkCreateSemaphore(_device->context().device(), &createInfo, nullptr, &_signal));
     _drawCallCount = 0;
     return _active;
 }
@@ -565,8 +554,8 @@ bool cala::backend::vulkan::CommandBuffer::submit(std::span<VkSemaphore> wait, V
     submitInfo.waitSemaphoreCount = waitCount;
     submitInfo.pWaitSemaphores = wait.data();
 
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = &_signal;
+//    submitInfo.signalSemaphoreCount = 1;
+//    submitInfo.pSignalSemaphores = &_signal;
 
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &_buffer;
@@ -580,7 +569,7 @@ bool cala::backend::vulkan::CommandBuffer::submit(std::span<VkSemaphore> wait, V
     return res == VK_SUCCESS;
 }
 
-bool cala::backend::vulkan::CommandBuffer::submit(VkSemaphore timeline, u64 waitValue, u64 signalValue, VkSemaphore waitSemaphore) {
+bool cala::backend::vulkan::CommandBuffer::submit(cala::backend::vulkan::Semaphore& timeline, u64 waitValue, u64 signalValue, cala::backend::vulkan::Semaphore* waitSemaphore, cala::backend::vulkan::Semaphore* signalSemaphore) {
     PROFILE_NAMED("CommandBuffer::Submit");
     end();
 
@@ -596,8 +585,8 @@ bool cala::backend::vulkan::CommandBuffer::submit(VkSemaphore timeline, u64 wait
 
     VkPipelineStageFlags waitDstStageMasks[2] = { VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT };
 
-    VkSemaphore waits[2] = { timeline, waitSemaphore };
-    VkSemaphore signals[2] = { timeline, _signal };
+    VkSemaphore waits[2] = { timeline.semaphore(), waitSemaphore->semaphore() };
+    VkSemaphore signals[2] = { timeline.semaphore(), signalSemaphore->semaphore() };
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -608,6 +597,58 @@ bool cala::backend::vulkan::CommandBuffer::submit(VkSemaphore timeline, u64 wait
     submitInfo.pSignalSemaphores = signals;
 
     submitInfo.pWaitDstStageMask = waitDstStageMasks;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &_buffer;
+
+    auto res = vkQueueSubmit(_queue, 1, &submitInfo, VK_NULL_HANDLE);
+    if (res == VK_ERROR_DEVICE_LOST) {
+        _device->logger().error("Device lost on queue submit");
+        _device->printMarkers();
+        throw std::runtime_error("Device lost on queue submit");
+    }
+    return res == VK_SUCCESS;
+}
+
+bool cala::backend::vulkan::CommandBuffer::submit(std::span<SemaphoreSubmit> waitSemaphores, std::span<SemaphoreSubmit> signalSemaphores) {
+    PROFILE_NAMED("CommandBuffer::Submit");
+    end();
+
+    u64 waitValues[waitSemaphores.size()];
+    u64 signalValues[signalSemaphores.size()];
+    VkSemaphore waits[waitSemaphores.size()];
+    VkSemaphore signals[signalSemaphores.size()];
+    VkPipelineStageFlags waitStages[waitSemaphores.size()];
+
+    for (u32 i = 0; i < waitSemaphores.size(); i++) {
+        auto& wait = waitSemaphores[i];
+        waitValues[i] = wait.value;
+        waits[i] = wait.semaphore->semaphore();
+        waitStages[i] = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    }
+
+    for (u32 i = 0; i < signalSemaphores.size(); i++) {
+        auto& signal = signalSemaphores[i];
+        signalValues[i] = signal.value;
+        signals[i] = signal.semaphore->semaphore();
+    }
+
+    VkTimelineSemaphoreSubmitInfo timelineSubmitInfo{};
+    timelineSubmitInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
+    timelineSubmitInfo.waitSemaphoreValueCount = waitSemaphores.size();
+    timelineSubmitInfo.pWaitSemaphoreValues = waitValues;
+    timelineSubmitInfo.signalSemaphoreValueCount = signalSemaphores.size();
+    timelineSubmitInfo.pSignalSemaphoreValues = signalValues;
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.pNext = &timelineSubmitInfo;
+    submitInfo.waitSemaphoreCount = waitSemaphores.size();
+    submitInfo.pWaitSemaphores = waits;
+    submitInfo.signalSemaphoreCount = signalSemaphores.size();
+    submitInfo.pSignalSemaphores = signals;
+
+    submitInfo.pWaitDstStageMask = waitStages;
 
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &_buffer;

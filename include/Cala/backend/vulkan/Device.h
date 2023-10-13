@@ -5,6 +5,7 @@
 #include <Cala/backend/vulkan/Swapchain.h>
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include <Cala/backend/vulkan/CommandPool.h>
+#include <Cala/backend/vulkan/Semaphore.h>
 #include "Platform.h"
 #include <Cala/backend/vulkan/Handle.h>
 #include <Ende/time/StopWatch.h>
@@ -49,19 +50,9 @@ namespace cala::backend::vulkan {
 
         bool wait(u64 timeout = 1000000000); // waits for all frames
 
-        bool waitTimeline(u64 value, u64 timeout = 1000000000);
+        bool usingTimeline() const { return _timelineSemaphore.semaphore() != VK_NULL_HANDLE; }
 
-        bool usingTimeline() const { return _timelineSemaphore != VK_NULL_HANDLE; }
-
-        bool signalTimeline(u64 value);
-
-        u64 queryGPUTimelineValue();
-
-        u64 queryCPUTimelineValue();
-
-        u64 getNextTimelineValue();
-
-        VkSemaphore getTimelineSemaphore() { return _timelineSemaphore; }
+        Semaphore& getTimelineSemaphore() { return _timelineSemaphore; }
 
         void setFrameValue(u64 frame, u64 value) { _frameValues[frame] = value; }
 
@@ -181,7 +172,7 @@ namespace cala::backend::vulkan {
         spdlog::logger& _logger;
         Context _context;
         CommandPool _commandPools[2][3]; // 0 = graphics, 1 = compute, 2 = transfer
-        VkSemaphore _timelineSemaphore;
+        Semaphore _timelineSemaphore;
         u64 _timelineValue;
         u64 _frameValues[FRAMES_IN_FLIGHT];
         VkFence _frameFences[FRAMES_IN_FLIGHT];

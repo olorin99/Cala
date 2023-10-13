@@ -458,16 +458,16 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
         }
     }
 
-    for (i32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
-        auto& pass = _orderedPasses[passIndex];
-        _engine->logger().info("Pass: {}", pass->_passName);
-        for (auto& barrier : pass->_invalidate) {
-            _engine->logger().info("Invalidate: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
-        }
-        for (auto& barrier : pass->_flush) {
-            _engine->logger().info("Flush: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
-        }
-    }
+//    for (i32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
+//        auto& pass = _orderedPasses[passIndex];
+//        _engine->logger().info("Pass: {}", pass->_passName);
+//        for (auto& barrier : pass->_invalidate) {
+//            _engine->logger().info("Invalidate: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
+//        }
+//        for (auto& barrier : pass->_flush) {
+//            _engine->logger().info("Flush: {}, src: {}, dst: {}, src: {}, dst: {}, {} -> {}", barrier.name, backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage), backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess), backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
+//        }
+//    }
 
     for (auto& attachment : _attachmentMap) {
         u32 index = attachment.second.index;

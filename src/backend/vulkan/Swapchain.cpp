@@ -122,10 +122,6 @@ cala::backend::vulkan::Swapchain::~Swapchain() {
 //    _driver.destroyImage(_depthImage);
     _depthImage.release();
 
-    for (auto& semaphore : _semaphores) {
-        vkDestroySemaphore(_driver.context().device(), semaphore, nullptr);
-    }
-
     for (auto& view : _imageViews)
         vkDestroyImageView(_driver.context().device(), view, nullptr);
 
@@ -140,11 +136,11 @@ cala::backend::vulkan::Swapchain::~Swapchain() {
 
 
 std::expected<cala::backend::vulkan::Swapchain::Frame, i32> cala::backend::vulkan::Swapchain::nextImage() {
-    auto image = _semaphores.back();
+    auto semaphorePair = std::move(_semaphores.back());
     _semaphores.pop_back();
     u32 index = 0;
     if (_surface != VK_NULL_HANDLE) {
-        VkResult result = vkAcquireNextImageKHR(_driver.context().device(), _swapchain, std::numeric_limits<u64>::max(), image, VK_NULL_HANDLE, &index);
+        VkResult result = vkAcquireNextImageKHR(_driver.context().device(), _swapchain, std::numeric_limits<u64>::max(), semaphorePair.acquire.semaphore(), VK_NULL_HANDLE, &index);
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
             resize(_depthImage->width(), _depthImage->height());
         } else if (result == VK_ERROR_DEVICE_LOST)
@@ -152,11 +148,12 @@ std::expected<cala::backend::vulkan::Swapchain::Frame, i32> cala::backend::vulka
     } else {
         index = (index + 1) % 2;
     }
-    return Frame{ _frame++, index, image, _framebuffers[index] };
+    return Frame{ _frame++, index, std::move(semaphorePair), _framebuffers[index] };
 }
 
-bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFinish) {
-    _semaphores.push_back(frame.imageAquired);
+bool cala::backend::vulkan::Swapchain::present(Frame frame) {
+    auto presentSemaphore = frame.semaphores.present.semaphore();
+    _semaphores.push_back(std::move(frame.semaphores));
     std::rotate(_semaphores.begin(), _semaphores.end() - 1, _semaphores.end());
 
     if (_surface != VK_NULL_HANDLE) {
@@ -164,7 +161,7 @@ bool cala::backend::vulkan::Swapchain::present(Frame frame, VkSemaphore renderFi
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
         presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = &renderFinish;
+        presentInfo.pWaitSemaphores = &presentSemaphore;
 
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = &_swapchain;
@@ -469,15 +466,10 @@ bool cala::backend::vulkan::Swapchain::createSemaphores() {
         createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
         for (u32 i = 0; i < _imageViews.size(); i++) {
-            VkSemaphore imageAcquired;
-
-            if (vkCreateSemaphore(_driver.context().device(), &createInfo, nullptr, &imageAcquired) != VK_SUCCESS)
-                return false;
-
-            _semaphores.push_back(imageAcquired);
+            _semaphores.push_back({{&_driver}, {&_driver}});
         }
     } else {
-        _semaphores.push_back(VK_NULL_HANDLE);
+        _semaphores.push_back({{nullptr}, {nullptr}});
     }
 
     return true;
