@@ -153,16 +153,11 @@ namespace cala::backend::vulkan {
 
         void stopPipelineStatistics();
 
-
-        bool submit(std::span<VkSemaphore> wait = {}, VkFence fence = VK_NULL_HANDLE);
-
-        bool submit(Semaphore& timeline, u64 waitValue = 0, u64 signalValue = 0, Semaphore* waitSemaphore = nullptr, Semaphore* signalSemaphore = nullptr);
-
         struct SemaphoreSubmit {
             Semaphore* semaphore = nullptr;
             u64 value = 0;
         };
-        bool submit(std::span<SemaphoreSubmit> waitSemaphores, std::span<SemaphoreSubmit> signalSemaphores);
+        bool submit(std::span<SemaphoreSubmit> waitSemaphores, std::span<SemaphoreSubmit> signalSemaphores, VkFence fence = VK_NULL_HANDLE);
 
         bool active() const { return _active; }
 

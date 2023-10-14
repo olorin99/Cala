@@ -528,132 +528,48 @@ void cala::backend::vulkan::CommandBuffer::stopPipelineStatistics() {
 
 
 
-
-bool cala::backend::vulkan::CommandBuffer::submit(std::span<VkSemaphore> wait, VkFence fence) {
-    PROFILE_NAMED("CommandBuffer::Submit");
-
-    end();
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-    assert(wait.size() <= 2);
-    VkPipelineStageFlags waitDstStageMask[2] = { VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT };
-//    VkSemaphore waitSemaphore[wait] = { wait };
-
-//    submitInfo.waitSemaphoreCount = wait == VK_NULL_HANDLE ? 0 : 1;
-//    submitInfo.pWaitSemaphores = waitSemaphore;
-    submitInfo.pWaitDstStageMask = waitDstStageMask;
-
-    u32 waitCount = wait.size();
-    for (auto& semaphore : wait) {
-        if (semaphore == VK_NULL_HANDLE)
-            waitCount = 0;
-    }
-
-    submitInfo.waitSemaphoreCount = waitCount;
-    submitInfo.pWaitSemaphores = wait.data();
-
-//    submitInfo.signalSemaphoreCount = 1;
-//    submitInfo.pSignalSemaphores = &_signal;
-
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &_buffer;
-
-    auto res = vkQueueSubmit(_queue, 1, &submitInfo, fence);
-    if (res == VK_ERROR_DEVICE_LOST) {
-        _device->logger().error("Device lost on queue submit");
-        _device->printMarkers();
-        throw std::runtime_error("Device lost on queue submit");
-    }
-    return res == VK_SUCCESS;
-}
-
-bool cala::backend::vulkan::CommandBuffer::submit(cala::backend::vulkan::Semaphore& timeline, u64 waitValue, u64 signalValue, cala::backend::vulkan::Semaphore* waitSemaphore, cala::backend::vulkan::Semaphore* signalSemaphore) {
+bool cala::backend::vulkan::CommandBuffer::submit(std::span<SemaphoreSubmit> waitSemaphores, std::span<SemaphoreSubmit> signalSemaphores, VkFence fence) {
     PROFILE_NAMED("CommandBuffer::Submit");
     end();
 
-    u64 waitValues[2] = { waitValue, 0 };
-    u64 signalValues[2] = { signalValue, 0 };
-
-    VkTimelineSemaphoreSubmitInfo timelineSubmitInfo{};
-    timelineSubmitInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
-    timelineSubmitInfo.waitSemaphoreValueCount = 2;
-    timelineSubmitInfo.pWaitSemaphoreValues = waitValues;
-    timelineSubmitInfo.signalSemaphoreValueCount = 2;
-    timelineSubmitInfo.pSignalSemaphoreValues = signalValues;
-
-    VkPipelineStageFlags waitDstStageMasks[2] = { VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT };
-
-    VkSemaphore waits[2] = { timeline.semaphore(), waitSemaphore->semaphore() };
-    VkSemaphore signals[2] = { timeline.semaphore(), signalSemaphore->semaphore() };
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.pNext = &timelineSubmitInfo;
-    submitInfo.waitSemaphoreCount = 2;
-    submitInfo.pWaitSemaphores = waits;
-    submitInfo.signalSemaphoreCount = 2;
-    submitInfo.pSignalSemaphores = signals;
-
-    submitInfo.pWaitDstStageMask = waitDstStageMasks;
-
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &_buffer;
-
-    auto res = vkQueueSubmit(_queue, 1, &submitInfo, VK_NULL_HANDLE);
-    if (res == VK_ERROR_DEVICE_LOST) {
-        _device->logger().error("Device lost on queue submit");
-        _device->printMarkers();
-        throw std::runtime_error("Device lost on queue submit");
-    }
-    return res == VK_SUCCESS;
-}
-
-bool cala::backend::vulkan::CommandBuffer::submit(std::span<SemaphoreSubmit> waitSemaphores, std::span<SemaphoreSubmit> signalSemaphores) {
-    PROFILE_NAMED("CommandBuffer::Submit");
-    end();
-
-    u64 waitValues[waitSemaphores.size()];
-    u64 signalValues[signalSemaphores.size()];
-    VkSemaphore waits[waitSemaphores.size()];
-    VkSemaphore signals[signalSemaphores.size()];
-    VkPipelineStageFlags waitStages[waitSemaphores.size()];
+    VkSemaphoreSubmitInfo waits[waitSemaphores.size()];
+    VkSemaphoreSubmitInfo signals[signalSemaphores.size()];
 
     for (u32 i = 0; i < waitSemaphores.size(); i++) {
         auto& wait = waitSemaphores[i];
-        waitValues[i] = wait.value;
-        waits[i] = wait.semaphore->semaphore();
-        waitStages[i] = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        waits[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+        waits[i].pNext = nullptr;
+        waits[i].semaphore = wait.semaphore->semaphore();
+        waits[i].value = wait.value;
+        waits[i].stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        waits[i].deviceIndex = 0;
     }
 
     for (u32 i = 0; i < signalSemaphores.size(); i++) {
         auto& signal = signalSemaphores[i];
-        signalValues[i] = signal.value;
-        signals[i] = signal.semaphore->semaphore();
+        signals[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+        signals[i].pNext = nullptr;
+        signals[i].semaphore = signal.semaphore->semaphore();
+        signals[i].value = signal.value;
+        signals[i].stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        signals[i].deviceIndex = 0;
     }
 
-    VkTimelineSemaphoreSubmitInfo timelineSubmitInfo{};
-    timelineSubmitInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
-    timelineSubmitInfo.waitSemaphoreValueCount = waitSemaphores.size();
-    timelineSubmitInfo.pWaitSemaphoreValues = waitValues;
-    timelineSubmitInfo.signalSemaphoreValueCount = signalSemaphores.size();
-    timelineSubmitInfo.pSignalSemaphoreValues = signalValues;
+    VkCommandBufferSubmitInfo commandSubmitInfo{};
+    commandSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    commandSubmitInfo.commandBuffer = _buffer;
+    commandSubmitInfo.deviceMask = 0;
 
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.pNext = &timelineSubmitInfo;
-    submitInfo.waitSemaphoreCount = waitSemaphores.size();
-    submitInfo.pWaitSemaphores = waits;
-    submitInfo.signalSemaphoreCount = signalSemaphores.size();
-    submitInfo.pSignalSemaphores = signals;
+    VkSubmitInfo2 submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    submitInfo.waitSemaphoreInfoCount = waitSemaphores.size();
+    submitInfo.pWaitSemaphoreInfos = waits;
+    submitInfo.signalSemaphoreInfoCount = signalSemaphores.size();
+    submitInfo.pSignalSemaphoreInfos = signals;
+    submitInfo.commandBufferInfoCount = 1;
+    submitInfo.pCommandBufferInfos = &commandSubmitInfo;
 
-    submitInfo.pWaitDstStageMask = waitStages;
-
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &_buffer;
-
-    auto res = vkQueueSubmit(_queue, 1, &submitInfo, VK_NULL_HANDLE);
+    auto res = vkQueueSubmit2(_queue, 1, &submitInfo, fence);
     if (res == VK_ERROR_DEVICE_LOST) {
         _device->logger().error("Device lost on queue submit");
         _device->printMarkers();

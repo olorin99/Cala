@@ -95,8 +95,9 @@ f64 cala::Renderer::endFrame() {
         }
         _engine->device().setFrameValue(_engine->device().frameIndex(), signalValue);
     } else {
-        auto semaphore = _swapchainFrame.semaphores.acquire.semaphore();
-        if (!_frameInfo.cmd->submit({ &semaphore, 1 }, _frameInfo.fence)) {
+        std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 1> wait({{ &_swapchainFrame.semaphores.acquire, 0 }});
+        std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 1> signal({{ &_swapchainFrame.semaphores.present, 0 }});
+        if (!_frameInfo.cmd->submit(wait, signal, _frameInfo.fence)) {
             _engine->logger().error("Error submitting command buffer");
             _engine->device().printMarkers();
             throw std::runtime_error("Error submitting command buffer");
