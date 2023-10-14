@@ -32,11 +32,24 @@ void cala::ui::RendererSettingsWindow::render() {
     ImGui::SliderInt("Target FPS", &_targetFPS, 5, 240);
     rendererSettings.millisecondTarget = 1000.f / _targetFPS;
 
-    bool vsync = _swapchain->getVsync();
-    if (ImGui::Checkbox("Vsync", &vsync)) {
+    backend::PresentMode presentMode = _swapchain->getPresentMode();
+    const char* modes[] = { "FIFO", "MAILBOX", "IMMEDIATE" };
+    static int modeIndex = 0;
+    if (ImGui::Combo("PresentMode", &modeIndex, modes, 3)) {
         _engine->device().wait();
-        _swapchain->setVsync(vsync);
+        switch (modeIndex) {
+            case 0:
+                _swapchain->setPresentMode(backend::PresentMode::FIFO);
+                break;
+            case 1:
+                _swapchain->setPresentMode(backend::PresentMode::MAILBOX);
+                break;
+            case 2:
+                _swapchain->setPresentMode(backend::PresentMode::IMMEDIATE);
+                break;
+        }
     }
+
     ImGui::Text("Debug Settings");
     ImGui::Checkbox("\tDebug Clusters", &rendererSettings.debugClusters);
     ImGui::Checkbox("\tNormals", &rendererSettings.debugNormals);

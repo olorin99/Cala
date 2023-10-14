@@ -288,7 +288,7 @@ void cala::backend::vulkan::Device::endSingleTimeCommands(CommandBuffer& buffer)
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceCreateInfo.pNext = nullptr;
     VK_TRY(vkCreateFence(context().device(), &fenceCreateInfo, nullptr, &fence));
-    if (!buffer.submit({}, fence)) {
+    if (!buffer.submit({}, {}, fence)) {
         _logger.error("Error submitting command buffer");
         printMarkers();
         throw std::runtime_error("Error submitting immediate command buffer");

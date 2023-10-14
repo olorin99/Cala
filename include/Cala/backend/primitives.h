@@ -31,6 +31,15 @@ namespace cala::backend {
         PRESENT = 0x20
     };
 
+    enum class PresentMode {
+        IMMEDIATE = 0,
+        MAILBOX = 1,
+        FIFO = 2,
+        FIFO_RELAXED = 3,
+        SHARED_DEMAND_REFRESH = 1000111000,
+        SHARED_CONTINUOUS_REFRESH = 1000111001
+    };
+
     enum class Format {
         UNDEFINED = 0,
         //TODO: fill in extras

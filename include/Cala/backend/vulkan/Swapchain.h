@@ -57,9 +57,9 @@ namespace cala::backend::vulkan {
 
         Framebuffer& framebuffer(u32 i) { return *_framebuffers[i]; }
 
-        void setVsync(bool vsync);
+        void setPresentMode(PresentMode mode);
 
-        bool getVsync() const { return _vsync; }
+        PresentMode getPresentMode() const { return _mode; }
 
     private:
 
@@ -75,6 +75,7 @@ namespace cala::backend::vulkan {
         VkSurfaceKHR _surface;
         VkSwapchainKHR _swapchain;
         Format _format;
+        PresentMode _mode;
         VkExtent2D _extent;
         u64 _frame;
 
@@ -88,8 +89,6 @@ namespace cala::backend::vulkan {
 
         RenderPass* _renderPass;
         std::vector<Framebuffer*> _framebuffers;
-
-        bool _vsync;
 
     };
 

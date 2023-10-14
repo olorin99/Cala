@@ -6,6 +6,10 @@
 
 namespace cala::backend::vulkan {
 
+    constexpr inline VkPresentModeKHR getPresentMode(PresentMode mode) {
+        return static_cast<VkPresentModeKHR>(mode);
+    }
+
     constexpr inline VkFormat getFormat(Format format) {
         return static_cast<VkFormat>(format);
     }

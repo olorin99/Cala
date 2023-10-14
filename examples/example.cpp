@@ -352,7 +352,7 @@ int main() {
     backend::vulkan::Swapchain swapchain(engine.device(), platform);
     backend::vulkan::Swapchain offlineSwapchain(engine.device(), offlinePlatform);
     Renderer renderer(&engine, {});
-    swapchain.setVsync(true);
+    swapchain.setPresentMode(backend::PresentMode::FIFO);
 
     ImGuiContext imGuiContext(engine.device(), &swapchain, platform.window());
 

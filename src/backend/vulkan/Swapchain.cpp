@@ -27,7 +27,7 @@ VkSurfaceFormatKHR getSurfaceFormat(VkPhysicalDevice device, VkSurfaceKHR surfac
     return formats.front();
 }
 
-VkPresentModeKHR getPresentMode(VkPhysicalDevice device, VkSurfaceKHR surface, VkPresentModeKHR preference = VK_PRESENT_MODE_MAILBOX_KHR) {
+VkPresentModeKHR getValidPresentMode(VkPhysicalDevice device, VkSurfaceKHR surface, VkPresentModeKHR preference = VK_PRESENT_MODE_MAILBOX_KHR) {
     u32 count = 0;
     vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &count, nullptr);
     std::vector<VkPresentModeKHR> modes(count);
@@ -64,7 +64,7 @@ cala::backend::vulkan::Swapchain::Swapchain(Device &driver, Platform& platform, 
     _frame(0),
     _depthImage({}),
     _depthView(),
-    _vsync(false)
+    _mode(PresentMode::MAILBOX)
 {
     _surface = platform.surface(_driver.context().instance());
 //    VkBool32 supported = VK_FALSE;
@@ -339,18 +339,17 @@ void cala::backend::vulkan::Swapchain::copyFrameToImage(u32 index, cala::backend
     });
 }
 
-void cala::backend::vulkan::Swapchain::setVsync(bool vsync) {
-    _vsync = vsync;
+void cala::backend::vulkan::Swapchain::setPresentMode(cala::backend::PresentMode mode) {
+    _mode = mode;
     resize(_extent.width, _extent.height);
 }
-
 
 
 bool cala::backend::vulkan::Swapchain::createSwapchain() {
     if (_surface != VK_NULL_HANDLE) {
         VkSurfaceCapabilitiesKHR capabilities = getCapabilities(_driver.context().physicalDevice(), _surface);
         VkSurfaceFormatKHR format = getSurfaceFormat(_driver.context().physicalDevice(), _surface);
-        VkPresentModeKHR mode = getPresentMode(_driver.context().physicalDevice(), _surface, _vsync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR);
+        VkPresentModeKHR mode = getValidPresentMode(_driver.context().physicalDevice(), _surface, backend::vulkan::getPresentMode(_mode));
         VkExtent2D extent = getExtent(capabilities, _extent.width, _extent.height);
 
         u32 imageCount = capabilities.minImageCount + 1;
