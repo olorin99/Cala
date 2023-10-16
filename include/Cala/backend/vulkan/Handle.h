@@ -11,8 +11,10 @@ namespace cala::backend::vulkan {
     class Image;
     class ShaderProgram;
     class Sampler;
+    class CommandBuffer;
+    class CommandPool;
 
-    template <typename T>
+    template <typename T, typename O>
     class Handle {
     public:
 
@@ -23,8 +25,8 @@ namespace cala::backend::vulkan {
 
         Handle() = default;
 
-        Handle(Device* device, i32 index, Counter* counter)
-                : _device(device),
+        Handle(O* owner, i32 index, Counter* counter)
+                : _owner(owner),
                   _index(index),
                   _counter(counter)
         {}
@@ -34,7 +36,7 @@ namespace cala::backend::vulkan {
         }
 
         Handle(const Handle& rhs)
-            : _device(rhs._device),
+            : _owner(rhs._owner),
             _index(rhs._index),
             _counter(rhs._counter)
         {
@@ -45,7 +47,7 @@ namespace cala::backend::vulkan {
         Handle& operator=(const Handle& rhs) {
             if (this == &rhs)
                 return *this;
-            _device = rhs._device;
+            _owner = rhs._owner;
             _index = rhs._index;
             _counter = rhs._counter;
             if (_counter)
@@ -58,11 +60,11 @@ namespace cala::backend::vulkan {
         T* operator->() noexcept;
 
         explicit operator bool() const noexcept {
-            return _device && _index >= 0 && isValid();
+            return _owner && _index >= 0 && isValid();
         }
 
-        bool operator==(Handle<T> rhs) const noexcept {
-            return _device == rhs._device && _index == rhs._index;
+        bool operator==(Handle<T, O> rhs) const noexcept {
+            return _owner == rhs._owner && _index == rhs._index;
         }
 
         i32 index() const { return _index; }
@@ -83,16 +85,17 @@ namespace cala::backend::vulkan {
     private:
         friend Device;
 
-        Device* _device = nullptr;
+        O* _owner = nullptr;
         i32 _index = -1;
         Counter *_counter = nullptr;
 
     };
 
-    using BufferHandle = Handle<Buffer>;
-    using ImageHandle = Handle<Image>;
-    using ProgramHandle = Handle<ShaderProgram>;
-    using SamplerHandle = Handle<Sampler>;
+    using BufferHandle = Handle<Buffer, Device>;
+    using ImageHandle = Handle<Image, Device>;
+    using ProgramHandle = Handle<ShaderProgram, Device>;
+    using SamplerHandle = Handle<Sampler, Device>;
+    using CommandHandle = Handle<CommandBuffer, CommandPool>;
 
 }
 

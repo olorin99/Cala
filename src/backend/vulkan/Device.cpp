@@ -220,7 +220,7 @@ cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFra
         _logger.error("Error waiting for frame ({}), index ({})", _frameCount, frameIndex());
         return {
             _frameCount,
-            nullptr,
+            {},
             _frameFences[frameIndex()]
         };
     }
@@ -241,7 +241,7 @@ cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFra
 
     return {
         _frameCount,
-        &getCommandBuffer(frameIndex()),
+        getCommandBuffer(frameIndex()),
         _frameFences[frameIndex()]
     };
 }
@@ -278,20 +278,20 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::stagingBuffer
 }
 
 
-cala::backend::vulkan::CommandBuffer& cala::backend::vulkan::Device::beginSingleTimeCommands(QueueType queueType) {
+cala::backend::vulkan::CommandHandle cala::backend::vulkan::Device::beginSingleTimeCommands(QueueType queueType) {
 
-    auto& buffer = getCommandBuffer(frameIndex(), queueType);
-    buffer.begin();
+    auto buffer = getCommandBuffer(frameIndex(), queueType);
+    buffer->begin();
     return buffer;
 }
 
-void cala::backend::vulkan::Device::endSingleTimeCommands(CommandBuffer& buffer) {
+void cala::backend::vulkan::Device::endSingleTimeCommands(CommandHandle buffer) {
     VkFence fence; //TODO: dont create/destroy fence each time
     VkFenceCreateInfo fenceCreateInfo{};
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceCreateInfo.pNext = nullptr;
     VK_TRY(vkCreateFence(context().device(), &fenceCreateInfo, nullptr, &fence));
-    if (!buffer.submit({}, {}, fence)) {
+    if (!buffer->submit({}, {}, fence)) {
         _logger.error("Error submitting command buffer");
         printMarkers();
         throw std::runtime_error("Error submitting immediate command buffer");
@@ -305,7 +305,7 @@ void cala::backend::vulkan::Device::endSingleTimeCommands(CommandBuffer& buffer)
     vkDestroyFence(context().device(), fence, nullptr);
 }
 
-cala::backend::vulkan::CommandBuffer& cala::backend::vulkan::Device::getCommandBuffer(u32 frame, QueueType queueType) {
+cala::backend::vulkan::CommandHandle cala::backend::vulkan::Device::getCommandBuffer(u32 frame, QueueType queueType) {
     assert(frame < FRAMES_IN_FLIGHT && queueType <= QueueType::TRANSFER);
     u32 index = 0;
     switch (queueType) {
@@ -459,12 +459,12 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::resizeBuffer(
     auto newHandle = createBuffer(size, handle->usage(), handle->flags(), handle->persistentlyMapped());
     assert(newHandle);
     if (transfer) {
-        immediate([&](backend::vulkan::CommandBuffer& cmd) {
+        immediate([&](backend::vulkan::CommandHandle cmd) {
             VkBufferCopy bufferCopy{};
             bufferCopy.dstOffset = 0;
             bufferCopy.srcOffset = 0;
             bufferCopy.size = handle->size();
-            vkCmdCopyBuffer(cmd.buffer(), handle->buffer(), newHandle->buffer(), 1, &bufferCopy);
+            vkCmdCopyBuffer(cmd->buffer(), handle->buffer(), newHandle->buffer(), 1, &bufferCopy);
         });
     }
 //    destroyBuffer(handle);

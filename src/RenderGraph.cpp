@@ -246,7 +246,7 @@ void cala::RenderPass::addSampledImageWrite(const char *label, backend::Pipeline
 
 
 
-void cala::RenderPass::setExecuteFunction(std::function<void(backend::vulkan::CommandBuffer&, cala::RenderGraph&)> func) {
+void cala::RenderPass::setExecuteFunction(std::function<void(backend::vulkan::CommandHandle, cala::RenderGraph&)> func) {
     _executeFunc = std::move(func);
 }
 
@@ -576,7 +576,7 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
     return true;
 }
 
-bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) {
+bool cala::RenderGraph::execute(backend::vulkan::CommandHandle cmd, u32 index) {
     PROFILE_NAMED("RenderGraph::Execute");
     assert(_swapchain);
     for (u32 i = 0; i < _orderedPasses.size(); i++) {
@@ -587,7 +587,7 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
         auto& timer = _timers[_engine->device().frameIndex()][i];
         timer.first = pass->_passName;
         timer.second.start(cmd);
-        cmd.pushDebugLabel(pass->_passName, pass->_debugColour);
+        cmd->pushDebugLabel(pass->_passName, pass->_debugColour);
 
         for (auto& barrier : pass->_invalidate) {
             bool clear = false;
@@ -602,31 +602,31 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
                 if (auto resource = getResource<ImageResource>(barrier.name); resource) {
                     auto b = resource->handle->barrier(backend::PipelineStage::ALL_COMMANDS, backend::PipelineStage::ALL_COMMANDS, barrier.srcAccess, backend::Access::TRANSFER_WRITE, barrier.srcLayout, backend::ImageLayout::GENERAL);
 
-                    cmd.pipelineBarrier({ &b, 1 });
+                    cmd->pipelineBarrier({ &b, 1 });
 
-                    cmd.clearImage(resource->handle);
+                    cmd->clearImage(resource->handle);
 
                     b = resource->handle->barrier(backend::PipelineStage::ALL_COMMANDS, barrier.dstStage, backend::Access::TRANSFER_WRITE, barrier.dstAccess, backend::ImageLayout::GENERAL, barrier.dstLayout);
-                    cmd.pipelineBarrier({ &b, 1 });
+                    cmd->pipelineBarrier({ &b, 1 });
                 } else if (auto resource1 = getResource<BufferResource>(barrier.name); resource1) {
                     auto b = resource1->handle->barrier(backend::PipelineStage::ALL_COMMANDS, backend::PipelineStage::ALL_COMMANDS, barrier.srcAccess, backend::Access::TRANSFER_WRITE);
-                    cmd.pipelineBarrier({ &b, 1 });
+                    cmd->pipelineBarrier({ &b, 1 });
 
-                    cmd.clearBuffer(resource1->handle);
+                    cmd->clearBuffer(resource1->handle);
 
                     b = resource1->handle->barrier(backend::PipelineStage::ALL_COMMANDS, barrier.dstStage, backend::Access::TRANSFER_WRITE, barrier.dstAccess);
-                    cmd.pipelineBarrier({ &b, 1 });
+                    cmd->pipelineBarrier({ &b, 1 });
                 }
             } else {
                 if (barrier.dstLayout != backend::ImageLayout::UNDEFINED) {
                     if (auto resource = getResource<ImageResource>(barrier.name); resource) {
                         auto b = resource->handle->barrier(barrier.srcStage, barrier.dstStage, barrier.srcAccess, barrier.dstAccess, barrier.srcLayout, barrier.dstLayout);
-                        cmd.pipelineBarrier({ &b, 1 });
+                        cmd->pipelineBarrier({ &b, 1 });
                     }
                 } else {
                     if (auto resource = getResource<BufferResource>(barrier.name); resource) {
                         auto b = resource->handle->barrier(barrier.srcStage, barrier.dstStage, barrier.srcAccess, barrier.dstAccess);
-                        cmd.pipelineBarrier({ &b, 1 });
+                        cmd->pipelineBarrier({ &b, 1 });
                     }
                 }
             }
@@ -638,31 +638,31 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
         memoryBarrier.srcAccess = backend::Access::MEMORY_WRITE | backend::Access::MEMORY_READ;
         memoryBarrier.dstAccess = backend::Access::MEMORY_WRITE | backend::Access::MEMORY_READ;
 
-        cmd.pipelineBarrier({ &memoryBarrier, 1 });
+        cmd->pipelineBarrier({ &memoryBarrier, 1 });
 
         if (!pass->compute && pass->_framebuffer)
-            cmd.begin(*pass->_framebuffer);
+            cmd->begin(*pass->_framebuffer);
         if (pass->_executeFunc)
             pass->_executeFunc(cmd, *this);
         if (!pass->compute && pass->_framebuffer)
-            cmd.end(*pass->_framebuffer);
+            cmd->end(*pass->_framebuffer);
 
         for (auto& barrier : pass->_flush) {
             if (barrier.dstLayout != backend::ImageLayout::UNDEFINED) {
                 if (auto resource = getResource<ImageResource>(barrier.name); resource) {
                     auto b = resource->handle->barrier(barrier.srcStage, barrier.dstStage, barrier.srcAccess, barrier.dstAccess, barrier.srcLayout, barrier.dstLayout);
-                    cmd.pipelineBarrier({ &b, 1 });
+                    cmd->pipelineBarrier({ &b, 1 });
                 }
             } else {
                 if (auto resource = getResource<BufferResource>(barrier.name); resource) {
                     auto b = resource->handle->barrier(barrier.srcStage, barrier.dstStage, barrier.srcAccess, barrier.dstAccess);
-                    cmd.pipelineBarrier({ &b, 1 });
+                    cmd->pipelineBarrier({ &b, 1 });
                 }
             }
         }
 
 
-        cmd.popDebugLabel();
+        cmd->popDebugLabel();
         timer.second.stop();
     }
 
@@ -671,12 +671,12 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandBuffer& cmd, u32 index) 
         return false;
 
     auto barrier = backbuffer->handle->barrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::PipelineStage::TRANSFER, backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::TRANSFER_READ, backend::ImageLayout::TRANSFER_SRC);
-    cmd.pipelineBarrier({ &barrier, 1 });
+    cmd->pipelineBarrier({ &barrier, 1 });
 
     _swapchain->blitImageToFrame(index, cmd, *backbuffer->handle);
 
     barrier = backbuffer->handle->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::BOTTOM, backend::Access::TRANSFER_READ, backend::Access::NONE, backend::ImageLayout::COLOUR_ATTACHMENT);
-    cmd.pipelineBarrier({ &barrier, 1 });
+    cmd->pipelineBarrier({ &barrier, 1 });
     return true;
 }
 

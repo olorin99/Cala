@@ -4,6 +4,7 @@
 #include <volk.h>
 #include <Ende/platform.h>
 #include <span>
+#include <Cala/backend/vulkan/Handle.h>
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
 #include "../../third_party/vk_mem_alloc.h"
@@ -57,13 +58,13 @@ namespace cala::backend::vulkan {
 
         void unmap();
 
-        void copy(CommandBuffer& buffer, Image& dst, u32 srcLayer = 0, u32 dstLayer = 0, u32 srcMipLevel = 0, u32 dstMipLevel = 0);
+        void copy(CommandHandle buffer, Image& dst, u32 srcLayer = 0, u32 dstLayer = 0, u32 srcMipLevel = 0, u32 dstMipLevel = 0);
 
-        void blit(CommandBuffer& buffer, Image& dst, ImageLayout srcLayout, ImageLayout dstLayout, VkFilter filter = VK_FILTER_NEAREST);
+        void blit(CommandHandle buffer, Image& dst, ImageLayout srcLayout, ImageLayout dstLayout, VkFilter filter = VK_FILTER_NEAREST);
 
         void generateMips();
 
-        void generateMips(CommandBuffer& cmd);
+        void generateMips(CommandHandle cmd);
 
 
         struct View {

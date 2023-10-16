@@ -32,7 +32,7 @@ namespace cala::backend::vulkan {
 
         struct FrameInfo {
             u64 frame = 0;
-            CommandBuffer* cmd = nullptr;
+            CommandHandle cmd = {};
             VkFence fence = VK_NULL_HANDLE;
         };
 
@@ -61,18 +61,18 @@ namespace cala::backend::vulkan {
         BufferHandle stagingBuffer(u32 size);
 
 
-        CommandBuffer& beginSingleTimeCommands(QueueType queueType = QueueType::GRAPHICS);
+        CommandHandle beginSingleTimeCommands(QueueType queueType = QueueType::GRAPHICS);
 
-        void endSingleTimeCommands(CommandBuffer& buffer);
+        void endSingleTimeCommands(CommandHandle buffer);
 
         template <typename F>
         void immediate(F func, QueueType queueType = QueueType::GRAPHICS) {
-            auto& cmd = beginSingleTimeCommands(queueType);
+            auto cmd = beginSingleTimeCommands(queueType);
             func(cmd);
             endSingleTimeCommands(cmd);
         }
 
-        CommandBuffer& getCommandBuffer(u32 frame, QueueType queueType = QueueType::GRAPHICS);
+        CommandHandle getCommandBuffer(u32 frame, QueueType queueType = QueueType::GRAPHICS);
 
         bool gc();
 

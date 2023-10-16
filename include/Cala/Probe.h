@@ -30,7 +30,7 @@ namespace cala {
 
         Probe& operator=(const Probe&) = delete;
 
-        void draw(backend::vulkan::CommandBuffer& cmd, std::function<void(backend::vulkan::CommandBuffer& cmd, u32 face)> perFace);
+        void draw(backend::vulkan::CommandHandle cmd, std::function<void(backend::vulkan::CommandHandle cmd, u32 face)> perFace);
 
         backend::vulkan::ImageHandle map() const { return _cubeMap; }
 

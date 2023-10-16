@@ -202,7 +202,7 @@ bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {
     return true;
 }
 
-void cala::backend::vulkan::Swapchain::blitImageToFrame(u32 index, CommandBuffer &buffer, Image &src) {
+void cala::backend::vulkan::Swapchain::blitImageToFrame(u32 index, CommandHandle buffer, Image &src) {
     VkImageSubresourceRange range{};
     range.aspectMask = isDepthFormat(src.format()) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     range.baseMipLevel = 0;
@@ -221,7 +221,7 @@ void cala::backend::vulkan::Swapchain::blitImageToFrame(u32 index, CommandBuffer
     memoryBarrier.image = _images[index];
     memoryBarrier.subresourceRange = range;
 
-    buffer.pipelineBarrier({}, { &memoryBarrier, 1});
+    buffer->pipelineBarrier({}, { &memoryBarrier, 1});
 
     VkImageSubresourceLayers srcSubresource{};
     srcSubresource.aspectMask = isDepthFormat(src.format()) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
@@ -243,7 +243,7 @@ void cala::backend::vulkan::Swapchain::blitImageToFrame(u32 index, CommandBuffer
     blit.dstOffsets[0] = {0, 0, 0 };
     blit.dstOffsets[1] = { static_cast<i32>(_extent.width), static_cast<i32>(_extent.height), static_cast<i32>(1) };
 
-    vkCmdBlitImage(buffer.buffer(), src.image(), getImageLayout(ImageLayout::TRANSFER_SRC), _images[index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_NEAREST);
+    vkCmdBlitImage(buffer->buffer(), src.image(), getImageLayout(ImageLayout::TRANSFER_SRC), _images[index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_NEAREST);
 
     memoryBarrier.srcStageMask = getPipelineStage(PipelineStage::TRANSFER);
     memoryBarrier.dstStageMask = getPipelineStage(PipelineStage::BOTTOM);
@@ -251,14 +251,14 @@ void cala::backend::vulkan::Swapchain::blitImageToFrame(u32 index, CommandBuffer
     memoryBarrier.dstAccessMask = getAccessFlags(Access::NONE);
     memoryBarrier.oldLayout = getImageLayout(ImageLayout::TRANSFER_DST);
     memoryBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    buffer.pipelineBarrier({}, { &memoryBarrier, 1});
+    buffer->pipelineBarrier({}, { &memoryBarrier, 1});
 }
 
-void cala::backend::vulkan::Swapchain::copyImageToFrame(u32 index, CommandBuffer &buffer, Image &src) {
+void cala::backend::vulkan::Swapchain::copyImageToFrame(u32 index, CommandHandle buffer, Image &src) {
     assert(_extent.width == src.width() && _extent.height == src.height() && 1 == src.depth());
 
     auto barriers = src.barrier(PipelineStage::COMPUTE_SHADER | PipelineStage::VERTEX_SHADER | PipelineStage::FRAGMENT_SHADER, PipelineStage::TRANSFER, Access::SHADER_WRITE, Access::TRANSFER_WRITE, ImageLayout::COLOUR_ATTACHMENT, ImageLayout::TRANSFER_SRC);
-    buffer.pipelineBarrier({ &barriers, 1 });
+    buffer->pipelineBarrier({ &barriers, 1 });
 
 
     VkImageSubresourceRange range{};
@@ -279,7 +279,7 @@ void cala::backend::vulkan::Swapchain::copyImageToFrame(u32 index, CommandBuffer
     memoryBarrier.image = _images[index];
     memoryBarrier.subresourceRange = range;
 
-    buffer.pipelineBarrier({}, { &memoryBarrier, 1});
+    buffer->pipelineBarrier({}, { &memoryBarrier, 1});
 
     VkImageCopy region{};
 
@@ -296,7 +296,7 @@ void cala::backend::vulkan::Swapchain::copyImageToFrame(u32 index, CommandBuffer
     region.srcOffset = { 0, 0, 0 };
     region.dstOffset = { 0, 0, 0 };
     region.extent = { _extent.width, _extent.height, 1 };
-    vkCmdCopyImage(buffer.buffer(), src.image(), getImageLayout(ImageLayout::TRANSFER_SRC), _images[index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    vkCmdCopyImage(buffer->buffer(), src.image(), getImageLayout(ImageLayout::TRANSFER_SRC), _images[index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
     memoryBarrier.srcStageMask = getPipelineStage(PipelineStage::TRANSFER);
     memoryBarrier.dstStageMask = getPipelineStage(PipelineStage::BOTTOM);
@@ -304,14 +304,14 @@ void cala::backend::vulkan::Swapchain::copyImageToFrame(u32 index, CommandBuffer
     memoryBarrier.dstAccessMask = getAccessFlags(Access::NONE);
     memoryBarrier.oldLayout = getImageLayout(ImageLayout::TRANSFER_DST);
     memoryBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    buffer.pipelineBarrier({}, { &memoryBarrier, 1});
+    buffer->pipelineBarrier({}, { &memoryBarrier, 1});
 }
 
-void cala::backend::vulkan::Swapchain::copyFrameToImage(u32 index, cala::backend::vulkan::CommandBuffer &buffer, cala::backend::vulkan::Image &dst) {
+void cala::backend::vulkan::Swapchain::copyFrameToImage(u32 index, cala::backend::vulkan::CommandHandle buffer, cala::backend::vulkan::Image &dst) {
     assert(_extent.width == dst.width() && _extent.height == dst.height() && 1 == dst.depth());
 
     auto barriers = dst.barrier(PipelineStage::TRANSFER, PipelineStage::TRANSFER, Access::TRANSFER_WRITE, Access::TRANSFER_WRITE, ImageLayout::UNDEFINED, ImageLayout::TRANSFER_DST);
-    buffer.pipelineBarrier({ &barriers, 1 });
+    buffer->pipelineBarrier({ &barriers, 1 });
 
     VkImageCopy region{};
 
@@ -328,13 +328,13 @@ void cala::backend::vulkan::Swapchain::copyFrameToImage(u32 index, cala::backend
     region.srcOffset = { 0, 0, 0 };
     region.dstOffset = { 0, 0, 0 };
     region.extent = { _extent.width, _extent.height, 1 };
-    vkCmdCopyImage(buffer.buffer(), _images[index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, dst.image(), getImageLayout(dst.layout()), 1, &region);
+    vkCmdCopyImage(buffer->buffer(), _images[index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, dst.image(), getImageLayout(dst.layout()), 1, &region);
 
 
 }
 
 void cala::backend::vulkan::Swapchain::copyFrameToImage(u32 index, cala::backend::vulkan::Image &dst) {
-    _driver.immediate([&](CommandBuffer& cmd) {
+    _driver.immediate([&](CommandHandle cmd) {
         copyFrameToImage(index, cmd, dst);
     });
 }

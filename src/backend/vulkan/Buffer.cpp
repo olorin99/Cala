@@ -87,6 +87,7 @@ void cala::backend::vulkan::Buffer::unmap() {
 }
 
 void cala::backend::vulkan::Buffer::_data(u8, std::span<u8> data, u32 offset) {
+    u32 dataSize = data.size();
     assert(data.size() + offset <= _size);
     if (_mapped.address)
         std::memcpy(static_cast<char*>(_mapped.address) + offset, data.data(), data.size());

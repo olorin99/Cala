@@ -165,8 +165,8 @@ void ImGuiContext::processEvent(void *event) {
         ImGui_ImplSDL2_ProcessEvent((SDL_Event*)event);
 }
 
-void ImGuiContext::render(cala::backend::vulkan::CommandBuffer &buffer) {
+void ImGuiContext::render(cala::backend::vulkan::CommandHandle buffer) {
 //    buffer.begin(*_renderPass);TODO: use own renderpass/framebuffers
     if (_window)
-        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer.buffer());
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer->buffer());
 }

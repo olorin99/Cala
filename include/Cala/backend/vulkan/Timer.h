@@ -10,7 +10,7 @@ namespace cala::backend::vulkan {
 
         Timer(Device& driver, u32 index = 0);
 
-        void start(CommandBuffer& cmd);
+        void start(CommandHandle cmd);
 
         void stop();
 
@@ -21,7 +21,7 @@ namespace cala::backend::vulkan {
         Device* _driver;
 
         u32 _index;
-        CommandBuffer* _cmdBuffer;
+        CommandHandle _cmdBuffer;
         u64 _result;
 
     };

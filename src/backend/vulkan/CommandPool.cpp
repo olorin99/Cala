@@ -7,7 +7,6 @@ cala::backend::vulkan::CommandPool::CommandPool(Device *device, QueueType queueT
     _queueType(queueType),
     _index(0)
 {
-    _buffers.reserve(100);
     VkCommandPoolCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     u32 index = 0;
@@ -30,9 +29,9 @@ void cala::backend::vulkan::CommandPool::reset() {
     _index = 0;
 }
 
-cala::backend::vulkan::CommandBuffer &cala::backend::vulkan::CommandPool::getBuffer() {
+cala::backend::vulkan::CommandHandle cala::backend::vulkan::CommandPool::getBuffer() {
     if (_index < _buffers.size())
-        return _buffers[_index++];
+        return { this, static_cast<i32>(_index++), nullptr };
 
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -42,8 +41,7 @@ cala::backend::vulkan::CommandBuffer &cala::backend::vulkan::CommandPool::getBuf
     VkCommandBuffer buffer;
     VK_TRY(vkAllocateCommandBuffers(_device->context().device(), &allocInfo, &buffer));
     _buffers.emplace_back(*_device, _device->context().getQueue(_queueType), buffer);
-    ++_index;
-    return _buffers.back();
+    return { this, static_cast<i32>(_index++), nullptr };
 }
 
 void cala::backend::vulkan::CommandPool::destroy() {

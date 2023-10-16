@@ -32,10 +32,10 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
         1, 1,
         backend::ImageUsage::SAMPLED | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT | backend::ImageUsage::TRANSFER_SRC
     });
-    _engine->device().immediate([&](backend::vulkan::CommandBuffer& cmd) {
+    _engine->device().immediate([&](backend::vulkan::CommandHandle cmd) {
         auto targetBarrier = _shadowTarget->barrier(backend::PipelineStage::TOP, backend::PipelineStage::EARLY_FRAGMENT, backend::Access::NONE, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
 
-        cmd.pipelineBarrier({ &targetBarrier, 1 });
+        cmd->pipelineBarrier({ &targetBarrier, 1 });
     });
     backend::vulkan::RenderPass::Attachment shadowAttachment = {
             cala::backend::Format::D32_SFLOAT,
@@ -163,9 +163,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     bool debugViewEnabled = _renderSettings.debugNormals || _renderSettings.debugRoughness || _renderSettings.debugMetallic || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugVxgi;
     debugViewEnabled = false;
 
-    backend::vulkan::CommandBuffer& cmd = *_frameInfo.cmd;
+    backend::vulkan::CommandHandle cmd = _frameInfo.cmd;
 
-    cmd.clearDescriptors();
+    cmd->clearDescriptors();
 
     _graph.reset();
 
@@ -273,12 +273,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         createClusters.addStorageBufferWrite("clusters", backend::PipelineStage::COMPUTE_SHADER);
         createClusters.addStorageBufferRead("camera", backend::PipelineStage::COMPUTE_SHADER);
 
-        createClusters.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+        createClusters.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
             auto clusters = graph.getResource<BufferResource>("clusters");
-            cmd.clearDescriptors();
-            cmd.bindProgram(_engine->_createClustersProgram);
-            cmd.bindBindings({});
-            cmd.bindAttributes({});
+            cmd->clearDescriptors();
+            cmd->bindProgram(_engine->_createClustersProgram);
+            cmd->bindBindings({});
+            cmd->bindAttributes({});
             struct ClusterPush {
                 ende::math::Mat4f inverseProjection;
                 ende::math::Vec<4, u32> tileSizes;
@@ -292,11 +292,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             push.near = camera.near();
             push.far = camera.far();
 
-            cmd.pushConstants(backend::ShaderStage::COMPUTE, push);
-            cmd.bindBuffer(1, 0, clusters->handle, true);
-            cmd.bindPipeline();
-            cmd.bindDescriptors();
-            cmd.dispatchCompute(16, 9, 24);
+            cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
+            cmd->bindBuffer(1, 0, clusters->handle, true);
+            cmd->bindPipeline();
+            cmd->bindDescriptors();
+            cmd->dispatchCompute(16, 9, 24);
         });
         camera.setDirty(false);
     }
@@ -328,16 +328,16 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     cullLights.addStorageBufferWrite("lightGlobalResource", backend::PipelineStage::COMPUTE_SHADER, true);
     cullLights.addStorageBufferRead("camera", backend::PipelineStage::COMPUTE_SHADER);
 
-    cullLights.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+    cullLights.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
         auto global = graph.getResource<BufferResource>("global");
         auto clusters = graph.getResource<BufferResource>("clusters");
         auto lightGrid = graph.getResource<BufferResource>("lightGrid");
         auto lightIndices = graph.getResource<BufferResource>("lightIndices");
         auto lightGlobalIndex = graph.getResource<BufferResource>("lightGlobalResource");
-        cmd.clearDescriptors();
-        cmd.bindProgram(_engine->_cullLightsProgram);
-        cmd.bindBindings({});
-        cmd.bindAttributes({});
+        cmd->clearDescriptors();
+        cmd->bindProgram(_engine->_cullLightsProgram);
+        cmd->bindBindings({});
+        cmd->bindAttributes({});
         struct ClusterPush {
             ende::math::Mat4f inverseProjection;
             ende::math::Vec<4, u32> tileSizes;
@@ -355,14 +355,14 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         push.lightGridIndex = lightGrid->handle.index();
         push.lightIndicesIndex = lightIndices->handle.index();
 
-        cmd.pushConstants(backend::ShaderStage::COMPUTE, push);
-        cmd.bindBuffer(1, 0, global->handle);
-        cmd.bindBuffer(1, 1, clusters->handle, true);
-        cmd.bindBuffer(1, 2, lightGlobalIndex->handle, true);
-        cmd.bindBuffer(1, 3, scene._lightCountBuffer[_engine->device().frameIndex()], true);
-        cmd.bindPipeline();
-        cmd.bindDescriptors();
-        cmd.dispatchCompute(1, 1, 6);
+        cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
+        cmd->bindBuffer(1, 0, global->handle);
+        cmd->bindBuffer(1, 1, clusters->handle, true);
+        cmd->bindBuffer(1, 2, lightGlobalIndex->handle, true);
+        cmd->bindBuffer(1, 3, scene._lightCountBuffer[_engine->device().frameIndex()], true);
+        cmd->bindPipeline();
+        cmd->bindDescriptors();
+        cmd->dispatchCompute(1, 1, 6);
     });
 
     if (_renderSettings.debugClusters) {
@@ -373,29 +373,29 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         debugClusters.addStorageBufferRead("lightGrid", backend::PipelineStage::FRAGMENT_SHADER);
         debugClusters.addSampledImageRead("depth", backend::PipelineStage::FRAGMENT_SHADER);
 
-        debugClusters.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+        debugClusters.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
             auto global = graph.getResource<BufferResource>("global");
             auto lightGrid = graph.getResource<BufferResource>("lightGrid");
             auto depthBuffer = graph.getResource<ImageResource>("depth");
-            cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, global->handle);
-            cmd.bindBindings({});
-            cmd.bindAttributes({});
-            cmd.bindBlendState({ true });
-            cmd.bindProgram(_engine->_clusterDebugProgram);
+            cmd->clearDescriptors();
+            cmd->bindBuffer(1, 0, global->handle);
+            cmd->bindBindings({});
+            cmd->bindAttributes({});
+            cmd->bindBlendState({ true });
+            cmd->bindProgram(_engine->_clusterDebugProgram);
             struct ClusterPush {
                 ende::math::Vec<4, u32> tileSizes;
                 ende::math::Vec<2, u32> screenSize;
             } push;
             push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
             push.screenSize = { _swapchain->extent().width, _swapchain->extent().height };
-            cmd.pushConstants(backend::ShaderStage::FRAGMENT, push);
-            cmd.bindBuffer(1, 1, lightGrid->handle, true);
-            cmd.bindImage(1, 2, _engine->device().getImageView(depthBuffer->handle), _engine->device().defaultShadowSampler());
-            cmd.bindPipeline();
-            cmd.bindDescriptors();
-            cmd.draw(3, 1, 0, 0, false);
-            cmd.bindBlendState({ false });
+            cmd->pushConstants(backend::ShaderStage::FRAGMENT, push);
+            cmd->bindBuffer(1, 1, lightGrid->handle, true);
+            cmd->bindImage(1, 2, _engine->device().getImageView(depthBuffer->handle), _engine->device().defaultShadowSampler());
+            cmd->bindPipeline();
+            cmd->bindDescriptors();
+            cmd->draw(3, 1, 0, 0, false);
+            cmd->bindBlendState({ false });
         });
     }
 
@@ -453,7 +453,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     pointShadows.addIndexBufferRead("indexBuffer");
     pointShadows.addIndirectBufferRead("shadowDrawCommands");
 
-    pointShadows.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+    pointShadows.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
         auto global = graph.getResource<BufferResource>("global");
         auto drawCommands = graph.getResource<BufferResource>("shadowDrawCommands");
         auto drawCount = graph.getResource<BufferResource>("drawCount");
@@ -490,33 +490,33 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     shadowCam.updateFrustum();
                     ende::math::Frustum shadowFrustum = shadowCam.frustum();
 
-                    cmd.clearDescriptors();
-                    cmd.bindProgram(_engine->_pointShadowCullProgram);
-                    cmd.bindBindings({});
-                    cmd.bindAttributes({});
-                    cmd.pushConstants(backend::ShaderStage::COMPUTE, shadowFrustum);
-                    cmd.bindBuffer(1, 0, global->handle);
-                    cmd.bindBuffer(2, 0, drawCommands->handle, true);
-                    cmd.bindBuffer(2, 1, drawCount->handle, true);
-                    cmd.bindPipeline();
-                    cmd.bindDescriptors();
-                    cmd.dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
+                    cmd->clearDescriptors();
+                    cmd->bindProgram(_engine->_pointShadowCullProgram);
+                    cmd->bindBindings({});
+                    cmd->bindAttributes({});
+                    cmd->pushConstants(backend::ShaderStage::COMPUTE, shadowFrustum);
+                    cmd->bindBuffer(1, 0, global->handle);
+                    cmd->bindBuffer(2, 0, drawCommands->handle, true);
+                    cmd->bindBuffer(2, 1, drawCount->handle, true);
+                    cmd->bindPipeline();
+                    cmd->bindDescriptors();
+                    cmd->dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
 
 
-                    cmd.begin(*_shadowFramebuffer);
+                    cmd->begin(*_shadowFramebuffer);
 
-                    cmd.clearDescriptors();
-                    cmd.bindRasterState({
+                    cmd->clearDescriptors();
+                    cmd->bindRasterState({
                         backend::CullMode::FRONT
                     });
-                    cmd.bindDepthState({
+                    cmd->bindDepthState({
                         true, true,
                         backend::CompareOp::LESS_EQUAL
                     });
 
-                    cmd.bindProgram(_engine->_pointShadowProgram);
+                    cmd->bindProgram(_engine->_pointShadowProgram);
 
-                    cmd.bindBuffer(3, 0, scene._lightBuffer[_engine->device().frameIndex()], sizeof(Light::Data) * i, sizeof(Light::Data), true);
+                    cmd->bindBuffer(3, 0, scene._lightBuffer[_engine->device().frameIndex()], sizeof(Light::Data) * i, sizeof(Light::Data), true);
 
                     struct ShadowData {
                         ende::math::Mat4f viewProjection;
@@ -530,32 +530,32 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         shadowCam.near(),
                         shadowCam.far()
                     };
-                    cmd.pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::FRAGMENT, shadowData);
+                    cmd->pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::FRAGMENT, shadowData);
 
                     auto& renderable = scene._renderables[0].second.first;
-                    cmd.bindBindings(renderable.bindings);
-                    cmd.bindAttributes(renderable.attributes);
+                    cmd->bindBindings(renderable.bindings);
+                    cmd->bindAttributes(renderable.attributes);
 
-                    cmd.bindBuffer(1, 0, global->handle);
+                    cmd->bindBuffer(1, 0, global->handle);
 
-                    cmd.bindPipeline();
-                    cmd.bindDescriptors();
-                    cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
-                    cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
-                    cmd.drawIndirectCount(drawCommands->handle, 0, drawCount->handle, 0);
+                    cmd->bindPipeline();
+                    cmd->bindDescriptors();
+                    cmd->bindVertexBuffer(0, _engine->_globalVertexBuffer);
+                    cmd->bindIndexBuffer(_engine->_globalIndexBuffer);
+                    cmd->drawIndirectCount(drawCommands->handle, 0, drawCount->handle, 0);
 
-                    cmd.end(*_shadowFramebuffer);
+                    cmd->end(*_shadowFramebuffer);
 
                     auto srcBarrier = _shadowTarget->barrier(backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::TRANSFER, backend::Access::DEPTH_STENCIL_WRITE, backend::Access::TRANSFER_READ, backend::ImageLayout::TRANSFER_SRC);
                     auto dstBarrier = shadowMap->barrier(backend::PipelineStage::FRAGMENT_SHADER, backend::PipelineStage::TRANSFER, backend::Access::SHADER_READ, backend::Access::TRANSFER_WRITE, backend::ImageLayout::TRANSFER_DST, face);
-                    cmd.pipelineBarrier({ &srcBarrier, 1 });
-                    cmd.pipelineBarrier({ &dstBarrier, 1 });
+                    cmd->pipelineBarrier({ &srcBarrier, 1 });
+                    cmd->pipelineBarrier({ &dstBarrier, 1 });
 
                     _shadowTarget->copy(cmd, *shadowMap, 0, face);
                     srcBarrier = _shadowTarget->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::EARLY_FRAGMENT, backend::Access::TRANSFER_READ, backend::Access::DEPTH_STENCIL_WRITE, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
                     dstBarrier = shadowMap->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::FRAGMENT_SHADER, backend::Access::TRANSFER_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY, face);
-                    cmd.pipelineBarrier({ &srcBarrier, 1 });
-                    cmd.pipelineBarrier({ &dstBarrier, 1 });
+                    cmd->pipelineBarrier({ &srcBarrier, 1 });
+                    cmd->pipelineBarrier({ &dstBarrier, 1 });
                 }
             }
         }
@@ -574,7 +574,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 //
 //            cullPass.setDebugColour({0.3, 0.3, 1, 1});
 //
-//            cullPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+//            cullPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
 //                auto global = graph.getResource<BufferResource>("global");
 //                auto materialCounts = graph.getResource<BufferResource>("materialCounts");
 //                auto drawCommands = graph.getResource<BufferResource>("vxgiDrawCommands");
@@ -582,18 +582,18 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 //                ende::math::Mat4f perspective = ende::math::orthographic<f32>(_renderSettings.voxelBounds.first.x(), _renderSettings.voxelBounds.second.x(), _renderSettings.voxelBounds.first.y(), _renderSettings.voxelBounds.second.y(), _renderSettings.voxelBounds.first.z(), _renderSettings.voxelBounds.second.z());
 //                ende::math::Frustum frustum(perspective);
 //
-//                cmd.clearDescriptors();
-//                cmd.bindProgram(_engine->_cullProgram);
-//                cmd.bindBindings(nullptr);
-//                cmd.bindAttributes(nullptr);
-//                cmd.pushConstants(backend::ShaderStage::COMPUTE, { &frustum, sizeof(frustum) });
-//                cmd.bindBuffer(1, 0, global->handle);
-//                cmd.bindBuffer(2, 0, drawCommands->handle, true);
-//                cmd.bindBuffer(2, 1, _drawCountBuffer[_engine->device().frameIndex()], true);
-//                cmd.bindBuffer(2, 2, materialCounts->handle, true);
-//                cmd.bindPipeline();
-//                cmd.bindDescriptors();
-//                cmd.dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
+//                cmd->clearDescriptors();
+//                cmd->bindProgram(_engine->_cullProgram);
+//                cmd->bindBindings(nullptr);
+//                cmd->bindAttributes(nullptr);
+//                cmd->pushConstants(backend::ShaderStage::COMPUTE, { &frustum, sizeof(frustum) });
+//                cmd->bindBuffer(1, 0, global->handle);
+//                cmd->bindBuffer(2, 0, drawCommands->handle, true);
+//                cmd->bindBuffer(2, 1, _drawCountBuffer[_engine->device().frameIndex()], true);
+//                cmd->bindBuffer(2, 2, materialCounts->handle, true);
+//                cmd->bindPipeline();
+//                cmd->bindDescriptors();
+//                cmd->dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
 //            });
 
             ImageResource voxelGridResource;
@@ -630,32 +630,32 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
             voxelGIPass.addColourAttachment("voxelOutput");
 
-            voxelGIPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            voxelGIPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
                 auto global = graph.getResource<BufferResource>("global");
                 auto drawCommands = graph.getResource<BufferResource>("drawCommands");
                 auto lightGrid = graph.getResource<BufferResource>("lightGrid");
                 auto lightIndices = graph.getResource<BufferResource>("lightIndices");
                 auto materialCounts = graph.getResource<BufferResource>("materialCounts");
                 auto voxelGrid = graph.getResource<ImageResource>("voxelGrid");
-                cmd.clearDescriptors();
+                cmd->clearDescriptors();
                 if (scene._renderables.empty())
                     return;
 
-                cmd.bindBuffer(1, 0, global->handle);
+                cmd->bindBuffer(1, 0, global->handle);
 
                 auto& renderable = scene._renderables[0].second.first;
 
-                cmd.bindBindings(renderable.bindings);
-                cmd.bindAttributes(renderable.attributes);
+                cmd->bindBindings(renderable.bindings);
+                cmd->bindAttributes(renderable.attributes);
 
                 for (u32 i = 0; i < scene._materialCounts.size(); i++) {
                     Material* material = &_engine->_materials[i];
                     if (!material)
                         continue;
-                    cmd.bindProgram(material->getVariant(Material::Variant::VOXELGI));
-                    cmd.bindRasterState(material->getRasterState());
-                    cmd.bindDepthState({ false });
-                    cmd.bindBuffer(2, 0, material->buffer(), true);
+                    cmd->bindProgram(material->getVariant(Material::Variant::VOXELGI));
+                    cmd->bindRasterState(material->getRasterState());
+                    cmd->bindDepthState({ false });
+                    cmd->bindBuffer(2, 0, material->buffer(), true);
 
                     struct VoxelizePush {
                         ende::math::Mat4f orthographic;
@@ -673,17 +673,17 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                     push.orthographic = ende::math::orthographic<f32>(_renderSettings.voxelBounds.first.x(), _renderSettings.voxelBounds.second.x(), _renderSettings.voxelBounds.first.y(), _renderSettings.voxelBounds.second.y(), _renderSettings.voxelBounds.first.z(), _renderSettings.voxelBounds.second.z());
 
-                    cmd.pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::FRAGMENT, push);
+                    cmd->pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::FRAGMENT, push);
 
-                    cmd.bindPipeline();
-                    cmd.bindDescriptors();
+                    cmd->bindPipeline();
+                    cmd->bindDescriptors();
 
-                    cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
-                    cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
+                    cmd->bindVertexBuffer(0, _engine->_globalVertexBuffer);
+                    cmd->bindIndexBuffer(_engine->_globalIndexBuffer);
 
                     u32 drawCommandOffset = scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand);
                     u32 countOffset = i * (sizeof(u32) * 2);
-                    cmd.drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
+                    cmd->drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
                 }
             });
         }
@@ -704,27 +704,27 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             voxelVisualisePass.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
             voxelVisualisePass.addStorageBufferRead("camera", backend::PipelineStage::COMPUTE_SHADER);
 
-            voxelVisualisePass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+            voxelVisualisePass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
                 auto global = graph.getResource<BufferResource>("global");
                 auto voxelGrid = graph.getResource<ImageResource>("voxelGrid");
                 auto voxelVisualised = graph.getResource<ImageResource>("backbuffer");
 //            auto voxelVisualised = graph.getResource<ImageResource>("voxelVisualised");
-                cmd.clearDescriptors();
-                cmd.bindProgram(_engine->getProgram(Engine::ProgramType::VOXEL_VISUALISE));
-                cmd.bindBindings({});
-                cmd.bindAttributes({});
-                cmd.bindBuffer(1, 0, global->handle);
-                cmd.bindImage(2, 0, _engine->device().getImageView(voxelVisualised->handle), _engine->device().defaultSampler(), true);
+                cmd->clearDescriptors();
+                cmd->bindProgram(_engine->getProgram(Engine::ProgramType::VOXEL_VISUALISE));
+                cmd->bindBindings({});
+                cmd->bindAttributes({});
+                cmd->bindBuffer(1, 0, global->handle);
+                cmd->bindImage(2, 0, _engine->device().getImageView(voxelVisualised->handle), _engine->device().defaultSampler(), true);
                 struct VoxelPush {
                     ende::math::Mat4f voxelOrthographic;
                     i32 voxelGridIndex;
                 } push;
                 push.voxelGridIndex = voxelGrid->handle.index();
                 push.voxelOrthographic = ende::math::orthographic<f32>(_renderSettings.voxelBounds.first.x(), _renderSettings.voxelBounds.second.x(), _renderSettings.voxelBounds.first.y(), _renderSettings.voxelBounds.second.y(), _renderSettings.voxelBounds.first.z(), _renderSettings.voxelBounds.second.z());
-                cmd.pushConstants(backend::ShaderStage::COMPUTE, push);
-                cmd.bindPipeline();
-                cmd.bindDescriptors();
-                cmd.dispatchCompute(std::ceil(voxelVisualised->width / 32.f), std::ceil(voxelVisualised->height / 32.f), 1);
+                cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
+                cmd->bindPipeline();
+                cmd->bindDescriptors();
+                cmd->dispatchCompute(std::ceil(voxelVisualised->width / 32.f), std::ceil(voxelVisualised->height / 32.f), 1);
             });
         }
     }
@@ -741,21 +741,21 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     cullPass.setDebugColour({0.3, 0.3, 1, 1});
 
-    cullPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+    cullPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
         auto global = graph.getResource<BufferResource>("global");
         auto materialCounts = graph.getResource<BufferResource>("materialCounts");
         auto drawCommands = graph.getResource<BufferResource>("drawCommands");
-        cmd.clearDescriptors();
-        cmd.bindProgram(_engine->_cullProgram);
-        cmd.bindBindings({});
-        cmd.bindAttributes({});
-        cmd.pushConstants(backend::ShaderStage::COMPUTE, _cullingFrustum);
-        cmd.bindBuffer(1, 0, global->handle);
-        cmd.bindBuffer(2, 0, drawCommands->handle, true);
-        cmd.bindBuffer(2, 1, materialCounts->handle, true);
-        cmd.bindPipeline();
-        cmd.bindDescriptors();
-        cmd.dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
+        cmd->clearDescriptors();
+        cmd->bindProgram(_engine->_cullProgram);
+        cmd->bindBindings({});
+        cmd->bindAttributes({});
+        cmd->pushConstants(backend::ShaderStage::COMPUTE, _cullingFrustum);
+        cmd->bindBuffer(1, 0, global->handle);
+        cmd->bindBuffer(2, 0, drawCommands->handle, true);
+        cmd->bindBuffer(2, 1, materialCounts->handle, true);
+        cmd->bindPipeline();
+        cmd->bindDescriptors();
+        cmd->dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
     });
 
 
@@ -771,26 +771,26 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         depthPrePass.addIndexBufferRead("indexBuffer");
         depthPrePass.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
-        depthPrePass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+        depthPrePass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
             auto global = graph.getResource<BufferResource>("global");
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
-            cmd.clearDescriptors();
-            cmd.bindBuffer(1, 0, global->handle);
+            cmd->clearDescriptors();
+            cmd->bindBuffer(1, 0, global->handle);
             auto& renderable = scene._renderables[0].second.first;
 
-            cmd.bindBindings(renderable.bindings);
-            cmd.bindAttributes(renderable.attributes);
-            cmd.bindProgram(_engine->_directShadowProgram);
-            cmd.bindDepthState({ true, true, backend::CompareOp::LESS });
-            cmd.bindPipeline();
-            cmd.bindDescriptors();
-            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
-            cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
+            cmd->bindBindings(renderable.bindings);
+            cmd->bindAttributes(renderable.attributes);
+            cmd->bindProgram(_engine->_directShadowProgram);
+            cmd->bindDepthState({ true, true, backend::CompareOp::LESS });
+            cmd->bindPipeline();
+            cmd->bindDescriptors();
+            cmd->bindVertexBuffer(0, _engine->_globalVertexBuffer);
+            cmd->bindIndexBuffer(_engine->_globalIndexBuffer);
             for (u32 material = 0; material < scene._materialCounts.size(); material++) {
                 u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
                 u32 countOffset = material * (sizeof(u32) * 2);
-                cmd.drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
+                cmd->drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
             }
         });
     }
@@ -824,31 +824,31 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
         forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
 
-        forwardPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+        forwardPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
             auto global = graph.getResource<BufferResource>("global");
             auto drawCommands = graph.getResource<BufferResource>("drawCommands");
             auto lightGrid = graph.getResource<BufferResource>("lightGrid");
             auto lightIndices = graph.getResource<BufferResource>("lightIndices");
             auto materialCounts = graph.getResource<BufferResource>("materialCounts");
-            cmd.clearDescriptors();
+            cmd->clearDescriptors();
             if (scene._renderables.empty())
                 return;
 
-            cmd.bindBuffer(1, 0, global->handle);
+            cmd->bindBuffer(1, 0, global->handle);
 
             auto& renderable = scene._renderables[0].second.first;
 
-            cmd.bindBindings(renderable.bindings);
-            cmd.bindAttributes(renderable.attributes);
+            cmd->bindBindings(renderable.bindings);
+            cmd->bindAttributes(renderable.attributes);
 
             for (u32 i = 0; i < scene._materialCounts.size(); i++) {
                 Material* material = &_engine->_materials[i];
                 if (!material)
                     continue;
-                cmd.bindProgram(material->getVariant(Material::Variant::LIT));
-                cmd.bindRasterState(material->getRasterState());
-                cmd.bindDepthState(material->getDepthState());
-                cmd.bindBuffer(2, 0, material->buffer(), true);
+                cmd->bindProgram(material->getVariant(Material::Variant::LIT));
+                cmd->bindRasterState(material->getRasterState());
+                cmd->bindDepthState(material->getDepthState());
+                cmd->bindBuffer(2, 0, material->buffer(), true);
 
                 struct ForwardPush {
                     ende::math::Vec<4, u32> tileSizes;
@@ -861,17 +861,17 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 push.lightGridIndex = lightGrid->handle.index();
                 push.lightIndicesIndex = lightIndices->handle.index();
 
-                cmd.pushConstants(backend::ShaderStage::FRAGMENT, push);
+                cmd->pushConstants(backend::ShaderStage::FRAGMENT, push);
 
-                cmd.bindPipeline();
-                cmd.bindDescriptors();
+                cmd->bindPipeline();
+                cmd->bindDescriptors();
 
-                cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
-                cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
+                cmd->bindVertexBuffer(0, _engine->_globalVertexBuffer);
+                cmd->bindIndexBuffer(_engine->_globalIndexBuffer);
 
                 u32 drawCommandOffset = scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand);
                 u32 countOffset = i * (sizeof(u32) * 2);
-                cmd.drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
+                cmd->drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
             }
         });
     }
@@ -884,20 +884,20 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         tonemapPass.addStorageImageRead("hdr", backend::PipelineStage::COMPUTE_SHADER);
 
         tonemapPass.setDebugColour({0.1, 0.4, 0.7, 1});
-        tonemapPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+        tonemapPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
             auto global = graph.getResource<BufferResource>("global");
             auto hdrImage = graph.getResource<ImageResource>("hdr");
             auto backbuffer = graph.getResource<ImageResource>("backbuffer");
-            cmd.clearDescriptors();
-            cmd.bindProgram(_engine->_tonemapProgram);
-            cmd.bindBindings({});
-            cmd.bindAttributes({});
-            cmd.bindBuffer(1, 0, global->handle);
-            cmd.bindImage(2, 0, _engine->device().getImageView(hdrImage->handle), _engine->device().defaultSampler(), true);
-            cmd.bindImage(2, 1, _engine->device().getImageView(backbuffer->handle), _engine->device().defaultSampler(), true);
-            cmd.bindPipeline();
-            cmd.bindDescriptors();
-            cmd.dispatchCompute(std::ceil(backbuffer->width / 32.f), std::ceil(backbuffer->height / 32.f), 1);
+            cmd->clearDescriptors();
+            cmd->bindProgram(_engine->_tonemapProgram);
+            cmd->bindBindings({});
+            cmd->bindAttributes({});
+            cmd->bindBuffer(1, 0, global->handle);
+            cmd->bindImage(2, 0, _engine->device().getImageView(hdrImage->handle), _engine->device().defaultSampler(), true);
+            cmd->bindImage(2, 1, _engine->device().getImageView(backbuffer->handle), _engine->device().defaultSampler(), true);
+            cmd->bindPipeline();
+            cmd->bindDescriptors();
+            cmd->dispatchCompute(std::ceil(backbuffer->width / 32.f), std::ceil(backbuffer->height / 32.f), 1);
         });
     }
 
@@ -912,23 +912,23 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
         skyboxPass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
-        skyboxPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+        skyboxPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
             auto global = graph.getResource<BufferResource>("global");
-            cmd.clearDescriptors();
-            cmd.bindProgram(_engine->_skyboxProgram);
-            cmd.bindRasterState({ backend::CullMode::NONE });
-            cmd.bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
-            cmd.bindBindings({ &_engine->_cube->_binding, 1 });
-            cmd.bindAttributes(_engine->_cube->_attributes);
-            cmd.bindBuffer(1, 0, global->handle);
+            cmd->clearDescriptors();
+            cmd->bindProgram(_engine->_skyboxProgram);
+            cmd->bindRasterState({ backend::CullMode::NONE });
+            cmd->bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
+            cmd->bindBindings({ &_engine->_cube->_binding, 1 });
+            cmd->bindAttributes(_engine->_cube->_attributes);
+            cmd->bindBuffer(1, 0, global->handle);
             i32 skyMapIndex = scene._skyLightMap.index();
-            cmd.pushConstants(backend::ShaderStage::FRAGMENT, skyMapIndex);
+            cmd->pushConstants(backend::ShaderStage::FRAGMENT, skyMapIndex);
 
-            cmd.bindPipeline();
-            cmd.bindDescriptors();
-            cmd.bindVertexBuffer(0, _engine->_globalVertexBuffer);
-            cmd.bindIndexBuffer(_engine->_globalIndexBuffer);
-            cmd.draw(_engine->_cube->indexCount, 1, _engine->_cube->firstIndex, 0);
+            cmd->bindPipeline();
+            cmd->bindDescriptors();
+            cmd->bindVertexBuffer(0, _engine->_globalVertexBuffer);
+            cmd->bindIndexBuffer(_engine->_globalIndexBuffer);
+            cmd->draw(_engine->_cube->indexCount, 1, _engine->_cube->firstIndex, 0);
         });
     }
 
@@ -937,7 +937,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         uiPass.addColourAttachment("backbuffer");
         uiPass.setDebugColour({0.7, 0.1, 0.4, 1});
 
-        uiPass.setExecuteFunction([&](backend::vulkan::CommandBuffer& cmd, RenderGraph& graph) {
+        uiPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
             imGui->render(cmd);
         });
     }
@@ -945,8 +945,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     if (!_graph.compile(_swapchain))
         throw std::runtime_error("cyclical graph found");
 
-    cmd.startPipelineStatistics();
+    cmd->startPipelineStatistics();
     _graph.execute(cmd, _swapchainFrame.index);
-    cmd.stopPipelineStatistics();
+    cmd->stopPipelineStatistics();
 
 }

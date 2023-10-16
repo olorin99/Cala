@@ -2,6 +2,7 @@
 #define CALA_COMMANDPOOL_H
 
 #include <Cala/backend/vulkan/CommandBuffer.h>
+#include <Cala/backend/vulkan/Handle.h>
 
 namespace cala::backend::vulkan {
 
@@ -18,11 +19,12 @@ namespace cala::backend::vulkan {
 
         void reset();
 
-        CommandBuffer& getBuffer();
+        CommandHandle getBuffer();
 
         void destroy();
 
     private:
+        friend CommandHandle;
 
         Device* _device;
         VkCommandPool _pool;

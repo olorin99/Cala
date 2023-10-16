@@ -100,7 +100,7 @@ namespace cala {
 
 
 
-        void setExecuteFunction(std::function<void(backend::vulkan::CommandBuffer&, RenderGraph&)> func);
+        void setExecuteFunction(std::function<void(backend::vulkan::CommandHandle, RenderGraph&)> func);
 
         void setDebugColour(std::array<f32, 4> colour);
 
@@ -142,7 +142,7 @@ namespace cala {
         std::vector<Barrier> _invalidate; //inputs
         std::vector<Barrier> _flush; //outputs
 
-        std::function<void(backend::vulkan::CommandBuffer&, RenderGraph&)> _executeFunc;
+        std::function<void(backend::vulkan::CommandHandle, RenderGraph&)> _executeFunc;
 
         std::array<f32, 4> _debugColour;
         u32 _passTimer;
@@ -165,7 +165,7 @@ namespace cala {
 
         bool compile(backend::vulkan::Swapchain* swapchain);
 
-        bool execute(backend::vulkan::CommandBuffer& cmd, u32 index = 0);
+        bool execute(backend::vulkan::CommandHandle cmd, u32 index = 0);
 
         void reset();
 

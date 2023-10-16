@@ -18,7 +18,7 @@ public:
 
     void processEvent(void* event);
 
-    void render(cala::backend::vulkan::CommandBuffer& buffer);
+    void render(cala::backend::vulkan::CommandHandle buffer);
 
 private:
 
