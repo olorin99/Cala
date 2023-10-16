@@ -139,7 +139,7 @@ namespace cala::backend::vulkan {
 
         u32 setLayoutCount() const { return _setLayouts.size(); }
 
-        f64 fps() const { return 1000.f / (static_cast<f64>(_lastFrameTime.microseconds()) / 1000.f); }
+        f64 fps() const { return 1000.f / milliseconds(); }
 
         f64 milliseconds() const { return static_cast<f64>(_lastFrameTime.microseconds()) / 1000.f; }
 
@@ -153,6 +153,7 @@ namespace cala::backend::vulkan {
             u32 descriptorSetCount = 0;
             u32 pipelineCount = 0;
             u32 perFrameAllocated = 0;
+            u32 perFrameUploaded = 0;
         };
 
         Stats stats() const;
@@ -160,6 +161,8 @@ namespace cala::backend::vulkan {
         spdlog::logger& logger() { return _logger; }
 
         void printMarkers();
+
+        void increaseDataUploadCount(u32 size) { _bytesUploadedToGPUPerFrame += size; }
 
     private:
         friend BufferHandle;
@@ -227,6 +230,7 @@ namespace cala::backend::vulkan {
 
 
         u32 _bytesAllocatedPerFrame;
+        u32 _bytesUploadedToGPUPerFrame;
 
         void destroyBuffer(i32 handle);
 

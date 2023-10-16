@@ -7,24 +7,28 @@ cala::backend::vulkan::Buffer::Buffer(cala::backend::vulkan::Device *device)
     : _device(device),
     _buffer(VK_NULL_HANDLE),
     _allocation(nullptr),
-    _invalidated(false)
+    _invalidated(false),
+    _mapped()
 {}
 
 
 cala::backend::vulkan::Buffer::Buffer(Buffer &&rhs) noexcept
-    : _device(rhs._device),
+    : _device(nullptr),
       _buffer(VK_NULL_HANDLE),
       _allocation(nullptr),
       _size(0),
       _flags(MemoryProperties::STAGING),
       _usage(BufferUsage::UNIFORM),
-      _invalidated(false)
+      _invalidated(false),
+      _mapped()
 {
+    std::swap(_device, rhs._device);
     std::swap(_buffer, rhs._buffer);
     std::swap(_allocation, rhs._allocation);
     std::swap(_size, rhs._size);
-    std::swap(_flags, rhs._flags);
     std::swap(_usage, rhs._usage);
+    std::swap(_flags, rhs._flags);
+    std::swap(_mapped, rhs._mapped);
     std::swap(_invalidated, rhs._invalidated);
 }
 
@@ -32,8 +36,9 @@ cala::backend::vulkan::Buffer &cala::backend::vulkan::Buffer::operator=(cala::ba
     std::swap(_buffer, rhs._buffer);
     std::swap(_allocation, rhs._allocation);
     std::swap(_size, rhs._size);
-    std::swap(_flags, rhs._flags);
     std::swap(_usage, rhs._usage);
+    std::swap(_flags, rhs._flags);
+    std::swap(_mapped, rhs._mapped);
     std::swap(_invalidated, rhs._invalidated);
     return *this;
 }
@@ -70,6 +75,7 @@ cala::backend::vulkan::Buffer::Mapped cala::backend::vulkan::Buffer::map(u32 off
     assert(_size >= size + offset);
     void* address = nullptr;
     VK_TRY(vmaMapMemory(_device->context().allocator(), _allocation, &address));
+    assert(address);
     Mapped mapped;
     mapped.address = (void*)((char*)address + offset);
     mapped.buffer = this;
@@ -81,8 +87,7 @@ void cala::backend::vulkan::Buffer::unmap() {
 }
 
 void cala::backend::vulkan::Buffer::_data(u8, std::span<u8> data, u32 offset) {
-    if (data.size() == 0 || size() - offset == 0)
-        return;
+    assert(data.size() + offset <= _size);
     if (_mapped.address)
         std::memcpy(static_cast<char*>(_mapped.address) + offset, data.data(), data.size());
     else {
@@ -90,11 +95,11 @@ void cala::backend::vulkan::Buffer::_data(u8, std::span<u8> data, u32 offset) {
         std::memcpy(mapped.address, data.data(), data.size());
     }
     invalidate();
+    _device->increaseDataUploadCount(data.size());
 }
 
 void cala::backend::vulkan::Buffer::_data(u8, std::span<const u8> data, u32 offset) {
-    if (data.size() == 0 || size() - offset == 0)
-        return;
+    assert(data.size() + offset <= _size);
     if (_mapped.address)
         std::memcpy(static_cast<char*>(_mapped.address) + offset, data.data(), data.size());
     else {
@@ -102,6 +107,7 @@ void cala::backend::vulkan::Buffer::_data(u8, std::span<const u8> data, u32 offs
         std::memcpy(mapped.address, data.data(), data.size());
     }
     invalidate();
+    _device->increaseDataUploadCount(data.size());
 }
 
 cala::backend::vulkan::Buffer::View::View()

@@ -41,6 +41,7 @@ void cala::ui::StatisticsWindow::render() {
     ImGui::Text("Allocated DescriptorSets: %d", engineStats.descriptorSetCount);
     ImGui::Text("Allocated Pipelines: %d", engineStats.pipelineCount);
     ImGui::Text("Bytes Allocated Per Frame: %d", engineStats.perFrameAllocated);
+    ImGui::Text("Bytes Uploaded Per Frame: %d", engineStats.perFrameUploaded);
 
     ImGui::End();
 }

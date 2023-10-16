@@ -19,7 +19,9 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
           .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
       }),
       _timelineSemaphore(this, createInfo.useTimeline ? 10 : -1),
-      _timelineValue(10)
+      _timelineValue(10),
+      _bytesAllocatedPerFrame(0),
+      _bytesUploadedToGPUPerFrame(0)
 {
     if (createInfo.useTimeline) {
         for (auto& value : _frameValues)
@@ -211,6 +213,7 @@ cala::backend::vulkan::Device::~Device() {
 cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFrame() {
     _frameCount++;
     _bytesAllocatedPerFrame = 0;
+    _bytesUploadedToGPUPerFrame = 0;
 
     if (!waitFrame(frameIndex())) {
         printMarkers();
@@ -1013,7 +1016,8 @@ cala::backend::vulkan::Device::Stats cala::backend::vulkan::Device::stats() cons
         allocatedImages,
         descriptorSetCount,
         pipelineCount,
-        _bytesAllocatedPerFrame
+        _bytesAllocatedPerFrame,
+        _bytesUploadedToGPUPerFrame
     };
 }
 

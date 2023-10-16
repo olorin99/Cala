@@ -1,5 +1,4 @@
 #include <vector>
-#define VK_USE_PLATFORM_XLIB_KHR
 #include "Cala/backend/vulkan/SDLPlatform.h"
 #include <SDL2/SDL_vulkan.h>
 #include <stdexcept>
@@ -10,7 +9,9 @@ cala::backend::vulkan::SDLPlatform::SDLPlatform(const char *windowTitle, u32 wid
     _width(width),
     _height(height)
 {
-//    SDL_VideoInit("wayland");
+#ifdef CALA_WAYLAND
+    SDL_VideoInit("wayland");
+#endif
     _window = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, flags | SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN);
     if (!_window) throw std::runtime_error("Unable to create window");
 }
