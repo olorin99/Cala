@@ -159,6 +159,8 @@ namespace cala {
 
         void buildRenderPasses();
 
+        void log();
+
         Engine* _engine;
 
         const char* _backbuffer;

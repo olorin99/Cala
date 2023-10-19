@@ -104,7 +104,8 @@ namespace cala::backend {
         STENCIL_ATTACHMENT = 1000241002,
         STENCIL_READ_ONLY = 1000241003,
         READ_ONLY = 1000314000,
-        ATTACHMENT = 1000314001
+        ATTACHMENT = 1000314001,
+        PRESENT = 1000001002,
     };
 
     enum class BufferUsage {
@@ -146,6 +147,19 @@ namespace cala::backend {
         VIEW1D_ARRAY = 4,
         VIEW2D_ARRAY = 5,
         CUBE_ARRAY = 6,
+    };
+
+    enum class LoadOp {
+        LOAD = 0,
+        CLEAR = 1,
+        DONT_CARE = 2,
+        NONE = 1000400000
+    };
+
+    enum class StoreOp {
+        STORE = 0,
+        DONT_CARE = 1,
+        NONE = 1000301000
     };
 
     enum class PolygonMode {
@@ -450,6 +464,8 @@ namespace cala::backend {
                 return tostr(ImageLayout::READ_ONLY);
             case ImageLayout::ATTACHMENT:
                 return tostr(ImageLayout::ATTACHMENT);
+            case ImageLayout::PRESENT:
+                return tostr(ImageLayout::PRESENT);
         }
         return tostr(ImageLayout::UNDEFINED);
     }
@@ -550,6 +566,32 @@ namespace cala::backend {
                 return tostr(Access::STORAGE_WRITE);
         }
         return tostr(Access::NONE);
+    }
+
+    constexpr const char* loadOpToString(LoadOp op) {
+        switch (op) {
+            case LoadOp::LOAD:
+                return tostr(LoadOp::LOAD);
+            case LoadOp::CLEAR:
+                return tostr(LoadOp::CLEAR);
+            case LoadOp::DONT_CARE:
+                return tostr(LoadOp::DONT_CARE);
+            case LoadOp::NONE:
+                return tostr(LoadOp::NONE);
+        }
+        return tostr(LoadOp::NONE);
+    }
+
+    constexpr const char* storeOpToString(StoreOp op) {
+        switch (op) {
+            case StoreOp::STORE:
+                return tostr(StoreOp::STORE);
+            case StoreOp::DONT_CARE:
+                return tostr(StoreOp::DONT_CARE);
+            case StoreOp::NONE:
+                return tostr(StoreOp::NONE);
+        }
+        return tostr(StoreOp::NONE);
     }
 
 }

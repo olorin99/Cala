@@ -16,13 +16,13 @@ namespace cala::backend::vulkan {
         struct Attachment {
             Format format;
             VkSampleCountFlagBits samples;
-            VkAttachmentLoadOp loadOp;
-            VkAttachmentStoreOp storeOp;
-            VkAttachmentLoadOp stencilLoadOp;
-            VkAttachmentStoreOp stencilStoreOp;
-            VkImageLayout initialLayout;
-            VkImageLayout finalLayout;
-            VkImageLayout internalLayout;
+            LoadOp loadOp;
+            StoreOp storeOp;
+            LoadOp stencilLoadOp;
+            StoreOp stencilStoreOp;
+            ImageLayout initialLayout;
+            ImageLayout finalLayout;
+            ImageLayout internalLayout;
         };
 
         RenderPass(Device& driver, std::span<Attachment> attachments);

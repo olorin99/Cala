@@ -22,14 +22,14 @@ cala::backend::vulkan::RenderPass::RenderPass(Device& driver, std::span<Attachme
         if (attachments[i].format != Format::D16_UNORM && attachments[i].format != Format::D32_SFLOAT && attachments[i].format != Format::D24_UNORM_S8_UINT) {
             attachmentDescriptions[colourAttachmentCount].format = getFormat(attachments[i].format);
             attachmentDescriptions[colourAttachmentCount].samples = attachments[i].samples;
-            attachmentDescriptions[colourAttachmentCount].loadOp = attachments[i].loadOp;
-            attachmentDescriptions[colourAttachmentCount].storeOp = attachments[i].storeOp;
-            attachmentDescriptions[colourAttachmentCount].stencilLoadOp = attachments[i].stencilLoadOp;
-            attachmentDescriptions[colourAttachmentCount].stencilStoreOp = attachments[i].stencilStoreOp;
-            attachmentDescriptions[colourAttachmentCount].initialLayout = attachments[i].initialLayout;
-            attachmentDescriptions[colourAttachmentCount].finalLayout = attachments[i].finalLayout;
+            attachmentDescriptions[colourAttachmentCount].loadOp = getLoadOp(attachments[i].loadOp);
+            attachmentDescriptions[colourAttachmentCount].storeOp = getStoreOp(attachments[i].storeOp);
+            attachmentDescriptions[colourAttachmentCount].stencilLoadOp = getLoadOp(attachments[i].stencilLoadOp);
+            attachmentDescriptions[colourAttachmentCount].stencilStoreOp = getStoreOp(attachments[i].stencilStoreOp);
+            attachmentDescriptions[colourAttachmentCount].initialLayout = getImageLayout(attachments[i].initialLayout);
+            attachmentDescriptions[colourAttachmentCount].finalLayout = getImageLayout(attachments[i].finalLayout);
             colourReferences[colourAttachmentCount].attachment = i;
-            colourReferences[colourAttachmentCount].layout = attachments[i].internalLayout;
+            colourReferences[colourAttachmentCount].layout = getImageLayout(attachments[i].internalLayout);
             if (attachmentDescriptions[colourAttachmentCount].loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
                 while (_clearValues.size() <= i)
                     _clearValues.push_back({0.f, 0.f, 0.f, 1.f});
@@ -38,14 +38,14 @@ cala::backend::vulkan::RenderPass::RenderPass(Device& driver, std::span<Attachme
         } else {
             depthAttachment.format = getFormat(attachments[i].format);
             depthAttachment.samples = attachments[i].samples;
-            depthAttachment.loadOp = attachments[i].loadOp;
-            depthAttachment.storeOp = attachments[i].storeOp;
-            depthAttachment.stencilLoadOp = attachments[i].stencilLoadOp;
-            depthAttachment.stencilStoreOp = attachments[i].stencilStoreOp;
-            depthAttachment.initialLayout = attachments[i].initialLayout;
-            depthAttachment.finalLayout = attachments[i].finalLayout;
+            depthAttachment.loadOp = getLoadOp(attachments[i].loadOp);
+            depthAttachment.storeOp = getStoreOp(attachments[i].storeOp);
+            depthAttachment.stencilLoadOp = getLoadOp(attachments[i].stencilLoadOp);
+            depthAttachment.stencilStoreOp = getStoreOp(attachments[i].stencilStoreOp);
+            depthAttachment.initialLayout = getImageLayout(attachments[i].initialLayout);
+            depthAttachment.finalLayout = getImageLayout(attachments[i].finalLayout);
             depthReference.attachment = i;
-            depthReference.layout = attachments[i].internalLayout;
+            depthReference.layout = getImageLayout(attachments[i].internalLayout);
             depthPresent = true;
             if (depthAttachment.loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
                 while (_clearValues.size() <= i)

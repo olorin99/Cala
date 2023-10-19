@@ -1,6 +1,6 @@
 #include "Cala/ImGuiContext.h"
 #include <volk.h>
-
+#include <Cala/backend/primitives.h>
 #include <imgui.h>
 #include <backends/imgui_impl_vulkan.h>
 
@@ -48,13 +48,13 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Device &driver, cala::backend:
             cala::backend::vulkan::RenderPass::Attachment{
                     cala::backend::Format::RGBA8_UNORM,
                     VK_SAMPLE_COUNT_1_BIT,
-                    VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    VK_ATTACHMENT_STORE_OP_STORE,
-                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    VK_IMAGE_LAYOUT_UNDEFINED,
-                    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+                    cala::backend::LoadOp::CLEAR,
+                    cala::backend::StoreOp::STORE,
+                    cala::backend::LoadOp::DONT_CARE,
+                    cala::backend::StoreOp::DONT_CARE,
+                    cala::backend::ImageLayout::UNDEFINED,
+                    cala::backend::ImageLayout::PRESENT,
+                    cala::backend::ImageLayout::COLOUR_ATTACHMENT
             }
 //            cala::backend::vulkan::RenderPass::Attachment{
 //                    device.context().depthFormat(),

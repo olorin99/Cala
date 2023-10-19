@@ -88,24 +88,24 @@ cala::backend::vulkan::Swapchain::Swapchain(Device &driver, Platform& platform, 
             RenderPass::Attachment{
                     format(),
                     VK_SAMPLE_COUNT_1_BIT,
-                    clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
-                    VK_ATTACHMENT_STORE_OP_STORE,
-                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    clear ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+                    clear ? LoadOp::CLEAR : LoadOp::LOAD,
+                    StoreOp::STORE,
+                    LoadOp::DONT_CARE,
+                    StoreOp::DONT_CARE,
+                    clear ? ImageLayout::UNDEFINED : ImageLayout::PRESENT,
+                    ImageLayout::PRESENT,
+                    ImageLayout::COLOUR_ATTACHMENT
             },
             RenderPass::Attachment{
                     _driver.context().depthFormat(),
                     VK_SAMPLE_COUNT_1_BIT,
-                    clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                    VK_ATTACHMENT_STORE_OP_STORE,
-                    VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    VK_IMAGE_LAYOUT_UNDEFINED,
-                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+                    clear ? LoadOp::CLEAR : LoadOp::DONT_CARE,
+                    StoreOp::STORE,
+                    LoadOp::CLEAR,
+                    StoreOp::DONT_CARE,
+                    ImageLayout::UNDEFINED,
+                    ImageLayout::DEPTH_STENCIL_ATTACHMENT,
+                    ImageLayout::DEPTH_STENCIL_ATTACHMENT
             }
     };
 

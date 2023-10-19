@@ -12,13 +12,13 @@
 cala::backend::vulkan::RenderPass::Attachment shadowPassAttachment {
         cala::backend::Format::D32_SFLOAT,
         VK_SAMPLE_COUNT_1_BIT,
-        VK_ATTACHMENT_LOAD_OP_CLEAR,
-        VK_ATTACHMENT_STORE_OP_STORE,
-        VK_ATTACHMENT_LOAD_OP_CLEAR,
-        VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        cala::backend::LoadOp::CLEAR,
+        cala::backend::StoreOp::STORE,
+        cala::backend::LoadOp::CLEAR,
+        cala::backend::StoreOp::DONT_CARE,
+        cala::backend::ImageLayout::UNDEFINED,
+        cala::backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT,
+        cala::backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT
 };
 
 

@@ -291,6 +291,8 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
 
     buildRenderPasses();
 
+    log();
+
     return true;
 }
 
@@ -454,19 +456,6 @@ void cala::RenderGraph::buildBarriers() {
         });
     }
 
-
-    for (auto& pass : _orderedPasses) {
-        _engine->logger().info("RenderGraph Pass: {}", pass->_label);
-        for (auto& barrier : pass->_barriers) {
-
-            _engine->logger().info("\t{}: {} -> {}, {} -> {}, {} -> {}", barrier.label,
-                                   backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage),
-                                   backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess),
-                                   backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
-
-        }
-    }
-
 }
 
 void cala::RenderGraph::buildRenderPasses() {
@@ -537,13 +526,13 @@ void cala::RenderGraph::buildRenderPasses() {
             backend::vulkan::RenderPass::Attachment attachment{};
             attachment.format = image->format;
             attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-            attachment.loadOp = prevAccessPassIndex > -1 ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR;
-            attachment.storeOp = nextAccessPassIndex > -1 ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_NONE;
-            attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment.initialLayout = backend::vulkan::getImageLayout(access.layout);
-            attachment.finalLayout = backend::vulkan::getImageLayout(access.layout);
-            attachment.internalLayout = backend::vulkan::getImageLayout(access.layout);
+            attachment.loadOp = prevAccessPassIndex > -1 ? backend::LoadOp::LOAD : backend::LoadOp::CLEAR;
+            attachment.storeOp = nextAccessPassIndex > -1 ? backend::StoreOp::STORE : backend::StoreOp::NONE;
+            attachment.stencilLoadOp = backend::LoadOp::DONT_CARE;
+            attachment.stencilStoreOp = backend::StoreOp::DONT_CARE;
+            attachment.initialLayout = access.layout;
+            attachment.finalLayout = access.layout;
+            attachment.internalLayout = access.layout;
 
             width = std::max(width, image->width);
             height = std::max(height, image->height);
@@ -564,13 +553,13 @@ void cala::RenderGraph::buildRenderPasses() {
             backend::vulkan::RenderPass::Attachment attachment{};
             attachment.format = depthResource->format;
             attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-            attachment.loadOp = prevAccessPassIndex > -1 ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR;
-            attachment.storeOp = nextAccessPassIndex > -1 ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_NONE;
-            attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment.initialLayout = backend::vulkan::getImageLayout(access.layout);
-            attachment.finalLayout = backend::vulkan::getImageLayout(access.layout);
-            attachment.internalLayout = backend::vulkan::getImageLayout(access.layout);
+            attachment.loadOp = prevAccessPassIndex > -1 ? backend::LoadOp::LOAD : backend::LoadOp::CLEAR;
+            attachment.storeOp = nextAccessPassIndex > -1 ? backend::StoreOp::STORE : backend::StoreOp::NONE;
+            attachment.stencilLoadOp = backend::LoadOp::DONT_CARE;
+            attachment.stencilStoreOp = backend::StoreOp::DONT_CARE;
+            attachment.initialLayout = access.layout;
+            attachment.finalLayout = access.layout;
+            attachment.internalLayout = access.layout;
 
             attachments.push_back(attachment);
             attachmentImages.push_back(_engine->device().getImageView(_images[depthResource->index].index()).view);
@@ -581,5 +570,37 @@ void cala::RenderGraph::buildRenderPasses() {
         auto framebuffer = _engine->device().getFramebuffer(renderPass, attachmentImages, attachmentHashes, width, height);
 
         pass->_framebuffer = framebuffer;
+    }
+}
+
+void cala::RenderGraph::log() {
+    // log barriers
+    _engine->logger().info("RenderGraph");
+
+    _engine->logger().info("Barriers");
+    for (auto& pass : _orderedPasses) {
+        _engine->logger().info("Pass: {}", pass->_label);
+        for (auto& barrier : pass->_barriers) {
+            _engine->logger().info("\t{}: {} -> {}, {} -> {}, {} -> {}", barrier.label,
+                                   backend::pipelineStageToString(barrier.srcStage), backend::pipelineStageToString(barrier.dstStage),
+                                   backend::accessToString(barrier.srcAccess), backend::accessToString(barrier.dstAccess),
+                                   backend::imageLayoutToString(barrier.srcLayout), backend::imageLayoutToString(barrier.dstLayout));
+
+        }
+    }
+    for (auto& pass : _orderedPasses) {
+        _engine->logger().info("Pass: {}", pass->_label);
+        if (pass->_compute) {
+            _engine->logger().info("\tCompute pass");
+            continue;
+        }
+        for (auto& attachment : pass->_framebuffer->renderPass().attachments()) {
+            _engine->logger().info("\tformat: {}\n\tloadOp: {}\n\tstoreOp: {}\n\tinitialLayout: {}\n\tfinalLayout: {}\n\tinternalLayout: {}",
+                                   backend::formatToString(attachment.format),
+                                   backend::loadOpToString(attachment.loadOp), backend::storeOpToString(attachment.storeOp),
+                                   backend::imageLayoutToString(attachment.initialLayout),
+                                   backend::imageLayoutToString(attachment.finalLayout),
+                                   backend::imageLayoutToString(attachment.internalLayout));
+        }
     }
 }

@@ -40,13 +40,13 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
     backend::vulkan::RenderPass::Attachment shadowAttachment = {
             cala::backend::Format::D32_SFLOAT,
             VK_SAMPLE_COUNT_1_BIT,
-            VK_ATTACHMENT_LOAD_OP_CLEAR,
-            VK_ATTACHMENT_STORE_OP_STORE,
-            VK_ATTACHMENT_LOAD_OP_CLEAR,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+            backend::LoadOp::CLEAR,
+            backend::StoreOp::STORE,
+            backend::LoadOp::DONT_CARE,
+            backend::StoreOp::DONT_CARE,
+            backend::ImageLayout::UNDEFINED,
+            backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT,
+            backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT
     };
     auto shadowRenderPass = _engine->device().getRenderPass({&shadowAttachment, 1 });
     u32 h = _shadowTarget.index();

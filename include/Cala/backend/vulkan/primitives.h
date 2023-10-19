@@ -38,6 +38,14 @@ namespace cala::backend::vulkan {
         return static_cast<VkImageViewType>(type);
     }
 
+    constexpr inline VkAttachmentLoadOp getLoadOp(LoadOp op) {
+        return static_cast<VkAttachmentLoadOp>(op);
+    }
+
+    constexpr inline VkAttachmentStoreOp getStoreOp(StoreOp op) {
+        return static_cast<VkAttachmentStoreOp>(op);
+    }
+
     constexpr inline VkPolygonMode getPolygonMode(PolygonMode mode) {
         return static_cast<VkPolygonMode>(mode);
     }
