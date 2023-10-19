@@ -31,7 +31,7 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
         engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_lightCountBuffer[i]->buffer(), debugLabel);
     }
     for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
-        _materialCountBuffer[i] = engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING, true);
+        _materialCountBuffer[i] = engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING, true);
         std::string debugLabel = "MaterialCountBuffer: " + std::to_string(i);
         engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_materialCountBuffer[i]->buffer(), debugLabel);
     }

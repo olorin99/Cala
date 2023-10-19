@@ -5,131 +5,101 @@
 #include <functional>
 #include "../third_party/tsl/robin_map.h"
 #include <Cala/backend/vulkan/Timer.h>
+#include <Ende/math/Vec.h>
 
 namespace cala {
 
-    class RenderGraph;
-
     struct Resource {
-
-        bool dirty = true;
-        bool transient = true;
-
         virtual ~Resource() = default;
 
-        virtual void devirtualize(Engine* engine, backend::vulkan::Swapchain* swapchain, const char* label = nullptr) = 0;
-
-        virtual void destroyResource(Engine* engine) = 0;
-
-        virtual bool operator==(Resource* rhs) = 0;
-
-        virtual bool operator!=(Resource* rhs) = 0;
+        u32 index = 0;
+        const char* label = nullptr;
     };
 
     struct ImageResource : public Resource {
-
+        bool matchSwapchain = true;
         u32 width = 1;
         u32 height = 1;
         u32 depth = 1;
         backend::Format format = backend::Format::RGBA8_UNORM;
-        bool matchSwapchain = true;
-        bool clear = true;
-        backend::ImageUsage usage = backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST;
-        backend::ImageLayout layout = backend::ImageLayout::UNDEFINED;
-        backend::vulkan::ImageHandle handle;
-
-        void devirtualize(Engine* engine, backend::vulkan::Swapchain* swapchain, const char* label = nullptr) override;
-
-        void destroyResource(Engine* engine) override;
-
-        bool operator==(Resource* rhs) override;
-
-        bool operator!=(Resource* rhs) override;
-
-        void addUsage(backend::ImageUsage use);
+        backend::ImageUsage usage = backend::ImageUsage::TRANSFER_SRC;
     };
 
     struct BufferResource : public Resource {
-
-        u32 size = 1;
-        backend::BufferUsage usage = backend::BufferUsage::UNIFORM;
-
-        backend::vulkan::BufferHandle handle;
-
-        void devirtualize(Engine* engine, backend::vulkan::Swapchain* swapchain, const char* label = nullptr) override;
-
-        void destroyResource(Engine* engine) override;
-
-        bool operator==(Resource* rhs) override;
-
-        bool operator!=(Resource* rhs) override;
+        u32 size = 0;
+        backend::BufferUsage usage = backend::BufferUsage::STORAGE;
     };
 
+    class RenderGraph;
     class RenderPass {
     public:
 
-    private:
-        bool reads(const char* label, backend::PipelineStage stage = backend::PipelineStage::TOP, backend::Access access = backend::Access::MEMORY_READ, backend::ImageLayout layout = backend::ImageLayout::UNDEFINED);
-
-        bool writes(const char* label, backend::PipelineStage stage = backend::PipelineStage::TOP, backend::Access access = backend::Access::MEMORY_WRITE, backend::ImageLayout layout = backend::ImageLayout::UNDEFINED, bool clear = false);
-    public:
-
-        void addColourAttachment(const char* label);
-
-        void addDepthAttachment(const char* label);
-
-        void addDepthReadAttachment(const char* label);
-
-        void addIndirectBufferRead(const char* label);
-
-        void addVertexBufferRead(const char* label);
-
-        void addIndexBufferRead(const char* label);
-
-        void addStorageImageRead(const char* label, backend::PipelineStage stage);
-
-        void addStorageImageWrite(const char* label, backend::PipelineStage stage, bool clear = false);
-
-        void addStorageBufferRead(const char* label, backend::PipelineStage stage);
-
-        void addStorageBufferWrite(const char* label, backend::PipelineStage stage, bool clear = false);
-
-        void addSampledImageRead(const char* label, backend::PipelineStage stage);
-
-        void addSampledImageWrite(const char* label, backend::PipelineStage stage);
-
-
+        RenderPass(RenderGraph* graph, const char* label);
 
         void setExecuteFunction(std::function<void(backend::vulkan::CommandHandle, RenderGraph&)> func);
 
-        void setDebugColour(std::array<f32, 4> colour);
+        void setDebugColour(const std::array<f32, 4>& colour);
 
-        ~RenderPass();
+
+        void addColourWrite(const char* label);
+
+        void addDepthWrite(const char* label);
+
+        void addDepthRead(const char* label);
+
+        void addIndirectRead(const char* label);
+
+        void addVertexRead(const char* label);
+
+        void addIndexRead(const char* label);
+
+        void addStorageImageWrite(const char* label, backend::PipelineStage stage);
+
+        void addStorageImageRead(const char* label, backend::PipelineStage stage);
+
+        void addStorageBufferWrite(const char* label, backend::PipelineStage stage);
+
+        void addStorageBufferRead(const char* label, backend::PipelineStage stage);
+
+        void addSampledImageRead(const char* label, backend::PipelineStage stage);
+
 //    private:
+
+        Resource* reads(const char* label, backend::Access access, backend::PipelineStage stage, backend::ImageLayout layout);
+
+        Resource* writes(const char* label, backend::Access access, backend::PipelineStage stage, backend::ImageLayout layout);
+
 
         friend RenderGraph;
 
-        RenderPass(RenderGraph* graph, const char* name, u32 index);
-
-        RenderPass(RenderPass&& rhs) noexcept;
-
         RenderGraph* _graph;
-        const char* _passName;
 
-        struct PassResource {
-            const char* name;
+        const char* _label;
+
+        std::function<void(backend::vulkan::CommandHandle, RenderGraph&)> _function;
+
+        bool _compute;
+
+        std::array<f32, 4> _debugColour;
+
+        struct ResourceAccess {
+            const char* label;
+            i32 index;
             backend::Access access;
             backend::PipelineStage stage;
             backend::ImageLayout layout;
-            bool clear;
         };
 
-        std::vector<PassResource> _inputs;
-        std::vector<PassResource> _outputs;
-        std::vector<PassResource> _attachments;
+        std::vector<ResourceAccess> _inputs;
+        std::vector<ResourceAccess> _outputs;
+
+        std::vector<u32> _colourAttachments;
+        i32 _depthResource;
+
+        backend::vulkan::Framebuffer* _framebuffer;
 
         struct Barrier {
-            const char* name;
+            const char* label;
             i32 index = -1;
             backend::PipelineStage srcStage = backend::PipelineStage::TOP;
             backend::PipelineStage dstStage = backend::PipelineStage::BOTTOM;
@@ -138,17 +108,7 @@ namespace cala {
             backend::ImageLayout srcLayout = backend::ImageLayout::UNDEFINED;
             backend::ImageLayout dstLayout = backend::ImageLayout::UNDEFINED;
         };
-
-        std::vector<Barrier> _invalidate; //inputs
-        std::vector<Barrier> _flush; //outputs
-
-        std::function<void(backend::vulkan::CommandHandle, RenderGraph&)> _executeFunc;
-
-        std::array<f32, 4> _debugColour;
-        u32 _passTimer;
-
-        cala::backend::vulkan::Framebuffer* _framebuffer;
-        bool compute = false;
+        std::vector<Barrier> _barriers;
 
     };
 
@@ -157,89 +117,65 @@ namespace cala {
 
         RenderGraph(Engine* engine);
 
-        ~RenderGraph();
 
-        RenderPass& addPass(const char* name, bool compute = false);
+        RenderPass& addPass(const char* label, bool compute = false);
 
         void setBackbuffer(const char* label);
 
+
+        void addImageResource(const char* label, ImageResource resource, backend::vulkan::ImageHandle handle = {});
+
+        void addBufferResource(const char* label, BufferResource resource, backend::vulkan::BufferHandle handle = {});
+
+
+        ImageResource* getImageResource(const char* label);
+
+        BufferResource* getBufferResource(const char* label);
+
+        backend::vulkan::ImageHandle getImage(const char* label);
+
+        backend::vulkan::BufferHandle getBuffer(const char* label);
+
+
         bool compile(backend::vulkan::Swapchain* swapchain);
 
-        bool execute(backend::vulkan::CommandHandle cmd, u32 index = 0);
+        bool execute(backend::vulkan::CommandHandle  cmd, u32 index = 0);
 
         void reset();
 
         std::span<std::pair<const char*, backend::vulkan::Timer>> getTimers() {
-            u32 offIndex = _engine->device().frameIndex();
-            assert(_orderedPasses.size() <= _timers[offIndex].size());
-            return { _timers[offIndex].data(), static_cast<u32>(_orderedPasses.size()) };
-        }
-
-        template<class T>
-        T* getResource(const char* label) {
-            auto it = _attachmentMap.find(label);
-            if (it == _attachmentMap.end())
-                return nullptr;
-
-            u32 index = it.value().index;
-            auto* t = it.value().internal ? _internalResources[index].get() : _externalResources[index].get();
-            return dynamic_cast<T*>(t);
-        }
-
-        template <typename T>
-        void addResource(const char* label, T resource, bool internal = true) {
-            auto it = _attachmentMap.find(label);
-            if (_attachmentMap.end() == it) {
-                if (internal) {
-                    _internalResources.push_back(std::make_unique<T>(std::move(resource)));
-                    _attachmentMap.emplace(label, ResourcePointer{ (u32)_internalResources.size() - 1, internal });
-                } else {
-                    _externalResources.push_back(std::make_unique<T>(std::move(resource)));
-                    _attachmentMap.emplace(label, ResourcePointer{ (u32)_externalResources.size() - 1, internal });
-                }
-            } else {
-                assert(it.value().internal == internal);
-                u32 index = it.value().index;
-
-                if (internal) {
-                    assert(index < _internalResources.size());
-                    if (*_internalResources[index] != &resource) {
-                        _internalResources[index]->destroyResource(_engine);
-                        _internalResources[index] = std::make_unique<T>(std::move(resource));
-                    }
-                } else {
-                    assert(index < _externalResources.size());
-                    if (*_externalResources[index] != &resource) {
-                        _externalResources[index]->destroyResource(_engine);
-                        _externalResources[index] = std::make_unique<T>(std::move(resource));
-                    }
-                }
-            }
+            u32 frameIndex = _engine->device().frameIndex();
+            assert(_orderedPasses.size() <= _timers[frameIndex].size());
+            return { _timers[frameIndex].data(), static_cast<u32>(_orderedPasses.size()) };
         }
 
 //    private:
+
         friend RenderPass;
 
+        void buildResources();
+
+        void buildBarriers();
+
+        void buildRenderPasses();
+
         Engine* _engine;
-        backend::vulkan::Swapchain* _swapchain;
-
-        std::vector<RenderPass> _passes;
-        std::vector<std::pair<const char*, backend::vulkan::Timer>> _timers[2];
-
-        struct ResourcePointer {
-            u32 index;
-            bool internal;
-        };
-
-        tsl::robin_map<const char*, ResourcePointer> _attachmentMap;
-
-        std::vector<std::unique_ptr<Resource>> _internalResources;
-        std::vector<std::unique_ptr<Resource>> _externalResources;
 
         const char* _backbuffer;
 
+        std::vector<RenderPass> _passes;
+
+        tsl::robin_map<const char*, u32> _labelToIndex;
+
+        std::vector<std::unique_ptr<Resource>> _resources;
+        std::vector<backend::vulkan::ImageHandle> _images;
+        std::vector<backend::vulkan::BufferHandle> _buffers;
+
+        std::vector<std::pair<const char*, backend::vulkan::Timer>> _timers[backend::vulkan::FRAMES_IN_FLIGHT];
+
         std::vector<RenderPass*> _orderedPasses;
 
+        backend::vulkan::Swapchain* _swapchain;
     };
 
 }

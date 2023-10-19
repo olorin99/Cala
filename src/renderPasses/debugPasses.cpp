@@ -6,24 +6,24 @@ using namespace cala;
 void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     auto& normalsPass = graph.addPass("debug_normals");
 
-//    normalsPass.addColourAttachment("backbuffer");
-    normalsPass.addColourAttachment("hdr");
-    normalsPass.addDepthAttachment("depth");
+//    normalsPass.addColourWrite("backbuffer");
+    normalsPass.addColourWrite("hdr");
+    normalsPass.addDepthWrite("depth");
 
     normalsPass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
-    normalsPass.addIndirectBufferRead("drawCommands");
-    normalsPass.addIndirectBufferRead("materialCounts");
+    normalsPass.addIndirectRead("drawCommands");
+    normalsPass.addIndirectRead("materialCounts");
     normalsPass.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
     normalsPass.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
     normalsPass.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     normalsPass.setExecuteFunction([&](cala::backend::vulkan::CommandHandle cmd, cala::RenderGraph& graph) {
-        auto global = graph.getResource<cala::BufferResource>("global");
-        auto drawCommands = graph.getResource<cala::BufferResource>("drawCommands");
-        auto materialCounts = graph.getResource<cala::BufferResource>("materialCounts");
+        auto global = graph.getBuffer("global");
+        auto drawCommands = graph.getBuffer("drawCommands");
+        auto materialCounts = graph.getBuffer("materialCounts");
 
         cmd->clearDescriptors();
-        cmd->bindBuffer(1, 0, global->handle);
+        cmd->bindBuffer(1, 0, global);
         auto& renderable = scene._renderables[0].second.first;
 
         cmd->bindBindings(renderable.bindings);
@@ -43,7 +43,7 @@ void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene
 
             u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
             u32 countOffset = material * (sizeof(u32) * 2);
-            cmd->drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
+            cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
         }
     });
 }
@@ -51,23 +51,23 @@ void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene
 void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     auto& debugRoughness = graph.addPass("debug_roughness");
 
-//    debugRoughness.addColourAttachment("backbuffer");
-    debugRoughness.addColourAttachment("hdr");
-    debugRoughness.addDepthAttachment("depth");
+//    debugRoughness.addColourWrite("backbuffer");
+    debugRoughness.addColourWrite("hdr");
+    debugRoughness.addDepthWrite("depth");
 
     debugRoughness.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
-    debugRoughness.addIndirectBufferRead("drawCommands");
-    debugRoughness.addIndirectBufferRead("materialCounts");
+    debugRoughness.addIndirectRead("drawCommands");
+    debugRoughness.addIndirectRead("materialCounts");
     debugRoughness.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
     debugRoughness.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
     debugRoughness.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugRoughness.setExecuteFunction([&](cala::backend::vulkan::CommandHandle cmd, cala::RenderGraph& graph) {
-        auto global = graph.getResource<cala::BufferResource>("global");
-        auto drawCommands = graph.getResource<cala::BufferResource>("drawCommands");
-        auto materialCounts = graph.getResource<cala::BufferResource>("materialCounts");
+        auto global = graph.getBuffer("global");
+        auto drawCommands = graph.getBuffer("drawCommands");
+        auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
-        cmd->bindBuffer(1, 0, global->handle);
+        cmd->bindBuffer(1, 0, global);
         auto& renderable = scene._renderables[0].second.first;
 
         cmd->bindBindings(renderable.bindings);
@@ -87,7 +87,7 @@ void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
 
             u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
             u32 countOffset = material * (sizeof(u32) * 2);
-            cmd->drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
+            cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
         }
     });
 }
@@ -95,23 +95,23 @@ void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
 void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     auto& debugMetallic = graph.addPass("debug_metallic");
 
-//    debugMetallic.addColourAttachment("backbuffer");
-    debugMetallic.addColourAttachment("hdr");
-    debugMetallic.addDepthAttachment("depth");
+//    debugMetallic.addColourWrite("backbuffer");
+    debugMetallic.addColourWrite("hdr");
+    debugMetallic.addDepthWrite("depth");
 
     debugMetallic.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
-    debugMetallic.addIndirectBufferRead("drawCommands");
-    debugMetallic.addIndirectBufferRead("materialCounts");
+    debugMetallic.addIndirectRead("drawCommands");
+    debugMetallic.addIndirectRead("materialCounts");
     debugMetallic.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
     debugMetallic.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
     debugMetallic.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugMetallic.setExecuteFunction([&](cala::backend::vulkan::CommandHandle cmd, cala::RenderGraph& graph) {
-        auto global = graph.getResource<cala::BufferResource>("global");
-        auto drawCommands = graph.getResource<cala::BufferResource>("drawCommands");
-        auto materialCounts = graph.getResource<cala::BufferResource>("materialCounts");
+        auto global = graph.getBuffer("global");
+        auto drawCommands = graph.getBuffer("drawCommands");
+        auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
-        cmd->bindBuffer(1, 0, global->handle);
+        cmd->bindBuffer(1, 0, global);
         auto& renderable = scene._renderables[0].second.first;
 
         cmd->bindBindings(renderable.bindings);
@@ -131,7 +131,7 @@ void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sce
 
             u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
             u32 countOffset = material * (sizeof(u32) * 2);
-            cmd->drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
+            cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
         }
     });
 }
@@ -139,23 +139,23 @@ void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sce
 void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     auto& debugUnlit = graph.addPass("debug_unlit");
 
-//    debugUnlit.addColourAttachment("backbuffer");
-    debugUnlit.addColourAttachment("hdr");
-    debugUnlit.addDepthAttachment("depth");
+//    debugUnlit.addColourWrite("backbuffer");
+    debugUnlit.addColourWrite("hdr");
+    debugUnlit.addDepthWrite("depth");
 
     debugUnlit.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
-    debugUnlit.addIndirectBufferRead("drawCommands");
-    debugUnlit.addIndirectBufferRead("materialCounts");
+    debugUnlit.addIndirectRead("drawCommands");
+    debugUnlit.addIndirectRead("materialCounts");
     debugUnlit.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
     debugUnlit.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
     debugUnlit.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugUnlit.setExecuteFunction([&](cala::backend::vulkan::CommandHandle cmd, cala::RenderGraph& graph) {
-        auto global = graph.getResource<cala::BufferResource>("global");
-        auto drawCommands = graph.getResource<cala::BufferResource>("drawCommands");
-        auto materialCounts = graph.getResource<cala::BufferResource>("materialCounts");
+        auto global = graph.getBuffer("global");
+        auto drawCommands = graph.getBuffer("drawCommands");
+        auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
-        cmd->bindBuffer(1, 0, global->handle);
+        cmd->bindBuffer(1, 0, global);
         auto& renderable = scene._renderables[0].second.first;
 
         cmd->bindBindings(renderable.bindings);
@@ -175,7 +175,7 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene&
 
             u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
             u32 countOffset = material * (sizeof(u32) * 2);
-            cmd->drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
+            cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
         }
     });
 }
@@ -183,23 +183,23 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene&
 void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     auto& debugWorldPos = graph.addPass("debug_worldPos");
 
-//    debugWorldPos.addColourAttachment("backbuffer");
-    debugWorldPos.addColourAttachment("hdr");
-    debugWorldPos.addDepthAttachment("depth");
+//    debugWorldPos.addColourWrite("backbuffer");
+    debugWorldPos.addColourWrite("hdr");
+    debugWorldPos.addDepthWrite("depth");
 
     debugWorldPos.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
-    debugWorldPos.addIndirectBufferRead("drawCommands");
-    debugWorldPos.addIndirectBufferRead("materialCounts");
+    debugWorldPos.addIndirectRead("drawCommands");
+    debugWorldPos.addIndirectRead("materialCounts");
     debugWorldPos.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
     debugWorldPos.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
     debugWorldPos.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugWorldPos.setExecuteFunction([&](cala::backend::vulkan::CommandHandle cmd, cala::RenderGraph& graph) {
-        auto global = graph.getResource<cala::BufferResource>("global");
-        auto drawCommands = graph.getResource<cala::BufferResource>("drawCommands");
-        auto materialCounts = graph.getResource<cala::BufferResource>("materialCounts");
+        auto global = graph.getBuffer("global");
+        auto drawCommands = graph.getBuffer("drawCommands");
+        auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
-        cmd->bindBuffer(1, 0, global->handle);
+        cmd->bindBuffer(1, 0, global);
         auto& renderable = scene._renderables[0].second.first;
 
         cmd->bindBindings(renderable.bindings);
@@ -216,7 +216,7 @@ void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala
 
             u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
             u32 countOffset = material * (sizeof(u32) * 2);
-            cmd->drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
+            cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
         }
     });
 }
@@ -224,22 +224,22 @@ void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala
 void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings, const char* backbuffer) {
     auto& debugWireframe = graph.addPass("debug_wireframe");
 
-    debugWireframe.addColourAttachment(backbuffer);
-    debugWireframe.addDepthAttachment("depth");
+    debugWireframe.addColourWrite(backbuffer);
+    debugWireframe.addDepthWrite("depth");
 
     debugWireframe.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
-    debugWireframe.addIndirectBufferRead("drawCommands");
-    debugWireframe.addIndirectBufferRead("materialCounts");
+    debugWireframe.addIndirectRead("drawCommands");
+    debugWireframe.addIndirectRead("materialCounts");
     debugWireframe.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
     debugWireframe.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
     debugWireframe.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::GEOMETRY_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugWireframe.setExecuteFunction([settings, &engine, &scene](cala::backend::vulkan::CommandHandle cmd, cala::RenderGraph& graph) {
-        auto global = graph.getResource<cala::BufferResource>("global");
-        auto drawCommands = graph.getResource<cala::BufferResource>("drawCommands");
-        auto materialCounts = graph.getResource<cala::BufferResource>("materialCounts");
+        auto global = graph.getBuffer("global");
+        auto drawCommands = graph.getBuffer("drawCommands");
+        auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
-        cmd->bindBuffer(1, 0, global->handle);
+        cmd->bindBuffer(1, 0, global);
         auto& renderable = scene._renderables[0].second.first;
 
         cmd->bindBindings(renderable.bindings);
@@ -259,7 +259,7 @@ void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
 
             u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
             u32 countOffset = material * (sizeof(u32) * 2);
-            cmd->drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
+            cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
         }
     });
 }
@@ -267,22 +267,22 @@ void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
 void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings, const char* backbuffer) {
     auto& debugNormalLines = graph.addPass("debug_normal_lines");
 
-    debugNormalLines.addColourAttachment(backbuffer);
-    debugNormalLines.addDepthAttachment("depth");
+    debugNormalLines.addColourWrite(backbuffer);
+    debugNormalLines.addDepthWrite("depth");
 
     debugNormalLines.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
-    debugNormalLines.addIndirectBufferRead("drawCommands");
-    debugNormalLines.addIndirectBufferRead("materialCounts");
+    debugNormalLines.addIndirectRead("drawCommands");
+    debugNormalLines.addIndirectRead("materialCounts");
     debugNormalLines.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
     debugNormalLines.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
     debugNormalLines.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::GEOMETRY_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
     debugNormalLines.setExecuteFunction([settings, &engine, &scene](cala::backend::vulkan::CommandHandle cmd, cala::RenderGraph& graph) {
-        auto global = graph.getResource<cala::BufferResource>("global");
-        auto drawCommands = graph.getResource<cala::BufferResource>("drawCommands");
-        auto materialCounts = graph.getResource<cala::BufferResource>("materialCounts");
+        auto global = graph.getBuffer("global");
+        auto drawCommands = graph.getBuffer("drawCommands");
+        auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
-        cmd->bindBuffer(1, 0, global->handle);
+        cmd->bindBuffer(1, 0, global);
         auto& renderable = scene._renderables[0].second.first;
 
         cmd->bindBindings(renderable.bindings);
@@ -300,7 +300,7 @@ void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::
 
             u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
             u32 countOffset = material * (sizeof(u32) * 2);
-            cmd->drawIndirectCount(drawCommands->handle, drawCommandOffset, materialCounts->handle, countOffset);
+            cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
         }
     });
 }
