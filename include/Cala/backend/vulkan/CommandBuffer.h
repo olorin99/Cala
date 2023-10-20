@@ -206,7 +206,7 @@ namespace cala::backend::vulkan {
         struct DescriptorKey {
             VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
             struct {
-                BufferHandle buffer = {};
+                Buffer* buffer = nullptr;
                 u32 offset = 0;
                 u32 range = 0;
                 bool storage = false;

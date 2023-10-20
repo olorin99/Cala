@@ -65,6 +65,10 @@ namespace cala {
 
         void addSampledImageRead(const char* label, backend::PipelineStage stage);
 
+        void addBlitWrite(const char* label);
+
+        void addBlitRead(const char* label);
+
 //    private:
 
         Resource* reads(const char* label, backend::Access access, backend::PipelineStage stage, backend::ImageLayout layout);
@@ -124,6 +128,8 @@ namespace cala {
 
         void setBackbuffer(const char* label);
 
+        void setBackbufferDimensions(u32 width, u32 height);
+
 
         void addImageResource(const char* label, ImageResource resource, backend::vulkan::ImageHandle handle = {});
 
@@ -141,9 +147,9 @@ namespace cala {
         backend::vulkan::BufferHandle getBuffer(const char* label);
 
 
-        bool compile(backend::vulkan::Swapchain* swapchain);
+        bool compile();
 
-        bool execute(backend::vulkan::CommandHandle  cmd, u32 index = 0);
+        bool execute(backend::vulkan::CommandHandle  cmd);
 
         void reset();
 
@@ -168,6 +174,8 @@ namespace cala {
         Engine* _engine;
 
         const char* _backbuffer;
+        u32 _backbufferWidth;
+        u32 _backbufferHeight;
 
         std::vector<RenderPass> _passes;
 
@@ -182,7 +190,6 @@ namespace cala {
 
         std::vector<RenderPass*> _orderedPasses;
 
-        backend::vulkan::Swapchain* _swapchain;
     };
 
 }

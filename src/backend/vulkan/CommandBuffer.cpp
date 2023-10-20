@@ -274,7 +274,7 @@ void cala::backend::vulkan::CommandBuffer::bindPipeline() {
 void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 binding, BufferHandle buffer, u32 offset, u32 range, bool storage) {
     assert(buffer);
     assert(set < MAX_SET_COUNT && "set is greater than valid number of descriptor sets");
-    _descriptorKey[set].buffers[binding] = { buffer, offset, range == 0 ? (buffer->size() - offset) : range , storage };
+    _descriptorKey[set].buffers[binding] = { &*buffer, offset, range == 0 ? (buffer->size() - offset) : range , storage };
 //    bindBuffer(set, slot, buffer.buffer(), offset, range == 0 ? buffer.size() : range);
     _descriptorDirty = true;
 }
@@ -282,7 +282,7 @@ void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 binding, Buff
 void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 binding, BufferHandle buffer, bool storage) {
     assert(buffer);
     assert(set < MAX_SET_COUNT && "set is greater than valid number of descriptor sets");
-    _descriptorKey[set].buffers[binding] = { buffer, 0, buffer->size(), storage };
+    _descriptorKey[set].buffers[binding] = { &*buffer, 0, buffer->size(), storage };
     _descriptorDirty = true;
 }
 

@@ -132,6 +132,23 @@ void cala::RenderPass::addSampledImageRead(const char *label, backend::PipelineS
     }
 }
 
+void cala::RenderPass::addBlitWrite(const char *label) {
+    if (auto resource = writes(label, backend::Access::TRANSFER_WRITE,
+                               backend::PipelineStage::TRANSFER,
+                               backend::ImageLayout::TRANSFER_DST); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | backend::ImageUsage::TRANSFER_DST;
+    }
+}
+
+void cala::RenderPass::addBlitRead(const char *label) {
+    if (auto resource = reads(label, backend::Access::TRANSFER_READ,
+                             backend::PipelineStage::TRANSFER,
+                             backend::ImageLayout::TRANSFER_SRC); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | backend::ImageUsage::TRANSFER_SRC;
+    }
+}
 
 cala::Resource *cala::RenderPass::reads(const char *label, backend::Access access, backend::PipelineStage stage, backend::ImageLayout layout) {
     auto it = _graph->_labelToIndex.find(label);
@@ -172,6 +189,11 @@ cala::RenderPass &cala::RenderGraph::addPass(const char *label, bool compute) {
 
 void cala::RenderGraph::setBackbuffer(const char *label) {
     _backbuffer = label;
+}
+
+void cala::RenderGraph::setBackbufferDimensions(u32 width, u32 height) {
+    _backbufferWidth = width;
+    _backbufferHeight = height;
 }
 
 
@@ -271,10 +293,8 @@ cala::backend::vulkan::BufferHandle cala::RenderGraph::getBuffer(const char *lab
     return {};
 }
 
-bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
+bool cala::RenderGraph::compile() {
     PROFILE_NAMED("RenderGraph::compile");
-    _swapchain = swapchain;
-    assert(_swapchain);
     _orderedPasses.clear();
 
     tsl::robin_map<const char*, std::vector<u32>> outputs;
@@ -322,7 +342,7 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
     return true;
 }
 
-bool cala::RenderGraph::execute(backend::vulkan::CommandHandle cmd, u32 index) {
+bool cala::RenderGraph::execute(backend::vulkan::CommandHandle cmd) {
     PROFILE_NAMED("RenderGraph::execute");
 
     for (u32 i = 0; i < _orderedPasses.size(); i++) {
@@ -355,18 +375,6 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandHandle cmd, u32 index) {
         cmd->popDebugLabel();
         timer.second.stop();
     }
-
-    auto backbuffer = getImage(_backbuffer);
-    if (!backbuffer)
-        return false;
-
-    auto b = backbuffer->barrier(backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT, backend::PipelineStage::TRANSFER, backend::Access::COLOUR_ATTACHMENT_WRITE, backend::Access::TRANSFER_READ, backend::ImageLayout::COLOUR_ATTACHMENT, backend::ImageLayout::TRANSFER_SRC);
-    cmd->pipelineBarrier({ &b, 1 });
-
-    _swapchain->blitImageToFrame(index, cmd, *backbuffer);
-
-    b = backbuffer->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::BOTTOM, backend::Access::TRANSFER_READ, backend::Access::NONE, backend::ImageLayout::TRANSFER_SRC, backend::ImageLayout::COLOUR_ATTACHMENT);
-    cmd->pipelineBarrier({ &b, 1 });
     return true;
 }
 
@@ -385,8 +393,9 @@ void cala::RenderGraph::buildResources() {
         auto& resource = _resources[i];
         if (auto imageResource = dynamic_cast<ImageResource*>(resource.get()); imageResource) {
             if (imageResource->matchSwapchain) {
-                imageResource->width = _swapchain->extent().width;
-                imageResource->height = _swapchain->extent().height;
+                imageResource->width = _backbufferWidth;
+                imageResource->height = _backbufferHeight;
+                imageResource->depth = 1;
             }
             if (!_images[i]) {
 

@@ -268,10 +268,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
 
 
-
-
-    _graph.setBackbuffer("backbuffer");
-
     if (camera.isDirty()) {
         auto& createClusters = _graph.addPass("create_clusters", true);
 
@@ -944,11 +940,32 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         });
     }
 
-    if (!_graph.compile(_swapchain))
+
+    _graph.setBackbufferDimensions(_swapchain->extent().width, _swapchain->extent().height);
+//    _graph.setBackbuffer("backbuffer");
+    _graph.setBackbuffer("swapchain");
+    {
+        ImageResource backbufferAttachment;
+        backbufferAttachment.format = backend::Format::RGBA8_UNORM;
+        backbufferAttachment.matchSwapchain = false;
+        _graph.addImageResource("swapchain", backbufferAttachment);
+
+        auto& blitPass = _graph.addPass("blit", true);
+        blitPass.addBlitRead("backbuffer");
+        blitPass.addBlitWrite("swapchain");
+
+        blitPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+            auto backbuffer = graph.getImage("backbuffer");
+            _swapchain->blitImageToFrame(_swapchainFrame.index, cmd, *backbuffer);
+        });
+    }
+
+
+    if (!_graph.compile())
         throw std::runtime_error("cyclical graph found");
 
     cmd->startPipelineStatistics();
-    _graph.execute(cmd, _swapchainFrame.index);
+    _graph.execute(cmd);
     cmd->stopPipelineStatistics();
 
 }
