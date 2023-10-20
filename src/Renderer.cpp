@@ -269,7 +269,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
 
     if (camera.isDirty()) {
-        auto& createClusters = _graph.addPass("create_clusters", true);
+        auto& createClusters = _graph.addPass("create_clusters", RenderPass::Type::COMPUTE);
 
         createClusters.addStorageBufferWrite("clusters", backend::PipelineStage::COMPUTE_SHADER);
         createClusters.addStorageBufferRead("camera", backend::PipelineStage::COMPUTE_SHADER);
@@ -316,7 +316,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         _graph.addBufferResource("lightGlobalResource", lightGlobalIndexResource);
     }
 
-    auto& cullLights = _graph.addPass("cull_lights", true);
+    auto& cullLights = _graph.addPass("cull_lights", RenderPass::Type::COMPUTE);
 
     cullLights.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
     cullLights.addStorageBufferRead("clusters", backend::PipelineStage::COMPUTE_SHADER);
@@ -435,7 +435,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         _graph.addImageResource("pointDepth", pointDepth);
     }
 
-    auto& pointShadows = _graph.addPass("point_shadows", true);
+    auto& pointShadows = _graph.addPass("point_shadows", RenderPass::Type::COMPUTE);
 
     pointShadows.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
     pointShadows.addStorageImageWrite("pointDepth", backend::PipelineStage::FRAGMENT_SHADER);
@@ -588,26 +588,26 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 //                cmd->dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
 //            });
 
-            {
-                ImageResource voxelGridResource;
-                voxelGridResource.format = backend::Format::RGBA32_SFLOAT;
-                voxelGridResource.width = 100;
-                voxelGridResource.height = 100;
-                voxelGridResource.depth = 100;
-                voxelGridResource.matchSwapchain = false;
-                _graph.addImageResource("voxelGrid", voxelGridResource);
+            ImageResource voxelGridResource;
+            voxelGridResource.format = backend::Format::RGBA32_SFLOAT;
+            voxelGridResource.width = 100;
+            voxelGridResource.height = 100;
+            voxelGridResource.depth = 100;
+            voxelGridResource.matchSwapchain = false;
+            _graph.addImageResource("voxelGrid", voxelGridResource);
 
-                ImageResource voxelOutput;
-                voxelOutput.format = backend::Format::RGBA32_SFLOAT;
-                voxelOutput.matchSwapchain = false;
-                voxelOutput.width = voxelGridResource.width;
-                voxelOutput.height = voxelGridResource.height;
-                _graph.addImageResource("voxelOutput", voxelOutput);
-            }
+            ImageResource voxelOutput;
+            voxelOutput.format = backend::Format::RGBA32_SFLOAT;
+            voxelOutput.matchSwapchain = false;
+            voxelOutput.width = voxelGridResource.width;
+            voxelOutput.height = voxelGridResource.height;
+            _graph.addImageResource("voxelOutput", voxelOutput);
 
 
 
             auto& voxelGIPass = _graph.addPass("voxelGI");
+
+            voxelGIPass.setDimensions(voxelGridResource.width, voxelGridResource.height);
 
 //        voxelGIPass.addStorageImageRead("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER);
             voxelGIPass.addStorageImageWrite("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER);
@@ -725,7 +725,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     }
 
 
-    auto& cullPass = _graph.addPass("cull", true);
+    auto& cullPass = _graph.addPass("cull", RenderPass::Type::COMPUTE);
 
     cullPass.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
     cullPass.addStorageBufferRead("transforms", backend::PipelineStage::COMPUTE_SHADER);
@@ -872,7 +872,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     }
 
     if (_renderSettings.tonemap) {
-        auto& tonemapPass = _graph.addPass("tonemap", true);
+        auto& tonemapPass = _graph.addPass("tonemap", RenderPass::Type::COMPUTE);
 
         tonemapPass.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
         if (debugViewEnabled)
@@ -950,7 +950,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         backbufferAttachment.matchSwapchain = false;
         _graph.addImageResource("swapchain", backbufferAttachment);
 
-        auto& blitPass = _graph.addPass("blit", true);
+        auto& blitPass = _graph.addPass("blit", RenderPass::Type::TRANSFER);
         blitPass.addBlitRead("backbuffer");
         blitPass.addBlitWrite("swapchain");
 

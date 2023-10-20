@@ -8,7 +8,10 @@ cala::RenderPass::RenderPass(cala::RenderGraph *graph, const char *label)
     _label(label),
     _depthResource(-1),
     _framebuffer(nullptr),
-    _debugColour({ 23.f / 255.f, 87.f / 255.f, 41.f / 255.f, 1.f })
+    _debugColour({ 23.f / 255.f, 87.f / 255.f, 41.f / 255.f, 1.f }),
+    _width(0),
+    _height(0),
+    _type(Type::GRAPHICS)
 {}
 
 void cala::RenderPass::setExecuteFunction(std::function<void(backend::vulkan::CommandHandle, RenderGraph & )> func) {
@@ -17,6 +20,11 @@ void cala::RenderPass::setExecuteFunction(std::function<void(backend::vulkan::Co
 
 void cala::RenderPass::setDebugColour(const std::array<f32, 4> &colour) {
     _debugColour = colour;
+}
+
+void cala::RenderPass::setDimensions(u32 width, u32 height) {
+    _width = width;
+    _height = height;
 }
 
 
@@ -175,13 +183,13 @@ cala::RenderGraph::RenderGraph(cala::Engine *engine)
     : _engine(engine)
 {}
 
-cala::RenderPass &cala::RenderGraph::addPass(const char *label, bool compute) {
+cala::RenderPass &cala::RenderGraph::addPass(const char *label, RenderPass::Type type) {
     u32 index = _passes.size();
     while (_timers[_engine->device().frameIndex()].size() <= index) {
         _timers[_engine->device().frameIndex()].emplace_back(std::make_pair("", backend::vulkan::Timer(_engine->device())));
     }
     _passes.emplace_back(this, label);
-    _passes.back()._compute = compute;
+    _passes.back()._type = type;
     _timers[_engine->device().frameIndex()][index].first = label;
     assert(_passes.size() <= _timers[_engine->device().frameIndex()].size());
     return _passes.back();
@@ -365,11 +373,11 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandHandle cmd) {
             }
         }
 
-        if (!pass->_compute && pass->_framebuffer)
+        if (pass->_type == RenderPass::Type::GRAPHICS && pass->_framebuffer)
             cmd->begin(*pass->_framebuffer);
         if (pass->_function)
             pass->_function(cmd, *this);
-        if (!pass->_compute && pass->_framebuffer)
+        if (pass->_type == RenderPass::Type::GRAPHICS && pass->_framebuffer)
             cmd->end(*pass->_framebuffer);
 
         cmd->popDebugLabel();
@@ -542,14 +550,14 @@ void cala::RenderGraph::buildRenderPasses() {
     for (i32 i = 0; i < _orderedPasses.size(); i++) {
         auto& pass = _orderedPasses[i];
 
-        if (pass->_compute)
+        if (pass->_type != RenderPass::Type::GRAPHICS)
             continue;
 
         std::vector<backend::vulkan::RenderPass::Attachment> attachments;
         std::vector<VkImageView> attachmentImages;
         std::vector<u32> attachmentHashes;
 
-        u32 width = 0, height = 0;
+        u32 width = pass->_width, height = pass->_height;
 
         for (auto& imageIndex : pass->_colourAttachments) {
             auto image = dynamic_cast<ImageResource*>(_resources[imageIndex].get());
@@ -599,6 +607,9 @@ void cala::RenderGraph::buildRenderPasses() {
             attachment.finalLayout = access.layout;
             attachment.internalLayout = access.layout;
 
+            width = std::max(width, depthResource->width);
+            height = std::max(height, depthResource->height);
+
             attachments.push_back(attachment);
             attachmentImages.push_back(_engine->device().getImageView(_images[depthResource->index].index()).view);
             attachmentHashes.push_back(_images[depthResource->index].index());
@@ -628,7 +639,7 @@ void cala::RenderGraph::log() {
     }
     for (auto& pass : _orderedPasses) {
         _engine->logger().info("Pass: {}", pass->_label);
-        if (pass->_compute) {
+        if (pass->_type == RenderPass::Type::GRAPHICS) {
             _engine->logger().info("\tCompute pass");
             continue;
         }

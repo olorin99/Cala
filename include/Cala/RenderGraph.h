@@ -22,7 +22,7 @@ namespace cala {
         u32 height = 1;
         u32 depth = 1;
         backend::Format format = backend::Format::RGBA8_UNORM;
-        backend::ImageUsage usage = backend::ImageUsage::TRANSFER_SRC;
+        backend::ImageUsage usage = backend::ImageUsage::SAMPLED;
     };
 
     struct BufferResource : public Resource {
@@ -34,11 +34,19 @@ namespace cala {
     class RenderPass {
     public:
 
+        enum class Type {
+            GRAPHICS,
+            COMPUTE,
+            TRANSFER
+        };
+
         RenderPass(RenderGraph* graph, const char* label);
 
         void setExecuteFunction(std::function<void(backend::vulkan::CommandHandle, RenderGraph&)> func);
 
         void setDebugColour(const std::array<f32, 4>& colour);
+
+        void setDimensions(u32 width, u32 height);
 
 
         void addColourWrite(const char* label);
@@ -84,7 +92,7 @@ namespace cala {
 
         std::function<void(backend::vulkan::CommandHandle, RenderGraph&)> _function;
 
-        bool _compute;
+        Type _type;
 
         std::array<f32, 4> _debugColour;
 
@@ -101,6 +109,8 @@ namespace cala {
 
         std::vector<u32> _colourAttachments;
         i32 _depthResource;
+        u32 _width;
+        u32 _height;
 
         backend::vulkan::Framebuffer* _framebuffer;
 
@@ -123,8 +133,7 @@ namespace cala {
 
         RenderGraph(Engine* engine);
 
-
-        RenderPass& addPass(const char* label, bool compute = false);
+        RenderPass& addPass(const char* label, RenderPass::Type type = RenderPass::Type::GRAPHICS);
 
         void setBackbuffer(const char* label);
 
