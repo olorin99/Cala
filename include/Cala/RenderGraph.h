@@ -43,6 +43,8 @@ namespace cala {
 
         void addColourWrite(const char* label);
 
+        void addColourRead(const char* label);
+
         void addDepthWrite(const char* label);
 
         void addDepthRead(const char* label);
@@ -127,6 +129,8 @@ namespace cala {
 
         void addBufferResource(const char* label, BufferResource resource, backend::vulkan::BufferHandle handle = {});
 
+        void addAlias(const char* label, const char* alias);
+
 
         ImageResource* getImageResource(const char* label);
 
@@ -170,6 +174,7 @@ namespace cala {
         tsl::robin_map<const char*, u32> _labelToIndex;
 
         std::vector<std::unique_ptr<Resource>> _resources;
+        std::vector<std::vector<const char*>> _aliases;
         std::vector<backend::vulkan::ImageHandle> _images;
         std::vector<backend::vulkan::BufferHandle> _buffers;
 

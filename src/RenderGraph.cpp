@@ -31,6 +31,15 @@ void cala::RenderPass::addColourWrite(const char *label) {
     }
 }
 
+void cala::RenderPass::addColourRead(const char *label) {
+    if (auto resource = reads(label, backend::Access::COLOUR_ATTACHMENT_READ | backend::Access::COLOUR_ATTACHMENT_WRITE,
+                               backend::PipelineStage::COLOUR_ATTACHMENT_OUTPUT,
+                               backend::ImageLayout::COLOUR_ATTACHMENT); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | backend::ImageUsage::COLOUR_ATTACHMENT;
+    }
+}
+
 void cala::RenderPass::addDepthWrite(const char *label) {
     if (auto resource = writes(label, backend::Access::DEPTH_STENCIL_READ | backend::Access::DEPTH_STENCIL_WRITE,
                                backend::PipelineStage::EARLY_FRAGMENT | backend::PipelineStage::LATE_FRAGMENT,
@@ -212,6 +221,23 @@ void cala::RenderGraph::addBufferResource(const char *label, cala::BufferResourc
     }
 }
 
+void cala::RenderGraph::addAlias(const char *label, const char *alias) {
+    auto it = _labelToIndex.find(label);
+    if (it != _labelToIndex.end()) {
+        _labelToIndex[alias] = it->second;
+        if (_aliases.size() <= it->second)
+            _aliases.resize(it->second + 1);
+        _aliases[it->second].push_back(alias);
+    }
+
+//    } else {
+//        it = _labelToIndex.find(alias);
+//        if (it != _labelToIndex.end()) {
+//
+//        }
+//    }
+}
+
 cala::ImageResource *cala::RenderGraph::getImageResource(const char *label) {
     auto it = _labelToIndex.find(label);
     if (it != _labelToIndex.end()) {
@@ -291,7 +317,7 @@ bool cala::RenderGraph::compile(cala::backend::vulkan::Swapchain* swapchain) {
 
     buildRenderPasses();
 
-    log();
+//    log();
 
     return true;
 }
@@ -347,6 +373,7 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandHandle cmd, u32 index) {
 void cala::RenderGraph::reset() {
     _resources.clear();
     _passes.clear();
+    _aliases.clear();
 }
 
 
@@ -357,11 +384,11 @@ void cala::RenderGraph::buildResources() {
     for (u32 i = 0; i < _resources.size(); i++) {
         auto& resource = _resources[i];
         if (auto imageResource = dynamic_cast<ImageResource*>(resource.get()); imageResource) {
+            if (imageResource->matchSwapchain) {
+                imageResource->width = _swapchain->extent().width;
+                imageResource->height = _swapchain->extent().height;
+            }
             if (!_images[i]) {
-                if (imageResource->matchSwapchain) {
-                    imageResource->width = _swapchain->extent().width;
-                    imageResource->height = _swapchain->extent().height;
-                }
 
                 _images[i] = _engine->device().createImage({
                     imageResource->width,
@@ -526,7 +553,9 @@ void cala::RenderGraph::buildRenderPasses() {
             backend::vulkan::RenderPass::Attachment attachment{};
             attachment.format = image->format;
             attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+            // if first access clear otherwise load
             attachment.loadOp = prevAccessPassIndex > -1 ? backend::LoadOp::LOAD : backend::LoadOp::CLEAR;
+            // if last access none otherwise store
             attachment.storeOp = nextAccessPassIndex > -1 ? backend::StoreOp::STORE : backend::StoreOp::NONE;
             attachment.stencilLoadOp = backend::LoadOp::DONT_CARE;
             attachment.stencilStoreOp = backend::StoreOp::DONT_CARE;

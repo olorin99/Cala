@@ -161,7 +161,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _globalDataBuffer[_engine->device().frameIndex()]->data(std::span<RendererGlobal>(&_globalData, 1));
 
     bool debugViewEnabled = _renderSettings.debugNormals || _renderSettings.debugRoughness || _renderSettings.debugMetallic || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugVxgi;
-    debugViewEnabled = false;
 
     backend::vulkan::CommandHandle cmd = _frameInfo.cmd;
 
@@ -180,6 +179,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             ImageResource backbufferAttachment;
             backbufferAttachment.format = backend::Format::RGBA8_UNORM;
             _graph.addImageResource("backbuffer", backbufferAttachment);
+            _graph.addAlias("backbuffer", "backbuffer-debug");
         }
         {
             ImageResource depthAttachment;
@@ -422,16 +422,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     }
 
     if (_renderSettings.debugWireframe) {
-        bool overlay = _renderSettings.tonemap;
-        //TODO: overlay works however having both wireframe and normal lines with overlay crashes
-//        overlay = false;
-        debugWireframePass(_graph, *_engine, scene, _renderSettings, overlay ? "hdr" : "backbuffer");
+        debugWireframePass(_graph, *_engine, scene, _renderSettings);
     }
 
     if (_renderSettings.debugNormalLines) {
-        bool overlay = _renderSettings.tonemap;
-//        overlay = false;
-        debugNormalLinesPass(_graph, *_engine, scene, _renderSettings, overlay ? "hdr" : "backbuffer");
+        debugNormalLinesPass(_graph, *_engine, scene, _renderSettings);
     }
 
 
@@ -799,7 +794,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         });
     }
 
-    if (_renderSettings.forward && !debugViewEnabled) {
+    if (_renderSettings.forward) {
         auto& forwardPass = _graph.addPass("forward");
         if (_renderSettings.tonemap)
             forwardPass.addColourWrite("hdr");
@@ -880,11 +875,14 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         });
     }
 
-    if (_renderSettings.tonemap && !debugViewEnabled) {
+    if (_renderSettings.tonemap) {
         auto& tonemapPass = _graph.addPass("tonemap", true);
 
         tonemapPass.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
-        tonemapPass.addStorageImageWrite("backbuffer", backend::PipelineStage::COMPUTE_SHADER);
+        if (debugViewEnabled)
+            tonemapPass.addStorageImageWrite("backbuffer-debug", backend::PipelineStage::COMPUTE_SHADER);
+        else
+            tonemapPass.addStorageImageWrite("backbuffer", backend::PipelineStage::COMPUTE_SHADER);
         tonemapPass.addStorageImageRead("hdr", backend::PipelineStage::COMPUTE_SHADER);
 
         tonemapPass.setDebugColour({0.1, 0.4, 0.7, 1});
@@ -907,7 +905,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     if (_renderSettings.skybox && scene._skyLightMap) {
         auto& skyboxPass = _graph.addPass("skybox");
-        if (scene._hdrSkyLight && _renderSettings.tonemap && !_renderSettings.debugNormals)
+        if (scene._hdrSkyLight && _renderSettings.tonemap)
             skyboxPass.addColourWrite("hdr");
         else
             skyboxPass.addColourWrite("backbuffer");
