@@ -624,12 +624,26 @@ void cala::RenderGraph::log() {
             continue;
         }
         for (auto& attachment : pass->_framebuffer->renderPass().attachments()) {
-            _engine->logger().info("\tformat: {}\n\tloadOp: {}\n\tstoreOp: {}\n\tinitialLayout: {}\n\tfinalLayout: {}\n\tinternalLayout: {}",
+            _engine->logger().info("\n\tformat: {}\n\tloadOp: {}\n\tstoreOp: {}\n\tinitialLayout: {}\n\tfinalLayout: {}\n\tinternalLayout: {}",
                                    backend::formatToString(attachment.format),
                                    backend::loadOpToString(attachment.loadOp), backend::storeOpToString(attachment.storeOp),
                                    backend::imageLayoutToString(attachment.initialLayout),
                                    backend::imageLayoutToString(attachment.finalLayout),
                                    backend::imageLayoutToString(attachment.internalLayout));
+        }
+    }
+
+    for (u32 i = 0; i < _images.size(); i++) {
+        auto& image = _images[i];
+        if (image) {
+            _engine->logger().info("\n\tName: {}\n\tformat: {}\n\textent: ({}, {}, {})\n\tsize: {}", _resources[i]->label, backend::formatToString(image->format()), image->width(), image->height(), image->depth(), image->size());
+        }
+    }
+
+    for (u32 i = 0; i < _buffers.size(); i++) {
+        auto& buffer = _buffers[i];
+        if (buffer) {
+            _engine->logger().info("\n\tName: {}\n\tsize: {}", _resources[i]->label, buffer->size());
         }
     }
 }
