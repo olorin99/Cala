@@ -134,7 +134,7 @@ void cala::RenderPass::addStorageBufferRead(const char *label, backend::Pipeline
 void cala::RenderPass::addSampledImageRead(const char *label, backend::PipelineStage stage) {
     if (auto resource = reads(label, backend::Access::SAMPLED_READ,
                                stage,
-                               backend::ImageLayout::READ_ONLY); resource) {
+                               backend::ImageLayout::SHADER_READ_ONLY); resource) {
         auto imageResource = dynamic_cast<ImageResource*>(resource);
         imageResource->usage = imageResource->usage | backend::ImageUsage::SAMPLED;
     }

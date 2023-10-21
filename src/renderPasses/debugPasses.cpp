@@ -3,12 +3,47 @@
 
 using namespace cala;
 
+void debugClusters(cala::RenderGraph& graph, cala::Engine& engine, cala::backend::vulkan::Swapchain& swapchain) {
+    auto& debugClusters = graph.addPass("debug_clusters");
+
+    debugClusters.addColourRead("backbuffer-debug");
+    debugClusters.addColourWrite("backbuffer");
+
+    debugClusters.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    debugClusters.addStorageBufferRead("lightGrid", backend::PipelineStage::FRAGMENT_SHADER);
+    debugClusters.addSampledImageRead("depth", backend::PipelineStage::FRAGMENT_SHADER);
+
+    debugClusters.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+        auto global = graph.getBuffer("global");
+        auto lightGrid = graph.getBuffer("lightGrid");
+        auto depthBuffer = graph.getImage("depth");
+        cmd->clearDescriptors();
+        cmd->bindBuffer(1, 0, global);
+        cmd->bindBindings({});
+        cmd->bindAttributes({});
+        cmd->bindBlendState({ true });
+        cmd->bindProgram(engine.getProgram(Engine::ProgramType::DEBUG_CLUSTER));
+        struct ClusterPush {
+            ende::math::Vec<4, u32> tileSizes;
+            ende::math::Vec<2, u32> screenSize;
+        } push;
+        push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)swapchain.extent().width / (f32)16.f) };
+        push.screenSize = { swapchain.extent().width, swapchain.extent().height };
+        cmd->pushConstants(backend::ShaderStage::FRAGMENT, push);
+        cmd->bindBuffer(1, 1, lightGrid, true);
+        cmd->bindImage(1, 2, engine.device().getImageView(depthBuffer), engine.device().defaultShadowSampler());
+        cmd->bindPipeline();
+        cmd->bindDescriptors();
+        cmd->draw(3, 1, 0, 0, false);
+        cmd->bindBlendState({ false });
+    });
+}
+
 void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     auto& normalsPass = graph.addPass("debug_normals");
 
-    normalsPass.addColourRead("backbuffer-debug");
     normalsPass.addColourWrite("backbuffer");
-    normalsPass.addDepthRead("depth");
+    normalsPass.addDepthWrite("depth");
 
     normalsPass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
     normalsPass.addIndirectRead("drawCommands");
@@ -28,7 +63,7 @@ void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene
 
         cmd->bindBindings(renderable.bindings);
         cmd->bindAttributes(renderable.attributes);
-        cmd->bindDepthState({ true, false, cala::backend::CompareOp::LESS_EQUAL });
+        cmd->bindDepthState({ true, true, cala::backend::CompareOp::LESS_EQUAL });
         cmd->bindRasterState({});
         cmd->bindVertexBuffer(0, engine.vertexBuffer());
         cmd->bindIndexBuffer(engine.indexBuffer());
@@ -51,9 +86,8 @@ void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene
 void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     auto& debugRoughness = graph.addPass("debug_roughness");
 
-    debugRoughness.addColourRead("backbuffer-debug");
     debugRoughness.addColourWrite("backbuffer");
-    debugRoughness.addDepthRead("depth");
+    debugRoughness.addDepthWrite("depth");
 
     debugRoughness.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
     debugRoughness.addIndirectRead("drawCommands");
@@ -72,7 +106,7 @@ void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
 
         cmd->bindBindings(renderable.bindings);
         cmd->bindAttributes(renderable.attributes);
-        cmd->bindDepthState({ true, false, cala::backend::CompareOp::LESS_EQUAL });
+        cmd->bindDepthState({ true, true, cala::backend::CompareOp::LESS_EQUAL });
         cmd->bindRasterState({});
         cmd->bindVertexBuffer(0, engine.vertexBuffer());
         cmd->bindIndexBuffer(engine.indexBuffer());
@@ -95,9 +129,8 @@ void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
 void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     auto& debugMetallic = graph.addPass("debug_metallic");
 
-    debugMetallic.addColourRead("backbuffer-debug");
     debugMetallic.addColourWrite("backbuffer");
-    debugMetallic.addDepthRead("depth");
+    debugMetallic.addDepthWrite("depth");
 
     debugMetallic.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
     debugMetallic.addIndirectRead("drawCommands");
@@ -116,7 +149,7 @@ void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sce
 
         cmd->bindBindings(renderable.bindings);
         cmd->bindAttributes(renderable.attributes);
-        cmd->bindDepthState({ true, false, cala::backend::CompareOp::LESS_EQUAL });
+        cmd->bindDepthState({ true, true, cala::backend::CompareOp::LESS_EQUAL });
         cmd->bindRasterState({});
         cmd->bindVertexBuffer(0, engine.vertexBuffer());
         cmd->bindIndexBuffer(engine.indexBuffer());
@@ -139,9 +172,8 @@ void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sce
 void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     auto& debugUnlit = graph.addPass("debug_unlit");
 
-    debugUnlit.addColourRead("backbuffer-debug");
     debugUnlit.addColourWrite("backbuffer");
-    debugUnlit.addDepthRead("depth");
+    debugUnlit.addDepthWrite("depth");
 
     debugUnlit.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
     debugUnlit.addIndirectRead("drawCommands");
@@ -160,7 +192,7 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene&
 
         cmd->bindBindings(renderable.bindings);
         cmd->bindAttributes(renderable.attributes);
-        cmd->bindDepthState({ true, false, cala::backend::CompareOp::LESS_EQUAL });
+        cmd->bindDepthState({ true, true, cala::backend::CompareOp::LESS_EQUAL });
         cmd->bindRasterState({});
         cmd->bindVertexBuffer(0, engine.vertexBuffer());
         cmd->bindIndexBuffer(engine.indexBuffer());
@@ -183,9 +215,8 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene&
 void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     auto& debugWorldPos = graph.addPass("debug_worldPos");
 
-    debugWorldPos.addColourRead("backbuffer-debug");
     debugWorldPos.addColourWrite("backbuffer");
-    debugWorldPos.addDepthRead("depth");
+    debugWorldPos.addDepthWrite("depth");
 
     debugWorldPos.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
     debugWorldPos.addIndirectRead("drawCommands");
@@ -204,7 +235,7 @@ void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala
 
         cmd->bindBindings(renderable.bindings);
         cmd->bindAttributes(renderable.attributes);
-        cmd->bindDepthState({ true, false, cala::backend::CompareOp::LESS_EQUAL });
+        cmd->bindDepthState({ true, true, cala::backend::CompareOp::LESS_EQUAL });
         cmd->bindRasterState({});
 //            cmd->bindPipeline();
         cmd->bindVertexBuffer(0, engine.vertexBuffer());
@@ -304,5 +335,36 @@ void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::
             u32 countOffset = material * (sizeof(u32) * 2);
             cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
         }
+    });
+}
+
+void debugVxgi(cala::RenderGraph& graph, cala::Engine& engine, cala::Renderer::Settings settings) {
+    auto& voxelVisualisePass = graph.addPass("voxelVisualisation", RenderPass::Type::COMPUTE);
+
+    voxelVisualisePass.addStorageImageWrite("backbuffer", backend::PipelineStage::COMPUTE_SHADER);
+    voxelVisualisePass.addStorageImageRead("voxelGrid", backend::PipelineStage::COMPUTE_SHADER);
+    voxelVisualisePass.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
+    voxelVisualisePass.addStorageBufferRead("camera", backend::PipelineStage::COMPUTE_SHADER);
+
+    voxelVisualisePass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+        auto global = graph.getBuffer("global");
+        auto voxelGrid = graph.getImage("voxelGrid");
+        auto backbuffer = graph.getImage("backbuffer");
+        cmd->clearDescriptors();
+        cmd->bindProgram(engine.getProgram(Engine::ProgramType::VOXEL_VISUALISE));
+        cmd->bindBindings({});
+        cmd->bindAttributes({});
+        cmd->bindBuffer(1, 0, global);
+        cmd->bindImage(2, 0, engine.device().getImageView(backbuffer), engine.device().defaultSampler(), true);
+        struct VoxelPush {
+            ende::math::Mat4f voxelOrthographic;
+            i32 voxelGridIndex;
+        } push;
+        push.voxelGridIndex = voxelGrid.index();
+        push.voxelOrthographic = ende::math::orthographic<f32>(settings.voxelBounds.first.x(), settings.voxelBounds.second.x(), settings.voxelBounds.first.y(), settings.voxelBounds.second.y(), settings.voxelBounds.first.z(), settings.voxelBounds.second.z());
+        cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
+        cmd->bindPipeline();
+        cmd->bindDescriptors();
+        cmd->dispatchCompute(std::ceil(backbuffer->width() / 32.f), std::ceil(backbuffer->height() / 32.f), 1);
     });
 }

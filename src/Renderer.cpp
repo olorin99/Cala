@@ -160,7 +160,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     _globalDataBuffer[_engine->device().frameIndex()]->data(std::span<RendererGlobal>(&_globalData, 1));
 
-    bool debugViewEnabled = _renderSettings.debugNormals || _renderSettings.debugRoughness || _renderSettings.debugMetallic || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugVxgi;
+    bool overlayDebug = _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugClusters;
+    bool fullscreenDebug = _renderSettings.debugNormals || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugMetallic || _renderSettings.debugRoughness || _renderSettings.debugVxgi;
+    bool debugViewEnabled = overlayDebug || fullscreenDebug;
 
     backend::vulkan::CommandHandle cmd = _frameInfo.cmd;
 
@@ -364,37 +366,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     });
 
     if (_renderSettings.debugClusters) {
-        auto& debugClusters = _graph.addPass("debug_clusters");
-
-        debugClusters.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
-        debugClusters.addColourWrite("hdr");
-        debugClusters.addStorageBufferRead("lightGrid", backend::PipelineStage::FRAGMENT_SHADER);
-        debugClusters.addSampledImageRead("depth", backend::PipelineStage::FRAGMENT_SHADER);
-
-        debugClusters.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
-            auto global = graph.getBuffer("global");
-            auto lightGrid = graph.getBuffer("lightGrid");
-            auto depthBuffer = graph.getImage("depth");
-            cmd->clearDescriptors();
-            cmd->bindBuffer(1, 0, global);
-            cmd->bindBindings({});
-            cmd->bindAttributes({});
-            cmd->bindBlendState({ true });
-            cmd->bindProgram(_engine->_clusterDebugProgram);
-            struct ClusterPush {
-                ende::math::Vec<4, u32> tileSizes;
-                ende::math::Vec<2, u32> screenSize;
-            } push;
-            push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
-            push.screenSize = { _swapchain->extent().width, _swapchain->extent().height };
-            cmd->pushConstants(backend::ShaderStage::FRAGMENT, push);
-            cmd->bindBuffer(1, 1, lightGrid, true);
-            cmd->bindImage(1, 2, _engine->device().getImageView(depthBuffer), _engine->device().defaultShadowSampler());
-            cmd->bindPipeline();
-            cmd->bindDescriptors();
-            cmd->draw(3, 1, 0, 0, false);
-            cmd->bindBlendState({ false });
-        });
+        debugClusters(_graph, *_engine, *_swapchain);
     }
 
     if (_renderSettings.debugNormals) {
@@ -423,6 +395,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     if (_renderSettings.debugNormalLines) {
         debugNormalLinesPass(_graph, *_engine, scene, _renderSettings);
+    }
+
+    if (_renderSettings.debugVxgi) {
+        debugVxgi(_graph, *_engine, _renderSettings);
     }
 
 
@@ -695,46 +671,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 });
             }
         }
-        if (_renderSettings.debugVxgi) {
-            ImageResource colourAttachment1;
-            colourAttachment1.format = backend::Format::RGBA32_SFLOAT;
-            _graph.addImageResource("voxelVisualised", colourAttachment1);
-
-
-            auto& voxelVisualisePass = _graph.addPass("voxelVisualisation", RenderPass::Type::COMPUTE);
-
-//        voxelVisualisePass.addColourWrite()("voxelVisualised");
-//        voxelVisualisePass.addColourWrite()("backbuffer");
-
-//        voxelVisualisePass.addStorageImageWrite("voxelVisualised", backend::PipelineStage::COMPUTE_SHADER);
-            voxelVisualisePass.addStorageImageWrite("backbuffer", backend::PipelineStage::COMPUTE_SHADER);
-            voxelVisualisePass.addStorageImageRead("voxelGrid", backend::PipelineStage::COMPUTE_SHADER);
-            voxelVisualisePass.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
-            voxelVisualisePass.addStorageBufferRead("camera", backend::PipelineStage::COMPUTE_SHADER);
-
-            voxelVisualisePass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
-                auto global = graph.getBuffer("global");
-                auto voxelGrid = graph.getImage("voxelGrid");
-                auto voxelVisualised = graph.getImage("backbuffer");
-//            auto voxelVisualised = graph.getImage()("voxelVisualised");
-                cmd->clearDescriptors();
-                cmd->bindProgram(_engine->getProgram(Engine::ProgramType::VOXEL_VISUALISE));
-                cmd->bindBindings({});
-                cmd->bindAttributes({});
-                cmd->bindBuffer(1, 0, global);
-                cmd->bindImage(2, 0, _engine->device().getImageView(voxelVisualised), _engine->device().defaultSampler(), true);
-                struct VoxelPush {
-                    ende::math::Mat4f voxelOrthographic;
-                    i32 voxelGridIndex;
-                } push;
-                push.voxelGridIndex = voxelGrid.index();
-                push.voxelOrthographic = ende::math::orthographic<f32>(_renderSettings.voxelBounds.first.x(), _renderSettings.voxelBounds.second.x(), _renderSettings.voxelBounds.first.y(), _renderSettings.voxelBounds.second.y(), _renderSettings.voxelBounds.first.z(), _renderSettings.voxelBounds.second.z());
-                cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
-                cmd->bindPipeline();
-                cmd->bindDescriptors();
-                cmd->dispatchCompute(std::ceil(voxelVisualised->width() / 32.f), std::ceil(voxelVisualised->height() / 32.f), 1);
-            });
-        }
     }
 
 
@@ -803,7 +739,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         });
     }
 
-    if (_renderSettings.forward) {
+    if (_renderSettings.forward && !fullscreenDebug) {
         auto& forwardPass = _graph.addPass("forward");
         if (_renderSettings.tonemap)
             forwardPass.addColourWrite("hdr");
@@ -884,11 +820,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         });
     }
 
-    if (_renderSettings.tonemap) {
+    if (_renderSettings.tonemap && !fullscreenDebug) {
         auto& tonemapPass = _graph.addPass("tonemap", RenderPass::Type::COMPUTE);
 
         tonemapPass.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
-        if (debugViewEnabled)
+        if (overlayDebug)
             tonemapPass.addStorageImageWrite("backbuffer-debug", backend::PipelineStage::COMPUTE_SHADER);
         else
             tonemapPass.addStorageImageWrite("backbuffer", backend::PipelineStage::COMPUTE_SHADER);
@@ -912,7 +848,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         });
     }
 
-    if (_renderSettings.skybox && scene._skyLightMap) {
+    if (_renderSettings.skybox && scene._skyLightMap && !fullscreenDebug) {
         auto& skyboxPass = _graph.addPass("skybox");
         if (scene._hdrSkyLight && _renderSettings.tonemap)
             skyboxPass.addColourWrite("hdr");
