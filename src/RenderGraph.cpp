@@ -142,7 +142,7 @@ void cala::RenderPass::addSampledImageRead(const char *label, backend::PipelineS
 
 void cala::RenderPass::addBlitWrite(const char *label) {
     if (auto resource = writes(label, backend::Access::TRANSFER_WRITE,
-                               backend::PipelineStage::TRANSFER,
+                               backend::PipelineStage::BLIT,
                                backend::ImageLayout::TRANSFER_DST); resource) {
         auto imageResource = dynamic_cast<ImageResource*>(resource);
         imageResource->usage = imageResource->usage | backend::ImageUsage::TRANSFER_DST;
@@ -151,8 +151,26 @@ void cala::RenderPass::addBlitWrite(const char *label) {
 
 void cala::RenderPass::addBlitRead(const char *label) {
     if (auto resource = reads(label, backend::Access::TRANSFER_READ,
-                             backend::PipelineStage::TRANSFER,
+                             backend::PipelineStage::BLIT,
                              backend::ImageLayout::TRANSFER_SRC); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | backend::ImageUsage::TRANSFER_SRC;
+    }
+}
+
+void cala::RenderPass::addTransferWrite(const char *label) {
+    if (auto resource = writes(label, backend::Access::TRANSFER_WRITE,
+                               backend::PipelineStage::TRANSFER,
+                               backend::ImageLayout::TRANSFER_DST); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | backend::ImageUsage::TRANSFER_DST;
+    }
+}
+
+void cala::RenderPass::addTransferRead(const char *label) {
+    if (auto resource = reads(label, backend::Access::TRANSFER_READ,
+                              backend::PipelineStage::TRANSFER,
+                              backend::ImageLayout::TRANSFER_SRC); resource) {
         auto imageResource = dynamic_cast<ImageResource*>(resource);
         imageResource->usage = imageResource->usage | backend::ImageUsage::TRANSFER_SRC;
     }
@@ -219,7 +237,8 @@ void cala::RenderGraph::addImageResource(const char *label, cala::ImageResource 
             _images[index] = handle;
     } else {
         _resources.push_back(std::make_unique<ImageResource>(std::move(resource)));
-        _images.resize(_resources.size());
+        if (_images.size() < _resources.size())
+            _images.resize(_resources.size());
         u32 index = _resources.size() - 1;
         if (handle)
             _images[index] = handle;
@@ -242,7 +261,8 @@ void cala::RenderGraph::addBufferResource(const char *label, cala::BufferResourc
             _buffers[index] = handle;
     } else {
         _resources.push_back(std::make_unique<BufferResource>(std::move(resource)));
-        _buffers.resize(_resources.size());
+        if (_buffers.size() < _resources.size())
+            _buffers.resize(_resources.size());
         u32 index = _resources.size() - 1;
         if (handle)
             _buffers[index] = handle;
@@ -387,15 +407,17 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandHandle cmd) {
 }
 
 void cala::RenderGraph::reset() {
-    _resources.clear();
+//    _resources.clear();
     _passes.clear();
     _aliases.clear();
 }
 
 
 void cala::RenderGraph::buildResources() {
-    _images.resize(_resources.size());
-    _buffers.resize(_resources.size());
+    if (_images.size() < _resources.size())
+        _images.resize(_resources.size());
+    if (_images.size() < _resources.size())
+        _buffers.resize(_resources.size());
 
     for (u32 i = 0; i < _resources.size(); i++) {
         auto& resource = _resources[i];
@@ -483,13 +505,14 @@ void cala::RenderGraph::buildBarriers() {
     }
 
     // find first access of resources
-    for (auto [label, index] : _labelToIndex) {
-        auto [accessPassIndex, accessIndex, nextAccess] = findNextAccess(-1, index);
+    for (u32 i = 0; i < _resources.size(); i++) {
+        auto [accessPassIndex, accessIndex, nextAccess] = findNextAccess(-1, i);
         if (accessPassIndex < 0)
             continue;
+        auto& resource = _resources[i];
         auto& accessPass = _orderedPasses[accessPassIndex];
         accessPass->_barriers.push_back({
-            label,
+            resource->label,
             accessIndex,
             backend::PipelineStage::TOP,
             nextAccess.stage,

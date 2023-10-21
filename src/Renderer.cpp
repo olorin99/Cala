@@ -595,6 +595,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             voxelGridResource.depth = 100;
             voxelGridResource.matchSwapchain = false;
             _graph.addImageResource("voxelGrid", voxelGridResource);
+            _graph.addAlias("voxelGrid", "voxelGridClear");
 
             ImageResource voxelOutput;
             voxelOutput.format = backend::Format::RGBA32_SFLOAT;
@@ -604,83 +605,95 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             _graph.addImageResource("voxelOutput", voxelOutput);
 
 
+            {
+                auto& clearVoxelGridPass = _graph.addPass("clear-voxelGrid", RenderPass::Type::TRANSFER);
 
-            auto& voxelGIPass = _graph.addPass("voxelGI");
+                clearVoxelGridPass.addTransferWrite("voxelGridClear");
 
-            voxelGIPass.setDimensions(voxelGridResource.width, voxelGridResource.height);
+                clearVoxelGridPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+                    auto voxelGrid = graph.getImage("voxelGrid");
+                    cmd->clearImage(voxelGrid);
+                });
+            }
+            {
+                auto& voxelGIPass = _graph.addPass("voxelGI");
+
+                voxelGIPass.setDimensions(voxelGridResource.width, voxelGridResource.height);
 
 //        voxelGIPass.addStorageImageRead("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER);
-            voxelGIPass.addStorageImageWrite("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER);
-            voxelGIPass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
-            voxelGIPass.addIndirectRead("drawCommands");
-            voxelGIPass.addVertexRead("vertexBuffer");
-            voxelGIPass.addIndexRead("indexBuffer");
+                voxelGIPass.addStorageImageRead("voxelGridClear", backend::PipelineStage::FRAGMENT_SHADER);
+                voxelGIPass.addStorageImageWrite("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER);
+                voxelGIPass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+                voxelGIPass.addIndirectRead("drawCommands");
+                voxelGIPass.addVertexRead("vertexBuffer");
+                voxelGIPass.addIndexRead("indexBuffer");
 
-            voxelGIPass.addStorageBufferRead("meshData", backend::PipelineStage::FRAGMENT_SHADER);
-            voxelGIPass.addStorageBufferRead("lightIndices", backend::PipelineStage::FRAGMENT_SHADER);
-            voxelGIPass.addStorageBufferRead("lightGrid", backend::PipelineStage::FRAGMENT_SHADER);
-            voxelGIPass.addStorageBufferRead("lights", backend::PipelineStage::FRAGMENT_SHADER);
-            voxelGIPass.addIndirectRead("materialCounts");
-            voxelGIPass.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+                voxelGIPass.addStorageBufferRead("meshData", backend::PipelineStage::FRAGMENT_SHADER);
+                voxelGIPass.addStorageBufferRead("lightIndices", backend::PipelineStage::FRAGMENT_SHADER);
+                voxelGIPass.addStorageBufferRead("lightGrid", backend::PipelineStage::FRAGMENT_SHADER);
+                voxelGIPass.addStorageBufferRead("lights", backend::PipelineStage::FRAGMENT_SHADER);
+                voxelGIPass.addIndirectRead("materialCounts");
+                voxelGIPass.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
-            voxelGIPass.addColourWrite("voxelOutput");
+                voxelGIPass.addColourWrite("voxelOutput");
 
-            voxelGIPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
-                auto global = graph.getBuffer("global");
-                auto drawCommands = graph.getBuffer("drawCommands");
-                auto lightGrid = graph.getBuffer("lightGrid");
-                auto lightIndices = graph.getBuffer("lightIndices");
-                auto materialCounts = graph.getBuffer("materialCounts");
-                auto voxelGrid = graph.getImage("voxelGrid");
-                cmd->clearDescriptors();
-                if (scene._renderables.empty())
-                    return;
+                voxelGIPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+                    auto global = graph.getBuffer("global");
+                    auto drawCommands = graph.getBuffer("drawCommands");
+                    auto lightGrid = graph.getBuffer("lightGrid");
+                    auto lightIndices = graph.getBuffer("lightIndices");
+                    auto materialCounts = graph.getBuffer("materialCounts");
+                    auto voxelGrid = graph.getImage("voxelGrid");
+                    cmd->clearDescriptors();
+                    if (scene._renderables.empty())
+                        return;
 
-                cmd->bindBuffer(1, 0, global);
+                    cmd->bindBuffer(1, 0, global);
 
-                auto& renderable = scene._renderables[0].second.first;
+                    auto& renderable = scene._renderables[0].second.first;
 
-                cmd->bindBindings(renderable.bindings);
-                cmd->bindAttributes(renderable.attributes);
+                    cmd->bindBindings(renderable.bindings);
+                    cmd->bindAttributes(renderable.attributes);
 
-                for (u32 i = 0; i < scene._materialCounts.size(); i++) {
-                    Material* material = &_engine->_materials[i];
-                    if (!material)
-                        continue;
-                    cmd->bindProgram(material->getVariant(Material::Variant::VOXELGI));
-                    cmd->bindRasterState(material->getRasterState());
-                    cmd->bindDepthState({ false });
-                    cmd->bindBuffer(2, 0, material->buffer(), true);
+                    for (u32 i = 0; i < scene._materialCounts.size(); i++) {
+                        Material* material = &_engine->_materials[i];
+                        if (!material)
+                            continue;
+                        cmd->bindProgram(material->getVariant(Material::Variant::VOXELGI));
+                        cmd->bindRasterState(material->getRasterState());
+                        cmd->bindDepthState({ false });
+                        cmd->bindBuffer(2, 0, material->buffer(), true);
 
-                    struct VoxelizePush {
-                        ende::math::Mat4f orthographic;
-                        ende::math::Vec<4, u32> tileSizes;
-                        ende::math::Vec<2, u32> screenSize;
-                        i32 lightGridIndex;
-                        i32 lightIndicesIndex;
-                        i32 voxelGridIndex;
-                    } push;
-                    push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
-                    push.screenSize = { _swapchain->extent().width, _swapchain->extent().height };
-                    push.lightGridIndex = lightGrid.index();
-                    push.lightIndicesIndex = lightIndices.index();
-                    push.voxelGridIndex = voxelGrid.index();
+                        struct VoxelizePush {
+                            ende::math::Mat4f orthographic;
+                            ende::math::Vec<4, u32> tileSizes;
+                            ende::math::Vec<2, u32> screenSize;
+                            i32 lightGridIndex;
+                            i32 lightIndicesIndex;
+                            i32 voxelGridIndex;
+                        } push;
+                        push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
+                        push.screenSize = { _swapchain->extent().width, _swapchain->extent().height };
+                        push.lightGridIndex = lightGrid.index();
+                        push.lightIndicesIndex = lightIndices.index();
+                        push.voxelGridIndex = voxelGrid.index();
 
-                    push.orthographic = ende::math::orthographic<f32>(_renderSettings.voxelBounds.first.x(), _renderSettings.voxelBounds.second.x(), _renderSettings.voxelBounds.first.y(), _renderSettings.voxelBounds.second.y(), _renderSettings.voxelBounds.first.z(), _renderSettings.voxelBounds.second.z());
+                        push.orthographic = ende::math::orthographic<f32>(_renderSettings.voxelBounds.first.x(), _renderSettings.voxelBounds.second.x(), _renderSettings.voxelBounds.first.y(), _renderSettings.voxelBounds.second.y(), _renderSettings.voxelBounds.first.z(), _renderSettings.voxelBounds.second.z());
 
-                    cmd->pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::FRAGMENT, push);
+                        cmd->pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::FRAGMENT, push);
 
-                    cmd->bindPipeline();
-                    cmd->bindDescriptors();
+                        cmd->bindPipeline();
+                        cmd->bindDescriptors();
 
-                    cmd->bindVertexBuffer(0, _engine->_globalVertexBuffer);
-                    cmd->bindIndexBuffer(_engine->_globalIndexBuffer);
+                        cmd->bindVertexBuffer(0, _engine->_globalVertexBuffer);
+                        cmd->bindIndexBuffer(_engine->_globalIndexBuffer);
 
-                    u32 drawCommandOffset = scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand);
-                    u32 countOffset = i * (sizeof(u32) * 2);
-                    cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
-                }
-            });
+                        u32 drawCommandOffset = scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand);
+                        u32 countOffset = i * (sizeof(u32) * 2);
+                        cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
+                    }
+                });
+            }
         }
         if (_renderSettings.debugVxgi) {
             ImageResource colourAttachment1;
@@ -688,7 +701,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             _graph.addImageResource("voxelVisualised", colourAttachment1);
 
 
-            auto& voxelVisualisePass = _graph.addPass("voxelVisualisation");
+            auto& voxelVisualisePass = _graph.addPass("voxelVisualisation", RenderPass::Type::COMPUTE);
 
 //        voxelVisualisePass.addColourWrite()("voxelVisualised");
 //        voxelVisualisePass.addColourWrite()("backbuffer");
@@ -943,16 +956,16 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     _graph.setBackbufferDimensions(_swapchain->extent().width, _swapchain->extent().height);
 //    _graph.setBackbuffer("backbuffer");
-    _graph.setBackbuffer("swapchain");
+    _graph.setBackbuffer("final-swapchain");
     {
         ImageResource backbufferAttachment;
         backbufferAttachment.format = backend::Format::RGBA8_UNORM;
         backbufferAttachment.matchSwapchain = false;
-        _graph.addImageResource("swapchain", backbufferAttachment);
+        _graph.addImageResource("final-swapchain", backbufferAttachment);
 
         auto& blitPass = _graph.addPass("blit", RenderPass::Type::TRANSFER);
         blitPass.addBlitRead("backbuffer");
-        blitPass.addBlitWrite("swapchain");
+        blitPass.addBlitWrite("final-swapchain");
 
         blitPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
             auto backbuffer = graph.getImage("backbuffer");

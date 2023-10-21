@@ -77,6 +77,10 @@ namespace cala {
 
         void addBlitRead(const char* label);
 
+        void addTransferWrite(const char* label);
+
+        void addTransferRead(const char* label);
+
 //    private:
 
         Resource* reads(const char* label, backend::Access access, backend::PipelineStage stage, backend::ImageLayout layout);
