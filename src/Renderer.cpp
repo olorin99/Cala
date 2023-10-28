@@ -573,9 +573,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             voxelGridResource.width = 100;
             voxelGridResource.height = 100;
             voxelGridResource.depth = 100;
+            voxelGridResource.mipLevels = 5;
             voxelGridResource.matchSwapchain = false;
             _graph.addImageResource("voxelGrid", voxelGridResource);
             _graph.addAlias("voxelGrid", "voxelGridClear");
+            _graph.addAlias("voxelGrid", "voxelGridMipMapped");
 
             ImageResource voxelOutput;
             voxelOutput.format = backend::Format::RGBA32_SFLOAT;
@@ -596,11 +598,20 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 });
             }
             {
+                auto& voxelMipMapPass = _graph.addPass("voxel-mipmap", RenderPass::Type::TRANSFER);
+                voxelMipMapPass.addTransferWrite("voxelGridMipMapped");
+                voxelMipMapPass.addTransferRead("voxelGrid");
+
+                voxelMipMapPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+                    auto voxelGrid = graph.getImage("voxelGrid");
+                    voxelGrid->generateMips(cmd);
+                });
+            }
+            {
                 auto& voxelGIPass = _graph.addPass("voxelGI");
 
                 voxelGIPass.setDimensions(voxelGridResource.width, voxelGridResource.height);
 
-//        voxelGIPass.addStorageImageRead("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER);
                 voxelGIPass.addStorageImageRead("voxelGridClear", backend::PipelineStage::FRAGMENT_SHADER);
                 voxelGIPass.addStorageImageWrite("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER);
                 voxelGIPass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
@@ -767,7 +778,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         forwardPass.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
         if (_renderSettings.vxgi)
-            forwardPass.addStorageImageRead("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER);
+            forwardPass.addStorageImageRead("voxelGridMipMapped", backend::PipelineStage::FRAGMENT_SHADER);
 //        forwardPass.addStorageImageRead("voxelVisualised", backend::PipelineStage::FRAGMENT_SHADER);
 
         forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
