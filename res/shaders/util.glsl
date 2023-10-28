@@ -4,7 +4,7 @@ float linearDepth(float depth, float near, float far) {
 }
 
 uint getTileIndex(vec2 xy, float depth, float near, float far) {
-    uvec2 tileSize = screenSize / tileSizes.xy;
+    uvec2 tileSize = globalData.swapchainSize / tileSizes.xy;
     float scale = 24.0 / log2(far / near);
     float bias = -(24.0 * log2(near) / log2(far / near));
     uint zTile = uint(max(log2(linearDepth(depth, near, far)) * scale + bias, 0.0));

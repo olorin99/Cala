@@ -6,6 +6,7 @@ struct GlobalData {
     uint time;
     uint gpuCulling;
     uint maxDrawCount;
+    uvec2 swapchainSize;
     int transformsBufferIndex;
     int meshBufferIndex;
     int materialBufferIndex;

@@ -21,8 +21,8 @@ layout (set = 0, binding = 3) uniform writeonly image3D voxelGrid[];
 
 layout (push_constant) uniform PushData {
     mat4 orthographic;
+    uvec4 voxelGridSize;
     uvec4 tileSizes;
-    uvec2 screenSize;
     int lightGridIndex;
     int lightIndicesIndex;
     int voxelGridIndex;

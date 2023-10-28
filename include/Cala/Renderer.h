@@ -97,6 +97,7 @@ namespace cala {
             u32 time = 0;
             u32 gpuCulling = 1;
             u32 maxDrawCount = 0;
+            ende::math::Vec<2, u32> swapchainSize = {0, 0};
             i32 tranformsBufferIndex = -1;
             i32 meshBufferIndex = -1;
             i32 materialBufferIndex = -1;

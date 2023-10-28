@@ -21,8 +21,8 @@ layout (location = 0) out VsOut {
 
 layout (push_constant) uniform PushData {
     mat4 orthographic;
+    uvec4 voxelGridSize;
     uvec4 tileSizes;
-    uvec2 screenSize;
     int lightGridIndex;
     int lightIndicesIndex;
     int voxelGridIndex;

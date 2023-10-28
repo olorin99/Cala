@@ -122,6 +122,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     _globalData.maxDrawCount = scene._renderables.size();
     _globalData.gpuCulling = _renderSettings.gpuCulling;
+    _globalData.swapchainSize = { _swapchain->extent().width, _swapchain->extent().height };
 
     _globalData.tranformsBufferIndex = scene._modelBuffer[_engine->device().frameIndex()].index();
     _globalData.meshBufferIndex = scene._meshDataBuffer[_engine->device().frameIndex()].index();
@@ -645,21 +646,21 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                         struct VoxelizePush {
                             ende::math::Mat4f orthographic;
+                            ende::math::Vec<4, u32> voxelGridSize;
                             ende::math::Vec<4, u32> tileSizes;
-                            ende::math::Vec<2, u32> screenSize;
                             i32 lightGridIndex;
                             i32 lightIndicesIndex;
                             i32 voxelGridIndex;
                         } push;
-                        push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
-                        push.screenSize = { _swapchain->extent().width, _swapchain->extent().height };
+                        push.voxelGridSize = { voxelGrid->width(), voxelGrid->height(), voxelGrid->depth(), 0 };
+                        push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };;
                         push.lightGridIndex = lightGrid.index();
                         push.lightIndicesIndex = lightIndices.index();
                         push.voxelGridIndex = voxelGrid.index();
 
                         push.orthographic = ende::math::orthographic<f32>(_renderSettings.voxelBounds.first.x(), _renderSettings.voxelBounds.second.x(), _renderSettings.voxelBounds.first.y(), _renderSettings.voxelBounds.second.y(), _renderSettings.voxelBounds.first.z(), _renderSettings.voxelBounds.second.z());
 
-                        cmd->pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::FRAGMENT, push);
+                        cmd->pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::GEOMETRY | backend::ShaderStage::FRAGMENT, push);
 
                         cmd->bindPipeline();
                         cmd->bindDescriptors();
