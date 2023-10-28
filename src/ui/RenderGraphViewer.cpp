@@ -3,8 +3,12 @@
 
 cala::ui::RenderGraphViewer::RenderGraphViewer(cala::RenderGraph *graph)
     : _graph(graph),
-    _context(ax::NodeEditor::CreateEditor())
-{}
+    _config(),
+    _context(nullptr)
+{
+    _config.CanvasSizeMode = ax::NodeEditor::CanvasSizeMode::CenterOnly;
+    _context = ax::NodeEditor::CreateEditor(&_config);
+}
 
 void cala::ui::RenderGraphViewer::render() {
     tsl::robin_map<const char*, std::vector<u32>> inputs;
@@ -29,7 +33,7 @@ void cala::ui::RenderGraphViewer::render() {
 
         u32 nodeID = id;
 
-        ax::NodeEditor::SetNodePosition(id, ImVec2(x, y));
+//        ax::NodeEditor::SetNodePosition(id, ImVec2(x, y));
         ax::NodeEditor::BeginNode(id++);
         ImGui::Text("%s", pass->_label);
 
@@ -59,39 +63,36 @@ void cala::ui::RenderGraphViewer::render() {
         y += 50;
     }
 
+    auto findNextAccess = [&](i32 startIndex, u32 resource) -> std::tuple<i32, i32, RenderPass::ResourceAccess> {
+        for (i32 passIndex = startIndex + 1; passIndex < _graph->_orderedPasses.size(); passIndex++) {
+            auto& pass = _graph->_orderedPasses[passIndex];
+            for (i32 outputIndex = 0; outputIndex < pass->_outputs.size(); outputIndex++) {
+                if (pass->_outputs[outputIndex].index == resource)
+                    return { passIndex, outputIndex, pass->_outputs[outputIndex] };
+            }
+            for (i32 inputIndex = 0; inputIndex < pass->_inputs.size(); inputIndex++) {
+                if (pass->_inputs[inputIndex].index == resource)
+                    return { passIndex, inputIndex, pass->_inputs[inputIndex] };
+            }
+        }
+        return { -1, -1, {} };
+    };
+
     for (i32 i = 0; i < (i32)_graph->_orderedPasses.size() - 1; i++) {
         auto& pass = _graph->_orderedPasses[i];
         for (auto& output : pass->_outputs) {
             i32 outputID = ids[i][output.label];
 
-            for (i32 j = i; j < _graph->_orderedPasses.size(); j++) {
-                auto& nextPass = _graph->_orderedPasses[j];
-                for (auto& input : nextPass->_inputs) {
-                    if (strcmp(output.label, input.label) == 0) {
-                        i32 inputID = ids[j][input.label];
-                        ax::NodeEditor::Link(id++, outputID, inputID);
-                    }
-                }
-                for (auto& output2 : nextPass->_outputs) {
-                    if (strcmp(output.label, output2.label) == 0) {
-                        i32 inputID = ids[j][output2.label];
-                        ax::NodeEditor::Link(id++, outputID, inputID);
-                    }
-                }
-            }
+            auto [accessPassIndex, accessIndex, nextAccess] = findNextAccess(i, output.index);
+            if (accessPassIndex < 0)
+                continue;
+
+            auto& accessPass = _graph->_orderedPasses[accessPassIndex];
+            i32 inputId = ids[accessPassIndex][nextAccess.label];
+
+            ax::NodeEditor::Link(id++, outputID, inputId);
 
         }
-
-//            for (u32 i = 0; i < renderer._graph._orderedPasses.size(); i++) {
-//                auto& pass = renderer._graph._orderedPasses[i];
-//                for (auto& output : pass->_outputs) {
-//                    i32 outputID = ids[i][output];
-//                    auto& in = inputs[output];
-//                    for (auto& input : in) {
-//                        i32 inputID = ids[input][output];
-//                        ax::NodeEditor::Link(id++, outputID, inputID);
-//                    }
-//                }
 
     }
 

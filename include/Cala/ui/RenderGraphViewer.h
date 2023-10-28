@@ -17,6 +17,7 @@ namespace cala::ui {
     private:
 
         RenderGraph* _graph;
+        ax::NodeEditor::Config _config;
         ax::NodeEditor::EditorContext* _context;
 
 
