@@ -339,14 +339,14 @@ void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::
 }
 
 void debugVxgi(cala::RenderGraph& graph, cala::Engine& engine, cala::Renderer::Settings settings) {
-    auto& voxelVisualisePass = graph.addPass("voxelVisualisation", RenderPass::Type::COMPUTE);
+    auto& debugVoxel = graph.addPass("voxelVisualisation", RenderPass::Type::COMPUTE);
 
-    voxelVisualisePass.addStorageImageWrite("backbuffer", backend::PipelineStage::COMPUTE_SHADER);
-    voxelVisualisePass.addStorageImageRead("voxelGrid", backend::PipelineStage::COMPUTE_SHADER);
-    voxelVisualisePass.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
-    voxelVisualisePass.addStorageBufferRead("camera", backend::PipelineStage::COMPUTE_SHADER);
+    debugVoxel.addStorageImageWrite("backbuffer", backend::PipelineStage::COMPUTE_SHADER);
+    debugVoxel.addStorageImageRead("voxelGrid", backend::PipelineStage::COMPUTE_SHADER);
+    debugVoxel.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
+    debugVoxel.addStorageBufferRead("camera", backend::PipelineStage::COMPUTE_SHADER);
 
-    voxelVisualisePass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+    debugVoxel.setExecuteFunction([settings, &engine](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
         auto global = graph.getBuffer("global");
         auto voxelGrid = graph.getImage("voxelGrid");
         auto backbuffer = graph.getImage("backbuffer");
