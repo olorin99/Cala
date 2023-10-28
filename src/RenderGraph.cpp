@@ -381,17 +381,35 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandHandle cmd) {
         timer.second.start(cmd);
         cmd->pushDebugLabel(pass->_label, pass->_debugColour);
 
-        for (auto& barrier : pass->_barriers) {
+        u32 imageBarrierCount = 0;
+        backend::vulkan::Image::Barrier imageBarriers[pass->_barriers.size()];
+        u32 bufferBarrierCount = 0;
+        backend::vulkan::Buffer::Barrier bufferBarriers[pass->_barriers.size()];
+
+        for (u32 barrierIndex = 0; barrierIndex < pass->_barriers.size(); barrierIndex++) {
+            auto& barrier = pass->_barriers[barrierIndex];
             if (barrier.dstLayout != backend::ImageLayout::UNDEFINED) {
                 auto image = getImage(barrier.label);
-                auto b = image->barrier(barrier.srcStage, barrier.dstStage, barrier.srcAccess, barrier.dstAccess, barrier.srcLayout, barrier.dstLayout);
-                cmd->pipelineBarrier({ &b, 1 });
+                imageBarriers[imageBarrierCount++] = image->barrier(barrier.srcStage, barrier.dstStage, barrier.srcAccess, barrier.dstAccess, barrier.srcLayout, barrier.dstLayout);
             } else {
                 auto buffer = getBuffer(barrier.label);
-                auto b = buffer->barrier(barrier.srcStage, barrier.dstStage, barrier.srcAccess, barrier.dstAccess);
-                cmd->pipelineBarrier({ &b, 1 });
+                bufferBarriers[bufferBarrierCount++] = buffer->barrier(barrier.srcStage, barrier.dstStage, barrier.srcAccess, barrier.dstAccess);
             }
         }
+        cmd->pipelineBarrier({ imageBarriers, imageBarrierCount });
+        cmd->pipelineBarrier({ bufferBarriers, bufferBarrierCount });
+
+//        for (auto& barrier : pass->_barriers) {
+//            if (barrier.dstLayout != backend::ImageLayout::UNDEFINED) {
+//                auto image = getImage(barrier.label);
+//                auto b = image->barrier(barrier.srcStage, barrier.dstStage, barrier.srcAccess, barrier.dstAccess, barrier.srcLayout, barrier.dstLayout);
+//                cmd->pipelineBarrier({ &b, 1 });
+//            } else {
+//                auto buffer = getBuffer(barrier.label);
+//                auto b = buffer->barrier(barrier.srcStage, barrier.dstStage, barrier.srcAccess, barrier.dstAccess);
+//                cmd->pipelineBarrier({ &b, 1 });
+//            }
+//        }
 
         if (pass->_type == RenderPass::Type::GRAPHICS && pass->_framebuffer)
             cmd->begin(*pass->_framebuffer);
@@ -434,7 +452,8 @@ void cala::RenderGraph::buildResources() {
                     imageResource->height,
                     imageResource->depth,
                     imageResource->format,
-                    1, 1,
+                    imageResource->mipLevels,
+                    1,
                     imageResource->usage
                 });
                 _engine->device().context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)_images[i]->image(), imageResource->label);
@@ -464,6 +483,22 @@ void cala::RenderGraph::buildBarriers() {
         return { -1, -1, {} };
     };
 
+    auto readsResource = [&](RenderPass& pass, u32 resource) -> bool {
+        for (auto& access : pass._inputs) {
+            if (access.index == resource)
+                return true;
+        }
+        return false;
+    };
+
+    auto writesResource = [&](RenderPass& pass, u32 resource) -> bool {
+        for (auto& access : pass._outputs) {
+            if (access.index == resource)
+                return true;
+        }
+        return false;
+    };
+
     // for each pass for each input/output find next pass that access that resource and add barrier to next pass
     for (i32 passIndex = 0; passIndex < _orderedPasses.size(); passIndex++) {
         auto& pass = _orderedPasses[passIndex];
@@ -487,6 +522,9 @@ void cala::RenderGraph::buildBarriers() {
         }
         for (i32 inputIndex = 0; inputIndex < pass->_inputs.size(); inputIndex++) {
             auto& currentAccess = pass->_inputs[inputIndex];
+            if (writesResource(*pass, currentAccess.index))
+                continue;
+
             auto [accessPassIndex, accessIndex, nextAccess] = findNextAccess(passIndex, currentAccess.index);
             if (accessPassIndex < 0)
                 continue;
