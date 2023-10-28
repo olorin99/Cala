@@ -29,4 +29,13 @@ layout (set = 0, binding = 1) readonly buffer LightData {
     Light lights[];
 } bindlessBuffersLights[];
 
+layout (set = 0, binding = 1) readonly buffer LightCount {
+    uint directLightCount;
+    uint pointLightCount;
+} bindlessBuffersLightCount[];
+
+uint getTotalLightCount() {
+    return bindlessBuffersLightCount[globalData.lightCountBufferIndex].directLightCount + bindlessBuffersLightCount[globalData.lightCountBufferIndex].pointLightCount;
+}
+
 #endif

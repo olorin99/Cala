@@ -126,6 +126,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _globalData.tranformsBufferIndex = scene._modelBuffer[_engine->device().frameIndex()].index();
     _globalData.meshBufferIndex = scene._meshDataBuffer[_engine->device().frameIndex()].index();
     _globalData.lightBufferIndex = scene._lightBuffer[_engine->device().frameIndex()].index();
+    _globalData.lightCountBufferIndex = scene._lightCountBuffer[_engine->device().frameIndex()].index();
     _globalData.cameraBufferIndex = _cameraBuffer[_engine->device().frameIndex()].index();
 
     if (_renderSettings.ibl) {
@@ -163,6 +164,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     bool overlayDebug = _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugClusters;
     bool fullscreenDebug = _renderSettings.debugNormals || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugMetallic || _renderSettings.debugRoughness || _renderSettings.debugVxgi;
     bool debugViewEnabled = overlayDebug || fullscreenDebug;
+    if (_renderSettings.debugVxgi)
+        _renderSettings.vxgi = true;
 
     backend::vulkan::CommandHandle cmd = _frameInfo.cmd;
 
@@ -359,7 +362,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd->bindBuffer(1, 0, global);
         cmd->bindBuffer(1, 1, clusters, true);
         cmd->bindBuffer(1, 2, lightGlobalIndex, true);
-        cmd->bindBuffer(1, 3, scene._lightCountBuffer[_engine->device().frameIndex()], true);
+//        cmd->bindBuffer(1, 3, scene._lightCountBuffer[_engine->device().frameIndex()], true);
         cmd->bindPipeline();
         cmd->bindDescriptors();
         cmd->dispatchCompute(1, 1, 6);

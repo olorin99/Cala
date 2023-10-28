@@ -10,6 +10,7 @@ struct GlobalData {
     int meshBufferIndex;
     int materialBufferIndex;
     int lightBufferIndex;
+    int lightCountBufferIndex;
     int cameraBufferIndex;
     int irradianceIndex;
     int prefilterIndex;

@@ -101,6 +101,7 @@ namespace cala {
             i32 meshBufferIndex = -1;
             i32 materialBufferIndex = -1;
             i32 lightBufferIndex = -1;
+            i32 lightCountBufferIndex = -1;
             i32 cameraBufferIndex = -1;
             i32 irradianceIndex = -1;
             i32 prefilterIndex = -1;
