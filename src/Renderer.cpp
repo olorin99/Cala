@@ -850,8 +850,13 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     }
 
     if (imGui) {
+        ImageResource backbufferAttachment;
+        backbufferAttachment.format = backend::Format::RGBA8_UNORM;
+        _graph.addImageResource("ui-backbuffer", backbufferAttachment);
+
         auto& uiPass = _graph.addPass("ui");
-        uiPass.addColourWrite("backbuffer");
+        uiPass.addSampledImageRead("backbuffer", backend::PipelineStage::FRAGMENT_SHADER);
+        uiPass.addColourWrite("ui-backbuffer");
         uiPass.setDebugColour({0.7, 0.1, 0.4, 1});
 
         uiPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
@@ -870,11 +875,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         _graph.addImageResource("final-swapchain", backbufferAttachment);
 
         auto& blitPass = _graph.addPass("blit", RenderPass::Type::TRANSFER);
-        blitPass.addBlitRead("backbuffer");
+//        blitPass.addBlitRead("backbuffer");
+        blitPass.addBlitRead("ui-backbuffer");
         blitPass.addBlitWrite("final-swapchain");
 
         blitPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
-            auto backbuffer = graph.getImage("backbuffer");
+            auto backbuffer = graph.getImage("ui-backbuffer");
             _swapchain->blitImageToFrame(_swapchainFrame.index, cmd, *backbuffer);
         });
     }

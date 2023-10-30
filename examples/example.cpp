@@ -20,12 +20,7 @@
 #include <Cala/backend/vulkan/OfflinePlatform.h>
 #include <Cala/Model.h>
 #include <Ende/thread/thread.h>
-#include <Cala/ui/ProfileWindow.h>
-#include <Cala/ui/StatisticsWindow.h>
-#include <Cala/ui/RendererSettingsWindow.h>
-#include <Cala/ui/LightWindow.h>
-#include <Cala/ui/ResourceViewer.h>
-#include <Cala/ui/RenderGraphViewer.h>
+#include <Cala/ui/GuiWindow.h>
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -354,13 +349,10 @@ int main() {
     Renderer renderer(&engine, {});
     swapchain.setPresentMode(backend::PresentMode::FIFO);
 
-    ImGuiContext imGuiContext(engine.device(), &swapchain, platform.window());
+    u32 objectCount = 20;
+    Scene scene(&engine, objectCount);
 
-    ui::ProfileWindow profileWindow(&engine, &renderer);
-    ui::StatisticsWindow statisticsWindow(&engine, &renderer);
-    ui::RendererSettingsWindow rendererSettingsWindow(&engine, &renderer, &swapchain);
-    ui::ResourceViewer resourceViewer(&engine.device());
-    ui::RenderGraphViewer renderGraphViewer(&renderer._graph);
+    ui::GuiWindow guiWindow(engine, renderer, scene, swapchain, platform.window());
 
 
     struct Material1Data {
@@ -407,9 +399,6 @@ int main() {
 
 
     matInstance.setData(MaterialData{});
-
-    u32 objectCount = 20;
-    Scene scene(&engine, objectCount);
 
     ui::LightWindow lightWindow(&scene);
 
@@ -520,6 +509,8 @@ int main() {
 
     i32 newLights = 10;
 
+    bool renderGraphOpen = false;
+
     f64 dt = 1.f / 60.f;
     bool running = true;
     SDL_Event event;
@@ -539,7 +530,7 @@ int main() {
                     }
                     break;
             }
-            imGuiContext.processEvent(&event);
+            guiWindow.context().processEvent(&event);
         }
         {
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_W])
@@ -565,15 +556,7 @@ int main() {
         }
 
         {
-            imGuiContext.newFrame();
-
-            profileWindow.render();
-            statisticsWindow.render();
-            rendererSettingsWindow.render();
-            renderGraphViewer.render();
-            resourceViewer.render();
-            lightWindow.render();
-
+            guiWindow.render();
 
 
             f32 exposure = camera.getExposure();
@@ -633,7 +616,7 @@ int main() {
             engine.gc();
             scene.prepare(camera);
 
-            renderer.render(scene, camera, &imGuiContext);
+            renderer.render(scene, camera, &guiWindow.context());
 
             dt = renderer.endFrame();
         }

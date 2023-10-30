@@ -20,7 +20,11 @@ add_library(Cala src/backend/vulkan/Context.cpp include/Cala/backend/vulkan/Cont
         src/ui/RenderGraphViewer.cpp
         include/Cala/ui/RenderGraphViewer.h
         src/backend/vulkan/Semaphore.cpp
-        include/Cala/backend/vulkan/Semaphore.h)
+        include/Cala/backend/vulkan/Semaphore.h
+        src/ui/BackbufferView.cpp
+        include/Cala/ui/BackbufferView.h
+        src/ui/GuiWindow.cpp
+        include/Cala/ui/GuiWindow.h)
 
 target_include_directories(Cala
         PUBLIC
