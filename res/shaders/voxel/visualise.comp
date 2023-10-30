@@ -1,16 +1,12 @@
 
 layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
-layout (rgba32f, set = 0, binding = 3) uniform readonly image3D voxelGrid[];
+layout (set = 0, binding = 0) uniform texture3D textureMaps[];
+layout (set = 0, binding = 2) uniform sampler samplers[];
 
 #include "camera.glsl"
 
 #include "global_data.glsl"
-
-layout (push_constant) uniform PushData {
-    mat4 voxelOrthographic;
-    int voxelGridIndex;
-};
 
 layout (set = 2, binding = 0) uniform writeonly image2D backbuffer;
 
@@ -38,22 +34,25 @@ void main() {
 
     vec4 colour = vec4(0.0);
 
-    for (int step = 1; step < 1000 && colour.a < 0.99f; step++) {
-        vec3 currentPos = origin + direction * step * 0.1;
-        vec4 i = voxelOrthographic * vec4(currentPos, 1.0);
+    float dist = 0.1953125;
+    for (int step = 1; step < 1000 && dist < 100 && colour.a < 0.99f; step++) {
+//        float dist = step * globalData.vxgi.voxelExtent.x;
+        vec3 currentPos = origin + direction * dist;
+        vec4 i = globalData.vxgi.projection * vec4(currentPos, 1.0);
         vec3 voxelPos = scaleAndBias(i.xyz);
-        if (!isInsideCube(voxelPos, 0))
+        if (!isInsideCube(voxelPos, 0)) {
+            dist += globalData.vxgi.voxelExtent.x;
             continue;
+        }
 
-        ivec3 dim = imageSize(voxelGrid[voxelGridIndex]);
-        ivec3 voxelCoords = ivec3(dim * voxelPos);
-//
-//        voxelCoords = min(voxelCoords, dim);
-//        voxelCoords = max(voxelCoords, ivec3(0));
+        vec4 c = texture(sampler3D(textureMaps[globalData.vxgi.gridIndex], samplers[globalData.nearestRepeatSampler]), voxelPos);
+//        if (c.a > 0.4)
+//            c = vec4(voxelPos, c.a);
+//        else
+//            c = vec4(0, 0, 0, c.a);
 
-        vec4 c = imageLoad(voxelGrid[voxelGridIndex], voxelCoords);
-//        colour += (1.0f - colour.a) * vec4(voxelPos, 1.0);
         colour += (1.0f - colour.a) * c;
+        dist += globalData.vxgi.voxelExtent.x;
     }
 
 

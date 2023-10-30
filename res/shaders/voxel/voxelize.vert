@@ -20,12 +20,10 @@ layout (location = 0) out VsOut {
 #include "transforms_data.glsl"
 
 layout (push_constant) uniform PushData {
-    mat4 orthographic;
     uvec4 voxelGridSize;
     uvec4 tileSizes;
     int lightGridIndex;
     int lightIndicesIndex;
-    int voxelGridIndex;
 };
 
 void main() {
@@ -42,8 +40,8 @@ void main() {
     vsOut.TexCoords = inTexCoords;
     vsOut.TBN = mat3(T, B, N);
     vsOut.ViewPos = camera.position;
-    vsOut.ClipPos = (orthographic * model * vec4(inPosition, 1.0)).xyz;
+    vsOut.ClipPos = (globalData.vxgi.projection * model * vec4(inPosition, 1.0)).xyz;
     vsOut.drawID = gl_BaseInstance;
 
-    gl_Position = orthographic * model * vec4(inPosition, 1.0);
+    gl_Position = globalData.vxgi.projection * model * vec4(inPosition, 1.0);
 }

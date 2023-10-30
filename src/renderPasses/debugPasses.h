@@ -21,6 +21,6 @@ void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
 
 void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings);
 
-void debugVxgi(cala::RenderGraph& graph, cala::Engine& engine, cala::Renderer::Settings settings);
+void debugVxgi(cala::RenderGraph& graph, cala::Engine& engine);
 
 #endif //CALA_DEBUGPASSES_H

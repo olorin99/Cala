@@ -21,6 +21,11 @@ vec4 evalMaterial(Material material) {
     }
 
     vec3 ambient = getAmbient(globalData.irradianceIndex, globalData.prefilterIndex, globalData.brdfIndex, material.normal, V, F0, material.albedo, material.roughness, material.metallic);
+
+    if (globalData.vxgi.gridIndex >= 0) {
+        ambient += traceCone(fsIn.FragPos + material.normal * globalData.vxgi.voxelExtent.x, material.normal, 1.55f);
+    }
+
     vec3 colour = (ambient + Lo);
 
     return vec4(colour, 1.0);

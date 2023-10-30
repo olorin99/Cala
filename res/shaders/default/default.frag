@@ -11,6 +11,7 @@ layout (location = 0) out vec4 FragColour;
 
 layout (set = 0, binding = 0) uniform textureCube cubeMaps[];
 layout (set = 0, binding = 0) uniform texture2D textureMaps[];
+layout (set = 0, binding = 0) uniform texture3D textureMaps3D[];
 layout (set = 0, binding = 2) uniform sampler samplers[];
 
 #include "camera.glsl"
@@ -28,6 +29,8 @@ layout (push_constant) uniform IBLData {
 #include "pbr.glsl"
 #include "shadow.glsl"
 #include "lighting.glsl"
+
+#include "voxel/vxgi.glsl"
 
 MATERIAL_DATA;
 

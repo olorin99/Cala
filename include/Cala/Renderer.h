@@ -29,7 +29,8 @@ namespace cala {
             bool freezeFrustum = false;
             bool ibl = false;
             bool vxgi = false;
-            std::pair<ende::math::Vec<3, i32>, ende::math::Vec<3, i32>> voxelBounds = { { -10, -10, -10 }, { 10, 10, 10 } };
+            std::pair<ende::math::Vec<3, i32>, ende::math::Vec<3, i32>> voxelBounds = { { -15, -15, -15 }, { 15, 15, 15 } };
+            ende::math::Vec<3, u32> voxelGridDimensions = { 256, 256, 256 };
             bool gpuCulling = true;
             bool boundedFrameTime = false;
             f32 millisecondTarget = 1000.f / 240.f;
@@ -92,6 +93,14 @@ namespace cala {
 
         Settings _renderSettings;
 
+        struct VXGIData {
+            ende::math::Mat4f projection;
+            ende::math::Vec<3, u32> gridDimensions;
+            i32 padding0;
+            ende::math::Vec3f voxelExtent;
+            i32 gridIndex;
+        };
+
         struct RendererGlobal {
             f32 gamma = 2.2;
             u32 time = 0;
@@ -100,7 +109,6 @@ namespace cala {
             ende::math::Vec<2, u32> swapchainSize = {0, 0};
             i32 tranformsBufferIndex = -1;
             i32 meshBufferIndex = -1;
-            i32 materialBufferIndex = -1;
             i32 lightBufferIndex = -1;
             i32 lightCountBufferIndex = -1;
             i32 cameraBufferIndex = -1;
@@ -111,6 +119,9 @@ namespace cala {
             i32 linearRepeatSampler = -1;
             i32 lodSampler = -1;
             i32 shadowSampler = -1;
+            i32 padding0 = 0;
+            i32 padding1 = 0;
+            VXGIData vxgi;
         };
 
         RendererGlobal _globalData;

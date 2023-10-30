@@ -20,12 +20,10 @@ layout (set = 0, binding = 3) uniform writeonly image3D voxelGrid[];
 #include "global_data.glsl"
 
 layout (push_constant) uniform PushData {
-    mat4 orthographic;
     uvec4 voxelGridSize;
     uvec4 tileSizes;
     int lightGridIndex;
     int lightIndicesIndex;
-    int voxelGridIndex;
 };
 
 #include "util.glsl"
@@ -65,9 +63,9 @@ void main() {
     Material material = loadMaterial(materialData);
     vec4 colour = evalMaterial(material);
 
-    ivec3 dim = imageSize(voxelGrid[voxelGridIndex]);
+    ivec3 dim = imageSize(voxelGrid[globalData.vxgi.gridIndex]);
     ivec3 voxelCoords = ivec3(dim * voxelPos);
-    voxelCoords = min(voxelCoords, dim);
-    imageStore(voxelGrid[voxelGridIndex], voxelCoords, colour);
-    FragColour = vec4(voxelPos, 1.0);
+    imageStore(voxelGrid[globalData.vxgi.gridIndex], voxelCoords, colour);
+//    FragColour = vec4(voxelPos, 1.0);
+    FragColour = vec4(voxelCoords, 1.0);
 }

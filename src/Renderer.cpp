@@ -120,48 +120,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     auto cameraData = camera.data();
     _cameraBuffer[_engine->device().frameIndex()]->data(std::span<Camera::Data>(&cameraData, 1));
 
-    _globalData.maxDrawCount = scene._renderables.size();
-    _globalData.gpuCulling = _renderSettings.gpuCulling;
-    _globalData.swapchainSize = { _swapchain->extent().width, _swapchain->extent().height };
-
-    _globalData.tranformsBufferIndex = scene._modelBuffer[_engine->device().frameIndex()].index();
-    _globalData.meshBufferIndex = scene._meshDataBuffer[_engine->device().frameIndex()].index();
-    _globalData.lightBufferIndex = scene._lightBuffer[_engine->device().frameIndex()].index();
-    _globalData.lightCountBufferIndex = scene._lightCountBuffer[_engine->device().frameIndex()].index();
-    _globalData.cameraBufferIndex = _cameraBuffer[_engine->device().frameIndex()].index();
-
-    if (_renderSettings.ibl) {
-        _globalData.irradianceIndex = scene._skyLightIrradiance.index();
-        _globalData.prefilterIndex = scene._skyLightPrefilter.index();
-        _globalData.brdfIndex = _engine->_brdfImage.index();
-    } else {
-        _globalData.irradianceIndex = -1;
-        _globalData.prefilterIndex = -1;
-        _globalData.brdfIndex = -1;
-    }
-
-    _globalData.nearestRepeatSampler = _engine->device().getSampler({
-        .filter = VK_FILTER_NEAREST,
-        .addressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT
-    }).index();
-
-    _globalData.linearRepeatSampler = _engine->device().getSampler({
-        .filter = VK_FILTER_LINEAR,
-        .addressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT
-    }).index();
-
-    _globalData.lodSampler = _engine->device().getSampler({
-        .maxLod = 10
-    }).index();
-
-    _globalData.shadowSampler = _engine->device().getSampler({
-        .filter = VK_FILTER_NEAREST,
-        .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-        .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
-    }).index();
-
-    _globalDataBuffer[_engine->device().frameIndex()]->data(std::span<RendererGlobal>(&_globalData, 1));
-
     bool overlayDebug = _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugClusters;
     bool fullscreenDebug = _renderSettings.debugNormals || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugMetallic || _renderSettings.debugRoughness || _renderSettings.debugVxgi;
     bool debugViewEnabled = overlayDebug || fullscreenDebug;
@@ -360,7 +318,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         push.lightIndicesIndex = lightIndices.index();
 
         cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
-        cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 0, global, true);
         cmd->bindBuffer(1, 1, clusters, true);
         cmd->bindBuffer(1, 2, lightGlobalIndex, true);
 //        cmd->bindBuffer(1, 3, scene._lightCountBuffer[_engine->device().frameIndex()], true);
@@ -402,7 +360,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     }
 
     if (_renderSettings.debugVxgi) {
-        debugVxgi(_graph, *_engine, _renderSettings);
+        debugVxgi(_graph, *_engine);
     }
 
 
@@ -467,7 +425,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd->bindBindings({});
                     cmd->bindAttributes({});
                     cmd->pushConstants(backend::ShaderStage::COMPUTE, shadowFrustum);
-                    cmd->bindBuffer(1, 0, global);
+                    cmd->bindBuffer(1, 0, global, true);
                     cmd->bindBuffer(2, 0, drawCommands, true);
                     cmd->bindBuffer(2, 1, drawCount, true);
                     cmd->bindPipeline();
@@ -508,7 +466,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd->bindBindings(renderable.bindings);
                     cmd->bindAttributes(renderable.attributes);
 
-                    cmd->bindBuffer(1, 0, global);
+                    cmd->bindBuffer(1, 0, global, true);
 
                     cmd->bindPipeline();
                     cmd->bindDescriptors();
@@ -559,7 +517,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 //                cmd->bindBindings(nullptr);
 //                cmd->bindAttributes(nullptr);
 //                cmd->pushConstants(backend::ShaderStage::COMPUTE, { &frustum, sizeof(frustum) });
-//                cmd->bindBuffer(1, 0, global);
+//                cmd->bindBuffer(1, 0, global, true);
 //                cmd->bindBuffer(2, 0, drawCommands, true);
 //                cmd->bindBuffer(2, 1, _drawCountBuffer[_engine->device().frameIndex()], true);
 //                cmd->bindBuffer(2, 2, materialCounts, true);
@@ -570,9 +528,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
             ImageResource voxelGridResource;
             voxelGridResource.format = backend::Format::RGBA32_SFLOAT;
-            voxelGridResource.width = 100;
-            voxelGridResource.height = 100;
-            voxelGridResource.depth = 100;
+            voxelGridResource.width = _renderSettings.voxelGridDimensions.x();
+            voxelGridResource.height = _renderSettings.voxelGridDimensions.y();
+            voxelGridResource.depth = _renderSettings.voxelGridDimensions.z();
             voxelGridResource.mipLevels = 5;
             voxelGridResource.matchSwapchain = false;
             _graph.addImageResource("voxelGrid", voxelGridResource);
@@ -626,7 +584,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 voxelGIPass.addIndirectRead("materialCounts");
                 voxelGIPass.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
-                voxelGIPass.addColourWrite("voxelOutput");
+//                voxelGIPass.addColourWrite("voxelOutput");
 
                 voxelGIPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
                     auto global = graph.getBuffer("global");
@@ -639,7 +597,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     if (scene._renderables.empty())
                         return;
 
-                    cmd->bindBuffer(1, 0, global);
+                    cmd->bindBuffer(1, 0, global, true);
 
                     auto& renderable = scene._renderables[0].second.first;
 
@@ -651,25 +609,22 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         if (!material)
                             continue;
                         cmd->bindProgram(material->getVariant(Material::Variant::VOXELGI));
-                        cmd->bindRasterState(material->getRasterState());
+                        cmd->bindRasterState({
+                            backend::CullMode::NONE
+                        });
                         cmd->bindDepthState({ false });
                         cmd->bindBuffer(2, 0, material->buffer(), true);
 
                         struct VoxelizePush {
-                            ende::math::Mat4f orthographic;
                             ende::math::Vec<4, u32> voxelGridSize;
                             ende::math::Vec<4, u32> tileSizes;
                             i32 lightGridIndex;
                             i32 lightIndicesIndex;
-                            i32 voxelGridIndex;
                         } push;
                         push.voxelGridSize = { voxelGrid->width(), voxelGrid->height(), voxelGrid->depth(), 0 };
                         push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };;
                         push.lightGridIndex = lightGrid.index();
                         push.lightIndicesIndex = lightIndices.index();
-                        push.voxelGridIndex = voxelGrid.index();
-
-                        push.orthographic = ende::math::orthographic<f32>(_renderSettings.voxelBounds.first.x(), _renderSettings.voxelBounds.second.x(), _renderSettings.voxelBounds.first.y(), _renderSettings.voxelBounds.second.y(), _renderSettings.voxelBounds.first.z(), _renderSettings.voxelBounds.second.z());
 
                         cmd->pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::GEOMETRY | backend::ShaderStage::FRAGMENT, push);
 
@@ -709,7 +664,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd->bindBindings({});
         cmd->bindAttributes({});
         cmd->pushConstants(backend::ShaderStage::COMPUTE, _cullingFrustum);
-        cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 0, global, true);
         cmd->bindBuffer(2, 0, drawCommands, true);
         cmd->bindBuffer(2, 1, materialCounts, true);
         cmd->bindPipeline();
@@ -735,7 +690,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto drawCommands = graph.getBuffer("drawCommands");
             auto materialCounts = graph.getBuffer("materialCounts");
             cmd->clearDescriptors();
-            cmd->bindBuffer(1, 0, global);
+            cmd->bindBuffer(1, 0, global, true);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd->bindBindings(renderable.bindings);
@@ -793,7 +748,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             if (scene._renderables.empty())
                 return;
 
-            cmd->bindBuffer(1, 0, global);
+            cmd->bindBuffer(1, 0, global, true);
 
             auto& renderable = scene._renderables[0].second.first;
 
@@ -854,7 +809,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd->bindProgram(_engine->_tonemapProgram);
             cmd->bindBindings({});
             cmd->bindAttributes({});
-            cmd->bindBuffer(1, 0, global);
+            cmd->bindBuffer(1, 0, global, true);
             cmd->bindImage(2, 0, _engine->device().getImageView(hdrImage), _engine->device().defaultSampler(), true);
             cmd->bindImage(2, 1, _engine->device().getImageView(backbuffer), _engine->device().defaultSampler(), true);
             cmd->bindPipeline();
@@ -882,7 +837,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd->bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
             cmd->bindBindings({ &_engine->_cube->_binding, 1 });
             cmd->bindAttributes(_engine->_cube->_attributes);
-            cmd->bindBuffer(1, 0, global);
+            cmd->bindBuffer(1, 0, global, true);
             i32 skyMapIndex = scene._skyLightMap.index();
             cmd->pushConstants(backend::ShaderStage::FRAGMENT, skyMapIndex);
 
@@ -927,6 +882,64 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     if (!_graph.compile())
         throw std::runtime_error("cyclical graph found");
+
+
+
+    _globalData.maxDrawCount = scene._renderables.size();
+    _globalData.gpuCulling = _renderSettings.gpuCulling;
+    _globalData.swapchainSize = { _swapchain->extent().width, _swapchain->extent().height };
+
+    _globalData.tranformsBufferIndex = scene._modelBuffer[_engine->device().frameIndex()].index();
+    _globalData.meshBufferIndex = scene._meshDataBuffer[_engine->device().frameIndex()].index();
+    _globalData.lightBufferIndex = scene._lightBuffer[_engine->device().frameIndex()].index();
+    _globalData.lightCountBufferIndex = scene._lightCountBuffer[_engine->device().frameIndex()].index();
+    _globalData.cameraBufferIndex = _cameraBuffer[_engine->device().frameIndex()].index();
+
+    if (_renderSettings.ibl) {
+        _globalData.irradianceIndex = scene._skyLightIrradiance.index();
+        _globalData.prefilterIndex = scene._skyLightPrefilter.index();
+        _globalData.brdfIndex = _engine->_brdfImage.index();
+    } else {
+        _globalData.irradianceIndex = -1;
+        _globalData.prefilterIndex = -1;
+        _globalData.brdfIndex = -1;
+    }
+
+    _globalData.nearestRepeatSampler = _engine->device().getSampler({
+        .filter = VK_FILTER_NEAREST,
+        .addressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT
+    }).index();
+
+    _globalData.linearRepeatSampler = _engine->device().getSampler({
+        .filter = VK_FILTER_LINEAR,
+        .addressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT
+    }).index();
+
+    _globalData.lodSampler = _engine->device().getSampler({
+        .maxLod = 10
+    }).index();
+
+    _globalData.shadowSampler = _engine->device().getSampler({
+        .filter = VK_FILTER_NEAREST,
+        .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+        .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
+    }).index();
+
+    _globalData.vxgi.projection = ende::math::orthographic<f32>(_renderSettings.voxelBounds.first.x(), _renderSettings.voxelBounds.second.x(), _renderSettings.voxelBounds.first.y(), _renderSettings.voxelBounds.second.y(), _renderSettings.voxelBounds.first.z(), _renderSettings.voxelBounds.second.z());// *
+//            (ende::math::Quaternion({ 0, 1, 0 }, ende::math::rad(2)) * ende::math::Quaternion({ 1, 0, 0 }, ende::math::rad(2))).toMat();
+    _globalData.vxgi.gridDimensions = _renderSettings.voxelGridDimensions;
+
+    auto sceneBounds = _renderSettings.voxelBounds.second - _renderSettings.voxelBounds.first;
+    ende::math::Vec3f extents = {
+            static_cast<f32>(sceneBounds.x()) / static_cast<f32>(_renderSettings.voxelGridDimensions.x()),
+            static_cast<f32>(sceneBounds.y()) / static_cast<f32>(_renderSettings.voxelGridDimensions.y()),
+            static_cast<f32>(sceneBounds.z()) / static_cast<f32>(_renderSettings.voxelGridDimensions.z())
+    };
+
+    _globalData.vxgi.voxelExtent = extents;
+    _globalData.vxgi.gridIndex = _graph.getImage("voxelGrid").index();
+
+    _globalDataBuffer[_engine->device().frameIndex()]->data(std::span<RendererGlobal>(&_globalData, 1));
 
     cmd->startPipelineStatistics();
     _graph.execute(cmd);

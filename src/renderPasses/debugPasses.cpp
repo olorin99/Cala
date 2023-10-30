@@ -18,7 +18,7 @@ void debugClusters(cala::RenderGraph& graph, cala::Engine& engine, cala::backend
         auto lightGrid = graph.getBuffer("lightGrid");
         auto depthBuffer = graph.getImage("depth");
         cmd->clearDescriptors();
-        cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 0, global, true);
         cmd->bindBindings({});
         cmd->bindAttributes({});
         cmd->bindBlendState({ true });
@@ -58,7 +58,7 @@ void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene
         auto materialCounts = graph.getBuffer("materialCounts");
 
         cmd->clearDescriptors();
-        cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 0, global, true);
         auto& renderable = scene._renderables[0].second.first;
 
         cmd->bindBindings(renderable.bindings);
@@ -101,7 +101,7 @@ void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
         auto drawCommands = graph.getBuffer("drawCommands");
         auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
-        cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 0, global, true);
         auto& renderable = scene._renderables[0].second.first;
 
         cmd->bindBindings(renderable.bindings);
@@ -144,7 +144,7 @@ void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sce
         auto drawCommands = graph.getBuffer("drawCommands");
         auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
-        cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 0, global, true);
         auto& renderable = scene._renderables[0].second.first;
 
         cmd->bindBindings(renderable.bindings);
@@ -187,7 +187,7 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene&
         auto drawCommands = graph.getBuffer("drawCommands");
         auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
-        cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 0, global, true);
         auto& renderable = scene._renderables[0].second.first;
 
         cmd->bindBindings(renderable.bindings);
@@ -230,7 +230,7 @@ void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala
         auto drawCommands = graph.getBuffer("drawCommands");
         auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
-        cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 0, global, true);
         auto& renderable = scene._renderables[0].second.first;
 
         cmd->bindBindings(renderable.bindings);
@@ -271,7 +271,7 @@ void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
         auto drawCommands = graph.getBuffer("drawCommands");
         auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
-        cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 0, global, true);
         auto& renderable = scene._renderables[0].second.first;
 
         cmd->bindBindings(renderable.bindings);
@@ -315,7 +315,7 @@ void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::
         auto drawCommands = graph.getBuffer("drawCommands");
         auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
-        cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 0, global, true);
         auto& renderable = scene._renderables[0].second.first;
 
         cmd->bindBindings(renderable.bindings);
@@ -338,15 +338,16 @@ void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::
     });
 }
 
-void debugVxgi(cala::RenderGraph& graph, cala::Engine& engine, cala::Renderer::Settings settings) {
+void debugVxgi(cala::RenderGraph& graph, cala::Engine& engine) {
     auto& debugVoxel = graph.addPass("voxelVisualisation", RenderPass::Type::COMPUTE);
 
     debugVoxel.addStorageImageWrite("backbuffer", backend::PipelineStage::COMPUTE_SHADER);
-    debugVoxel.addStorageImageRead("voxelGrid", backend::PipelineStage::COMPUTE_SHADER);
+//    debugVoxel.addStorageImageRead("voxelGrid", backend::PipelineStage::COMPUTE_SHADER);
+    debugVoxel.addSampledImageRead("voxelGridMipMapped", backend::PipelineStage::COMPUTE_SHADER);
     debugVoxel.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
     debugVoxel.addStorageBufferRead("camera", backend::PipelineStage::COMPUTE_SHADER);
 
-    debugVoxel.setExecuteFunction([settings, &engine](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+    debugVoxel.setExecuteFunction([&engine](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
         auto global = graph.getBuffer("global");
         auto voxelGrid = graph.getImage("voxelGrid");
         auto backbuffer = graph.getImage("backbuffer");
@@ -354,15 +355,8 @@ void debugVxgi(cala::RenderGraph& graph, cala::Engine& engine, cala::Renderer::S
         cmd->bindProgram(engine.getProgram(Engine::ProgramType::VOXEL_VISUALISE));
         cmd->bindBindings({});
         cmd->bindAttributes({});
-        cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 0, global, true);
         cmd->bindImage(2, 0, engine.device().getImageView(backbuffer), engine.device().defaultSampler(), true);
-        struct VoxelPush {
-            ende::math::Mat4f voxelOrthographic;
-            i32 voxelGridIndex;
-        } push;
-        push.voxelGridIndex = voxelGrid.index();
-        push.voxelOrthographic = ende::math::orthographic<f32>(settings.voxelBounds.first.x(), settings.voxelBounds.second.x(), settings.voxelBounds.first.y(), settings.voxelBounds.second.y(), settings.voxelBounds.first.z(), settings.voxelBounds.second.z());
-        cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
         cmd->bindPipeline();
         cmd->bindDescriptors();
         cmd->dispatchCompute(std::ceil(backbuffer->width() / 32.f), std::ceil(backbuffer->height() / 32.f), 1);
