@@ -445,7 +445,13 @@ void cala::RenderGraph::buildResources() {
                 imageResource->height = _backbufferHeight;
                 imageResource->depth = 1;
             }
-            if (!_images[i]) {
+            backend::vulkan::ImageHandle image = _images[i];
+            if (!image || image->usage() != imageResource->usage ||
+                    image->width() != imageResource->width ||
+                    image->height() != imageResource->height ||
+                    image->depth() != imageResource->depth ||
+                    image->mips() != imageResource->mipLevels ||
+                    image->format() != imageResource->format) {
 
                 _images[i] = _engine->device().createImage({
                     imageResource->width,
@@ -551,7 +557,7 @@ void cala::RenderGraph::buildBarriers() {
         auto& accessPass = _orderedPasses[accessPassIndex];
         accessPass->_barriers.push_back({
             resource->label,
-            accessIndex,
+            nextAccess.index,
             backend::PipelineStage::TOP,
             nextAccess.stage,
             backend::Access::MEMORY_READ | backend::Access::MEMORY_WRITE,
