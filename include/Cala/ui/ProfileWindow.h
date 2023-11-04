@@ -18,8 +18,13 @@ namespace cala::ui {
         Engine* _engine;
         Renderer* _renderer;
 
-        std::array<std::pair<f32, f32>, 60> _globalTime;
-        tsl::robin_map<const char*, std::array<f32, 60>> _times;
+        static const u32 MAX_FRAME_COUNT = 60 * 5;
+
+        std::array<std::pair<f32, f32>, MAX_FRAME_COUNT> _globalTime;
+        std::array<f32, MAX_FRAME_COUNT> _cpuTimes;
+        std::array<f32, MAX_FRAME_COUNT> _gpuTimes;
+        u32 _frameOffset;
+        tsl::robin_map<const char*, std::array<f32, MAX_FRAME_COUNT>> _times;
 
         f32 _cpuAvg;
         f32 _gpuAvg;

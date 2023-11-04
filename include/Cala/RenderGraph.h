@@ -144,6 +144,10 @@ namespace cala {
 
         void setBackbufferDimensions(u32 width, u32 height);
 
+        backend::vulkan::ImageHandle getBackbuffer() { return getImage(_backbuffer); }
+
+        ende::math::Vec<2, u32> getBackbufferDimensions() { return { _backbufferWidth, _backbufferHeight }; }
+
 
         void addImageResource(const char* label, ImageResource resource, backend::vulkan::ImageHandle handle = {});
 

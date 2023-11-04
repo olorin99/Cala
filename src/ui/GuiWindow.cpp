@@ -71,6 +71,9 @@ void cala::ui::GuiWindow::render() {
     if (_showLightWindow)
         _lightWindow.render();
 
+    if (_showStatisticsWindow)
+        _statisticsWindow.render();
+
     if (_showProfileWindow)
         _profileWindow.render();
 
@@ -79,9 +82,6 @@ void cala::ui::GuiWindow::render() {
 
     if (_showResourceViewer)
         _resourceViewer.render();
-
-    if (_showStatisticsWindow)
-        _statisticsWindow.render();
 
     if (_showBackbufferView) {
         _backbufferView.setBackbufferHandle(_renderer->_graph.getImage("backbuffer"));
