@@ -3,6 +3,7 @@
 #include <Cala/backend/primitives.h>
 #include <imgui.h>
 #include <backends/imgui_impl_vulkan.h>
+#include <implot/implot.h>
 
 
 VkCommandBuffer beginSingleTimeCommands(VkDevice device, VkCommandPool pool) {
@@ -105,6 +106,8 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Device &driver, cala::backend:
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
+
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
@@ -146,6 +149,7 @@ ImGuiContext::~ImGuiContext() {
     ImGui_ImplVulkan_Shutdown();
     if (_window)
         ImGui_ImplSDL2_Shutdown();
+    ImPlot::DestroyContext();
 //    ImGui::DestroyContext();
     vkDestroyDescriptorPool(_device, _descriptorPool, nullptr);
 //    delete _renderPass;

@@ -1,6 +1,7 @@
 #include "Cala/ui/ProfileWindow.h"
 #include <imgui.h>
 #include <Ende/profile/ProfileManager.h>
+#include <implot/implot.h>
 
 cala::ui::ProfileWindow::ProfileWindow(Engine* engine, Renderer *renderer)
     : _engine(engine),
@@ -10,10 +11,21 @@ cala::ui::ProfileWindow::ProfileWindow(Engine* engine, Renderer *renderer)
     _frameOffset(0)
 {}
 
-void plotGraph(const char* label, std::span<f32> times, u32 offset, f32 height = 60, f32 width = 0) {
+//TODO: split with simple plot and complex plot where complex plot can plot multiple datasets e.g. all cpu timings
+void plotGraph(const char* label, std::span<f32> times, u32 offset, f32 height = 60, f32 width = -1) {
+    auto [min, max] = std::minmax_element(times.begin(), times.end());
+    if (ImPlot::BeginPlot(label, ImVec2(width, height))) {
+        ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoTickLabels, ImPlotAxisFlags_AutoFit);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, 0, *max, ImPlotCond_Always);
+        ImPlot::PlotLine("", times.data(), times.size(), 1, 0, 0, offset);
+        ImPlot::EndPlot();
+    }
+};
+
+void simplePlotGraph(const char* label, std::span<f32> times, u32 offset, f32 height = 60, f32 width = -1) {
     auto [min, max] = std::minmax_element(times.begin(), times.end());
     ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 255));
-    ImGui::PlotLines("", times.data(), times.size(), offset, label, *min, *max, ImVec2{ width, height });
+    ImGui::PlotLines("", times.data(), times.size(), offset, label, 0, *max, ImVec2{ width, height });
     ImGui::PopStyleColor();
 };
 
@@ -80,9 +92,9 @@ void cala::ui::ProfileWindow::render() {
     // gpu average
     f32 gpuTotal = 0;
     for (auto& frameTime : _gpuTimes) {
-        cpuTotal += frameTime;
+        gpuTotal += frameTime;
     }
-    _gpuAvg = cpuTotal / _gpuTimes.size();
+    _gpuAvg = gpuTotal / _gpuTimes.size();
 
     // deviations
     cpuTotal = 0;
@@ -121,7 +133,7 @@ void cala::ui::ProfileWindow::render() {
 
         ImGui::TableNextColumn();
 
-        plotGraph("Milliseconds", _cpuTimes, _frameOffset);
+        plotGraph("Milliseconds", _cpuTimes, _frameOffset, 240);
 
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
@@ -141,7 +153,7 @@ void cala::ui::ProfileWindow::render() {
                 auto& dataArray = it.value();
                 ImGui::TableNextColumn();
                 std::string label = std::format("{} ms", func.second.first);
-                plotGraph(label.c_str(), dataArray, _frameOffset, 30.f);
+                simplePlotGraph(label.c_str(), dataArray, _frameOffset, 30.f);
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
             }
@@ -161,7 +173,7 @@ void cala::ui::ProfileWindow::render() {
             auto& dataArray = it.value();
             ImGui::TableNextColumn();
             std::string label = std::format("{} ms", time / 1e6);
-            plotGraph(label.c_str(), dataArray, _frameOffset, 30.f);
+            simplePlotGraph(label.c_str(), dataArray, _frameOffset, 30.f);
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
         }

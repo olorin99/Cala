@@ -11,3 +11,6 @@
 [submodule "libs/volk"]
 	path = libs/volk
 	url = https://github.com/zeux/volk.git
+[submodule "libs/implot"]
+	path = libs/implot
+	url = https://github.com/epezent/implot.git
