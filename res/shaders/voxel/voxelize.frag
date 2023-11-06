@@ -58,7 +58,7 @@ void main() {
     if (!isInsideCube(voxelPos, 0))
         return;
 
-    Mesh mesh = bindlessBufferMesh[globalData.meshBufferIndex].meshData[fsIn.drawID];
+    Mesh mesh = globalData.meshBuffer.meshData[fsIn.drawID];
     MaterialData materialData = materials[mesh.materialInstanceIndex];
     Material material = loadMaterial(materialData);
     vec4 colour = evalMaterial(material);

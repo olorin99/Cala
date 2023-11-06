@@ -206,7 +206,8 @@ cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProg
     std::string source = "#version 460\n"
              "\n"
              "#extension GL_EXT_nonuniform_qualifier : enable\n"
-             "#extension GL_GOOGLE_include_directive : enable\n";
+             "#extension GL_GOOGLE_include_directive : enable\n"
+             "#extension GL_EXT_buffer_reference : enable\n";
 
     for (auto& include : includes) {
         source += "\n#include \"" + include + "\"\n";

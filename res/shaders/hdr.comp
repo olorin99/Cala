@@ -1,17 +1,6 @@
 
 layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
-struct CameraData {
-    mat4 projection;
-    mat4 view;
-    vec3 position;
-    float near;
-    float far;
-    float exposure;
-};
-
-layout (set = 0, binding = 1) buffer CameraBuffer { CameraData camera; } globalBuffersCamera[];
-
 #include "global_data.glsl"
 
 layout (rgba32f, set = 2, binding = 0) uniform readonly image2D hdrMap;
@@ -65,7 +54,7 @@ void main() {
 //    vec3 result = uncharted2Tonemap(hdr * camera.exposure);
 //    result = result * (1.0 / uncharted2Tonemap(vec3(11.2f)));
 
-    vec3 result = aces(hdr * globalBuffersCamera[globalData.cameraBufferIndex].camera.exposure);
+    vec3 result = aces(hdr * globalData.cameraBuffer.camera.exposure);
 //    vec3 result = reinhard(hdr * camera.exposure);
 //    vec3 result = reinhard2(hdr * camera.exposure);
 

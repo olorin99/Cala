@@ -108,6 +108,8 @@ namespace cala::backend::vulkan {
 
         VkBuffer buffer() const { return _buffer; }
 
+        u64 address() const { return _address; }
+
         u32 size() const { return _size; }
 
         BufferUsage usage() const { return _usage; }
@@ -123,6 +125,7 @@ namespace cala::backend::vulkan {
 
         Device* _device;
         VkBuffer _buffer;
+        VkDeviceAddress _address;
         VmaAllocation _allocation;
         u32 _size;
         BufferUsage _usage;

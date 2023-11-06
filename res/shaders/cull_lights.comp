@@ -1,19 +1,19 @@
 
 layout (local_size_x = 16, local_size_y = 9, local_size_z = 4) in;
 
+#include "global_data.glsl"
+
 layout (push_constant) uniform ScreenViewInfo {
     mat4 inverseProjection;
     uvec4 tileSizes;
     uvec2 screenSize;
     float near;
     float far;
-    int lightGridIndex;
-    int lightIndicesIndex;
+    LightGridBuffer lightGridBuffer;
+    LightIndicesBuffer lightIndicesBuffer;
 };
 
 #include "camera.glsl"
-
-#include "global_data.glsl"
 
 struct Cluster {
     vec4 minPoint;
@@ -33,7 +33,7 @@ layout (set = 1, binding = 2) buffer GlobalIndex {
 shared Light sharedLights[16 * 9 * 4];
 
 bool intersect(Light light, Cluster cluster) {
-    vec4 lightPos = (bindlessBuffersCamera[globalData.cameraBufferIndex].camera.view * vec4(light.position, 1.0));
+    vec4 lightPos = (globalData.cameraBuffer.camera.view * vec4(light.position, 1.0));
 
     vec4 closest = max(cluster.minPoint, min(lightPos, cluster.maxPoint));
     vec3 dist = closest.xyz - lightPos.xyz;
@@ -47,7 +47,7 @@ void main() {
     barrier();
 
     uint threadCount = gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z;
-    uint lightCount = getTotalLightCount();
+    uint lightCount = globalData.lightCountBuffer.directLightCount + globalData.lightCountBuffer.pointLightCount;
     uint tileIndex = gl_LocalInvocationIndex + gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z * gl_WorkGroupID.z;
     uint visibleLightCount = 0;
     const uint maxVisibleLights = 250;
@@ -58,7 +58,7 @@ void main() {
         uint batchSize = min(threadCount, lightCount - lightOffset);
         if (uint(gl_LocalInvocationIndex) < batchSize) {
             uint lightIndex = lightOffset + gl_LocalInvocationIndex;
-            sharedLights[gl_LocalInvocationIndex] = bindlessBuffersLights[globalData.lightBufferIndex].lights[lightIndex];
+            sharedLights[gl_LocalInvocationIndex] = globalData.lightBuffer.lights[lightIndex];
         }
         barrier();
 
@@ -74,9 +74,9 @@ void main() {
 
     uint offset = atomicAdd(globalIndexCount, visibleLightCount);
     for (uint i = 0; i < visibleLightCount; i++) {
-        bindlessBuffersLightIndices[lightIndicesIndex].lightIndices[offset + i] = visibleLightIndices[i];
+        lightIndicesBuffer.lightIndices[offset + i] = visibleLightIndices[i];
     }
 
-    bindlessBuffersLightGrid[lightGridIndex].lightGrid[tileIndex].offset = offset;
-    bindlessBuffersLightGrid[lightGridIndex].lightGrid[tileIndex].count = visibleLightCount;
+    lightGridBuffer.lightGrid[tileIndex].offset = offset;
+    lightGridBuffer.lightGrid[tileIndex].count = visibleLightCount;
 }

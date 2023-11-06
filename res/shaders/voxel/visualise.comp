@@ -22,7 +22,7 @@ void main() {
     ivec2 globCoords = ivec2(gl_GlobalInvocationID.xy);
     vec2 texCoords = vec2(globCoords) / vec2(imageSize(backbuffer));
 
-    CameraData camera = bindlessBuffersCamera[globalData.cameraBufferIndex].camera;
+    CameraData camera = globalData.cameraBuffer.camera;
 
     vec3 origin = camera.position;
 
