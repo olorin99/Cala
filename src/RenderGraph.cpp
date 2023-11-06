@@ -223,11 +223,12 @@ void cala::RenderGraph::setBackbufferDimensions(u32 width, u32 height) {
 }
 
 
-void cala::RenderGraph::addImageResource(const char *label, cala::ImageResource resource, cala::backend::vulkan::ImageHandle handle) {
+u32 cala::RenderGraph::addImageResource(const char *label, cala::ImageResource resource, cala::backend::vulkan::ImageHandle handle) {
+    u32 index = 0;
     resource.label = label;
     auto it = _labelToIndex.find(label);
     if (it != _labelToIndex.end()) {
-        u32 index = it->second;
+        index = it->second;
         if (_resources.size() <= index)
             _resources.resize(index + 1);
         _resources[index] = std::make_unique<ImageResource>(std::move(resource));
@@ -239,19 +240,21 @@ void cala::RenderGraph::addImageResource(const char *label, cala::ImageResource 
         _resources.push_back(std::make_unique<ImageResource>(std::move(resource)));
         if (_images.size() < _resources.size())
             _images.resize(_resources.size());
-        u32 index = _resources.size() - 1;
+        index = _resources.size() - 1;
         if (handle)
             _images[index] = handle;
         assert(_resources.size() == _images.size());
         _labelToIndex[label] = index;
     }
+    return index;
 }
 
-void cala::RenderGraph::addBufferResource(const char *label, cala::BufferResource resource, cala::backend::vulkan::BufferHandle handle) {
+u32 cala::RenderGraph::addBufferResource(const char *label, cala::BufferResource resource, cala::backend::vulkan::BufferHandle handle) {
+    u32 index = 0;
     resource.label = label;
     auto it = _labelToIndex.find(label);
     if (it != _labelToIndex.end()) {
-        u32 index = it->second;
+        index = it->second;
         if (_resources.size() <= index)
             _resources.resize(index + 1);
         _resources[index] = std::make_unique<BufferResource>(std::move(resource));
@@ -263,62 +266,82 @@ void cala::RenderGraph::addBufferResource(const char *label, cala::BufferResourc
         _resources.push_back(std::make_unique<BufferResource>(std::move(resource)));
         if (_buffers.size() < _resources.size())
             _buffers.resize(_resources.size());
-        u32 index = _resources.size() - 1;
+        index = _resources.size() - 1;
         if (handle)
             _buffers[index] = handle;
         assert(_resources.size() == _buffers.size());
         _labelToIndex[label] = index;
     }
+    return index;
 }
 
-void cala::RenderGraph::addAlias(const char *label, const char *alias) {
+u32 cala::RenderGraph::addAlias(const char *label, const char *alias) {
     auto it = _labelToIndex.find(label);
     if (it != _labelToIndex.end()) {
-        _labelToIndex[alias] = it->second;
-        if (_aliases.size() <= it->second)
-            _aliases.resize(it->second + 1);
-        _aliases[it->second].push_back(alias);
+        return addAlias(it->second, alias);
     }
+    return 0;
+}
 
-//    } else {
-//        it = _labelToIndex.find(alias);
-//        if (it != _labelToIndex.end()) {
-//
-//        }
-//    }
+u32 cala::RenderGraph::addAlias(u32 resourceIndex, const char *alias) {
+    assert(resourceIndex <= _resources.size());
+    _labelToIndex[alias] = resourceIndex;
+    if (_aliases.size() <= resourceIndex)
+        _aliases.resize(resourceIndex + 1);
+    _aliases[resourceIndex].push_back(alias);
+    return resourceIndex;
 }
 
 cala::ImageResource *cala::RenderGraph::getImageResource(const char *label) {
     auto it = _labelToIndex.find(label);
     if (it != _labelToIndex.end()) {
-        return dynamic_cast<ImageResource*>(_resources[it->second].get());
+        return getImageResource(it->second);
     }
     return nullptr;
+}
+
+cala::ImageResource *cala::RenderGraph::getImageResource(u32 resourceIndex) {
+    assert(resourceIndex <= _resources.size());
+    return dynamic_cast<ImageResource*>(_resources[resourceIndex].get());
 }
 
 cala::BufferResource *cala::RenderGraph::getBufferResource(const char *label) {
     auto it = _labelToIndex.find(label);
     if (it != _labelToIndex.end()) {
-        return dynamic_cast<BufferResource*>(_resources[it->second].get());
+        return getBufferResource(it->second);
     }
     return nullptr;
+}
+
+cala::BufferResource *cala::RenderGraph::getBufferResource(u32 resourceIndex) {
+    assert(resourceIndex <= _resources.size());
+    return dynamic_cast<BufferResource*>(_resources[resourceIndex].get());
 }
 
 cala::backend::vulkan::ImageHandle cala::RenderGraph::getImage(const char *label) {
     auto it = _labelToIndex.find(label);
     if (it != _labelToIndex.end()) {
-        return _images[it->second];
+        return getImage(it->second);
     }
     return {};
+}
+
+cala::backend::vulkan::ImageHandle cala::RenderGraph::getImage(u32 resourceIndex) {
+    assert(resourceIndex <= _resources.size());
+    return _images[resourceIndex];
 }
 
 cala::backend::vulkan::BufferHandle cala::RenderGraph::getBuffer(const char *label) {
     auto it = _labelToIndex.find(label);
     if (it != _labelToIndex.end()) {
-        u32 index = it->second;
-        return _buffers[it->second];
+        return getBuffer(it->second);
     }
     return {};
+}
+
+cala::backend::vulkan::BufferHandle cala::RenderGraph::getBuffer(u32 resourceIndex) {
+    assert(resourceIndex <= _resources.size());
+    return _buffers[resourceIndex];
 }
 
 bool cala::RenderGraph::compile() {

@@ -149,20 +149,25 @@ namespace cala {
         ende::math::Vec<2, u32> getBackbufferDimensions() { return { _backbufferWidth, _backbufferHeight }; }
 
 
-        void addImageResource(const char* label, ImageResource resource, backend::vulkan::ImageHandle handle = {});
+        u32 addImageResource(const char* label, ImageResource resource, backend::vulkan::ImageHandle handle = {});
 
-        void addBufferResource(const char* label, BufferResource resource, backend::vulkan::BufferHandle handle = {});
+        u32 addBufferResource(const char* label, BufferResource resource, backend::vulkan::BufferHandle handle = {});
 
-        void addAlias(const char* label, const char* alias);
+        u32 addAlias(const char* label, const char* alias);
+        u32 addAlias(u32 resourceIndex, const char* alias);
 
 
         ImageResource* getImageResource(const char* label);
+        ImageResource* getImageResource(u32 resourceIndex);
 
         BufferResource* getBufferResource(const char* label);
+        BufferResource* getBufferResource(u32 resourceIndex);
 
         backend::vulkan::ImageHandle getImage(const char* label);
+        backend::vulkan::ImageHandle getImage(u32 resourceIndex);
 
         backend::vulkan::BufferHandle getBuffer(const char* label);
+        backend::vulkan::BufferHandle getBuffer(u32 resourceIndex);
 
 
         bool compile();
