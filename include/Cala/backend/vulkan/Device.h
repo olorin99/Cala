@@ -72,6 +72,11 @@ namespace cala::backend::vulkan {
             endSingleTimeCommands(cmd);
         }
 
+        template<typename F>
+        void deferred(F func, QueueType queueType = QueueType::GRAPHICS) {
+            _deferredCommands.push_back(func);
+        }
+
         CommandHandle getCommandBuffer(u32 frame, QueueType queueType = QueueType::GRAPHICS);
 
         bool gc();
@@ -182,6 +187,8 @@ namespace cala::backend::vulkan {
         u64 _frameCount;
         ende::time::StopWatch _frameClock;
         ende::time::Duration _lastFrameTime;
+
+        std::vector<std::function<void(CommandHandle)>> _deferredCommands;
 
         tsl::robin_map<u64, RenderPass*> _renderPasses;
         tsl::robin_map<u64, Framebuffer*> _framebuffers;

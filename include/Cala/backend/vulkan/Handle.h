@@ -59,6 +59,8 @@ namespace cala::backend::vulkan {
 
         T* operator->() noexcept;
 
+        T* operator->() const noexcept;
+
         explicit operator bool() const noexcept {
             return _owner && _index >= 0 && isValid();
         }

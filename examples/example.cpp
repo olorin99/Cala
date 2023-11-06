@@ -102,7 +102,9 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
         images[index]->data(engine->device(), {
             0, (u32)image.width, (u32)image.height, 1, 4,
         }, std::span<u8>(buf, bufferSize));
-        images[index]->generateMips();
+        engine->device().deferred([image = images[index]](CommandHandle cmd) {
+            image->generateMips(cmd);
+        });
         if (del)
             delete buf;
     };

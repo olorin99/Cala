@@ -326,6 +326,13 @@ cala::backend::vulkan::CommandHandle cala::backend::vulkan::Device::getCommandBu
 
 
 bool cala::backend::vulkan::Device::gc() {
+    immediate([&](CommandHandle cmd) {
+        for (auto& deferredCommand : _deferredCommands) {
+            deferredCommand(cmd);
+        }
+    });
+    _deferredCommands.clear();
+
     for (auto it = _buffersToDestroy.begin(); it != _buffersToDestroy.end(); it++) {
         auto& frame = it->first;
         auto& handle = it->second;
