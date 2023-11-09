@@ -45,9 +45,9 @@ void main() {
         atomicExchange(drawCount, 0);
     }
 
-    Mesh mesh = globalData.meshBuffer.meshData[idx];
+    Mesh mesh = bindlessBufferMesh[globalData.meshBufferIndex].meshData[idx];
     vec3 center = (mesh.max.xyz + mesh.min.xyz) * 0.5;
-    center = (globalData.transformsBuffer.transforms[idx] * vec4(center, 1.0)).xyz;
+    center = (bindlessBuffersTransforms[globalData.transformsBufferIndex].transforms[idx] * vec4(center, 1.0)).xyz;
     vec3 halfExtent = (mesh.max.xyz - mesh.min.xyz) * 0.5;
 
     if (frustumCheck(center, length(halfExtent))) {

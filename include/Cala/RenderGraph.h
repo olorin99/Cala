@@ -72,8 +72,6 @@ namespace cala {
 
         void addStorageBufferRead(const char* label, backend::PipelineStage stage);
 
-        void addUniformBufferRead(const char* label, backend::PipelineStage stage);
-
         void addSampledImageRead(const char* label, backend::PipelineStage stage);
 
         void addBlitWrite(const char* label);

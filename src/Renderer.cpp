@@ -282,7 +282,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     auto& cullLights = _graph.addPass("cull_lights", RenderPass::Type::COMPUTE);
 
-    cullLights.addUniformBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
+    cullLights.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
     cullLights.addStorageBufferRead("clusters", backend::PipelineStage::COMPUTE_SHADER);
     cullLights.addStorageBufferWrite("lightGrid", backend::PipelineStage::COMPUTE_SHADER);
     cullLights.addStorageBufferWrite("lightIndices", backend::PipelineStage::COMPUTE_SHADER);
@@ -306,19 +306,19 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             ende::math::Vec<2, u32> screenSize;
             f32 near;
             f32 far;
-            u64 lightGridBuffer;
-            u64 lightIndicesBuffer;
+            i32 lightGridIndex;
+            i32 lightIndicesIndex;
         } push;
         push.inverseProjection = camera.projection().inverse();
         push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
         push.screenSize = { _swapchain->extent().width, _swapchain->extent().height };
         push.near = camera.near();
         push.far = camera.far();
-        push.lightGridBuffer = lightGrid->address();
-        push.lightIndicesBuffer = lightIndices->address();
+        push.lightGridIndex = lightGrid.index();
+        push.lightIndicesIndex = lightIndices.index();
 
         cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
-        cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 0, global, true);
         cmd->bindBuffer(1, 1, clusters, true);
         cmd->bindBuffer(1, 2, lightGlobalIndex, true);
 //        cmd->bindBuffer(1, 3, scene._lightCountBuffer[_engine->device().frameIndex()], true);
@@ -375,7 +375,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     auto& pointShadows = _graph.addPass("point_shadows", RenderPass::Type::COMPUTE);
 
-    pointShadows.addUniformBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    pointShadows.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
     pointShadows.addStorageImageWrite("pointDepth", backend::PipelineStage::FRAGMENT_SHADER);
     pointShadows.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
 //    pointShadows.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER);
@@ -425,7 +425,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd->bindBindings({});
                     cmd->bindAttributes({});
                     cmd->pushConstants(backend::ShaderStage::COMPUTE, shadowFrustum);
-                    cmd->bindBuffer(1, 0, global);
+                    cmd->bindBuffer(1, 0, global, true);
                     cmd->bindBuffer(2, 0, drawCommands, true);
                     cmd->bindBuffer(2, 1, drawCount, true);
                     cmd->bindPipeline();
@@ -466,7 +466,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     cmd->bindBindings(renderable.bindings);
                     cmd->bindAttributes(renderable.attributes);
 
-                    cmd->bindBuffer(1, 0, global);
+                    cmd->bindBuffer(1, 0, global, true);
 
                     cmd->bindPipeline();
                     cmd->bindDescriptors();
@@ -495,7 +495,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         if (_renderSettings.vxgi) {
 //            auto& cullPass = _graph.addPass("vxgiCull");
 //
-//            cullPass.addUniformBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
+//            cullPass.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
 //            cullPass.addStorageBufferRead("transforms", backend::PipelineStage::COMPUTE_SHADER);
 //            cullPass.addStorageBufferRead("meshData", backend::PipelineStage::COMPUTE_SHADER);
 //            cullPass.addStorageBufferWrite("materialCounts", backend::PipelineStage::COMPUTE_SHADER);
@@ -517,7 +517,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 //                cmd->bindBindings(nullptr);
 //                cmd->bindAttributes(nullptr);
 //                cmd->pushConstants(backend::ShaderStage::COMPUTE, { &frustum, sizeof(frustum) });
-//                cmd->bindBuffer(1, 0, global);
+//                cmd->bindBuffer(1, 0, global, true);
 //                cmd->bindBuffer(2, 0, drawCommands, true);
 //                cmd->bindBuffer(2, 1, _drawCountBuffer[_engine->device().frameIndex()], true);
 //                cmd->bindBuffer(2, 2, materialCounts, true);
@@ -572,7 +572,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                 voxelGIPass.addStorageImageRead("voxelGridClear", backend::PipelineStage::FRAGMENT_SHADER);
                 voxelGIPass.addStorageImageWrite("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER);
-                voxelGIPass.addUniformBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+                voxelGIPass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
                 voxelGIPass.addIndirectRead("drawCommands");
                 voxelGIPass.addVertexRead("vertexBuffer");
                 voxelGIPass.addIndexRead("indexBuffer");
@@ -597,7 +597,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     if (scene._renderables.empty())
                         return;
 
-                    cmd->bindBuffer(1, 0, global);
+                    cmd->bindBuffer(1, 0, global, true);
 
                     auto& renderable = scene._renderables[0].second.first;
 
@@ -618,13 +618,13 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         struct VoxelizePush {
                             ende::math::Vec<4, u32> voxelGridSize;
                             ende::math::Vec<4, u32> tileSizes;
-                            u64 lightGridBuffer;
-                            u64 lightIndicesBuffer;
+                            i32 lightGridIndex;
+                            i32 lightIndicesIndex;
                         } push;
                         push.voxelGridSize = { voxelGrid->width(), voxelGrid->height(), voxelGrid->depth(), 0 };
                         push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };;
-                        push.lightGridBuffer = lightGrid->address();
-                        push.lightIndicesBuffer = lightIndices->address();
+                        push.lightGridIndex = lightGrid.index();
+                        push.lightIndicesIndex = lightIndices.index();
 
                         cmd->pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::GEOMETRY | backend::ShaderStage::FRAGMENT, push);
 
@@ -646,7 +646,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     auto& cullPass = _graph.addPass("cull", RenderPass::Type::COMPUTE);
 
-    cullPass.addUniformBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
+    cullPass.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
     cullPass.addStorageBufferRead("transforms", backend::PipelineStage::COMPUTE_SHADER);
     cullPass.addStorageBufferRead("meshData", backend::PipelineStage::COMPUTE_SHADER);
     cullPass.addStorageBufferWrite("materialCounts", backend::PipelineStage::COMPUTE_SHADER);
@@ -664,7 +664,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd->bindBindings({});
         cmd->bindAttributes({});
         cmd->pushConstants(backend::ShaderStage::COMPUTE, _cullingFrustum);
-        cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 0, global, true);
         cmd->bindBuffer(2, 0, drawCommands, true);
         cmd->bindBuffer(2, 1, materialCounts, true);
         cmd->bindPipeline();
@@ -678,7 +678,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
         depthPrePass.addDepthWrite("depth");
 
-        depthPrePass.addUniformBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+        depthPrePass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
         depthPrePass.addIndirectRead("drawCommands");
         depthPrePass.addIndirectRead("materialCounts");
         depthPrePass.addVertexRead("vertexBuffer");
@@ -690,7 +690,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto drawCommands = graph.getBuffer("drawCommands");
             auto materialCounts = graph.getBuffer("materialCounts");
             cmd->clearDescriptors();
-            cmd->bindBuffer(1, 0, global);
+            cmd->bindBuffer(1, 0, global, true);
             auto& renderable = scene._renderables[0].second.first;
 
             cmd->bindBindings(renderable.bindings);
@@ -720,7 +720,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         else
             forwardPass.addDepthWrite("depth");
 
-        forwardPass.addUniformBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addSampledImageRead("pointDepth", backend::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addIndirectRead("drawCommands");
         forwardPass.addStorageBufferRead("lightIndices", backend::PipelineStage::FRAGMENT_SHADER);
@@ -748,7 +748,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             if (scene._renderables.empty())
                 return;
 
-            cmd->bindBuffer(1, 0, global);
+            cmd->bindBuffer(1, 0, global, true);
 
             auto& renderable = scene._renderables[0].second.first;
 
@@ -767,13 +767,13 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 struct ForwardPush {
                     ende::math::Vec<4, u32> tileSizes;
                     ende::math::Vec<2, u32> screenSize;
-                    u64 lightGridBuffer;
-                    u64 lightIndicesBuffer;
+                    i32 lightGridIndex;
+                    i32 lightIndicesIndex;
                 } push;
                 push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
                 push.screenSize = { _swapchain->extent().width, _swapchain->extent().height };
-                push.lightGridBuffer = lightGrid->address();
-                push.lightIndicesBuffer = lightIndices->address();
+                push.lightGridIndex = lightGrid.index();
+                push.lightIndicesIndex = lightIndices.index();
 
                 cmd->pushConstants(backend::ShaderStage::FRAGMENT, push);
 
@@ -793,7 +793,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     if (_renderSettings.tonemap && !fullscreenDebug) {
         auto& tonemapPass = _graph.addPass("tonemap", RenderPass::Type::COMPUTE);
 
-        tonemapPass.addUniformBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
+        tonemapPass.addStorageBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
         if (overlayDebug)
             tonemapPass.addStorageImageWrite("backbuffer-debug", backend::PipelineStage::COMPUTE_SHADER);
         else
@@ -809,7 +809,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd->bindProgram(_engine->_tonemapProgram);
             cmd->bindBindings({});
             cmd->bindAttributes({});
-            cmd->bindBuffer(1, 0, global);
+            cmd->bindBuffer(1, 0, global, true);
             cmd->bindImage(2, 0, _engine->device().getImageView(hdrImage), _engine->device().defaultSampler(), true);
             cmd->bindImage(2, 1, _engine->device().getImageView(backbuffer), _engine->device().defaultSampler(), true);
             cmd->bindPipeline();
@@ -827,7 +827,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         skyboxPass.addDepthRead("depth");
         skyboxPass.setDebugColour({0, 0.7, 0.1, 1});
 
-        skyboxPass.addUniformBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+        skyboxPass.addStorageBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
 
         skyboxPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
             auto global = graph.getBuffer("global");
@@ -837,7 +837,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd->bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
             cmd->bindBindings({ &_engine->_cube->_binding, 1 });
             cmd->bindAttributes(_engine->_cube->_attributes);
-            cmd->bindBuffer(1, 0, global);
+            cmd->bindBuffer(1, 0, global, true);
             i32 skyMapIndex = scene._skyLightMap.index();
             cmd->pushConstants(backend::ShaderStage::FRAGMENT, skyMapIndex);
 
@@ -895,6 +895,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _globalData.gpuCulling = _renderSettings.gpuCulling;
     _globalData.swapchainSize = { _swapchain->extent().width, _swapchain->extent().height };
 
+    _globalData.tranformsBufferIndex = scene._modelBuffer[_engine->device().frameIndex()].index();
+    _globalData.meshBufferIndex = scene._meshDataBuffer[_engine->device().frameIndex()].index();
+    _globalData.lightBufferIndex = scene._lightBuffer[_engine->device().frameIndex()].index();
+    _globalData.lightCountBufferIndex = scene._lightCountBuffer[_engine->device().frameIndex()].index();
+    _globalData.cameraBufferIndex = _cameraBuffer[_engine->device().frameIndex()].index();
+
     if (_renderSettings.ibl) {
         _globalData.irradianceIndex = scene._skyLightIrradiance.index();
         _globalData.prefilterIndex = scene._skyLightPrefilter.index();
@@ -925,11 +931,19 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
     }).index();
 
-    _globalData.cameraBuffer = _cameraBuffer[_engine->device().frameIndex()]->address();
-    _globalData.meshBuffer = scene._meshDataBuffer[_engine->device().frameIndex()]->address();
-    _globalData.transformsBuffer = scene._modelBuffer[_engine->device().frameIndex()]->address();
-    _globalData.lightBuffer = scene._lightBuffer[_engine->device().frameIndex()]->address();
-    _globalData.lightCountBuffer = scene._lightCountBuffer[_engine->device().frameIndex()]->address();
+    _globalData.vxgi.projection = ende::math::orthographic<f32>(_renderSettings.voxelBounds.first.x(), _renderSettings.voxelBounds.second.x(), _renderSettings.voxelBounds.first.y(), _renderSettings.voxelBounds.second.y(), _renderSettings.voxelBounds.first.z(), _renderSettings.voxelBounds.second.z());// *
+//            (ende::math::Quaternion({ 0, 1, 0 }, ende::math::rad(2)) * ende::math::Quaternion({ 1, 0, 0 }, ende::math::rad(2))).toMat();
+    _globalData.vxgi.gridDimensions = _renderSettings.voxelGridDimensions;
+
+    auto sceneBounds = _renderSettings.voxelBounds.second - _renderSettings.voxelBounds.first;
+    ende::math::Vec3f extents = {
+            static_cast<f32>(sceneBounds.x()) / static_cast<f32>(_renderSettings.voxelGridDimensions.x()),
+            static_cast<f32>(sceneBounds.y()) / static_cast<f32>(_renderSettings.voxelGridDimensions.y()),
+            static_cast<f32>(sceneBounds.z()) / static_cast<f32>(_renderSettings.voxelGridDimensions.z())
+    };
+
+    _globalData.vxgi.voxelExtent = extents;
+    _globalData.vxgi.gridIndex = _graph.getImage("voxelGrid").index();
 
     _globalDataBuffer[_engine->device().frameIndex()]->data(std::span<RendererGlobal>(&_globalData, 1));
 

@@ -1,10 +1,12 @@
 #ifndef GLOBAL_DATA_GLSL
 #define GLOBAL_DATA_GLSL
 
-#include "camera.glsl"
-#include "mesh_data.glsl"
-#include "transforms_data.glsl"
-#include "light_data.glsl"
+struct VXGIData {
+    mat4 projection;
+    uvec3 gridDimensions;
+    vec3 voxelExtent;
+    int gridIndex;
+};
 
 struct GlobalData {
     float gamma;
@@ -12,6 +14,11 @@ struct GlobalData {
     uint gpuCulling;
     uint maxDrawCount;
     uvec2 swapchainSize;
+    int transformsBufferIndex;
+    int meshBufferIndex;
+    int lightBufferIndex;
+    int lightCountBufferIndex;
+    int cameraBufferIndex;
     int irradianceIndex;
     int prefilterIndex;
     int brdfIndex;
@@ -19,14 +26,10 @@ struct GlobalData {
     int linearRepeatSampler;
     int lodSampler;
     int shadowSampler;
-    CameraBuffer cameraBuffer;
-    MeshBuffer meshBuffer;
-    TransformsBuffer transformsBuffer;
-    LightBuffer lightBuffer;
-    LightCountBuffer lightCountBuffer;
+    VXGIData vxgi;
 };
 
-layout (set = 1, binding = 0) uniform Global {
+layout (std430, set = 1, binding = 0) readonly buffer Global {
     GlobalData globalData;
 };
 

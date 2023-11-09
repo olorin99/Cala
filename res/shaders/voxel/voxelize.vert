@@ -34,7 +34,7 @@ void main() {
     T = normalize(T - dot(T, N) * N);
     vec3 B = cross(N, T);
 
-    CameraData camera = globalData.cameraBuffer.camera;
+    CameraData camera = bindlessBuffersCamera[globalData.cameraBufferIndex].camera;
 
     vsOut.FragPos = (model * vec4(inPosition, 1.0)).xyz;
     vsOut.TexCoords = inTexCoords;

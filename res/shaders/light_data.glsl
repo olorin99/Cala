@@ -6,21 +6,13 @@ struct LightGrid {
     uint count;
 };
 
-//layout (set = 0, binding = 1) buffer LightGridSSBO {
-//    LightGrid lightGrid[];
-//} bindlessBuffersLightGrid[];
-
-layout (std430, buffer_reference, buffer_reference_align = 8) readonly buffer LightGridBuffer {
+layout (set = 0, binding = 1) buffer LightGridSSBO {
     LightGrid lightGrid[];
-};
+} bindlessBuffersLightGrid[];
 
-//layout (set = 0, binding = 1) buffer BindlessLightIndices {
-//    uint lightIndices[];
-//} bindlessBuffersLightIndices[];
-
-layout (std430, buffer_reference, buffer_reference_align = 8) readonly buffer LightIndicesBuffer {
+layout (set = 0, binding = 1) buffer LightIndices {
     uint lightIndices[];
-};
+} bindlessBuffersLightIndices[];
 
 struct Light {
     vec3 position;
@@ -33,26 +25,17 @@ struct Light {
     int shadowIndex;
 };
 
-//layout (set = 0, binding = 1) readonly buffer LightData {
-//    Light lights[];
-//} bindlessBuffersLights[];
-
-layout (std430, buffer_reference, buffer_reference_align = 8) readonly buffer LightBuffer {
+layout (set = 0, binding = 1) readonly buffer LightData {
     Light lights[];
-};
+} bindlessBuffersLights[];
 
-//layout (set = 0, binding = 1) readonly buffer LightCount {
-//    uint directLightCount;
-//    uint pointLightCount;
-//} bindlessBuffersLightCount[];
-
-layout (std430, buffer_reference, buffer_reference_align = 8) readonly buffer LightCountBuffer {
+layout (set = 0, binding = 1) readonly buffer LightCount {
     uint directLightCount;
     uint pointLightCount;
-};
+} bindlessBuffersLightCount[];
 
-//uint getTotalLightCount() {
-//    return bindlessBuffersLightCount[globalData.lightCountBufferIndex].directLightCount + bindlessBuffersLightCount[globalData.lightCountBufferIndex].pointLightCount;
-//}
+uint getTotalLightCount() {
+    return bindlessBuffersLightCount[globalData.lightCountBufferIndex].directLightCount + bindlessBuffersLightCount[globalData.lightCountBufferIndex].pointLightCount;
+}
 
 #endif

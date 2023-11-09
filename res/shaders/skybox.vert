@@ -15,5 +15,5 @@ layout (location = 0) out VsOut {
 void main() {
     vsOut.TexCoords = inPosition;
 
-    gl_Position = (globalData.cameraBuffer.camera.projection * mat4(mat3(globalData.cameraBuffer.camera.view)) * vec4(inPosition, 1.0)).xyww;
+    gl_Position = (bindlessBuffersCamera[globalData.cameraBufferIndex].camera.projection * mat4(mat3(bindlessBuffersCamera[globalData.cameraBufferIndex].camera.view)) * vec4(inPosition, 1.0)).xyww;
 }

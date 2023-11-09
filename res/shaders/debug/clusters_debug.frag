@@ -14,6 +14,11 @@ layout (push_constant) uniform TileData {
     uvec2 screenSize;
 };
 
+struct LightGrid {
+    uint offset;
+    uint count;
+};
+
 layout (set = 1, binding = 1) buffer LightGridSSBO {
     LightGrid lightGrid[];
 };
@@ -24,7 +29,7 @@ layout (set = 1, binding = 2) uniform sampler2D depthMap;
 
 void main() {
 
-    CameraData camera = globalData.cameraBuffer.camera;
+    CameraData camera = bindlessBuffersCamera[globalData.cameraBufferIndex].camera;
 
     const float maxLightCount = 250;
 

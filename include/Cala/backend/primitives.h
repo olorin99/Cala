@@ -117,8 +117,7 @@ namespace cala::backend {
         STORAGE = 0x00000020,
         INDEX = 0x00000040,
         VERTEX = 0x00000080,
-        INDIRECT = 0x00000100,
-        DEVICE_ADDRESS = 0x00020000
+        INDIRECT = 0x00000100
     };
 
     enum class ImageUsage {
