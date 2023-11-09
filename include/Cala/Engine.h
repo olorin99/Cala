@@ -145,12 +145,9 @@ namespace cala {
         backend::vulkan::ImageHandle _defaultPrefilter;
 
         backend::vulkan::BufferHandle _globalVertexBuffer;
-        backend::vulkan::BufferHandle _vertexStagingBuffer;
         backend::vulkan::BufferHandle _globalIndexBuffer;
-        backend::vulkan::BufferHandle _indexStagingBuffer;
         u32 _vertexOffset;
         u32 _indexOffset;
-        bool _stagingReady;
 
         struct StagedInfo {
             backend::vulkan::BufferHandle dstBuffer;
@@ -160,9 +157,9 @@ namespace cala {
         };
         std::vector<StagedInfo> _pendingStaged;
 
-        backend::vulkan::BufferHandle _stagingBuffer;
         u32 _stagingSize;
         u32 _stagingOffset;
+        backend::vulkan::BufferHandle _stagingBuffer;
 
         Mesh* _cube;
 

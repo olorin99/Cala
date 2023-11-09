@@ -20,10 +20,10 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
     _engine->device().setBindlessSetIndex(0);
 
     for (auto& buffer : _cameraBuffer) {
-        buffer = engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true);
+        buffer = engine->device().createBuffer(sizeof(Camera::Data), backend::BufferUsage::UNIFORM, backend::MemoryProperties::DEVICE);
     }
     for (auto& buffer : _globalDataBuffer) {
-        buffer = engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::STAGING, true);
+        buffer = engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::DEVICE);
     }
 
     _shadowTarget = _engine->device().createImage({
@@ -81,11 +81,11 @@ bool cala::Renderer::beginFrame(cala::backend::vulkan::Swapchain* swapchain) {
 }
 
 f64 cala::Renderer::endFrame() {
+    _engine->gc();
     _frameInfo.cmd->end();
     if (_engine->device().usingTimeline()) {
         u64 waitValue = _engine->device().getFrameValue(_engine->device().prevFrameIndex());
         u64 signalValue = _engine->device().getTimelineSemaphore().increment();
-//        if (!_frameInfo.cmd->submit(_engine->device().getTimelineSemaphore(), waitValue, signalValue, &_swapchainFrame.semaphores.acquire, &_swapchainFrame.semaphores.present)) {
         std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 2> wait({ { &_engine->device().getTimelineSemaphore(), waitValue }, { &_swapchainFrame.semaphores.acquire, 0 } });
         std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 2> signal({ { &_engine->device().getTimelineSemaphore(), signalValue }, { &_swapchainFrame.semaphores.present, 0 } });
         if (!_frameInfo.cmd->submit(wait, signal)) {
@@ -118,7 +118,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     if (!_renderSettings.freezeFrustum)
         _cullingFrustum = camera.frustum();
     auto cameraData = camera.data();
-    _cameraBuffer[_engine->device().frameIndex()]->data(std::span<Camera::Data>(&cameraData, 1));
+    _engine->stageData(_cameraBuffer[_engine->device().frameIndex()], cameraData);
 
     bool overlayDebug = _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugClusters;
     bool fullscreenDebug = _renderSettings.debugNormals || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugMetallic || _renderSettings.debugRoughness || _renderSettings.debugVxgi;
@@ -924,7 +924,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _globalData.lightBuffer = scene._lightBuffer[_engine->device().frameIndex()]->address();
     _globalData.lightCountBuffer = scene._lightCountBuffer[_engine->device().frameIndex()]->address();
 
-    _globalDataBuffer[_engine->device().frameIndex()]->data(std::span<RendererGlobal>(&_globalData, 1));
+    _engine->stageData(_globalDataBuffer[_engine->device().frameIndex()], _globalData);
 
     cmd->startPipelineStatistics();
     _graph.execute(cmd);

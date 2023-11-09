@@ -616,7 +616,6 @@ int main() {
         }
         if (renderer.beginFrame(&swapchain)) {
             scene.prepare(camera);
-            engine.gc();
 
             renderer.render(scene, camera, &guiWindow.context());
 

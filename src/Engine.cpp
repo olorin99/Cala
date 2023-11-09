@@ -40,10 +40,9 @@ cala::Engine::Engine(backend::Platform &platform)
       })),
       _vertexOffset(0),
       _indexOffset(0),
-      _stagingReady(false),
-      _stagingBuffer(_device.createBuffer(1000000, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING, true)),
-      _stagingSize(1000000),
-      _stagingOffset(0)
+      _stagingSize(1000000), // 1mb
+      _stagingOffset(0),
+      _stagingBuffer(_device.createBuffer(_stagingSize, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING, true))
 {
     spdlog::flush_every(std::chrono::seconds(5));
     _device.setBindlessSetIndex(0);
@@ -202,14 +201,10 @@ cala::Engine::Engine(backend::Platform &platform)
     });
 
     _globalVertexBuffer = _device.createBuffer(1000000, backend::BufferUsage::VERTEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE);
-    _vertexStagingBuffer = _device.createBuffer(10000, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING, true);
     _globalIndexBuffer = _device.createBuffer(1000000, backend::BufferUsage::INDEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE);
-    _indexStagingBuffer = _device.createBuffer(10000, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING, true);
 
     _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalVertexBuffer->buffer(), "globalVertexBuffer");
-    _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_vertexStagingBuffer->buffer(), "vertexStagingBuffer");
     _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalIndexBuffer->buffer(), "globalIndexBuffer");
-    _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_indexStagingBuffer->buffer(), "indexStagingBuffer");
 
     _cube = new Mesh(shapes::cube().mesh(this));
 
@@ -220,51 +215,6 @@ cala::Engine::Engine(backend::Platform &platform)
 bool cala::Engine::gc() {
     PROFILE_NAMED("Engine::gc");
     flushStagedData();
-
-    if (_stagingReady) {
-
-        if (_vertexStagingBuffer->size() > _globalVertexBuffer->size()) {
-            _globalVertexBuffer = _device.resizeBuffer(_globalVertexBuffer, _vertexStagingBuffer->size(), true);
-            _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalVertexBuffer->buffer(), "globalVertexBuffer");
-        }
-        if (_indexStagingBuffer->size() > _globalIndexBuffer->size()) {
-            _globalIndexBuffer = _device.resizeBuffer(_globalIndexBuffer, _indexStagingBuffer->size(), true);
-            _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalIndexBuffer->buffer(), "globalIndexBuffer");
-        }
-
-        _device.immediate([&](backend::vulkan::CommandHandle cmd) { //TODO: async transfer queue
-            backend::vulkan::Buffer::Barrier barriers[4];
-
-            barriers[0] = _globalVertexBuffer->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_WRITE);
-            barriers[1] = _vertexStagingBuffer->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_READ);
-            barriers[2] = _globalIndexBuffer->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_WRITE);
-            barriers[3] = _indexStagingBuffer->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_READ);
-
-            cmd->pipelineBarrier({ barriers, 4 });
-
-            VkBufferCopy vertexCopy{};
-            vertexCopy.dstOffset = 0;
-            vertexCopy.srcOffset = 0;
-            vertexCopy.size = _vertexStagingBuffer->size();
-            vkCmdCopyBuffer(cmd->buffer(), _vertexStagingBuffer->buffer(), _globalVertexBuffer->buffer(), 1, &vertexCopy);
-
-            VkBufferCopy indexCopy{};
-            indexCopy.dstOffset = 0;
-            indexCopy.srcOffset = 0;
-            indexCopy.size = _indexStagingBuffer->size();
-            vkCmdCopyBuffer(cmd->buffer(), _indexStagingBuffer->buffer(), _globalIndexBuffer->buffer(), 1, &indexCopy);
-
-            barriers[0] = _globalVertexBuffer->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::BOTTOM, backend::Access::TRANSFER_WRITE, backend::Access::NONE);
-            barriers[1] = _vertexStagingBuffer->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::BOTTOM, backend::Access::TRANSFER_READ, backend::Access::NONE);
-            barriers[2] = _globalIndexBuffer->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::BOTTOM, backend::Access::TRANSFER_WRITE, backend::Access::NONE);
-            barriers[3] = _indexStagingBuffer->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::BOTTOM, backend::Access::TRANSFER_READ, backend::Access::NONE);
-
-            cmd->pipelineBarrier({ barriers, 4 });
-        });
-
-        _stagingReady = false;
-
-    }
 
     return _device.gc();
 }
@@ -411,32 +361,28 @@ void cala::Engine::updateMaterialdata() {
 
 u32 cala::Engine::uploadVertexData(std::span<f32> data) {
     u32 currentOffset = _vertexOffset;
-    if (currentOffset + data.size() * sizeof(f32) >= _vertexStagingBuffer->size()) {
-        _vertexStagingBuffer = _device.resizeBuffer(_vertexStagingBuffer, currentOffset + data.size() * sizeof(f32), true);
-        _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_vertexStagingBuffer->buffer(), "vertexStagingBuffer");
+    if (currentOffset + data.size() * sizeof(f32) >= _globalVertexBuffer->size()) {
+        flushStagedData();
+        _globalVertexBuffer = _device.resizeBuffer(_globalVertexBuffer, currentOffset + data.size() * sizeof(f32), true);
+        _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalVertexBuffer->buffer(), "vertexStagingBuffer");
     }
 
-//    stageData(_globalVertexBuffer, std::span<u8>(reinterpret_cast<u8*>(data.data()), data.size() * sizeof(f32)), currentOffset);
-
-    //TODO: transition to using global staging buffer
-    _vertexStagingBuffer->data(data, currentOffset);
+    stageData(_globalVertexBuffer, std::span<const u8>(reinterpret_cast<const u8*>(data.data()), data.size() * sizeof(f32)), currentOffset);
 
     _vertexOffset += data.size() * sizeof(f32);
-    _stagingReady = true;
     return currentOffset;
 }
 
 u32 cala::Engine::uploadIndexData(std::span<u32> data) {
     u32 currentOffset = _indexOffset;
-    if (currentOffset + data.size() * sizeof(u32) >= _indexStagingBuffer->size()) {
-        _indexStagingBuffer = _device.resizeBuffer(_indexStagingBuffer, currentOffset + data.size() * sizeof(u32), true);
-        _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_indexStagingBuffer->buffer(), "indexStagingBuffer");
+    if (currentOffset + data.size() * sizeof(u32) >= _globalIndexBuffer->size()) {
+        flushStagedData();
+        _globalIndexBuffer = _device.resizeBuffer(_globalIndexBuffer, currentOffset + data.size() * sizeof(u32), true);
+        _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalIndexBuffer->buffer(), "indexStagingBuffer");
     }
-//    stageData(_globalIndexBuffer, std::span<u8>(reinterpret_cast<u8*>(data.data()), data.size() * sizeof(f32)), currentOffset);
-//
-    _indexStagingBuffer->data(data, currentOffset);
+    stageData(_globalIndexBuffer, std::span<const u8>(reinterpret_cast<const u8*>(data.data()), data.size() * sizeof(f32)), currentOffset);
+
     _indexOffset += data.size() * sizeof(u32);
-    _stagingReady = true;
     return currentOffset;
 }
 
@@ -460,6 +406,7 @@ void cala::Engine::stageData(backend::vulkan::BufferHandle dstHandle, std::span<
 
             uploadOffset += allocationSize;
             _stagingOffset += allocationSize;
+            dstOffset += allocationSize;
             uploadSizeRemaining = data.size() - uploadOffset;
         } else {
             flushStagedData();
