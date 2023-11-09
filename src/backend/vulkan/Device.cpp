@@ -326,12 +326,14 @@ cala::backend::vulkan::CommandHandle cala::backend::vulkan::Device::getCommandBu
 
 
 bool cala::backend::vulkan::Device::gc() {
-    immediate([&](CommandHandle cmd) {
-        for (auto& deferredCommand : _deferredCommands) {
-            deferredCommand(cmd);
-        }
-    });
-    _deferredCommands.clear();
+    if (!_deferredCommands.empty()) {
+        immediate([&](CommandHandle cmd) {
+            for (auto& deferredCommand : _deferredCommands) {
+                deferredCommand(cmd);
+            }
+        });
+        _deferredCommands.clear();
+    }
 
     for (auto it = _buffersToDestroy.begin(); it != _buffersToDestroy.end(); it++) {
         auto& frame = it->first;
@@ -402,7 +404,7 @@ bool cala::backend::vulkan::Device::gc() {
 
 cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(u32 size, BufferUsage usage, backend::MemoryProperties flags, bool persistentlyMapped, ExtraInfo extraInfo) {
     u32 index = 0;
-    usage = usage | BufferUsage::TRANSFER_DST | BufferUsage::TRANSFER_SRC | BufferUsage::STORAGE;
+    usage = usage | BufferUsage::TRANSFER_DST | BufferUsage::TRANSFER_SRC | BufferUsage::STORAGE | BufferUsage::DEVICE_ADDRESS;
 
     VkBuffer buffer;
     VmaAllocation allocation;
@@ -441,6 +443,12 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
         }}));
     }
     _buffers[index].first->_buffer = buffer;
+    if (_context.getEnabledFeatures().deviceAddress) {
+        VkBufferDeviceAddressInfo deviceAddressInfo{};
+        deviceAddressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+        deviceAddressInfo.buffer = buffer;
+        _buffers[index].first->_address = vkGetBufferDeviceAddress(_context.device(), &deviceAddressInfo);
+    }
     _buffers[index].first->_allocation = allocation;
     _buffers[index].first->_size = size;
     _buffers[index].first->_usage = usage;

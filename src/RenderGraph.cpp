@@ -131,6 +131,15 @@ void cala::RenderPass::addStorageBufferRead(const char *label, backend::Pipeline
     }
 }
 
+void cala::RenderPass::addUniformBufferRead(const char *label, backend::PipelineStage stage) {
+    if (auto resource = reads(label, backend::Access::UNIFORM_READ,
+                              stage,
+                              backend::ImageLayout::UNDEFINED); resource) {
+        auto bufferResource = dynamic_cast<BufferResource*>(resource);
+        bufferResource->usage = bufferResource->usage | backend::BufferUsage::UNIFORM;
+    }
+}
+
 void cala::RenderPass::addSampledImageRead(const char *label, backend::PipelineStage stage) {
     if (auto resource = reads(label, backend::Access::SAMPLED_READ,
                                stage,

@@ -6,13 +6,13 @@ struct LightGrid {
     uint count;
 };
 
-layout (set = 0, binding = 1) buffer LightGridSSBO {
+layout (scalar, buffer_reference, buffer_reference_align = 8) buffer LightGridBuffer {
     LightGrid lightGrid[];
-} bindlessBuffersLightGrid[];
+};
 
-layout (set = 0, binding = 1) buffer LightIndices {
+layout (scalar, buffer_reference, buffer_reference_align = 8) buffer LightIndicesBuffer {
     uint lightIndices[];
-} bindlessBuffersLightIndices[];
+};
 
 struct Light {
     vec3 position;
@@ -25,17 +25,13 @@ struct Light {
     int shadowIndex;
 };
 
-layout (set = 0, binding = 1) readonly buffer LightData {
+layout (scalar, buffer_reference, buffer_reference_align = 8) readonly buffer LightBuffer {
     Light lights[];
-} bindlessBuffersLights[];
+};
 
-layout (set = 0, binding = 1) readonly buffer LightCount {
+layout (scalar, buffer_reference, buffer_reference_align = 8) readonly buffer LightCountBuffer {
     uint directLightCount;
     uint pointLightCount;
-} bindlessBuffersLightCount[];
-
-uint getTotalLightCount() {
-    return bindlessBuffersLightCount[globalData.lightCountBufferIndex].directLightCount + bindlessBuffersLightCount[globalData.lightCountBufferIndex].pointLightCount;
-}
+};
 
 #endif

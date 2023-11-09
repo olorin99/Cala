@@ -93,25 +93,13 @@ namespace cala {
 
         Settings _renderSettings;
 
-        struct VXGIData {
-            ende::math::Mat4f projection;
-            ende::math::Vec<3, u32> gridDimensions;
-            i32 padding0;
-            ende::math::Vec3f voxelExtent;
-            i32 gridIndex;
-        };
-
         struct RendererGlobal {
             f32 gamma = 2.2;
             u32 time = 0;
             u32 gpuCulling = 1;
             u32 maxDrawCount = 0;
+            ende::math::Vec<4, u32> tileSizes = { 0, 0, 0, 0 };
             ende::math::Vec<2, u32> swapchainSize = {0, 0};
-            i32 tranformsBufferIndex = -1;
-            i32 meshBufferIndex = -1;
-            i32 lightBufferIndex = -1;
-            i32 lightCountBufferIndex = -1;
-            i32 cameraBufferIndex = -1;
             i32 irradianceIndex = -1;
             i32 prefilterIndex = -1;
             i32 brdfIndex = -1;
@@ -119,9 +107,11 @@ namespace cala {
             i32 linearRepeatSampler = -1;
             i32 lodSampler = -1;
             i32 shadowSampler = -1;
-            i32 padding0 = 0;
-            i32 padding1 = 0;
-            VXGIData vxgi;
+            u64 meshBuffer;
+            u64 transformsBuffer;
+            u64 cameraBuffer;
+            u64 lightBuffer;
+            u64 lightCountBuffer;
         };
 
         RendererGlobal _globalData;

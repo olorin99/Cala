@@ -19,18 +19,14 @@ layout (set = 0, binding = 2) uniform sampler samplers[];
 #include "global_data.glsl"
 
 layout (push_constant) uniform IBLData {
-    uvec4 tileSizes;
-    uvec2 screenSize;
-    int lightGridIndex;
-    int lightIndicesIndex;
+    LightGridBuffer lightGridBuffer;
+    LightIndicesBuffer lightIndicesBuffer;
 };
 
 #include "util.glsl"
 #include "pbr.glsl"
 #include "shadow.glsl"
 #include "lighting.glsl"
-
-#include "voxel/vxgi.glsl"
 
 MATERIAL_DATA;
 
@@ -47,7 +43,7 @@ layout (set = 2, binding = 0) readonly buffer MatData {
 #include "mesh_data.glsl"
 
 void main() {
-    Mesh mesh = bindlessBufferMesh[globalData.meshBufferIndex].meshData[fsIn.drawID];
+    Mesh mesh = globalData.meshBuffer.meshData[fsIn.drawID];
     MaterialData materialData = materials[mesh.materialInstanceIndex];
     Material material = loadMaterial(materialData);
     FragColour = evalMaterial(material);

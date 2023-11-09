@@ -318,6 +318,8 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     vulkan12Features.descriptorBindingVariableDescriptorCount = VK_TRUE;
     vulkan12Features.hostQueryReset = VK_TRUE;
     vulkan12Features.timelineSemaphore = VK_TRUE;
+    vulkan12Features.bufferDeviceAddress = VK_TRUE;
+    vulkan12Features.scalarBlockLayout = VK_TRUE;
 
     VkPhysicalDeviceVulkan13Features vulkan13Features{};
     vulkan13Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
@@ -329,6 +331,11 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     VK_TRY(vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_logicalDevice));
 
     volkLoadDevice(_logicalDevice);
+
+    _enabledFeatures.meshShading = false;
+    _enabledFeatures.deviceAddress = vulkan12Features.bufferDeviceAddress;
+    _enabledFeatures.sync2 = vulkan13Features.synchronization2;
+
 
     VmaAllocatorCreateInfo allocatorCreateInfo{};
     allocatorCreateInfo.vulkanApiVersion = appInfo.apiVersion;
@@ -371,6 +378,8 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     if (_supportedExtensions.AMD_device_coherent_memory)
         allocatorCreateInfo.flags |= VMA_ALLOCATOR_CREATE_AMD_DEVICE_COHERENT_MEMORY_BIT;
 #endif
+    if (_enabledFeatures.deviceAddress)
+        allocatorCreateInfo.flags |= VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
 
     vmaCreateAllocator(&allocatorCreateInfo, &_allocator);
 
@@ -436,8 +445,8 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
             VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT;
     pipelineStatisticsCreate.queryCount = 6;
     VK_TRY(vkCreateQueryPool(_logicalDevice, &pipelineStatisticsCreate, nullptr, &_pipelineStatistics));
-
-    vkResetQueryPool(_logicalDevice, _timestampQueryPool, 0, 10);
+    vkResetQueryPool(_logicalDevice, _pipelineStatistics, 0, pipelineStatisticsCreate.queryCount);
+    vkResetQueryPool(_logicalDevice, _timestampQueryPool, 0, queryPoolCreateInfo.queryCount);
 }
 
 cala::backend::vulkan::Context::~Context() {
