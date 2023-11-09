@@ -3,12 +3,12 @@ float linearDepth(float depth, float near, float far) {
     return 2.0 * near * far / (far + near - depthRange * (far - near));
 }
 
-uint getTileIndex(vec2 xy, float depth, float near, float far) {
-    uvec2 tileSize = globalData.swapchainSize / tileSizes.xy;
+uint getTileIndex(vec3 position, uvec4 tileSizes, uvec2 screenSize, float near, float far) {
+    uvec2 tileSize = screenSize / tileSizes.xy;
     float scale = 24.0 / log2(far / near);
     float bias = -(24.0 * log2(near) / log2(far / near));
-    uint zTile = uint(max(log2(linearDepth(depth, near, far)) * scale + bias, 0.0));
-    uvec3 tiles = uvec3(uvec2(xy / tileSize), zTile);
+    uint zTile = uint(max(log2(linearDepth(position.z, near, far)) * scale + bias, 0.0));
+    uvec3 tiles = uvec3(uvec2(position.xy / tileSize), zTile);
     uint tileIndex = tiles.x + tileSizes.x * tiles.y + (tileSizes.x * tileSizes.y) * tiles.z;
     return tileIndex;
 }

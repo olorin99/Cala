@@ -10,8 +10,8 @@ struct Mesh {
     vec4 max;
 };
 
-layout (set = 0, binding = 1) readonly buffer MeshBuffer {
+layout (std430, buffer_reference, buffer_reference_align = 8) readonly buffer MeshBuffer {
     Mesh meshData[];
-} bindlessBufferMesh[];
+};
 
 #endif

@@ -105,6 +105,15 @@ namespace cala::backend::vulkan {
 
         Extensions getSupportedExtensions() const { return _supportedExtensions; }
 
+        struct Features {
+            bool meshShading = false;
+            bool deviceAddress = false;
+            bool sync2 = false;
+        };
+
+        Features getEnabledFeatures() const { return _enabledFeatures; }
+
+
         struct Limits {
             u32 maxImageDimensions1D = 0;
             u32 maxImageDimensions2D = 0;
@@ -160,6 +169,7 @@ namespace cala::backend::vulkan {
         std::string _deviceName;
 
         Extensions _supportedExtensions = {};
+        Features _enabledFeatures = {};
         Limits _limits = {};
 
     };

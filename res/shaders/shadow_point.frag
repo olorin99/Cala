@@ -18,7 +18,7 @@ layout (set = 3, binding = 0) readonly buffer LightData {
     Light light;
 };
 
-struct CameraData {
+struct ShadowCameraData {
     mat4 viewProjection;
     vec3 position;
     float near;
@@ -26,7 +26,7 @@ struct CameraData {
 };
 
 layout (push_constant) uniform PushConstants {
-    CameraData camera;
+    ShadowCameraData camera;
 };
 
 void main() {

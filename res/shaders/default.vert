@@ -19,14 +19,15 @@ layout (location = 0) out VsOut {
 #include "transforms_data.glsl"
 
 void main() {
-    mat4 model = bindlessBuffersTransforms[globalData.transformsBufferIndex].transforms[gl_BaseInstance];
+//    mat4 model = bindlessBuffersTransforms[globalData.transformsBufferIndex].transforms[gl_BaseInstance];
+    mat4 model = globalData.transformsBuffer.transforms[gl_BaseInstance];
 
     vec3 T = normalize(mat3(model) * inTangent.xyz) * inTangent.w;
     vec3 N = normalize(mat3(model) * inNormal);
     T = normalize(T - dot(T, N) * N);
     vec3 B = cross(N, T);
 
-    CameraData camera = bindlessBuffersCamera[globalData.cameraBufferIndex].camera;
+    CameraData camera = globalData.cameraBuffer.camera;
 
     vsOut.FragPos = (model * vec4(inPosition, 1.0)).xyz;
     vsOut.TexCoords = inTexCoords;
