@@ -517,7 +517,7 @@ void cala::backend::vulkan::CommandBuffer::popDebugLabel() {
 }
 
 void cala::backend::vulkan::CommandBuffer::startPipelineStatistics() {
-    vkCmdResetQueryPool(_buffer, _device->context().pipelineStatisticsPool(),0, 6);
+    vkCmdResetQueryPool(_buffer, _device->context().pipelineStatisticsPool(), 0, 6);
     vkCmdBeginQuery(_buffer, _device->context().pipelineStatisticsPool(), 0, 0);
 }
 

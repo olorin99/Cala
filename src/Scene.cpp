@@ -11,27 +11,27 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     _lightsDirtyFrame(2)
 {
     for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
-        _meshDataBuffer[i] = engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true);
+        _meshDataBuffer[i] = engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::DEVICE);
         std::string debugLabel = "MeshDataBuffer: " + std::to_string(i);
         engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_meshDataBuffer[i]->buffer(), debugLabel);
     }
     for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
-        _modelBuffer[i] = engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true);
+        _modelBuffer[i] = engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::DEVICE);
         std::string debugLabel = "ModelBuffer: " + std::to_string(i);
         engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_modelBuffer[i]->buffer(), debugLabel);
     }
     for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
-        _lightBuffer[i] = engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true);
+        _lightBuffer[i] = engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::DEVICE);
         std::string debugLabel = "LightBuffer: " + std::to_string(i);
         engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_lightBuffer[i]->buffer(), debugLabel);
     }
     for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
-        _lightCountBuffer[i] = engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::STAGING, true);
+        _lightCountBuffer[i] = engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::DEVICE);
         std::string debugLabel = "LightCountBuffer: " + std::to_string(i);
         engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_lightCountBuffer[i]->buffer(), debugLabel);
     }
     for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
-        _materialCountBuffer[i] = engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::STAGING, true);
+        _materialCountBuffer[i] = engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::DEVICE);
         std::string debugLabel = "MaterialCountBuffer: " + std::to_string(i);
         engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_materialCountBuffer[i]->buffer(), debugLabel);
     }
@@ -152,12 +152,15 @@ void cala::Scene::prepare(cala::Camera& camera) {
         if (f > 0) {
             u32 meshOffset = i * sizeof(MeshData);
             MeshData mesh{ renderable.firstIndex, renderable.indexCount, material->id(), static_cast<u32>(renderable.materialInstance->getOffset() / renderable.materialInstance->material()->size()), renderable.aabb.min, renderable.aabb.max };
-            assignMemory(_meshDataBuffer[frame]->persistentMapping(), meshOffset, mesh);
+//            _engine->stageData(_meshDataBuffer[frame], std::span<u8>(reinterpret_cast<u8*>(&mesh), sizeof(mesh)), meshOffset);
+            _engine->stageData(_meshDataBuffer[frame], mesh, meshOffset);
+//            assignMemory(_meshDataBuffer[frame]->persistentMapping(), meshOffset, mesh);
             _meshDataBuffer[frame]->invalidate();
 
             u32 transformOffset = i * sizeof(ende::math::Mat4f);
             auto model = transform->world();
-            assignMemory(_modelBuffer[frame]->persistentMapping(), transformOffset, model);
+            _engine->stageData(_modelBuffer[frame], model, transformOffset);
+//            assignMemory(_modelBuffer[frame]->persistentMapping(), transformOffset, model);
             _modelBuffer[frame]->invalidate();
             f--;
         }
@@ -216,12 +219,14 @@ void cala::Scene::prepare(cala::Camera& camera) {
             _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_lightBuffer[frame]->buffer(), debugLabel);
         }
         u32 lightCount[2] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount) };
-        std::span<u32> ls = lightCount;
-        _lightCountBuffer[frame]->data(ls);
+        std::span<const u8> ls(reinterpret_cast<const u8*>(lightCount), sizeof(u32) * 2);
+        _engine->stageData(_lightCountBuffer[frame], ls);
+//        _lightCountBuffer[frame]->data(ls);
 //        ende::log::info("lightData size: {}", _lightBuffer[frame]->size());
         assert(_lightData.size() * sizeof(Light::Data) <= _lightBuffer[frame]->size());
+        _engine->stageData(_lightBuffer[frame], std::span<const u8>(reinterpret_cast<const u8*>(_lightData.data()), _lightData.size() * sizeof(Light::Data)));
 //        assignMemory(_lightBuffer[frame]->persistentMapping(), 0, _lights.size());
-        assignMemory(_lightBuffer[frame]->persistentMapping(), 0, _lightData.data(), _lightData.size());
+//        assignMemory(_lightBuffer[frame]->persistentMapping(), 0, _lightData.data(), _lightData.size());
 //        assignMemory(_lightBuffer[frame]->persistentMapping(), sizeof(u32) * 4, _lightData.data(), _lightData.size());
         //TODO: find reason for crash when copying memory at offset into mapped lightbuffer memory
 
@@ -234,7 +239,8 @@ void cala::Scene::prepare(cala::Camera& camera) {
         count.offset = offset;
         offset += count.count;
     }
-    std::memcpy(_materialCountBuffer[frame]->persistentMapping(), _materialCounts.data(), _materialCounts.size() * sizeof(MaterialCount));
+    _engine->stageData(_materialCountBuffer[frame], std::span<const u8>(reinterpret_cast<const u8*>(_materialCounts.data()), _materialCounts.size() * sizeof(MaterialCount)));
+//    std::memcpy(_materialCountBuffer[frame]->persistentMapping(), _materialCounts.data(), _materialCounts.size() * sizeof(MaterialCount));
     _materialCountBuffer[frame]->invalidate();
 
     _engine->updateMaterialdata();

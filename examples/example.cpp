@@ -615,8 +615,8 @@ int main() {
             lightTransform.rotate(ende::math::Vec3f{0, 1, 1}, ende::math::rad(45) * dt);
         }
         if (renderer.beginFrame(&swapchain)) {
-            engine.gc();
             scene.prepare(camera);
+            engine.gc();
 
             renderer.render(scene, camera, &guiWindow.context());
 

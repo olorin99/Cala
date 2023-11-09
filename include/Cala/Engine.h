@@ -41,6 +41,15 @@ namespace cala {
 
         u32 uploadIndexData(std::span<u32> data);
 
+        template <typename T>
+        void stageData(backend::vulkan::BufferHandle dstHandle, const T& data, u32 dstOffset = 0) {
+            stageData(dstHandle, std::span<const u8>(reinterpret_cast<const u8*>(&data), sizeof(data)), dstOffset);
+        }
+
+        void stageData(backend::vulkan::BufferHandle dstHandle, std::span<const u8> data, u32 dstOffset = 0);
+
+        void flushStagedData();
+
         struct ShaderInfo {
             ende::fs::Path path;
             backend::ShaderStage stage;
@@ -142,6 +151,18 @@ namespace cala {
         u32 _vertexOffset;
         u32 _indexOffset;
         bool _stagingReady;
+
+        struct StagedInfo {
+            backend::vulkan::BufferHandle dstBuffer;
+            u32 dstOffset;
+            u32 srcSize;
+            u32 srcOffset;
+        };
+        std::vector<StagedInfo> _pendingStaged;
+
+        backend::vulkan::BufferHandle _stagingBuffer;
+        u32 _stagingSize;
+        u32 _stagingOffset;
 
         Mesh* _cube;
 

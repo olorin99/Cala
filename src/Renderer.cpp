@@ -491,7 +491,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         if (_renderSettings.vxgi) {
 //            auto& cullPass = _graph.addPass("vxgiCull");
 //
-//            cullPass.addUniformBufferRead("global, backend::PipelineStage::COMPUTE_SHADER);
+//            cullPass.addUniformBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
 //            cullPass.addStorageBufferRead("transforms", backend::PipelineStage::COMPUTE_SHADER);
 //            cullPass.addStorageBufferRead("meshData", backend::PipelineStage::COMPUTE_SHADER);
 //            cullPass.addStorageBufferWrite("materialCounts", backend::PipelineStage::COMPUTE_SHADER);
@@ -614,13 +614,13 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         struct VoxelizePush {
                             ende::math::Vec<4, u32> voxelGridSize;
                             ende::math::Vec<4, u32> tileSizes;
-                            i32 lightGridIndex;
-                            i32 lightIndicesIndex;
+                            u64 lightGridBuffer;
+                            u64 lightIndicesBuffer;
                         } push;
                         push.voxelGridSize = { voxelGrid->width(), voxelGrid->height(), voxelGrid->depth(), 0 };
                         push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };;
-                        push.lightGridIndex = lightGrid.index();
-                        push.lightIndicesIndex = lightIndices.index();
+                        push.lightGridBuffer = lightGrid->address();
+                        push.lightIndicesBuffer = lightIndices->address();
 
                         cmd->pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::GEOMETRY | backend::ShaderStage::FRAGMENT, push);
 
@@ -917,20 +917,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
         .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
     }).index();
-
-//    _globalData.vxgi.projection = ende::math::orthographic<f32>(_renderSettings.voxelBounds.first.x(), _renderSettings.voxelBounds.second.x(), _renderSettings.voxelBounds.first.y(), _renderSettings.voxelBounds.second.y(), _renderSettings.voxelBounds.first.z(), _renderSettings.voxelBounds.second.z());// *
-////            (ende::math::Quaternion({ 0, 1, 0 }, ende::math::rad(2)) * ende::math::Quaternion({ 1, 0, 0 }, ende::math::rad(2))).toMat();
-//    _globalData.vxgi.gridDimensions = _renderSettings.voxelGridDimensions;
-//
-//    auto sceneBounds = _renderSettings.voxelBounds.second - _renderSettings.voxelBounds.first;
-//    ende::math::Vec3f extents = {
-//            static_cast<f32>(sceneBounds.x()) / static_cast<f32>(_renderSettings.voxelGridDimensions.x()),
-//            static_cast<f32>(sceneBounds.y()) / static_cast<f32>(_renderSettings.voxelGridDimensions.y()),
-//            static_cast<f32>(sceneBounds.z()) / static_cast<f32>(_renderSettings.voxelGridDimensions.z())
-//    };
-//
-//    _globalData.vxgi.voxelExtent = extents;
-//    _globalData.vxgi.gridIndex = _graph.getImage("voxelGrid").index();
 
     _globalData.meshBuffer = scene._meshDataBuffer[_engine->device().frameIndex()]->address();
     _globalData.transformsBuffer = scene._modelBuffer[_engine->device().frameIndex()]->address();

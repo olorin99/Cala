@@ -1038,26 +1038,26 @@ cala::backend::vulkan::Device::Stats cala::backend::vulkan::Device::stats() cons
 
 void cala::backend::vulkan::Device::printMarkers() {
 
-    ende::fs::File file;
-    file.open("markers.log"_path, ende::fs::out);
+//    ende::fs::File file;
+//    file.open("markers.log"_path, ende::fs::out);
 
     for (u32 frame = 0; frame < FRAMES_IN_FLIGHT; frame++) {
-        file.write(std::format("Frame: {}", frame));
+//        file.write(std::format("Frame: {}", frame));
         if (!_markerBuffer[frame])
-            return;
+            continue;
 
         u32* markers = static_cast<u32*>(_markerBuffer[frame]->persistentMapping());
         for (u32 i = 0; i < _markerBuffer[frame]->size() / sizeof(u32); i++) {
             u32 marker = markers[i];
             auto cmd = marker < _markedCmds[frame].size() ? _markedCmds[i][frame] : std::make_pair( "NullCmd", 0 );
-            file.write(std::format("Command: {}\nMarker[{}]: {}\n", cmd.first, i, marker));
+//            file.write(std::format("Command: {}\nMarker[{}]: {}\n", cmd.first, i, marker));
             _logger.warn("Command: {}\nMarker[{}]: {}", cmd.first, i, marker);
             if (marker == 0)
                 break;
         }
 
-        file.write("\n\n\n");
+//        file.write("\n\n\n");
     }
 
-    file.close();
+//    file.close();
 }

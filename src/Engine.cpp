@@ -40,7 +40,10 @@ cala::Engine::Engine(backend::Platform &platform)
       })),
       _vertexOffset(0),
       _indexOffset(0),
-      _stagingReady(false)
+      _stagingReady(false),
+      _stagingBuffer(_device.createBuffer(1000000, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING, true)),
+      _stagingSize(1000000),
+      _stagingOffset(0)
 {
     spdlog::flush_every(std::chrono::seconds(5));
     _device.setBindlessSetIndex(0);
@@ -198,9 +201,9 @@ cala::Engine::Engine(backend::Platform &platform)
 
     });
 
-    _globalVertexBuffer = _device.createBuffer(10000, backend::BufferUsage::VERTEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE);
+    _globalVertexBuffer = _device.createBuffer(1000000, backend::BufferUsage::VERTEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE);
     _vertexStagingBuffer = _device.createBuffer(10000, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING, true);
-    _globalIndexBuffer = _device.createBuffer(10000, backend::BufferUsage::INDEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE);
+    _globalIndexBuffer = _device.createBuffer(1000000, backend::BufferUsage::INDEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE);
     _indexStagingBuffer = _device.createBuffer(10000, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING, true);
 
     _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalVertexBuffer->buffer(), "globalVertexBuffer");
@@ -216,6 +219,7 @@ cala::Engine::Engine(backend::Platform &platform)
 
 bool cala::Engine::gc() {
     PROFILE_NAMED("Engine::gc");
+    flushStagedData();
 
     if (_stagingReady) {
 
@@ -412,6 +416,9 @@ u32 cala::Engine::uploadVertexData(std::span<f32> data) {
         _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_vertexStagingBuffer->buffer(), "vertexStagingBuffer");
     }
 
+//    stageData(_globalVertexBuffer, std::span<u8>(reinterpret_cast<u8*>(data.data()), data.size() * sizeof(f32)), currentOffset);
+
+    //TODO: transition to using global staging buffer
     _vertexStagingBuffer->data(data, currentOffset);
 
     _vertexOffset += data.size() * sizeof(f32);
@@ -425,12 +432,59 @@ u32 cala::Engine::uploadIndexData(std::span<u32> data) {
         _indexStagingBuffer = _device.resizeBuffer(_indexStagingBuffer, currentOffset + data.size() * sizeof(u32), true);
         _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_indexStagingBuffer->buffer(), "indexStagingBuffer");
     }
-
+//    stageData(_globalIndexBuffer, std::span<u8>(reinterpret_cast<u8*>(data.data()), data.size() * sizeof(f32)), currentOffset);
+//
     _indexStagingBuffer->data(data, currentOffset);
     _indexOffset += data.size() * sizeof(u32);
     _stagingReady = true;
     return currentOffset;
 }
+
+void cala::Engine::stageData(backend::vulkan::BufferHandle dstHandle, std::span<const u8> data, u32 dstOffset) {
+    u32 uploadOffset = 0;
+    u32 uploadSizeRemaining = data.size() - uploadOffset;
+
+    while (uploadSizeRemaining > 0) {
+        u32 availableSize = _stagingSize - _stagingOffset;
+        u32 allocationSize = std::min(availableSize, uploadSizeRemaining);
+
+        if (allocationSize > 0) {
+            std::memcpy(static_cast<u8*>(_stagingBuffer->persistentMapping()) + _stagingOffset, data.data() + uploadOffset, uploadSizeRemaining);
+
+            _pendingStaged.push_back({
+                dstHandle,
+                dstOffset,
+                allocationSize,
+                _stagingOffset
+            });
+
+            uploadOffset += allocationSize;
+            _stagingOffset += allocationSize;
+            uploadSizeRemaining = data.size() - uploadOffset;
+        } else {
+            flushStagedData();
+        }
+    }
+}
+
+void cala::Engine::flushStagedData() {
+    if (!_pendingStaged.empty()) {
+        _device.immediate([&](backend::vulkan::CommandHandle cmd) {
+            for (auto& staged : _pendingStaged) {
+                VkBufferCopy  bufferCopy{};
+                bufferCopy.dstOffset = staged.dstOffset;
+                bufferCopy.srcOffset = staged.srcOffset;
+                bufferCopy.size = staged.srcSize;
+                assert(staged.dstBuffer->size() >= bufferCopy.dstOffset + bufferCopy.size);
+                vkCmdCopyBuffer(cmd->buffer(), _stagingBuffer->buffer(), staged.dstBuffer->buffer(), 1, &bufferCopy);
+            }
+        });
+        _pendingStaged.clear();
+        _stagingOffset = 0;
+    }
+}
+
+
 
 cala::Material *cala::Engine::createMaterial(u32 size) {
     u32 id = _materials.size();
