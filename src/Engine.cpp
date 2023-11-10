@@ -40,7 +40,7 @@ cala::Engine::Engine(backend::Platform &platform)
       })),
       _vertexOffset(0),
       _indexOffset(0),
-      _stagingSize(1000000), // 1mb
+      _stagingSize(1 << 24), // 16mb
       _stagingOffset(0),
       _stagingBuffer(_device.createBuffer(_stagingSize, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING, true))
 {
@@ -150,42 +150,7 @@ cala::Engine::Engine(backend::Platform &platform)
     _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)_brdfImage->image(), "brdf");
     _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_device.getImageView(_brdfImage).view, "brdf_View");
 
-    _defaultIrradiance = _device.createImage({
-        1, 1, 1,
-        backend::Format::RGBA32_SFLOAT,
-        1, 6,
-        backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST,
-        backend::ImageType::IMAGE2D
-        });
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)_defaultIrradiance->image(), "defaultIrradiance");
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_device.getImageView(_defaultIrradiance).view, "defaultIrradiance_View");
-
-    f32 irradianceData[4];
-    std::memset(irradianceData, 0, sizeof(f32) * 4);
-    for (u32 i = 0; i < 6; i++)
-        _defaultIrradiance->data(_device, {0, 1, 1, 1, 4 * 4, i }, std::span<f32>(irradianceData, 4));
-
-
-    _defaultPrefilter = _device.createImage({
-        512, 512, 1,
-        backend::Format::RGBA32_SFLOAT,
-        5, 6,
-        backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST | backend::ImageUsage::TRANSFER_SRC,
-        backend::ImageType::IMAGE2D
-        });
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)_defaultPrefilter->image(), "defaultPrefilter");
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_device.getImageView(_defaultPrefilter).view, "defaultPrefilter_View");
-
-    f32 prefilterData[4 * 512 * 512];
-    std::memset(prefilterData, 0, sizeof(f32) * 4 * 512 * 512);
-    for (u32 i = 0; i < 6; i++)
-        _defaultPrefilter->data(_device, {0, 512, 512, 1, 4 * 4, i }, std::span<f32>(prefilterData, 4 * 512 * 512 ));
-
     _device.immediate([&](backend::vulkan::CommandHandle cmd) {
-        auto prefilterBarrier = _defaultPrefilter->barrier(backend::PipelineStage::TOP, backend::PipelineStage::BOTTOM, backend::Access::NONE, backend::Access::NONE, backend::ImageLayout::TRANSFER_DST);
-        cmd->pipelineBarrier({ &prefilterBarrier, 1 });
-        _defaultPrefilter->generateMips(cmd);
-
         auto brdfBarrier = _brdfImage->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_WRITE | backend::Access::SHADER_READ, backend::ImageLayout::GENERAL);
         cmd->pipelineBarrier({ &brdfBarrier, 1 });
 
@@ -395,19 +360,88 @@ void cala::Engine::stageData(backend::vulkan::BufferHandle dstHandle, std::span<
         u32 allocationSize = std::min(availableSize, uploadSizeRemaining);
 
         if (allocationSize > 0) {
-            std::memcpy(static_cast<u8*>(_stagingBuffer->persistentMapping()) + _stagingOffset, data.data() + uploadOffset, uploadSizeRemaining);
+            std::memcpy(static_cast<u8*>(_stagingBuffer->persistentMapping()) + _stagingOffset, data.data() + uploadOffset, allocationSize);
 
-            _pendingStaged.push_back({
+            _pendingStagedBuffer.push_back({
                 dstHandle,
                 dstOffset,
                 allocationSize,
                 _stagingOffset
             });
 
-            uploadOffset += allocationSize;
             _stagingOffset += allocationSize;
-            dstOffset += allocationSize;
+            uploadOffset += allocationSize;
             uploadSizeRemaining = data.size() - uploadOffset;
+
+            dstOffset += allocationSize;
+        } else {
+            flushStagedData();
+        }
+    }
+}
+
+void cala::Engine::stageData(backend::vulkan::ImageHandle dstHandle, std::span<const u8> data, backend::vulkan::Image::DataInfo dataInfo) {
+    u32 uploadOffset = 0;
+    u32 uploadSizeRemaining = data.size() - uploadOffset;
+    ende::math::Vec<3, i32> dstOffset = { 0, 0, 0 };
+
+    //TODO: support loading 3d images
+
+    while (uploadSizeRemaining > 0) {
+        u32 availableSize = _stagingSize - _stagingOffset;
+        u32 allocationSize = std::min(availableSize, uploadSizeRemaining);
+
+        if (allocationSize > 0 && allocationSize >= dataInfo.format) {
+            u32 allocIndex = allocationSize / dataInfo.format;
+            u32 regionZ = 0;
+            if (dataInfo.depth > 1) {
+                regionZ = allocIndex / (dataInfo.width * dataInfo.height);
+                allocIndex -= (regionZ * (dataInfo.width * dataInfo.height));
+            }
+            u32 regionY = allocIndex / dataInfo.width;
+
+            // find square copy region
+            // get space remaining on current line. if this doesnt cover the whole line then only fill line
+            u32 rWidth = std::min(dataInfo.width - dstOffset.x(), allocIndex);
+            u32 rHeight = regionY;
+            if (rWidth < dataInfo.width)
+                rHeight = 1;
+
+
+            u32 allocSize = rWidth * rHeight * dataInfo.format;
+            allocationSize = allocSize;
+
+            u32 remainder = _stagingOffset % dataInfo.format;
+
+            u32 offset = _stagingOffset;
+            if (remainder != 0)
+                offset += (dataInfo.format - remainder);
+
+            std::memcpy(static_cast<u8*>(_stagingBuffer->persistentMapping()) + offset, data.data() + uploadOffset, allocationSize);
+
+            _pendingStagedImage.push_back({
+                dstHandle,
+                { rWidth, rHeight, dataInfo.depth },
+                dstOffset,
+                dataInfo.mipLevel,
+                dataInfo.layer,
+                1,
+                allocationSize,
+                offset
+            });
+
+            _stagingOffset = offset + allocationSize;
+            uploadOffset += allocationSize;
+            uploadSizeRemaining = data.size() - uploadOffset;
+
+            i32 index = (data.size() - uploadSizeRemaining) / dataInfo.format;
+            i32 z = index / (dataInfo.width * dataInfo.height);
+            index -= (z * (dataInfo.width * dataInfo.height));
+            i32 y = index / dataInfo.width;
+            i32 x = index % dataInfo.width;
+
+            dstOffset = { x, y, z };
+
         } else {
             flushStagedData();
         }
@@ -415,9 +449,9 @@ void cala::Engine::stageData(backend::vulkan::BufferHandle dstHandle, std::span<
 }
 
 void cala::Engine::flushStagedData() {
-    if (!_pendingStaged.empty()) {
+    if (!_pendingStagedBuffer.empty() || !_pendingStagedImage.empty()) {
         _device.immediate([&](backend::vulkan::CommandHandle cmd) {
-            for (auto& staged : _pendingStaged) {
+            for (auto& staged : _pendingStagedBuffer) {
                 VkBufferCopy  bufferCopy{};
                 bufferCopy.dstOffset = staged.dstOffset;
                 bufferCopy.srcOffset = staged.srcOffset;
@@ -425,8 +459,34 @@ void cala::Engine::flushStagedData() {
                 assert(staged.dstBuffer->size() >= bufferCopy.dstOffset + bufferCopy.size);
                 vkCmdCopyBuffer(cmd->buffer(), _stagingBuffer->buffer(), staged.dstBuffer->buffer(), 1, &bufferCopy);
             }
+            for (auto& staged : _pendingStagedImage) {
+                auto barrier = staged.dstImage->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::TRANSFER_DST);
+                cmd->pipelineBarrier({ &barrier, 1 });
+
+                VkBufferImageCopy imageCopy{};
+                imageCopy.bufferOffset = staged.srcOffset;
+                imageCopy.bufferRowLength = 0;
+                imageCopy.bufferImageHeight = 0;
+
+                imageCopy.imageSubresource.aspectMask = backend::isDepthFormat(staged.dstImage->format()) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+                imageCopy.imageSubresource.mipLevel = staged.dstMipLevel;
+                imageCopy.imageSubresource.baseArrayLayer = staged.dstLayer;
+                imageCopy.imageSubresource.layerCount = staged.dstLayerCount;
+                imageCopy.imageExtent.width = staged.dstDimensions.x();
+                imageCopy.imageExtent.height = staged.dstDimensions.y();
+                imageCopy.imageExtent.depth = staged.dstDimensions.z();
+                imageCopy.imageOffset.x = staged.dstOffset.x();
+                imageCopy.imageOffset.y = staged.dstOffset.y();
+                imageCopy.imageOffset.z = staged.dstOffset.z();
+
+                vkCmdCopyBufferToImage(cmd->buffer(), _stagingBuffer->buffer(), staged.dstImage->image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopy);
+
+                barrier = staged.dstImage->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::COMPUTE_SHADER, backend::Access::TRANSFER_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
+                cmd->pipelineBarrier({ &barrier, 1 });
+            }
         });
-        _pendingStaged.clear();
+        _pendingStagedBuffer.clear();
+        _pendingStagedImage.clear();
         _stagingOffset = 0;
     }
 }

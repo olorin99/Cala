@@ -51,7 +51,7 @@ ImageHandle loadImageHDR(Engine& engine, const ende::fs::Path& path) {
     u32 length = width * height * 4;
 
     ImageHandle handle = engine.device().createImage({(u32)width, (u32)height, 1, backend::Format::RGBA32_SFLOAT});
-    handle->data(engine.device(), {0, (u32)width, (u32)height, 1, (u32)4 * 4}, std::span(data, length));
+    engine.stageData(handle, std::span(data, length), {0, (u32)width, (u32)height, 1, (u32)4 * 4});
     stbi_image_free(data);
     return handle;
 }
@@ -99,11 +99,11 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
             mips, 1,
             ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST | ImageUsage::TRANSFER_SRC
         });
-        images[index]->data(engine->device(), {
-            0, (u32)image.width, (u32)image.height, 1, 4,
-        }, std::span<u8>(buf, bufferSize));
         engine->device().deferred([image = images[index]](CommandHandle cmd) {
             image->generateMips(cmd);
+        });
+        engine->stageData(images[index], std::span<u8>(buf, bufferSize), {
+            0, (u32)image.width, (u32)image.height, 1, 4
         });
         if (del)
             delete buf;
@@ -456,7 +456,8 @@ int main() {
     for (u32 i = 0; i < 10; i++) {
         roughnessImages[i] = engine.device().createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST, backend::ImageType::IMAGE2D});
         f32 metallicRoughnessData[] = { 0.f, static_cast<f32>(i) / 10.f, 0.f, 1.f };
-        roughnessImages[i]->data(engine.device(), {0, 1, 1, 1, 4 * 4 }, std::span<f32>(metallicRoughnessData, 4));
+        engine.stageData(roughnessImages[i], std::span<f32>(metallicRoughnessData, 4), {0, 1, 1, 1, 4 * 4 });
+//        roughnessImages[i]->data(engine.device(), {0, 1, 1, 1, 4 * 4 }, std::span<f32>(metallicRoughnessData, 4));
 
         Material1Data materialData1 {
                 -1,
