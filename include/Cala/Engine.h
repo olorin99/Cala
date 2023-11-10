@@ -48,6 +48,13 @@ namespace cala {
 
         void stageData(backend::vulkan::BufferHandle dstHandle, std::span<const u8> data, u32 dstOffset = 0);
 
+        template <typename T>
+        void stageData(backend::vulkan::ImageHandle dstHandle, std::span<T> data, backend::vulkan::Image::DataInfo dataInfo) {
+            stageData(dstHandle, std::span<const u8>(reinterpret_cast<const u8*>(data.data()), data.size() * sizeof(T)), dataInfo);
+        }
+
+        void stageData(backend::vulkan::ImageHandle dstHandle, std::span<const u8> data, backend::vulkan::Image::DataInfo dataInfo);
+
         void flushStagedData();
 
         struct ShaderInfo {
@@ -141,21 +148,31 @@ namespace cala {
         backend::vulkan::ProgramHandle _voxelVisualisationProgram;
 
         backend::vulkan::ImageHandle _brdfImage;
-        backend::vulkan::ImageHandle _defaultIrradiance;
-        backend::vulkan::ImageHandle _defaultPrefilter;
 
         backend::vulkan::BufferHandle _globalVertexBuffer;
         backend::vulkan::BufferHandle _globalIndexBuffer;
         u32 _vertexOffset;
         u32 _indexOffset;
 
-        struct StagedInfo {
+        struct StagedBufferInfo {
             backend::vulkan::BufferHandle dstBuffer;
             u32 dstOffset;
             u32 srcSize;
             u32 srcOffset;
         };
-        std::vector<StagedInfo> _pendingStaged;
+        std::vector<StagedBufferInfo> _pendingStagedBuffer;
+
+        struct StagedImageInfo {
+            backend::vulkan::ImageHandle dstImage;
+            ende::math::Vec<3, u32> dstDimensions;
+            ende::math::Vec<3, i32> dstOffset;
+            u32 dstMipLevel;
+            u32 dstLayer;
+            u32 dstLayerCount;
+            u32 srcSize;
+            u32 srcOffset;
+        };
+        std::vector<StagedImageInfo> _pendingStagedImage;
 
         u32 _stagingSize;
         u32 _stagingOffset;
