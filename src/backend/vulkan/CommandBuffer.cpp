@@ -2,6 +2,7 @@
 #include <Cala/backend/vulkan/primitives.h>
 #include <Cala/backend/vulkan/Device.h>
 #include <Ende/profile/profile.h>
+#include <Cala/backend/vulkan/ShaderModule.h>
 
 cala::backend::vulkan::CommandBuffer::CommandBuffer(Device& device, VkQueue queue, VkCommandBuffer buffer)
     : _device(&device),
@@ -137,10 +138,17 @@ void cala::backend::vulkan::CommandBuffer::bindProgram(ProgramHandle program) {
         if (_descriptorKey[i].setLayout != program->_setLayout[i])
             _descriptorKey[i].setLayout = program->_setLayout[i];
     }
-    for (u32 i = 0; i < program->_stages.size(); i++) {
-            _pipelineKey.shaders[i] = program->_stages[i];
+    for (u32 i = 0; i < program->_modules.size(); i++) {
+        auto& module = program->_modules[i];
+
+        VkPipelineShaderStageCreateInfo stageCreateInfo{};
+        stageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        stageCreateInfo.stage = static_cast<VkShaderStageFlagBits>(module->stage());
+        stageCreateInfo.module = module->module();
+        stageCreateInfo.pName = "main";
+        _pipelineKey.shaders[i] = stageCreateInfo;
     }
-    _pipelineKey.shaderCount = program->_stages.size();
+    _pipelineKey.shaderCount = program->_modules.size();
     _boundInterface = &program->_interface;
     _pipelineKey.compute = program->stagePresent(ShaderStage::COMPUTE);
     _pipelineDirty = true;

@@ -2,6 +2,7 @@
 #include "Cala/backend/vulkan/primitives.h"
 #include "Ende/filesystem/File.h"
 #include <Ende/profile/profile.h>
+#include <Cala/backend/vulkan/ShaderModule.h>
 
 cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog::logger& logger, CreateInfo createInfo)
     : _logger(logger),
@@ -159,6 +160,11 @@ cala::backend::vulkan::Device::~Device() {
     }
 
     _descriptorSets.clear();
+
+    for (auto& shaderModule : _shaderModules) {
+        vkDestroyShaderModule(context().device(), shaderModule.first->module(), nullptr);
+    }
+
 
     for (auto& pipeline : _pipelines)
         vkDestroyPipeline(_context.device(), pipeline.second, nullptr);
@@ -391,6 +397,20 @@ bool cala::backend::vulkan::Device::gc() {
             --frame;
     }
 
+    for (auto it = _shaderModulesToDestroy.begin(); it != _shaderModulesToDestroy.end(); it++) {
+        auto& frame = it->first;
+        auto& handle = it->second;
+        if (frame <= 0) {
+            u32 index = handle;
+            vkDestroyShaderModule(context().device(), _shaderModules[index].first->module(), nullptr);
+            _shaderModules[index].first = std::make_unique<ShaderModule>(this);
+            _freeShaderModules.push_back(index);
+            _shaderModulesToDestroy.erase(it--);
+            _logger.info("destroyed shader module ({})", index);
+        } else
+            --frame;
+    }
+
     for (auto it = _descriptorSets.begin(); it != _descriptorSets.end(); it++) {
         auto& frame = it.value().second;
         if (frame < 0) {
@@ -614,6 +634,36 @@ cala::backend::vulkan::ProgramHandle cala::backend::vulkan::Device::createProgra
 
 void cala::backend::vulkan::Device::destroyProgram(i32 handle) {
     _programsToDestroy.push_back(std::make_pair(FRAMES_IN_FLIGHT + 1, handle));
+}
+
+cala::backend::vulkan::ShaderModuleHandle cala::backend::vulkan::Device::createShaderModule(const std::vector<u32> &spirv, ShaderStage stage) {
+    u32 index = 0;
+
+    VkShaderModule module;
+    VkShaderModuleCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    createInfo.codeSize = spirv.size() * sizeof(u32);
+    createInfo.pCode = spirv.data();
+
+    if (vkCreateShaderModule(context().device(), &createInfo, nullptr, &module) != VK_SUCCESS)
+        throw std::runtime_error("Unable to create shader module");
+
+    if (!_freeShaderModules.empty()) {
+        index = _freeShaderModules.back();
+        _freeShaderModules.pop_back();
+        _shaderModules[index].first = std::make_unique<ShaderModule>(this);
+        _shaderModules[index].second->count = 1;
+    } else {
+        index = _shaderModules.size();
+        _shaderModules.emplace_back(std::make_unique<ShaderModule>(this), new ShaderModuleHandle::Counter{1, [this](i32 index) {
+            _shaderModulesToDestroy.push_back(std::make_pair(FRAMES_IN_FLIGHT + 1, index));
+        }});
+    }
+
+    _shaderModules[index].first->_module = module;
+    _shaderModules[index].first->_stage = stage;
+    _shaderModules[index].first->_main = "main";
+    return { this, static_cast<i32>(index), _shaderModules[index].second };
 }
 
 

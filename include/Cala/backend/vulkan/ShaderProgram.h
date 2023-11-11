@@ -5,6 +5,7 @@
 #include <Cala/backend/ShaderInterface.h>
 #include <Cala/backend/primitives.h>
 #include <vector>
+#include <Cala/backend/vulkan/Handle.h>
 #include <Ende/filesystem/Path.h>
 
 namespace cala::backend::vulkan {
@@ -59,7 +60,7 @@ namespace cala::backend::vulkan {
         friend CommandBuffer;
 
         Device* _device;
-        std::vector<VkPipelineShaderStageCreateInfo> _stages;
+        std::vector<ShaderModuleHandle> _modules;
         VkDescriptorSetLayout _setLayout[MAX_SET_COUNT];
         VkPipelineLayout _layout;
 

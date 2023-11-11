@@ -24,7 +24,11 @@ add_library(Cala src/backend/vulkan/Context.cpp include/Cala/backend/vulkan/Cont
         src/ui/BackbufferView.cpp
         include/Cala/ui/BackbufferView.h
         src/ui/GuiWindow.cpp
-        include/Cala/ui/GuiWindow.h)
+        include/Cala/ui/GuiWindow.h
+        src/AssetManager.cpp
+        include/Cala/AssetManager.h
+        src/backend/vulkan/ShaderModule.cpp
+        include/Cala/backend/vulkan/ShaderModule.h)
 
 target_include_directories(Cala
         PUBLIC

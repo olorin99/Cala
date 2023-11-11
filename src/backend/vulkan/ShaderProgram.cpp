@@ -341,22 +341,9 @@ cala::backend::vulkan::ShaderProgram cala::backend::vulkan::ShaderProgram::Build
             program._interface.sets[set].bindings[binding].stage |= stage.second;
         }
 
-        VkShaderModule shader;
-        VkShaderModuleCreateInfo createInfo{};
-        createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        createInfo.codeSize = stage.first.size() * sizeof(u32);
-        createInfo.pCode = stage.first.data();
+        auto handle = _device->createShaderModule(stage.first, stage.second);
 
-        if (vkCreateShaderModule(_device->context().device(), &createInfo, nullptr, &shader) != VK_SUCCESS)
-            throw std::runtime_error("Unable to create shader");
-
-        VkPipelineShaderStageCreateInfo stageCreateInfo{};
-        stageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        stageCreateInfo.stage = static_cast<VkShaderStageFlagBits>(stage.second);
-        stageCreateInfo.module = shader;
-        stageCreateInfo.pName = "main";
-
-        program._stages.push_back(stageCreateInfo);
+        program._modules.push_back(handle);
         program._stageFlags |= stage.second;
     }
 
@@ -443,9 +430,6 @@ cala::backend::vulkan::ShaderProgram::ShaderProgram(cala::backend::vulkan::Devic
 cala::backend::vulkan::ShaderProgram::~ShaderProgram() {
     if (_device == VK_NULL_HANDLE) return;
 
-    for (auto& stage : _stages)
-        vkDestroyShaderModule(_device->context().device(), stage.module, nullptr);
-
     vkDestroyPipelineLayout(_device->context().device(), _layout, nullptr);
 }
 
@@ -459,7 +443,7 @@ cala::backend::vulkan::ShaderProgram::ShaderProgram(ShaderProgram &&rhs) noexcep
     if (this == &rhs)
         return;
     std::swap(_device, rhs._device);
-    std::swap(_stages, rhs._stages);
+    std::swap(_modules, rhs._modules);
     for (u32 i = 0; i < MAX_SET_COUNT; i++)
         _setLayout[i] = rhs._setLayout[i];
     std::swap(_layout, rhs._layout);
@@ -472,7 +456,7 @@ cala::backend::vulkan::ShaderProgram &cala::backend::vulkan::ShaderProgram::oper
         return *this;
     std::swap(_device, rhs._device);
     std::swap(_device, rhs._device);
-    std::swap(_stages, rhs._stages);
+    std::swap(_modules, rhs._modules);
     for (u32 i = 0; i < MAX_SET_COUNT; i++)
         _setLayout[i] = rhs._setLayout[i];
     std::swap(_layout, rhs._layout);

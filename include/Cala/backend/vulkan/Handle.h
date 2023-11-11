@@ -10,6 +10,7 @@ namespace cala::backend::vulkan {
     class Buffer;
     class Image;
     class ShaderProgram;
+    class ShaderModule;
     class Sampler;
     class CommandBuffer;
     class CommandPool;
@@ -85,7 +86,7 @@ namespace cala::backend::vulkan {
         }
 
     private:
-        friend Device;
+        friend O;
 
         O* _owner = nullptr;
         i32 _index = -1;
@@ -96,6 +97,7 @@ namespace cala::backend::vulkan {
     using BufferHandle = Handle<Buffer, Device>;
     using ImageHandle = Handle<Image, Device>;
     using ProgramHandle = Handle<ShaderProgram, Device>;
+    using ShaderModuleHandle = Handle<ShaderModule, Device>;
     using SamplerHandle = Handle<Sampler, Device>;
     using CommandHandle = Handle<CommandBuffer, CommandPool>;
 

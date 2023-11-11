@@ -1,5 +1,6 @@
 #include "Cala/backend/vulkan/Handle.h"
 #include <Cala/backend/vulkan/Device.h>
+#include <Cala/backend/vulkan/ShaderModule.h>
 
 template <>
 cala::backend::vulkan::Buffer &cala::backend::vulkan::BufferHandle::operator*() noexcept {
@@ -63,6 +64,28 @@ cala::backend::vulkan::ShaderProgram *cala::backend::vulkan::ProgramHandle::oper
 template <>
 bool cala::backend::vulkan::ProgramHandle::isValid() const {
     return _owner->_programs[_index].first && _owner->_programs[_index].first->layout() != VK_NULL_HANDLE;
+}
+
+
+
+template <>
+cala::backend::vulkan::ShaderModule &cala::backend::vulkan::ShaderModuleHandle::operator*() noexcept {
+    return *_owner->_shaderModules[_index].first;
+}
+
+template <>
+cala::backend::vulkan::ShaderModule *cala::backend::vulkan::ShaderModuleHandle::operator->() noexcept {
+    return _owner->_shaderModules[_index].first.get();
+}
+
+template <>
+cala::backend::vulkan::ShaderModule *cala::backend::vulkan::ShaderModuleHandle::operator->() const noexcept {
+    return _owner->_shaderModules[_index].first.get();
+}
+
+template <>
+bool cala::backend::vulkan::ShaderModuleHandle::isValid() const {
+    return _owner->_shaderModules[_index].first && _owner->_shaderModules[_index].first->module() != VK_NULL_HANDLE;
 }
 
 

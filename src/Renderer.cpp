@@ -512,7 +512,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 //                cmd->bindProgram(_engine->_cullProgram);
 //                cmd->bindBindings(nullptr);
 //                cmd->bindAttributes(nullptr);
-//                cmd->pushConstants(backend::ShaderStage::COMPUTE, { &frustum, sizeof(frustum) });
+//                cmd->pushConstants(backend::ShaderModule::COMPUTE, { &frustum, sizeof(frustum) });
 //                cmd->bindBuffer(1, 0, global);
 //                cmd->bindBuffer(2, 0, drawCommands, true);
 //                cmd->bindBuffer(2, 1, _drawCountBuffer[_engine->device().frameIndex()], true);
