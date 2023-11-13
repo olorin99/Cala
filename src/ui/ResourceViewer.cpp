@@ -16,7 +16,8 @@ cala::ui::ResourceViewer::ResourceViewer(backend::vulkan::Device *device)
 
 cala::ui::ResourceViewer::~ResourceViewer() {
     while (!_destroyQueue.empty()) {
-        auto set = _destroyQueue.pop().value();
+        auto set = std::move(_destroyQueue.back());
+        _destroyQueue.pop_back();
         set.second.second = backend::vulkan::Image::View();
         ImGui_ImplVulkan_RemoveTexture(set.second.first);
     }
@@ -70,7 +71,7 @@ void cala::ui::ResourceViewer::render() {
 
     if (_imageDirty) {
         if (_imageSet != VK_NULL_HANDLE) {
-            _destroyQueue.push({ 5, std::make_pair( _imageSet, std::move(_imageView)) });
+            _destroyQueue.push_back({ 5, std::make_pair( _imageSet, std::move(_imageView)) });
         }
         _imageHandle = _device->getImageHandle(_imageIndex);
         if (_imageHandle) {

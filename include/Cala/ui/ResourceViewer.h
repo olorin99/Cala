@@ -31,7 +31,7 @@ namespace cala::ui {
         backend::vulkan::Image::View _imageView;
         backend::vulkan::Image::View _deleteView;
 
-        ende::Vector<std::pair<i32, std::pair<VkDescriptorSet, backend::vulkan::Image::View>>> _destroyQueue;
+        std::vector<std::pair<i32, std::pair<VkDescriptorSet, backend::vulkan::Image::View>>> _destroyQueue;
 
     };
 

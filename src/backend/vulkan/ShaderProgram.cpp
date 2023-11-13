@@ -170,12 +170,16 @@ cala::backend::vulkan::ShaderProgram::Builder::Builder(cala::backend::vulkan::De
     : _device(device)
 {}
 
+cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStage(cala::backend::vulkan::ShaderModuleHandle module) {
+//    _stages
+}
+
 cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStageSPV(const std::vector<u32>& code, ShaderStage stage) {
     _stages.push_back({code, stage});
     return *this;
 }
 
-cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStageGLSL(const ende::fs::Path& path, cala::backend::ShaderStage stage, const std::vector<std::pair<const char*, std::string>>& macros, const std::vector<std::string>& includes) {
+cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProgram::Builder::addStageGLSL(const std::filesystem::path& path, cala::backend::ShaderStage stage, const std::vector<std::pair<const char*, std::string>>& macros, const std::vector<std::string>& includes) {
     shaderc_shader_kind kind{};
     switch (stage) {
         case ShaderStage::VERTEX:
@@ -216,7 +220,7 @@ cala::backend::vulkan::ShaderProgram::Builder &cala::backend::vulkan::ShaderProg
 
     source += rawSource;
 
-    auto dst = compileShader(_device, *path, source, kind, macros);
+    auto dst = compileShader(_device, path, source, kind, macros);
     addStageSPV(dst, stage);
     return *this;
 }

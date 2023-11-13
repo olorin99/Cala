@@ -28,7 +28,7 @@ void cala::ui::BackbufferView::render() {
 
     if (_dirty) {
         if (_imageSet != VK_NULL_HANDLE)
-            _destroyQueue.push({ 5, _imageSet, });
+            _destroyQueue.push_back({ 5, _imageSet, });
 
         if (_backbuffer) {
             _imageSet = ImGui_ImplVulkan_AddTexture(_device->defaultSampler().sampler(), _device->getImageView(_backbuffer).view, backend::vulkan::getImageLayout(_backbuffer->layout()));

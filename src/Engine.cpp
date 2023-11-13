@@ -28,6 +28,7 @@ cala::Engine::Engine(backend::Platform &platform)
         std::make_shared<spdlog::sinks::basic_file_sink_mt>("debug.log", true)
       }),
       _device(platform, _logger, { true }),
+      _assetManager(this),
       _startTime(ende::time::SystemTime::now()),
       _shadowPass(_device, {&shadowPassAttachment, 1 }),
       _lodSampler(_device.getSampler({
@@ -46,103 +47,106 @@ cala::Engine::Engine(backend::Platform &platform)
 {
     spdlog::flush_every(std::chrono::seconds(5));
     _device.setBindlessSetIndex(0);
+    _assetManager.setAssetPath("../../res");
+    auto vshader = _assetManager.loadShaderModule("shaders/shadow_point.vert");
+    auto vshader1 = _assetManager.loadShaderModule("shaders/shadow_point.vert");
     {
         _pointShadowProgram = loadProgram({
-            { "../../res/shaders/shadow_point.vert"_path, backend::ShaderStage::VERTEX },
-            { "../../res/shaders/shadow_point.frag"_path, backend::ShaderStage::FRAGMENT }
+            { "../../res/shaders/shadow_point.vert", backend::ShaderStage::VERTEX },
+            { "../../res/shaders/shadow_point.frag", backend::ShaderStage::FRAGMENT }
         });
     }
     {
         _directShadowProgram = loadProgram({
-            { "../../res/shaders/shadow.vert"_path, backend::ShaderStage::VERTEX }
+            { "../../res/shaders/shadow.vert", backend::ShaderStage::VERTEX }
         });
     }
     {
         _equirectangularToCubeMap = loadProgram({
-            { "../../res/shaders/equirectangularToCubeMap.comp"_path, backend::ShaderStage::COMPUTE }
+            { "../../res/shaders/equirectangularToCubeMap.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _irradianceProgram = loadProgram({
-            { "../../res/shaders/irradiance.comp"_path, backend::ShaderStage::COMPUTE }
+            { "../../res/shaders/irradiance.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _prefilterProgram = loadProgram({
-            { "../../res/shaders/prefilter.comp"_path, backend::ShaderStage::COMPUTE }
+            { "../../res/shaders/prefilter.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _brdfProgram = loadProgram({
-            { "../../res/shaders/brdf.comp"_path, backend::ShaderStage::COMPUTE }
+            { "../../res/shaders/brdf.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _skyboxProgram = loadProgram({
-            { "../../res/shaders/skybox.vert"_path, backend::ShaderStage::VERTEX },
-            { "../../res/shaders/skybox.frag"_path, backend::ShaderStage::FRAGMENT }
+            { "../../res/shaders/skybox.vert", backend::ShaderStage::VERTEX },
+            { "../../res/shaders/skybox.frag", backend::ShaderStage::FRAGMENT }
         });
     }
     {
         _tonemapProgram = loadProgram({
-            { "../../res/shaders/hdr.comp"_path, backend::ShaderStage::COMPUTE }
+            { "../../res/shaders/hdr.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _cullProgram = loadProgram({
-            { "../../res/shaders/cull.comp"_path, backend::ShaderStage::COMPUTE }
+            { "../../res/shaders/cull.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _pointShadowCullProgram = loadProgram({
-            { "../../res/shaders/point_shadow_cull.comp"_path, backend::ShaderStage::COMPUTE }
+            { "../../res/shaders/point_shadow_cull.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _directShadowCullProgram = loadProgram({
-            { "../../res/shaders/direct_shadow_cull.comp"_path, backend::ShaderStage::COMPUTE }
+            { "../../res/shaders/direct_shadow_cull.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _createClustersProgram = loadProgram({
-            { "../../res/shaders/create_clusters.comp"_path, backend::ShaderStage::COMPUTE }
+            { "../../res/shaders/create_clusters.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _cullLightsProgram = loadProgram({
-            { "../../res/shaders/cull_lights.comp"_path, backend::ShaderStage::COMPUTE }
+            { "../../res/shaders/cull_lights.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _clusterDebugProgram = loadProgram({
-            { "../../res/shaders/fullscreen.vert"_path, backend::ShaderStage::VERTEX },
-            { "../../res/shaders/debug/clusters_debug.frag"_path, backend::ShaderStage::FRAGMENT }
+            { "../../res/shaders/fullscreen.vert", backend::ShaderStage::VERTEX },
+            { "../../res/shaders/debug/clusters_debug.frag", backend::ShaderStage::FRAGMENT }
         });
     }
     {
         _worldPosDebugProgram = loadProgram({
-            { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-            { "../../res/shaders/debug/world_pos.frag"_path, backend::ShaderStage::FRAGMENT }
+            { "../../res/shaders/default.vert", backend::ShaderStage::VERTEX },
+            { "../../res/shaders/debug/world_pos.frag", backend::ShaderStage::FRAGMENT }
         });
     }
     {
         _solidColourProgram = loadProgram({
-            { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-            { "../../res/shaders/solid_colour.frag"_path, backend::ShaderStage::FRAGMENT }
+            { "../../res/shaders/default.vert", backend::ShaderStage::VERTEX },
+            { "../../res/shaders/solid_colour.frag", backend::ShaderStage::FRAGMENT }
         });
     }
     {
         _normalsDebugProgram = loadProgram({
-            { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-            { "../../res/shaders/normals.geom"_path, backend::ShaderStage::GEOMETRY },
-            { "../../res/shaders/solid_colour.frag"_path, backend::ShaderStage::FRAGMENT }
+            { "../../res/shaders/default.vert", backend::ShaderStage::VERTEX },
+            { "../../res/shaders/normals.geom", backend::ShaderStage::GEOMETRY },
+            { "../../res/shaders/solid_colour.frag", backend::ShaderStage::FRAGMENT }
         });
     }
     {
 //        _voxelVisualisationProgram = loadProgram({
-////            { "../../res/shaders/fullscreen.vert"_path, backend::ShaderStage::VERTEX },
-////            { "../../res/shaders/voxel/visualise.frag"_path, backend::ShaderStage::FRAGMENT }
-//            { "../../res/shaders/voxel/visualise.comp"_path, backend::ShaderStage::COMPUTE }
+////            { "../../res/shaders/fullscreen.vert", backend::ShaderModule::VERTEX },
+////            { "../../res/shaders/voxel/visualise.frag", backend::ShaderModule::FRAGMENT }
+//            { "../../res/shaders/voxel/visualise.comp", backend::ShaderModule::COMPUTE }
 //        });
     }
 
@@ -713,7 +717,7 @@ std::optional<cala::backend::vulkan::CommandBuffer::BlendState> loadMaterialBlen
     return state;
 }
 
-cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size) {
+cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u32 size) {
     try {
 
         ende::fs::File file;
@@ -757,8 +761,8 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
             material->setBlendState(blendState.value());
 
         backend::vulkan::ProgramHandle litHandle = loadProgram({
-            { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-            { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
+            { "../../res/shaders/default.vert", backend::ShaderStage::VERTEX },
+            { "../../res/shaders/default/default.frag", backend::ShaderStage::FRAGMENT, {
                 { "MATERIAL_DATA", materialData },
                 { "MATERIAL_DEFINITION", materialDefinition },
                 { "MATERIAL_LOAD", materialLoad },
@@ -768,8 +772,8 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
         material->setVariant(Material::Variant::LIT, litHandle);
 
         backend::vulkan::ProgramHandle unlitHandle = loadProgram({
-            { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-            { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
+            { "../../res/shaders/default.vert", backend::ShaderStage::VERTEX },
+            { "../../res/shaders/default/default.frag", backend::ShaderStage::FRAGMENT, {
                 { "MATERIAL_DATA", materialData },
                 { "MATERIAL_DEFINITION", materialDefinition },
                 { "MATERIAL_LOAD", materialLoad },
@@ -779,8 +783,8 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
         material->setVariant(Material::Variant::UNLIT, unlitHandle);
 
         backend::vulkan::ProgramHandle normalsHandle = loadProgram({
-            { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-            { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
+            { "../../res/shaders/default.vert", backend::ShaderStage::VERTEX },
+            { "../../res/shaders/default/default.frag", backend::ShaderStage::FRAGMENT, {
                 { "MATERIAL_DATA", materialData },
                 { "MATERIAL_DEFINITION", materialDefinition },
                 { "MATERIAL_LOAD", materialLoad },
@@ -790,8 +794,8 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
         material->setVariant(Material::Variant::NORMAL, normalsHandle);
 
         backend::vulkan::ProgramHandle metallicHandle = loadProgram({
-            { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-            { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
+            { "../../res/shaders/default.vert", backend::ShaderStage::VERTEX },
+            { "../../res/shaders/default/default.frag", backend::ShaderStage::FRAGMENT, {
                 { "MATERIAL_DATA", materialData },
                 { "MATERIAL_DEFINITION", materialDefinition },
                 { "MATERIAL_LOAD", materialLoad },
@@ -801,8 +805,8 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
         material->setVariant(Material::Variant::METALLIC, metallicHandle);
 
         backend::vulkan::ProgramHandle roughnessHandle = loadProgram({
-            { "../../res/shaders/default.vert"_path, backend::ShaderStage::VERTEX },
-            { "../../res/shaders/default/default.frag"_path, backend::ShaderStage::FRAGMENT, {
+            { "../../res/shaders/default.vert", backend::ShaderStage::VERTEX },
+            { "../../res/shaders/default/default.frag", backend::ShaderStage::FRAGMENT, {
                 { "MATERIAL_DATA", materialData },
                 { "MATERIAL_DEFINITION", materialDefinition },
                 { "MATERIAL_LOAD", materialLoad },
@@ -812,9 +816,9 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
         material->setVariant(Material::Variant::ROUGHNESS, roughnessHandle);
 
 //        backend::vulkan::ProgramHandle voxelGIHandle = loadProgram({
-//            { "../../res/shaders/voxel/voxelize.vert"_path, backend::ShaderStage::VERTEX },
-//            { "../../res/shaders/voxel/voxelize.geom"_path, backend::ShaderStage::GEOMETRY },
-//            { "../../res/shaders/voxel/voxelize.frag"_path, backend::ShaderStage::FRAGMENT, {
+//            { "../../res/shaders/voxel/voxelize.vert", backend::ShaderModule::VERTEX },
+//            { "../../res/shaders/voxel/voxelize.geom", backend::ShaderModule::GEOMETRY },
+//            { "../../res/shaders/voxel/voxelize.frag", backend::ShaderModule::FRAGMENT, {
 //                { "MATERIAL_DATA", materialData },
 //                { "MATERIAL_DEFINITION", materialDefinition },
 //                { "MATERIAL_LOAD", materialLoad },
@@ -825,7 +829,7 @@ cala::Material *cala::Engine::loadMaterial(const ende::fs::Path &path, u32 size)
 
         return material;
     } catch (std::exception& e) {
-        _device.logger().error("Error with material: {}", *path);
+        _device.logger().error("Error with material: {}", path.string());
         return nullptr;
     }
 }

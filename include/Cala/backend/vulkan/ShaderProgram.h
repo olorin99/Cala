@@ -6,7 +6,7 @@
 #include <Cala/backend/primitives.h>
 #include <vector>
 #include <Cala/backend/vulkan/Handle.h>
-#include <Ende/filesystem/Path.h>
+#include <filesystem>
 
 namespace cala::backend::vulkan {
 
@@ -21,9 +21,11 @@ namespace cala::backend::vulkan {
 
             Builder(Device* device);
 
+            Builder& addStage(ShaderModuleHandle module);
+
             Builder& addStageSPV(const std::vector<u32>& code, ShaderStage stage);
 
-            Builder& addStageGLSL(const ende::fs::Path& path, ShaderStage stage, const std::vector<std::pair<const char*, std::string>>& macros = {}, const std::vector<std::string>& includes = {});
+            Builder& addStageGLSL(const std::filesystem::path& path, ShaderStage stage, const std::vector<std::pair<const char*, std::string>>& macros = {}, const std::vector<std::string>& includes = {});
 
             ShaderProgram compile();
 

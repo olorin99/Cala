@@ -30,9 +30,9 @@ using namespace cala;
 using namespace cala::backend;
 using namespace cala::backend::vulkan;
 
-ImageHandle loadImage(Engine& engine, const ende::fs::Path& path) {
+ImageHandle loadImage(Engine& engine, const std::filesystem::path& path) {
     i32 width, height, channels;
-    u8* data = stbi_load((*path).c_str(), &width, &height, &channels, STBI_rgb_alpha);
+    u8* data = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
     if (!data) throw "unable load image";
     u32 length = width * height * 4;
 
@@ -43,10 +43,10 @@ ImageHandle loadImage(Engine& engine, const ende::fs::Path& path) {
     return handle;
 }
 
-ImageHandle loadImageHDR(Engine& engine, const ende::fs::Path& path) {
+ImageHandle loadImageHDR(Engine& engine, const std::filesystem::path& path) {
     stbi_set_flip_vertically_on_load(true);
     i32 width, height, channels;
-    f32* data = stbi_loadf((*path).c_str(), &width, &height, &channels, STBI_rgb_alpha);
+    f32* data = stbi_loadf(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
     if (!data) throw "unable load image";
     u32 length = width * height * 4;
 
@@ -56,12 +56,12 @@ ImageHandle loadImageHDR(Engine& engine, const ende::fs::Path& path) {
     return handle;
 }
 
-Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
+Model loadGLTF(Engine* engine, Material* material, const std::filesystem::path& path) {
     tinygltf::TinyGLTF loader;
     tinygltf::Model model;
     std::string err;
     std::string warn;
-    loader.LoadASCIIFromFile(&model, &err, &warn, *path);
+    loader.LoadASCIIFromFile(&model, &err, &warn, path);
 
     std::vector<ImageHandle> images;
     images.resize(model.images.size());
@@ -295,11 +295,11 @@ Model loadGLTF(Engine* engine, Material* material, const ende::fs::Path& path) {
     return std::move(mesh);
 }
 
-MeshData loadModel(const ende::fs::Path& path) {
+MeshData loadModel(const std::filesystem::path& path) {
     MeshData data;
 
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(*path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+    const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
         return data;
@@ -364,7 +364,7 @@ int main() {
         f32 metallness = 0;
         f32 roughness = 0;
     };
-    Material* material = engine.loadMaterial<Material1Data>("../../res/materials/expanded_pbr.mat"_path);
+    Material* material = engine.loadMaterial<Material1Data>("../../res/materials/expanded_pbr.mat");
     if (!material)
         return -1;
 
@@ -374,7 +374,7 @@ int main() {
         i32 metallicRoughness = -1;
     };
 
-    Material* material1 = engine.loadMaterial<MaterialData>("../../res/materials/pbr.mat"_path);
+    Material* material1 = engine.loadMaterial<MaterialData>("../../res/materials/pbr.mat");
     if (!material1)
         return -2;
 
@@ -384,9 +384,9 @@ int main() {
 
     Mesh cube = cala::shapes::cube().mesh(&engine);
 //    Mesh sphere = cala::shapes::sphereNormalized(1).mesh(&engine);
-    Mesh sphere = loadModel("../../res/models/sphere.obj"_path).mesh(&engine);;
-    auto sponza = loadGLTF(&engine, material1, "../../res/models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf"_path);
-//    auto damagedHelmet = loadGLTF(&engine, &material, "../../res/models/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path);
+    Mesh sphere = loadModel("../../res/models/sphere.obj").mesh(&engine);;
+    auto sponza = loadGLTF(&engine, material1, "../../res/models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf");
+//    auto damagedHelmet = loadGLTF(&engine, &material, "../../res/models/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf");
     Model damagedHelmet;
 //    bool addHelmet = false;
 
@@ -426,9 +426,9 @@ int main() {
 //    u32 l2 = scene.addLight(light2);
 //    u32 l3 = scene.addLight(light3);
 
-    ImageHandle background = loadImageHDR(engine, "../../res/textures/TropicalRuins_3k.hdr"_path);
-//    ImageHandle background = loadImageHDR(engine, "../../res/textures/brown_photostudio_02_4k.hdr"_path);
-//    ImageHandle background = loadImageHDR(engine, "../../res/textures/dresden_station_night_4k.hdr"_path);
+    ImageHandle background = loadImageHDR(engine, "../../res/textures/TropicalRuins_3k.hdr");
+//    ImageHandle background = loadImageHDR(engine, "../../res/textures/brown_photostudio_02_4k.hdr");
+//    ImageHandle background = loadImageHDR(engine, "../../res/textures/dresden_station_night_4k.hdr");
     scene.addSkyLightMap(background, true);
 
     scene.addRenderable(sponza, &sponzaTransform, true);
@@ -599,9 +599,9 @@ int main() {
             }
 
             if (ImGui::Button("Load")) {
-                damagedHelmet = std::move(loadGLTF(&engine, material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"_path));
-//                damagedHelmet = std::move(loadGLTF(&engine, material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf"_path));
-//                damagedHelmet = std::move(loadGLTF(&engine, material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/FlightHelmet/glTF/FlightHelmet.gltf"_path));
+                damagedHelmet = std::move(loadGLTF(&engine, material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"));
+//                damagedHelmet = std::move(loadGLTF(&engine, material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf"));
+//                damagedHelmet = std::move(loadGLTF(&engine, material, "/home/christian/Downloads/gltf/glTF-Sample-Models/2.0/FlightHelmet/glTF/FlightHelmet.gltf"));
 //                addHelmet = true;
                 scene.addRenderable(damagedHelmet, &helmetTransform, true);
             }

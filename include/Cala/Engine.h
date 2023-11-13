@@ -8,8 +8,10 @@
 #include <Cala/backend/vulkan/Platform.h>
 #include <Cala/backend/vulkan/Device.h>
 
-#include <Ende/filesystem/Path.h>
+#include <filesystem>
 #include <spdlog/spdlog.h>
+
+#include <Cala/AssetManager.h>
 
 namespace cala {
 
@@ -58,7 +60,7 @@ namespace cala {
         void flushStagedData();
 
         struct ShaderInfo {
-            ende::fs::Path path;
+            std::filesystem::path path;
             backend::ShaderStage stage;
             std::vector<std::pair<const char*, std::string>> macros = {};
             std::vector<std::string> includes = {};
@@ -73,10 +75,10 @@ namespace cala {
         }
 
         //TODO: Return handle cause pointers may not be stable
-        Material* loadMaterial(const ende::fs::Path& path, u32 size);
+        Material* loadMaterial(const std::filesystem::path& path, u32 size);
 
         template <typename T>
-        Material* loadMaterial(const ende::fs::Path& path) {
+        Material* loadMaterial(const std::filesystem::path& path) {
             return loadMaterial(path, sizeof(T));
         }
 
@@ -118,6 +120,8 @@ namespace cala {
         spdlog::logger _logger;
 
         backend::vulkan::Device _device;
+
+        AssetManager _assetManager;
 
         ende::time::SystemTime _startTime;
 

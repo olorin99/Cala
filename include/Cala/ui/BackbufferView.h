@@ -32,7 +32,7 @@ namespace cala::ui {
         u32 _width;
         u32 _height;
 
-        ende::Vector<std::pair<i32, VkDescriptorSet>> _destroyQueue;
+        std::vector<std::pair<i32, VkDescriptorSet>> _destroyQueue;
 
     };
 
