@@ -99,6 +99,18 @@ private:
 
 };
 
+std::string macroize(std::string_view str) {
+    std::string result = str.data();
+    size_t index = 0;
+    size_t last = 0;
+
+    while ((index = result.find('\n', index)) != std::string::npos) {
+        result.insert(index++, "\\");
+        last = ++index;
+    }
+    return result;
+}
+
 std::expected<std::vector<u32>, u32> cala::util::compileGLSLToSpirv(backend::vulkan::Device *device, std::string_view name, std::string_view glsl, backend::ShaderStage stage, std::span<const std::pair<std::string_view, std::string_view>> macros, std::span<const std::filesystem::path> searchPaths) {
 
     shaderc_shader_kind kind{};
@@ -135,7 +147,7 @@ std::expected<std::vector<u32>, u32> cala::util::compileGLSLToSpirv(backend::vul
     options.SetIncluder(std::make_unique<FileIncluder>(&finder));
 
     for (auto& macro : macros)
-        options.AddMacroDefinition(macro.first.data(), macro.second.data());
+        options.AddMacroDefinition(macro.first.data(), macroize(macro.second));
 
     shaderc::PreprocessedSourceCompilationResult  preprocessedResult = compiler.PreprocessGlsl(glsl.data(), kind, name.data(), options);
     if (preprocessedResult.GetCompilationStatus() != shaderc_compilation_status_success) {

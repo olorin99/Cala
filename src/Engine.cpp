@@ -503,17 +503,17 @@ cala::Material *cala::Engine::createMaterial(u32 size) {
     return &_materials.back();
 }
 
-std::string macroize(const std::string& str) {
-    std::string result = str;
-    size_t index = 0;
-    size_t last = 0;
-
-    while ((index = result.find('\n', index)) != std::string::npos) {
-        result.insert(index++, "\\");
-        last = ++index;
-    }
-    return result;
-}
+//std::string macroize(const std::string& str) {
+//    std::string result = str;
+//    size_t index = 0;
+//    size_t last = 0;
+//
+//    while ((index = result.find('\n', index)) != std::string::npos) {
+//        result.insert(index++, "\\");
+//        last = ++index;
+//    }
+//    return result;
+//}
 
 std::optional<std::string> loadMaterialString(nlohmann::json& json, std::string_view label, const std::filesystem::path& root = {}) {
     auto it = json.find(label);
@@ -526,9 +526,9 @@ std::optional<std::string> loadMaterialString(nlohmann::json& json, std::string_
         ende::fs::File file;
         if (!file.open(root / "shaders" / path->get<std::string>()))
             return {};
-        return macroize(file.read());
+        return file.read();
     }
-    return macroize(it.value());
+    return it.value();
 }
 
 std::optional<cala::backend::vulkan::CommandBuffer::RasterState> loadMaterialRasterState(nlohmann::json& json) {

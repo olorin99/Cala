@@ -13,6 +13,7 @@ cala::ui::GuiWindow::GuiWindow(cala::Engine &engine, cala::Renderer& renderer, c
       _resourceViewer(&engine.device()),
       _statisticsWindow(&engine, &renderer),
       _backbufferView(&engine.device()),
+      _assetManager(engine.assetManager()),
 
       _showRenderGraph(false),
       _showLightWindow(true),
@@ -20,7 +21,8 @@ cala::ui::GuiWindow::GuiWindow(cala::Engine &engine, cala::Renderer& renderer, c
       _showRendererSettings(true),
       _showResourceViewer(true),
       _showStatisticsWindow(true),
-      _showBackbufferView(true)
+      _showBackbufferView(true),
+      _showAssetmanager(true)
 {}
 
 void cala::ui::GuiWindow::render() {
@@ -87,4 +89,7 @@ void cala::ui::GuiWindow::render() {
         _backbufferView.setBackbufferHandle(_renderer->_graph.getImage("backbuffer"));
         _backbufferView.render();
     }
+
+    if (_showAssetmanager)
+        _assetManager.render();
 }

@@ -32,7 +32,9 @@ add_library(Cala src/backend/vulkan/Context.cpp include/Cala/backend/vulkan/Cont
         src/util.cpp
         include/Cala/util.h
         src/backend/vulkan/ShaderModuleInterface.cpp
-        include/Cala/backend/vulkan/ShaderModuleInterface.h)
+        include/Cala/backend/vulkan/ShaderModuleInterface.h
+        src/ui/AssetManagerWindow.cpp
+        include/Cala/ui/AssetManagerWindow.h)
 
 target_include_directories(Cala
         PUBLIC

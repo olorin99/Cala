@@ -10,6 +10,10 @@
 
 namespace cala {
 
+    namespace ui {
+        class AssetManagerWindow;
+    }
+
     class Engine;
 
     class AssetManager {
@@ -68,6 +72,8 @@ namespace cala {
 
     private:
 
+        friend ui::AssetManagerWindow;
+
         Engine* _engine;
 
         std::filesystem::path _rootAssetPath;
@@ -83,8 +89,9 @@ namespace cala {
         std::vector<AssetMetadata> _metadata;
 
         struct ShaderModuleMetadata {
-            std::vector<std::pair<std::string_view, std::string_view>> macros;
-            std::vector<std::string_view> includes;
+            std::filesystem::path path;
+            std::vector<std::pair<std::string, std::string>> macros;
+            std::vector<std::string> includes;
             backend::vulkan::ShaderModuleHandle moduleHandle;
         };
         std::vector<ShaderModuleMetadata> _shaderModules;

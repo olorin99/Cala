@@ -127,6 +127,7 @@ cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle> cala::Asset
     moduleMetadata.moduleHandle = module;
     moduleMetadata.macros.clear();
     moduleMetadata.macros.insert(moduleMetadata.macros.begin(), macros.begin(), macros.end());
+    moduleMetadata.path = path;
 
     return { this, index };
 }

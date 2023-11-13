@@ -29,6 +29,8 @@ namespace cala {
 
         backend::vulkan::Device& device() { return _device; }
 
+        AssetManager* assetManager() { return &_assetManager; }
+
         ende::time::Duration getRunningTime() const { return _startTime.elapsed(); }
 
         bool gc();

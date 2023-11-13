@@ -12,6 +12,7 @@
 #include <Cala/ui/ResourceViewer.h>
 #include <Cala/ui/StatisticsWindow.h>
 #include <Cala/ui/BackbufferView.h>
+#include <Cala/ui/AssetManagerWindow.h>
 
 namespace cala::ui {
 
@@ -51,6 +52,9 @@ namespace cala::ui {
 
         bool _showBackbufferView;
         BackbufferView _backbufferView;
+
+        bool _showAssetmanager;
+        AssetManagerWindow _assetManager;
 
 
     };
