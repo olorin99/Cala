@@ -99,7 +99,7 @@ private:
 
 };
 
-std::expected<std::vector<u32>, u32> cala::util::compileGLSLToSpirv(backend::vulkan::Device *device, std::string_view name, std::string_view glsl, backend::ShaderStage stage, std::span<std::pair<std::string_view, std::string_view>> macros, std::span<std::filesystem::path> searchPaths) {
+std::expected<std::vector<u32>, u32> cala::util::compileGLSLToSpirv(backend::vulkan::Device *device, std::string_view name, std::string_view glsl, backend::ShaderStage stage, std::span<const std::pair<std::string_view, std::string_view>> macros, std::span<const std::filesystem::path> searchPaths) {
 
     shaderc_shader_kind kind{};
     switch (stage) {

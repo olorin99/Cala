@@ -5,6 +5,7 @@
 #include <filesystem>
 #include "../third_party/tsl/robin_map.h"
 #include <Cala/backend/vulkan/Handle.h>
+#include <Cala/backend/primitives.h>
 #include <span>
 
 namespace cala {
@@ -27,14 +28,7 @@ namespace cala {
 
         i32 getAssetIndex(u32 hash);
 
-        template<typename T>
-        i32 registerAsset(const std::filesystem::path& path) {
-            if constexpr (std::is_same<T, backend::vulkan::ShaderModuleHandle>::value) {
-                return registerShaderModule(path);
-            }
-        }
-
-        i32 registerShaderModule(const std::filesystem::path& path);
+        i32 registerShaderModule(const std::filesystem::path& path, u32 hash);
 
         bool isRegistered(u32 hash);
 
@@ -65,7 +59,7 @@ namespace cala {
 
         };
 
-        Asset<backend::vulkan::ShaderModuleHandle> loadShaderModule(const std::filesystem::path& path, std::span<std::pair<std::string_view, std::string_view>> macros = {});
+        Asset<backend::vulkan::ShaderModuleHandle> loadShaderModule(const std::filesystem::path& path, backend::ShaderStage stage = backend::ShaderStage::NONE, std::span<const std::pair<std::string_view, std::string_view>> macros = {});
 
         bool isLoaded(u32 hash);
 

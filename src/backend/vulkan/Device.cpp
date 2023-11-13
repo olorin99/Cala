@@ -389,7 +389,7 @@ bool cala::backend::vulkan::Device::gc() {
         auto& handle = it->second;
         if (frame <= 0) {
             u32 index = handle;
-            _programs[index].first = std::make_unique<ShaderProgram>(this);
+            _programs[index].first = std::make_unique<ShaderProgram>(this, std::span<ShaderModuleHandle>{});
             _freePrograms.push_back(index);
             _programsToDestroy.erase(it--);
             _logger.info("destroyed program ({})", index);
@@ -436,6 +436,7 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
 
     VmaAllocationCreateInfo allocInfo{};
     allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
     allocInfo.requiredFlags = extraInfo.requiredFlags;
     allocInfo.preferredFlags = extraInfo.preferredFlags;
 
@@ -636,7 +637,7 @@ void cala::backend::vulkan::Device::destroyProgram(i32 handle) {
     _programsToDestroy.push_back(std::make_pair(FRAMES_IN_FLIGHT + 1, handle));
 }
 
-cala::backend::vulkan::ShaderModuleHandle cala::backend::vulkan::Device::createShaderModule(const std::vector<u32> &spirv, ShaderStage stage) {
+cala::backend::vulkan::ShaderModuleHandle cala::backend::vulkan::Device::createShaderModule(std::span<u32> spirv, ShaderStage stage) {
     u32 index = 0;
 
     VkShaderModule module;
@@ -660,9 +661,12 @@ cala::backend::vulkan::ShaderModuleHandle cala::backend::vulkan::Device::createS
         }});
     }
 
+    ShaderModuleInterface interface(spirv, stage);
+
     _shaderModules[index].first->_module = module;
     _shaderModules[index].first->_stage = stage;
     _shaderModules[index].first->_main = "main";
+    _shaderModules[index].first->_interface = std::move(interface);
     return { this, static_cast<i32>(index), _shaderModules[index].second };
 }
 

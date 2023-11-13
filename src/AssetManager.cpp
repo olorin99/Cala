@@ -42,8 +42,7 @@ bool cala::AssetManager::isRegistered(const std::filesystem::path &path) {
     return isRegistered(std::hash<std::filesystem::path>()(path));
 }
 
-i32 cala::AssetManager::registerShaderModule(const std::filesystem::path &path) {
-    u32 hash = std::hash<std::filesystem::path>()(path);
+i32 cala::AssetManager::registerShaderModule(const std::filesystem::path &path, u32 hash) {
     i32 index = getAssetIndex(hash);
     if (index >= 0)
         return index;
@@ -63,28 +62,41 @@ i32 cala::AssetManager::registerShaderModule(const std::filesystem::path &path) 
     return index;
 }
 
-cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle> cala::AssetManager::loadShaderModule(const std::filesystem::path &path, std::span<std::pair<std::string_view, std::string_view>> macros) {
+
+inline u32 combineHash(u32 first, u32 second) {
+    return first ^= second + 0x9e3779b9 + (first<<6) + (first>>2);
+}
+
+cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle> cala::AssetManager::loadShaderModule(const std::filesystem::path &path, backend::ShaderStage stage, std::span<const std::pair<std::string_view, std::string_view>> macros) {
     u32 hash = std::hash<std::filesystem::path>()(path);
+
+    std::hash<std::string_view> hasher;
+    for (auto& macro : macros) {
+        u32 h = hasher(macro.second);
+        hash = combineHash(hash, h);
+    }
+
+
     i32 index = getAssetIndex(hash);
     if (index < 0)
-        index = registerShaderModule(path);
+        index = registerShaderModule(path, hash);
 
     auto& metadata = _metadata[index];
     if (metadata.loaded)
         return { this, index };
 
-
-    auto extension = path.extension();
-
-    backend::ShaderStage stage;
-    if (extension == ".vert")
-        stage = backend::ShaderStage::VERTEX;
-    else if (extension == ".frag")
-        stage = backend::ShaderStage::FRAGMENT;
-    else if (extension == ".geom")
-        stage = backend::ShaderStage::GEOMETRY;
-    else if (extension == ".comp")
-        stage = backend::ShaderStage::COMPUTE;
+    // if not defined use file extension to find stage
+    if (stage == backend::ShaderStage::NONE) {
+        auto extension = path.extension();
+        if (extension == ".vert")
+            stage = backend::ShaderStage::VERTEX;
+        else if (extension == ".frag")
+            stage = backend::ShaderStage::FRAGMENT;
+        else if (extension == ".geom")
+            stage = backend::ShaderStage::GEOMETRY;
+        else if (extension == ".comp")
+            stage = backend::ShaderStage::COMPUTE;
+    }
 
     ende::fs::File file;
     if (!file.open(_rootAssetPath / path))

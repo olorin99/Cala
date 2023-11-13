@@ -52,101 +52,101 @@ cala::Engine::Engine(backend::Platform &platform)
     auto vshader1 = _assetManager.loadShaderModule("shaders/shadow_point.vert");
     {
         _pointShadowProgram = loadProgram({
-            { "../../res/shaders/shadow_point.vert", backend::ShaderStage::VERTEX },
-            { "../../res/shaders/shadow_point.frag", backend::ShaderStage::FRAGMENT }
+            { "shaders/shadow_point.vert", backend::ShaderStage::VERTEX },
+            { "shaders/shadow_point.frag", backend::ShaderStage::FRAGMENT }
         });
     }
     {
         _directShadowProgram = loadProgram({
-            { "../../res/shaders/shadow.vert", backend::ShaderStage::VERTEX }
+            { "shaders/shadow.vert", backend::ShaderStage::VERTEX }
         });
     }
     {
         _equirectangularToCubeMap = loadProgram({
-            { "../../res/shaders/equirectangularToCubeMap.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/equirectangularToCubeMap.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _irradianceProgram = loadProgram({
-            { "../../res/shaders/irradiance.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/irradiance.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _prefilterProgram = loadProgram({
-            { "../../res/shaders/prefilter.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/prefilter.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _brdfProgram = loadProgram({
-            { "../../res/shaders/brdf.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/brdf.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _skyboxProgram = loadProgram({
-            { "../../res/shaders/skybox.vert", backend::ShaderStage::VERTEX },
-            { "../../res/shaders/skybox.frag", backend::ShaderStage::FRAGMENT }
+            { "shaders/skybox.vert", backend::ShaderStage::VERTEX },
+            { "shaders/skybox.frag", backend::ShaderStage::FRAGMENT }
         });
     }
     {
         _tonemapProgram = loadProgram({
-            { "../../res/shaders/hdr.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/hdr.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _cullProgram = loadProgram({
-            { "../../res/shaders/cull.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/cull.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _pointShadowCullProgram = loadProgram({
-            { "../../res/shaders/point_shadow_cull.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/point_shadow_cull.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _directShadowCullProgram = loadProgram({
-            { "../../res/shaders/direct_shadow_cull.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/direct_shadow_cull.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _createClustersProgram = loadProgram({
-            { "../../res/shaders/create_clusters.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/create_clusters.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _cullLightsProgram = loadProgram({
-            { "../../res/shaders/cull_lights.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/cull_lights.comp", backend::ShaderStage::COMPUTE }
         });
     }
     {
         _clusterDebugProgram = loadProgram({
-            { "../../res/shaders/fullscreen.vert", backend::ShaderStage::VERTEX },
-            { "../../res/shaders/debug/clusters_debug.frag", backend::ShaderStage::FRAGMENT }
+            { "shaders/fullscreen.vert", backend::ShaderStage::VERTEX },
+            { "shaders/debug/clusters_debug.frag", backend::ShaderStage::FRAGMENT }
         });
     }
     {
         _worldPosDebugProgram = loadProgram({
-            { "../../res/shaders/default.vert", backend::ShaderStage::VERTEX },
-            { "../../res/shaders/debug/world_pos.frag", backend::ShaderStage::FRAGMENT }
+            { "shaders/default.vert", backend::ShaderStage::VERTEX },
+            { "shaders/debug/world_pos.frag", backend::ShaderStage::FRAGMENT }
         });
     }
     {
         _solidColourProgram = loadProgram({
-            { "../../res/shaders/default.vert", backend::ShaderStage::VERTEX },
-            { "../../res/shaders/solid_colour.frag", backend::ShaderStage::FRAGMENT }
+            { "shaders/default.vert", backend::ShaderStage::VERTEX },
+            { "shaders/solid_colour.frag", backend::ShaderStage::FRAGMENT }
         });
     }
     {
         _normalsDebugProgram = loadProgram({
-            { "../../res/shaders/default.vert", backend::ShaderStage::VERTEX },
-            { "../../res/shaders/normals.geom", backend::ShaderStage::GEOMETRY },
-            { "../../res/shaders/solid_colour.frag", backend::ShaderStage::FRAGMENT }
+            { "shaders/default.vert", backend::ShaderStage::VERTEX },
+            { "shaders/normals.geom", backend::ShaderStage::GEOMETRY },
+            { "shaders/solid_colour.frag", backend::ShaderStage::FRAGMENT }
         });
     }
     {
 //        _voxelVisualisationProgram = loadProgram({
-////            { "../../res/shaders/fullscreen.vert", backend::ShaderModule::VERTEX },
-////            { "../../res/shaders/voxel/visualise.frag", backend::ShaderModule::FRAGMENT }
-//            { "../../res/shaders/voxel/visualise.comp", backend::ShaderModule::COMPUTE }
+////            { "shaders/fullscreen.vert", backend::ShaderModule::VERTEX },
+////            { "shaders/voxel/visualise.frag", backend::ShaderModule::FRAGMENT }
+//            { "shaders/voxel/visualise.comp", backend::ShaderModule::COMPUTE }
 //        });
     }
 
@@ -515,7 +515,7 @@ std::string macroize(const std::string& str) {
     return result;
 }
 
-std::optional<std::string> loadMaterialString(nlohmann::json& json, std::string_view label) {
+std::optional<std::string> loadMaterialString(nlohmann::json& json, std::string_view label, const std::filesystem::path& root = {}) {
     auto it = json.find(label);
     if (it == json.end())
         return {};
@@ -524,7 +524,7 @@ std::optional<std::string> loadMaterialString(nlohmann::json& json, std::string_
         if (path == it.value().end())
             return {};
         ende::fs::File file;
-        if (!file.open("../../res/shaders/" + path->get<std::string>()))
+        if (!file.open(root / "shaders" / path->get<std::string>()))
             return {};
         return macroize(file.read());
     }
@@ -730,15 +730,15 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
 
         Material* material = createMaterial(size);
 
-        std::string materialData = loadMaterialString(materialSource, "materialData").value();
-        std::string materialDefinition = loadMaterialString(materialSource, "materialDefinition").value();
-        std::string materialLoad = loadMaterialString(materialSource, "materialLoad").value();
-        std::string litEval = loadMaterialString(materialSource, "lit").value();
-        std::string unlitEval = loadMaterialString(materialSource, "unlit").value();
-        std::string normalEval = loadMaterialString(materialSource, "normal").value();
-        std::string roughnessEval = loadMaterialString(materialSource, "roughness").value();
-        std::string metallicEval = loadMaterialString(materialSource, "metallic").value();
-        std::string voxelizeEval = loadMaterialString(materialSource, "voxelize").value();
+        std::string materialData = loadMaterialString(materialSource, "materialData", _assetManager.getAssetPath()).value();
+        std::string materialDefinition = loadMaterialString(materialSource, "materialDefinition", _assetManager.getAssetPath()).value();
+        std::string materialLoad = loadMaterialString(materialSource, "materialLoad", _assetManager.getAssetPath()).value();
+        std::string litEval = loadMaterialString(materialSource, "lit", _assetManager.getAssetPath()).value();
+        std::string unlitEval = loadMaterialString(materialSource, "unlit", _assetManager.getAssetPath()).value();
+        std::string normalEval = loadMaterialString(materialSource, "normal", _assetManager.getAssetPath()).value();
+        std::string roughnessEval = loadMaterialString(materialSource, "roughness", _assetManager.getAssetPath()).value();
+        std::string metallicEval = loadMaterialString(materialSource, "metallic", _assetManager.getAssetPath()).value();
+        std::string voxelizeEval = loadMaterialString(materialSource, "voxelize", _assetManager.getAssetPath()).value();
 
         std::vector<std::string> includes;
         {
@@ -761,8 +761,8 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
             material->setBlendState(blendState.value());
 
         backend::vulkan::ProgramHandle litHandle = loadProgram({
-            { "../../res/shaders/default.vert", backend::ShaderStage::VERTEX },
-            { "../../res/shaders/default/default.frag", backend::ShaderStage::FRAGMENT, {
+            { "shaders/default.vert", backend::ShaderStage::VERTEX },
+            { "shaders/default/default.frag", backend::ShaderStage::FRAGMENT, {
                 { "MATERIAL_DATA", materialData },
                 { "MATERIAL_DEFINITION", materialDefinition },
                 { "MATERIAL_LOAD", materialLoad },
@@ -772,8 +772,8 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
         material->setVariant(Material::Variant::LIT, litHandle);
 
         backend::vulkan::ProgramHandle unlitHandle = loadProgram({
-            { "../../res/shaders/default.vert", backend::ShaderStage::VERTEX },
-            { "../../res/shaders/default/default.frag", backend::ShaderStage::FRAGMENT, {
+            { "shaders/default.vert", backend::ShaderStage::VERTEX },
+            { "shaders/default/default.frag", backend::ShaderStage::FRAGMENT, {
                 { "MATERIAL_DATA", materialData },
                 { "MATERIAL_DEFINITION", materialDefinition },
                 { "MATERIAL_LOAD", materialLoad },
@@ -783,8 +783,8 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
         material->setVariant(Material::Variant::UNLIT, unlitHandle);
 
         backend::vulkan::ProgramHandle normalsHandle = loadProgram({
-            { "../../res/shaders/default.vert", backend::ShaderStage::VERTEX },
-            { "../../res/shaders/default/default.frag", backend::ShaderStage::FRAGMENT, {
+            { "shaders/default.vert", backend::ShaderStage::VERTEX },
+            { "shaders/default/default.frag", backend::ShaderStage::FRAGMENT, {
                 { "MATERIAL_DATA", materialData },
                 { "MATERIAL_DEFINITION", materialDefinition },
                 { "MATERIAL_LOAD", materialLoad },
@@ -794,8 +794,8 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
         material->setVariant(Material::Variant::NORMAL, normalsHandle);
 
         backend::vulkan::ProgramHandle metallicHandle = loadProgram({
-            { "../../res/shaders/default.vert", backend::ShaderStage::VERTEX },
-            { "../../res/shaders/default/default.frag", backend::ShaderStage::FRAGMENT, {
+            { "shaders/default.vert", backend::ShaderStage::VERTEX },
+            { "shaders/default/default.frag", backend::ShaderStage::FRAGMENT, {
                 { "MATERIAL_DATA", materialData },
                 { "MATERIAL_DEFINITION", materialDefinition },
                 { "MATERIAL_LOAD", materialLoad },
@@ -805,8 +805,8 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
         material->setVariant(Material::Variant::METALLIC, metallicHandle);
 
         backend::vulkan::ProgramHandle roughnessHandle = loadProgram({
-            { "../../res/shaders/default.vert", backend::ShaderStage::VERTEX },
-            { "../../res/shaders/default/default.frag", backend::ShaderStage::FRAGMENT, {
+            { "shaders/default.vert", backend::ShaderStage::VERTEX },
+            { "shaders/default/default.frag", backend::ShaderStage::FRAGMENT, {
                 { "MATERIAL_DATA", materialData },
                 { "MATERIAL_DEFINITION", materialDefinition },
                 { "MATERIAL_LOAD", materialLoad },
@@ -816,9 +816,9 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
         material->setVariant(Material::Variant::ROUGHNESS, roughnessHandle);
 
 //        backend::vulkan::ProgramHandle voxelGIHandle = loadProgram({
-//            { "../../res/shaders/voxel/voxelize.vert", backend::ShaderModule::VERTEX },
-//            { "../../res/shaders/voxel/voxelize.geom", backend::ShaderModule::GEOMETRY },
-//            { "../../res/shaders/voxel/voxelize.frag", backend::ShaderModule::FRAGMENT, {
+//            { "shaders/voxel/voxelize.vert", backend::ShaderModule::VERTEX },
+//            { "shaders/voxel/voxelize.geom", backend::ShaderModule::GEOMETRY },
+//            { "shaders/voxel/voxelize.frag", backend::ShaderModule::FRAGMENT, {
 //                { "MATERIAL_DATA", materialData },
 //                { "MATERIAL_DEFINITION", materialDefinition },
 //                { "MATERIAL_LOAD", materialLoad },
@@ -829,18 +829,21 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
 
         return material;
     } catch (std::exception& e) {
-        _device.logger().error("Error with material: {}", path.string());
+        _device.logger().error("Error with material: {}, {}", path.string(), e.what());
         return nullptr;
     }
 }
 
 cala::backend::vulkan::ProgramHandle cala::Engine::loadProgram(const std::vector<ShaderInfo>& shaderInfo) {
-    auto programBuilder = backend::vulkan::ShaderProgram::create(&_device);
+
+    std::vector<backend::vulkan::ShaderModuleHandle> modules;
 
     for (auto& info : shaderInfo) {
-        programBuilder.addStageGLSL(info.path, info.stage, info.macros, info.includes);
+        modules.push_back(*_assetManager.loadShaderModule(info.path, info.stage, info.macros));
+//        programBuilder.addStageGLSL(info.path, info.stage, info.macros, info.includes);
     }
-    auto program = programBuilder.compile();
+//    auto program = programBuilder.compile();
+    backend::vulkan::ShaderProgram program(&_device, modules);
     return _device.createProgram(std::move(program));
 }
 

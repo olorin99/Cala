@@ -103,7 +103,7 @@ namespace cala::backend::vulkan {
 
         ProgramHandle createProgram(ShaderProgram&& program);
 
-        ShaderModuleHandle createShaderModule(const std::vector<u32>& spirv, ShaderStage stage);
+        ShaderModuleHandle createShaderModule(std::span<u32> spirv, ShaderStage stage);
 
 
         SamplerHandle getSampler(Sampler::CreateInfo info);

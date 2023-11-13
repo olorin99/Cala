@@ -205,18 +205,19 @@ namespace cala::backend::vulkan {
 
         struct DescriptorKey {
             VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
-            struct {
-                Buffer* buffer = nullptr;
-                u32 offset = 0;
-                u32 range = 0;
-                bool storage = false;
-            } buffers[MAX_BINDING_PER_SET] {};
-            struct {
-                Image* image = nullptr;
-                VkImageView view = VK_NULL_HANDLE;
-                VkSampler sampler = VK_NULL_HANDLE;
-                bool storage = false;
-            } images[MAX_BINDING_PER_SET] {};
+                struct {
+                    Buffer* buffer = nullptr;
+                    u32 offset = 0;
+                    u32 range = 0;
+                    bool storage = false;
+                } buffers[MAX_BINDING_PER_SET] {};
+                struct {
+                    Image* image = nullptr;
+                    VkImageView view = VK_NULL_HANDLE;
+                    VkSampler sampler = VK_NULL_HANDLE;
+                    bool storage = false;
+                } images[MAX_BINDING_PER_SET];
+            ShaderInterface::BindingType type;
 
             bool operator==(const DescriptorKey& rhs) const {
                 return memcmp(this, &rhs, sizeof(DescriptorKey)) == 0;

@@ -5,6 +5,7 @@
 #include <Cala/backend/primitives.h>
 #include <volk.h>
 #include <string>
+#include <Cala/backend/vulkan/ShaderModuleInterface.h>
 
 namespace cala::backend::vulkan {
 
@@ -19,6 +20,8 @@ namespace cala::backend::vulkan {
 
         VkShaderModule module() const { return _module; }
 
+        const ShaderModuleInterface& interface() const { return _interface; }
+
     private:
         friend Device;
 
@@ -26,6 +29,7 @@ namespace cala::backend::vulkan {
         VkShaderModule _module;
         ShaderStage _stage;
         std::string _main;
+        ShaderModuleInterface _interface;
 
     };
 

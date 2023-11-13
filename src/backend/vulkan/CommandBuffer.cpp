@@ -283,6 +283,7 @@ void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 binding, Buff
     assert(buffer);
     assert(set < MAX_SET_COUNT && "set is greater than valid number of descriptor sets");
     _descriptorKey[set].buffers[binding] = { &*buffer, offset, range == 0 ? (buffer->size() - offset) : range , storage };
+    _descriptorKey[set].type = storage ? ShaderInterface::BindingType::STORAGE_BUFFER : ShaderInterface::BindingType::UNIFORM_BUFFER;
 //    bindBuffer(set, slot, buffer.buffer(), offset, range == 0 ? buffer.size() : range);
     _descriptorDirty = true;
 }
@@ -291,11 +292,13 @@ void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 binding, Buff
     assert(buffer);
     assert(set < MAX_SET_COUNT && "set is greater than valid number of descriptor sets");
     _descriptorKey[set].buffers[binding] = { &*buffer, 0, buffer->size(), storage };
+    _descriptorKey[set].type = storage ? ShaderInterface::BindingType::STORAGE_BUFFER : ShaderInterface::BindingType::UNIFORM_BUFFER;
     _descriptorDirty = true;
 }
 
 void cala::backend::vulkan::CommandBuffer::bindImage(u32 set, u32 binding, Image::View& image, Sampler& sampler, bool storage) {
     _descriptorKey[set].images[binding] = { image.parent(), image.view, sampler.sampler(), storage };
+    _descriptorKey[set].type = storage ? ShaderInterface::BindingType::STORAGE_IMAGE : ShaderInterface::BindingType::SAMPLED_IMAGE;
     _descriptorDirty = true;
 }
 
