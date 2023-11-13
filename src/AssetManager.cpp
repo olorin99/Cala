@@ -127,9 +127,28 @@ cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle> cala::Asset
     moduleMetadata.moduleHandle = module;
     moduleMetadata.macros.clear();
     moduleMetadata.macros.insert(moduleMetadata.macros.begin(), macros.begin(), macros.end());
+    moduleMetadata.stage = stage;
     moduleMetadata.path = path;
+    moduleMetadata.hash = hash;
 
     return { this, index };
+}
+
+cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle> cala::AssetManager::reloadShaderModule(u32 hash) {
+    i32 index = getAssetIndex(hash);
+    if (index < 0)
+        return { this, -1 };
+
+    auto& metadata = _metadata[index];
+    auto& moduleMetadata = _shaderModules[metadata.index];
+
+    metadata.loaded = false;
+
+    std::vector<std::pair<std::string_view, std::string_view>> macros;
+    for (auto& macro : moduleMetadata.macros)
+        macros.push_back({macro.first, macro.second});
+
+    return loadShaderModule(moduleMetadata.path, moduleMetadata.stage, macros);
 }
 
 bool cala::AssetManager::isLoaded(u32 hash) {

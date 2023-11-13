@@ -70,9 +70,6 @@ void cala::ui::GuiWindow::render() {
     if (_showRenderGraph)
         _renderGraphViewer.render();
 
-    if (_showLightWindow)
-        _lightWindow.render();
-
     if (_showStatisticsWindow)
         _statisticsWindow.render();
 
@@ -92,4 +89,7 @@ void cala::ui::GuiWindow::render() {
 
     if (_showAssetmanager)
         _assetManager.render();
+
+    if (_showLightWindow)
+        _lightWindow.render();
 }

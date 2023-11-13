@@ -65,6 +65,8 @@ namespace cala {
 
         Asset<backend::vulkan::ShaderModuleHandle> loadShaderModule(const std::filesystem::path& path, backend::ShaderStage stage = backend::ShaderStage::NONE, std::span<const std::pair<std::string_view, std::string_view>> macros = {});
 
+        Asset<backend::vulkan::ShaderModuleHandle> reloadShaderModule(u32 hash);
+
         bool isLoaded(u32 hash);
 
         bool isLoaded(const std::filesystem::path& path);
@@ -89,7 +91,9 @@ namespace cala {
         std::vector<AssetMetadata> _metadata;
 
         struct ShaderModuleMetadata {
+            u32 hash;
             std::filesystem::path path;
+            backend::ShaderStage stage;
             std::vector<std::pair<std::string, std::string>> macros;
             std::vector<std::string> includes;
             backend::vulkan::ShaderModuleHandle moduleHandle;

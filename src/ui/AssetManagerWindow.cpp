@@ -1,12 +1,13 @@
 #include "Cala/ui/AssetManagerWindow.h"
 #include <imgui.h>
+#include <Cala/Engine.h>
 
 cala::ui::AssetManagerWindow::AssetManagerWindow(cala::AssetManager *assetManager)
     : _assetManager(assetManager)
 {}
 
 cala::ui::AssetManagerWindow::~AssetManagerWindow() {
-
+    _currentAssetMetadata = {};
 }
 
 void cala::ui::AssetManagerWindow::render() {
@@ -26,6 +27,12 @@ void cala::ui::AssetManagerWindow::render() {
                         ImGui::Text("%s: %s", macro.first.data(), macro.second.data());
                     }
                     ImGui::TreePop();
+                }
+                std::string label = std::format("Reload##{}", shaderID++);
+                if (ImGui::Button(label.c_str())) {
+                    _assetManager->reloadShaderModule(shaderModuleMetadata.hash);
+                    _assetManager->_engine->logger().info("Reloading Shader: {}", shaderModuleMetadata.path.string());
+
                 }
             }
 

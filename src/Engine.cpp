@@ -835,7 +835,6 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
 }
 
 cala::backend::vulkan::ProgramHandle cala::Engine::loadProgram(const std::vector<ShaderInfo>& shaderInfo) {
-
     std::vector<backend::vulkan::ShaderModuleHandle> modules;
 
     for (auto& info : shaderInfo) {
@@ -843,6 +842,7 @@ cala::backend::vulkan::ProgramHandle cala::Engine::loadProgram(const std::vector
 //        programBuilder.addStageGLSL(info.path, info.stage, info.macros, info.includes);
     }
 //    auto program = programBuilder.compile();
+    //TODO: change program to use asset handles so modules change on reload
     backend::vulkan::ShaderProgram program(&_device, modules);
     return _device.createProgram(std::move(program));
 }

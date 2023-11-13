@@ -120,73 +120,73 @@ void cala::ui::ProfileWindow::render() {
 
 
     // display times
+    if (ImGui::Begin("Profiling")) {
+        ImGui::Text("FPS: %f", _engine->device().fps());
 
-    ImGui::Begin("Profiling");
+        if (ImGui::BeginTable("Timings", 2)) {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
 
-    ImGui::Text("FPS: %f", _engine->device().fps());
+            ImGui::Text("Milliseconds: %f", _engine->device().milliseconds());
 
-    if (ImGui::BeginTable("Timings", 2)) {
-        ImGui::TableNextRow();
-        ImGui::TableSetColumnIndex(0);
+            ImGui::TableNextColumn();
 
-        ImGui::Text("Milliseconds: %f", _engine->device().milliseconds());
+            plotGraph("Milliseconds", _cpuTimes, _frameOffset, 240);
 
-        ImGui::TableNextColumn();
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
 
-        plotGraph("Milliseconds", _cpuTimes, _frameOffset, 240);
-
-        ImGui::TableNextRow();
-        ImGui::TableSetColumnIndex(0);
-
-        ImGui::Text("CPU Times:");
-        ImGui::TableNextRow();
-        ImGui::TableSetColumnIndex(0);
+            ImGui::Text("CPU Times:");
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
 
 #ifdef ENDE_PROFILE
-        {
-            for (auto& func : dataVec) {
-                ImGui::Text("\t%s ms", func.first);
-                auto it = _times.find(func.first);
+            {
+                for (auto& func : dataVec) {
+                    ImGui::Text("\t%s ms", func.first);
+                    auto it = _times.find(func.first);
+                    if (it == _times.end())
+                        continue;
+
+                    auto& dataArray = it.value();
+                    ImGui::TableNextColumn();
+                    std::string label = std::format("{} ms", func.second.first);
+                    simplePlotGraph(label.c_str(), dataArray, _frameOffset, 30.f);
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                }
+            }
+#endif
+
+            ImGui::Text("GPU Times:");
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            for (auto& timer : passTimers) {
+                u64 time = timer.second.result();
+                ImGui::Text("\t%s ms", timer.first);
+                auto it = _times.find(timer.first);
                 if (it == _times.end())
                     continue;
 
                 auto& dataArray = it.value();
                 ImGui::TableNextColumn();
-                std::string label = std::format("{} ms", func.second.first);
+                std::string label = std::format("{} ms", time / 1e6);
                 simplePlotGraph(label.c_str(), dataArray, _frameOffset, 30.f);
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
             }
+            ImGui::EndTable();
+
+
+            ImGui::Text("Total GPU: %f", totalGPUTime / 1e6);
+            ImGui::Text("CPU/GPU: %f", _engine->device().milliseconds() / (totalGPUTime / 1e6));
+            ImGui::Text("CPU Avg: %f, StdDev: %f, MaxDev: %f, MinDev: %f", _cpuAvg, cpuStdDev, cpuMaxDev, cpuMinDev);
+            ImGui::Text("GPU Avg: %f, StdDev: %f, MaxDev: %f, MinDev: %f", _gpuAvg, gpuStdDev, gpuMaxDev, gpuMinDev);
         }
-#endif
 
-        ImGui::Text("GPU Times:");
-        ImGui::TableNextRow();
-        ImGui::TableSetColumnIndex(0);
-        for (auto& timer : passTimers) {
-            u64 time = timer.second.result();
-            ImGui::Text("\t%s ms", timer.first);
-            auto it = _times.find(timer.first);
-            if (it == _times.end())
-                continue;
-
-            auto& dataArray = it.value();
-            ImGui::TableNextColumn();
-            std::string label = std::format("{} ms", time / 1e6);
-            simplePlotGraph(label.c_str(), dataArray, _frameOffset, 30.f);
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-        }
-        ImGui::EndTable();
-
-
-        ImGui::Text("Total GPU: %f", totalGPUTime / 1e6);
-        ImGui::Text("CPU/GPU: %f", _engine->device().milliseconds() / (totalGPUTime / 1e6));
-        ImGui::Text("CPU Avg: %f, StdDev: %f, MaxDev: %f, MinDev: %f", _cpuAvg, cpuStdDev, cpuMaxDev, cpuMinDev);
-        ImGui::Text("GPU Avg: %f, StdDev: %f, MaxDev: %f, MinDev: %f", _gpuAvg, gpuStdDev, gpuMaxDev, gpuMinDev);
+        ImGui::End();
     }
 
-    ImGui::End();
 
     _frameOffset = (_frameOffset + 1) % MAX_FRAME_COUNT;
 }
