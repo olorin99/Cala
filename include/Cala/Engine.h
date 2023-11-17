@@ -70,7 +70,7 @@ namespace cala {
             std::vector<std::pair<std::string_view, std::string_view>> macros = {};
             std::vector<std::string> includes = {};
         };
-        Program loadProgram(const std::vector<ShaderInfo>& shaderInfo);
+        Program loadProgram(const std::string& name, const std::vector<ShaderInfo>& shaderInfo);
 
         Material* createMaterial(u32 size);
 

@@ -32,7 +32,7 @@ namespace cala {
 
         i32 getAssetIndex(u32 hash);
 
-        i32 registerShaderModule(const std::filesystem::path& path, u32 hash);
+        i32 registerShaderModule(const std::string& name, const std::filesystem::path& path, u32 hash);
 
         bool isRegistered(u32 hash);
 
@@ -70,7 +70,7 @@ namespace cala {
 
         };
 
-        Asset<backend::vulkan::ShaderModuleHandle> loadShaderModule(const std::filesystem::path& path, backend::ShaderStage stage = backend::ShaderStage::NONE, std::span<const std::pair<std::string_view, std::string_view>> macros = {});
+        Asset<backend::vulkan::ShaderModuleHandle> loadShaderModule(const std::string& name, const std::filesystem::path& path, backend::ShaderStage stage = backend::ShaderStage::NONE, std::span<const std::pair<std::string_view, std::string_view>> macros = {}, std::span<const std::string> includes = {});
 
         Asset<backend::vulkan::ShaderModuleHandle> reloadShaderModule(u32 hash);
 
@@ -89,6 +89,7 @@ namespace cala {
         std::vector<std::filesystem::path> _searchPaths;
 
         struct AssetMetadata {
+            std::string name;
             std::filesystem::path path;
             bool loaded;
             i32 index;
@@ -99,6 +100,7 @@ namespace cala {
 
         struct ShaderModuleMetadata {
             u32 hash;
+            std::string name;
             std::filesystem::path path;
             backend::ShaderStage stage;
             std::vector<std::pair<std::string, std::string>> macros;

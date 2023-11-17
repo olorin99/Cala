@@ -24,9 +24,6 @@ layout (push_constant) uniform IBLData {
 };
 
 #include "util.glsl"
-#include "pbr.glsl"
-#include "shadow.glsl"
-#include "lighting.glsl"
 
 MATERIAL_DATA;
 
@@ -35,6 +32,8 @@ MATERIAL_DEFINITION;
 MATERIAL_LOAD;
 
 MATERIAL_EVAL;
+
+INCLUDES_GO_HERE;
 
 layout (set = 2, binding = 0) readonly buffer MatData {
     MaterialData materials[];
