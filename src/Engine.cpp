@@ -181,6 +181,29 @@ cala::Engine::Engine(backend::Platform &platform)
 
 }
 
+cala::Engine::~Engine() {
+    _pointShadowProgram = {};
+    _directShadowProgram = {};
+
+    _equirectangularToCubeMap = {};
+    _irradianceProgram = {};
+    _prefilterProgram = {};
+    _brdfProgram = {};
+    _skyboxProgram = {};
+    _tonemapProgram = {};
+    _cullProgram = {};
+    _pointShadowCullProgram = {};
+    _directShadowCullProgram = {};
+    _createClustersProgram = {};
+    _cullLightsProgram = {};
+
+    _clusterDebugProgram = {};
+    _normalsDebugProgram = {};
+    _worldPosDebugProgram = {};
+    _solidColourProgram = {};
+    _voxelVisualisationProgram = {};
+}
+
 bool cala::Engine::gc() {
     PROFILE_NAMED("Engine::gc");
     flushStagedData();

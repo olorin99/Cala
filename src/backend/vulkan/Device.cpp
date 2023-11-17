@@ -161,6 +161,12 @@ cala::backend::vulkan::Device::~Device() {
 
     _descriptorSets.clear();
 
+    _programs.clear();
+
+    for (auto& pipelineLayout : _pipelineLayoutList._resources) {
+        *pipelineLayout.first = PipelineLayout(nullptr);
+    }
+
     for (auto& shaderModule : _shaderModules) {
         vkDestroyShaderModule(context().device(), shaderModule.first->module(), nullptr);
     }
@@ -410,6 +416,11 @@ bool cala::backend::vulkan::Device::gc() {
         } else
             --frame;
     }
+
+    _pipelineLayoutList.clearDestroyQueue([this](i32 index, PipelineLayout& layout) {
+        layout = PipelineLayout(nullptr);
+        _logger.info("destroyed pipeline layout ({})", index);
+    });
 
     for (auto it = _descriptorSets.begin(); it != _descriptorSets.end(); it++) {
         auto& frame = it.value().second;
@@ -668,6 +679,14 @@ cala::backend::vulkan::ShaderModuleHandle cala::backend::vulkan::Device::createS
     _shaderModules[index].first->_main = "main";
     _shaderModules[index].first->_interface = std::move(interface);
     return { this, static_cast<i32>(index), _shaderModules[index].second };
+}
+
+cala::backend::vulkan::PipelineLayoutHandle cala::backend::vulkan::Device::createPipelineLayout(const cala::backend::ShaderInterface &interface) {
+    PipelineLayout layout(this, interface);
+
+    i32 index = _pipelineLayoutList.insert(this);
+    *_pipelineLayoutList._resources[index].first = std::move(layout);
+    return _pipelineLayoutList.getHandle(this, index);
 }
 
 

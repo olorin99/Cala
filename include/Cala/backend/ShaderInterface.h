@@ -40,6 +40,8 @@ namespace cala::backend {
 
         u32 setCount() const { return _setCount; }
 
+        bool stagePresent(ShaderStage stage) const { return (_stages & stage) == stage; }
+
 //    private:
         friend cala::backend::vulkan::ShaderProgram;
 
@@ -83,6 +85,8 @@ namespace cala::backend {
 //            std::unordered_map<std::string, BindingMember> members;
         } pushConstants[10] {};
         u32 pushConstantRanges = 0;
+
+        ShaderStage _stages;
 
     };
 

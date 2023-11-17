@@ -42,6 +42,11 @@ namespace cala {
         class Asset {
         public:
 
+            Asset()
+                : _manager(nullptr),
+                _index(-1)
+            {}
+
             Asset(AssetManager* manager, i32 index)
                 : _manager(manager),
                 _index(index)
@@ -49,8 +54,10 @@ namespace cala {
 
             T& operator*() noexcept;
 
+            T& operator*() const noexcept;
+
             explicit operator bool() const noexcept {
-                if (_index < 0)
+                if (_index < 0 || !_manager)
                     return false;
                 auto& metadata = _manager->_metadata[_index];
                 return metadata.loaded;

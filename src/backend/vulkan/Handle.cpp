@@ -131,3 +131,25 @@ template <>
 bool cala::backend::vulkan::CommandHandle::isValid() const {
     return _owner->_buffers.size() > _index && _owner->_buffers[_index].buffer() != VK_NULL_HANDLE;
 }
+
+
+
+template <>
+cala::backend::vulkan::PipelineLayout &cala::backend::vulkan::PipelineLayoutHandle::operator*() noexcept {
+    return *_owner->_pipelineLayoutList.getResource(_index);
+}
+
+template <>
+cala::backend::vulkan::PipelineLayout *cala::backend::vulkan::PipelineLayoutHandle::operator->() noexcept {
+    return _owner->_pipelineLayoutList.getResource(_index);
+}
+
+template <>
+cala::backend::vulkan::PipelineLayout *cala::backend::vulkan::PipelineLayoutHandle::operator->() const noexcept {
+    return _owner->_pipelineLayoutList.getResource(_index);
+}
+
+template <>
+bool cala::backend::vulkan::PipelineLayoutHandle::isValid() const {
+    return _owner->_pipelineLayoutList._resources.size() > _index && _owner->_pipelineLayoutList.getResource(_index)->layout() != VK_NULL_HANDLE;
+}

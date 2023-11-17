@@ -8,6 +8,7 @@
 #include <vector>
 #include <Cala/backend/vulkan/Handle.h>
 #include <filesystem>
+#include <Cala/backend/vulkan/PipelineLayout.h>
 
 namespace cala::backend::vulkan {
 
@@ -17,31 +18,9 @@ namespace cala::backend::vulkan {
     class ShaderProgram {
     public:
 
-//        class Builder {
-//        public:
-//
-//            Builder(Device* device);
-//
-//            Builder& addStage(ShaderModuleHandle module);
-//
-//            Builder& addStageSPV(const std::vector<u32>& code, ShaderStage stage);
-//
-//            Builder& addStageGLSL(const std::filesystem::path& path, ShaderStage stage, const std::vector<std::pair<const char*, std::string>>& macros = {}, const std::vector<std::string>& includes = {});
-//
-//            ShaderProgram compile();
-//
-//        private:
-//            Device* _device;
-//            std::vector<std::pair<std::vector<u32>, ShaderStage>> _stages;
-//
-//        };
-//
-//        static Builder create(Device* device);
-
-
         ShaderProgram(Device* device, std::span<const ShaderModuleHandle> modules);
 
-        ~ShaderProgram();
+        ShaderProgram(Device* device);
 
         ShaderProgram(const ShaderProgram& rhs) = delete;
 
@@ -54,21 +33,20 @@ namespace cala::backend::vulkan {
 
         VkPipelineLayout layout();
 
-        bool stagePresent(ShaderStage stageFlags) const;
+        VkDescriptorSetLayout setLayout(u32 set);
 
-        const ShaderInterface& interface() const { return _interface; }
+        bool stagePresent(ShaderStage stageFlags) const { return interface().stagePresent(stageFlags); }
 
-    private:
+        const ShaderInterface& interface() const;
+
+//    private:
 //        friend Builder;
         friend CommandBuffer;
 
         Device* _device;
         std::vector<ShaderModuleHandle> _modules;
-        VkDescriptorSetLayout _setLayout[MAX_SET_COUNT];
-        VkPipelineLayout _layout;
 
-        ShaderInterface _interface;
-        ShaderStage _stageFlags;
+        PipelineLayoutHandle _pipelineLayout;
 
     };
 

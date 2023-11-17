@@ -11,6 +11,7 @@ namespace cala::backend::vulkan {
     class Image;
     class ShaderProgram;
     class ShaderModule;
+    class PipelineLayout;
     class Sampler;
     class CommandBuffer;
     class CommandPool;
@@ -48,6 +49,8 @@ namespace cala::backend::vulkan {
         Handle& operator=(const Handle& rhs) {
             if (this == &rhs)
                 return *this;
+            if (_index != rhs._index)
+                release();
             _owner = rhs._owner;
             _index = rhs._index;
             _counter = rhs._counter;
@@ -98,6 +101,7 @@ namespace cala::backend::vulkan {
     using ImageHandle = Handle<Image, Device>;
     using ProgramHandle = Handle<ShaderProgram, Device>;
     using ShaderModuleHandle = Handle<ShaderModule, Device>;
+    using PipelineLayoutHandle = Handle<PipelineLayout, Device>;
     using SamplerHandle = Handle<Sampler, Device>;
     using CommandHandle = Handle<CommandBuffer, CommandPool>;
 

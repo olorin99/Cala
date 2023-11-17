@@ -2,6 +2,7 @@
 
 cala::backend::ShaderInterface::ShaderInterface(std::span<vulkan::ShaderModuleInterface> moduleInterfaces) {
     for (auto& interface : moduleInterfaces) {
+        _stages |= interface._stage;
         for (u32 set = 0; set < MAX_SET_COUNT; set++) {
             _setCount = std::max(_setCount, interface._setCount);
             sets[set].bindingCount = std::max(sets[set].bindingCount, interface._sets[set].bindingCount);

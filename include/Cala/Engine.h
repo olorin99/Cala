@@ -27,6 +27,8 @@ namespace cala {
 
         Engine(backend::Platform& platform);
 
+        ~Engine();
+
         backend::vulkan::Device& device() { return _device; }
 
         AssetManager* assetManager() { return &_assetManager; }

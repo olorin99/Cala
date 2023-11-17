@@ -105,6 +105,8 @@ namespace cala::backend::vulkan {
 
         ShaderModuleHandle createShaderModule(std::span<u32> spirv, ShaderStage stage);
 
+        PipelineLayoutHandle createPipelineLayout(const ShaderInterface& interface);
+
 
         SamplerHandle getSampler(Sampler::CreateInfo info);
 
@@ -177,6 +179,7 @@ namespace cala::backend::vulkan {
         friend ProgramHandle;
         friend SamplerHandle;
         friend ShaderModuleHandle;
+        friend PipelineLayoutHandle;
         friend ui::ResourceViewer;
         friend CommandBuffer;
 
@@ -209,6 +212,47 @@ namespace cala::backend::vulkan {
         VkDescriptorPool _bindlessPool;
         i32 _bindlessIndex;
 
+        template <typename T, typename H>
+        struct ResourceList {
+            std::vector<std::pair<std::unique_ptr<T>, std::unique_ptr<typename H::Counter>>> _resources;
+            std::vector<u32> _freeResources;
+            std::vector<std::pair<i32, i32>> _destroyQueue;
+
+            H getHandle(Device* device, i32 index) { return { device, index, _resources[index].second.get() }; }
+
+            T* getResource(i32 index) { return _resources[index].first.get(); }
+
+            T* getResource(i32 index) const { return _resources[index].first.get(); }
+
+            i32 insert(Device* device) {
+                i32 index = -1;
+                if (!_freeResources.empty()) {
+                    index + _freeResources.back();
+                    _freeResources.pop_back();
+                    _resources[index].first = std::make_unique<T>(device);
+                    _resources[index].second->count = 1;
+                } else {
+                    index = _resources.size();
+                    _resources.emplace_back(std::make_unique<T>(device), std::make_unique<typename H::Counter>(1, [this](i32 index) {
+                        _destroyQueue.push_back(std::make_pair(FRAMES_IN_FLIGHT + 1, index));
+                    }));
+                }
+                return index;
+            }
+
+            template <typename F>
+            bool clearDestroyQueue(F func) {
+                for (auto it = _destroyQueue.begin(); it != _destroyQueue.end(); it++) {
+                    if (it->first <= 0) {
+                        auto& object = *_resources[it->second].first;
+                        func(it->second, object);
+                        _destroyQueue.erase(it--);
+                    } else
+                        it->first--;
+                }
+                return true;
+            }
+        };
 
         std::vector<std::pair<std::unique_ptr<Buffer>, BufferHandle::Counter*>> _buffers;
         std::vector<u32> _freeBuffers;
@@ -229,6 +273,9 @@ namespace cala::backend::vulkan {
         std::vector<std::pair<std::unique_ptr<ShaderModule>, ShaderModuleHandle::Counter*>> _shaderModules;
         std::vector<u32> _freeShaderModules;
         std::vector<std::pair<i32, i32>> _shaderModulesToDestroy;
+
+        ResourceList<PipelineLayout, PipelineLayoutHandle> _pipelineLayoutList;
+
 
         std::vector<std::pair<Sampler::CreateInfo, std::unique_ptr<Sampler>>> _samplers;
 

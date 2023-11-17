@@ -11,6 +11,13 @@ cala::backend::vulkan::Handle<cala::backend::vulkan::ShaderModule, cala::backend
     return shaderModuleMetadata.moduleHandle;
 }
 
+template <>
+cala::backend::vulkan::Handle<cala::backend::vulkan::ShaderModule, cala::backend::vulkan::Device>& cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle>::operator*() const noexcept {
+    auto& metadata = _manager->_metadata[_index];
+    auto& shaderModuleMetadata = _manager->_shaderModules[metadata.index];
+    return shaderModuleMetadata.moduleHandle;
+}
+
 
 
 cala::AssetManager::AssetManager(cala::Engine *engine)
