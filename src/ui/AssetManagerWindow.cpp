@@ -30,8 +30,8 @@ void cala::ui::AssetManagerWindow::render() {
                 }
                 std::string label = std::format("Reload##{}", shaderID++);
                 if (ImGui::Button(label.c_str())) {
-                    _assetManager->reloadShaderModule(shaderModuleMetadata.hash);
                     _assetManager->_engine->logger().info("Reloading Shader: {}", shaderModuleMetadata.path.string());
+                    _assetManager->reloadShaderModule(shaderModuleMetadata.hash);
 
                 }
             }

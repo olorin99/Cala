@@ -125,6 +125,10 @@ cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle> cala::Asset
     };
 
     auto expectedSpirV = util::compileGLSLToSpirv(&_engine->device(), path.string(), source, stage, macros, searchPaths);
+    if (!expectedSpirV.has_value()) {
+        _engine->logger().warn("unable to load shader: {}", path.string());
+        return { this, index };
+    }
 
     auto module = _engine->device().createShaderModule(expectedSpirV.value(), stage);
 
@@ -155,7 +159,10 @@ cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle> cala::Asset
     for (auto& macro : moduleMetadata.macros)
         macros.push_back({macro.first, macro.second});
 
-    return loadShaderModule(moduleMetadata.path, moduleMetadata.stage, macros);
+    auto module = loadShaderModule(moduleMetadata.path, moduleMetadata.stage, macros);
+
+    metadata.loaded = true;
+    return module;
 }
 
 bool cala::AssetManager::isLoaded(u32 hash) {
