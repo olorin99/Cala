@@ -288,7 +288,7 @@ Model loadGLTF(Engine* engine, Material* material, const std::filesystem::path& 
 
     Model mesh;
     mesh.primitives = std::move(primitives);
-    mesh.images = std::move(images);
+    mesh.images = images;
     mesh.materials = std::move(materials);
     mesh._binding = binding;
     mesh._attributes = attributes;

@@ -12,6 +12,7 @@
 #include <spdlog/spdlog.h>
 
 #include <Cala/AssetManager.h>
+#include <Cala/Program.h>
 
 namespace cala {
 
@@ -69,7 +70,7 @@ namespace cala {
             std::vector<std::pair<std::string_view, std::string_view>> macros = {};
             std::vector<std::string> includes = {};
         };
-        backend::vulkan::ProgramHandle loadProgram(const std::vector<ShaderInfo>& shaderInfo);
+        Program loadProgram(const std::vector<ShaderInfo>& shaderInfo);
 
         Material* createMaterial(u32 size);
 
@@ -109,11 +110,12 @@ namespace cala {
             DEBUG_NORMALS,
             DEBUG_WORLDPOS,
             SOLID_COLOUR,
-            VOXEL_VISUALISE
+            VOXEL_VISUALISE,
+            SKYBOX
         };
 
 
-        backend::vulkan::ProgramHandle getProgram(ProgramType type);
+        backend::vulkan::ShaderProgram getProgram(ProgramType type);
 
     private:
         friend Renderer;
@@ -134,26 +136,26 @@ namespace cala {
 
         backend::vulkan::RenderPass _shadowPass;
 
-        backend::vulkan::ProgramHandle _pointShadowProgram;
-        backend::vulkan::ProgramHandle _directShadowProgram;
+        Program _pointShadowProgram;
+        Program _directShadowProgram;
 
-        backend::vulkan::ProgramHandle _equirectangularToCubeMap;
-        backend::vulkan::ProgramHandle _irradianceProgram;
-        backend::vulkan::ProgramHandle _prefilterProgram;
-        backend::vulkan::ProgramHandle _brdfProgram;
-        backend::vulkan::ProgramHandle _skyboxProgram;
-        backend::vulkan::ProgramHandle _tonemapProgram;
-        backend::vulkan::ProgramHandle _cullProgram;
-        backend::vulkan::ProgramHandle _pointShadowCullProgram;
-        backend::vulkan::ProgramHandle _directShadowCullProgram;
-        backend::vulkan::ProgramHandle _createClustersProgram;
-        backend::vulkan::ProgramHandle _cullLightsProgram;
+        Program _equirectangularToCubeMap;
+        Program _irradianceProgram;
+        Program _prefilterProgram;
+        Program _brdfProgram;
+        Program _skyboxProgram;
+        Program _tonemapProgram;
+        Program _cullProgram;
+        Program _pointShadowCullProgram;
+        Program _directShadowCullProgram;
+        Program _createClustersProgram;
+        Program _cullLightsProgram;
 
-        backend::vulkan::ProgramHandle _clusterDebugProgram;
-        backend::vulkan::ProgramHandle _normalsDebugProgram;
-        backend::vulkan::ProgramHandle _worldPosDebugProgram;
-        backend::vulkan::ProgramHandle _solidColourProgram;
-        backend::vulkan::ProgramHandle _voxelVisualisationProgram;
+        Program _clusterDebugProgram;
+        Program _normalsDebugProgram;
+        Program _worldPosDebugProgram;
+        Program _solidColourProgram;
+        Program _voxelVisualisationProgram;
 
         backend::vulkan::ImageHandle _brdfImage;
 

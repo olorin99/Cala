@@ -51,7 +51,7 @@ namespace cala::backend::vulkan {
 
 
 
-        void bindProgram(ProgramHandle program);
+        void bindProgram(const ShaderProgram& program);
 
         void bindAttributes(std::span<Attribute> attributes);
 

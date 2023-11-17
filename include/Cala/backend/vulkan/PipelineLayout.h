@@ -21,6 +21,10 @@ namespace cala::backend::vulkan {
 
         PipelineLayout& operator=(PipelineLayout&& rhs) noexcept;
 
+        operator bool() const noexcept {
+            return _device && _layout != VK_NULL_HANDLE;
+        }
+
         VkPipelineLayout layout() const { return _layout; }
 
         VkDescriptorSetLayout setLayout(u32 set) const { return _setLayouts[set]; }

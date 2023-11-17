@@ -43,11 +43,11 @@ cala::backend::vulkan::ShaderProgram &cala::backend::vulkan::ShaderProgram::oper
     return *this;
 }
 
-VkPipelineLayout cala::backend::vulkan::ShaderProgram::layout() {
+VkPipelineLayout cala::backend::vulkan::ShaderProgram::layout() const {
     return _pipelineLayout->layout();
 }
 
-VkDescriptorSetLayout cala::backend::vulkan::ShaderProgram::setLayout(u32 set) {
+VkDescriptorSetLayout cala::backend::vulkan::ShaderProgram::setLayout(u32 set) const {
     return _pipelineLayout->setLayout(set);
 }
 

@@ -241,7 +241,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         createClusters.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
             auto clusters = graph.getBuffer("clusters");
             cmd->clearDescriptors();
-            cmd->bindProgram(_engine->_createClustersProgram);
+            cmd->bindProgram(_engine->getProgram(Engine::ProgramType::CREATE_CLUSTERS));
             cmd->bindBindings({});
             cmd->bindAttributes({});
             struct ClusterPush {
@@ -297,7 +297,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         auto lightIndices = graph.getBuffer("lightIndices");
         auto lightGlobalIndex = graph.getBuffer("lightGlobalResource");
         cmd->clearDescriptors();
-        cmd->bindProgram(_engine->_cullLightsProgram);
+        cmd->bindProgram(_engine->getProgram(Engine::ProgramType::CULL_LIGHTS));
         cmd->bindBindings({});
         cmd->bindAttributes({});
         struct ClusterPush {
@@ -417,7 +417,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                     ende::math::Frustum shadowFrustum = shadowCam.frustum();
 
                     cmd->clearDescriptors();
-                    cmd->bindProgram(_engine->_pointShadowCullProgram);
+                    cmd->bindProgram(_engine->getProgram(Engine::ProgramType::CULL_POINT));
                     cmd->bindBindings({});
                     cmd->bindAttributes({});
                     cmd->pushConstants(backend::ShaderStage::COMPUTE, shadowFrustum);
@@ -440,7 +440,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         backend::CompareOp::LESS_EQUAL
                     });
 
-                    cmd->bindProgram(_engine->_pointShadowProgram);
+                    cmd->bindProgram(_engine->getProgram(Engine::ProgramType::SHADOW_POINT));
 
                     cmd->bindBuffer(3, 0, scene._lightBuffer[_engine->device().frameIndex()], sizeof(Light::Data) * i, sizeof(Light::Data), true);
 
@@ -604,7 +604,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         Material* material = &_engine->_materials[i];
                         if (!material)
                             continue;
-                        cmd->bindProgram(material->getVariant(Material::Variant::VOXELGI));
+                        cmd->bindProgram(material->getVariant(Material::Variant::VOXELGI).getBackendProgram());
                         cmd->bindRasterState({
                             backend::CullMode::NONE
                         });
@@ -656,7 +656,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         auto materialCounts = graph.getBuffer("materialCounts");
         auto drawCommands = graph.getBuffer("drawCommands");
         cmd->clearDescriptors();
-        cmd->bindProgram(_engine->_cullProgram);
+        cmd->bindProgram(_engine->getProgram(Engine::ProgramType::CULL));
         cmd->bindBindings({});
         cmd->bindAttributes({});
         cmd->pushConstants(backend::ShaderStage::COMPUTE, _cullingFrustum);
@@ -691,7 +691,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
             cmd->bindBindings(renderable.bindings);
             cmd->bindAttributes(renderable.attributes);
-            cmd->bindProgram(_engine->_directShadowProgram);
+            cmd->bindProgram(_engine->getProgram(Engine::ProgramType::SHADOW_DIRECT));
             cmd->bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd->bindPipeline();
             cmd->bindDescriptors();
@@ -755,7 +755,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 Material* material = &_engine->_materials[i];
                 if (!material)
                     continue;
-                cmd->bindProgram(material->getVariant(Material::Variant::LIT));
+                cmd->bindProgram(material->getVariant(Material::Variant::LIT).getBackendProgram());
                 cmd->bindRasterState(material->getRasterState());
                 cmd->bindDepthState(material->getDepthState());
                 cmd->bindBuffer(2, 0, material->buffer(), true);
@@ -798,7 +798,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto hdrImage = graph.getImage("hdr");
             auto backbuffer = graph.getImage("backbuffer");
             cmd->clearDescriptors();
-            cmd->bindProgram(_engine->_tonemapProgram);
+            cmd->bindProgram(_engine->getProgram(Engine::ProgramType::TONEMAP));
             cmd->bindBindings({});
             cmd->bindAttributes({});
             cmd->bindBuffer(1, 0, global);
@@ -824,7 +824,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         skyboxPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
             auto global = graph.getBuffer("global");
             cmd->clearDescriptors();
-            cmd->bindProgram(_engine->_skyboxProgram);
+            cmd->bindProgram(_engine->getProgram(Engine::ProgramType::SKYBOX));
             cmd->bindRasterState({ backend::CullMode::NONE });
             cmd->bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
             cmd->bindBindings({ &_engine->_cube->_binding, 1 });

@@ -70,15 +70,17 @@ void cala::Material::upload() {
     }
 }
 
-void cala::Material::setVariant(cala::Material::Variant variant, backend::vulkan::ProgramHandle program) {
+void cala::Material::setVariant(cala::Material::Variant variant, Program program) {
     assert(static_cast<u8>(variant) < static_cast<u8>(Variant::MAX));
-//    if (_programs[static_cast<u8>(variant)])
-//        _programs[static_cast<u8>(variant)].release();
-//        _engine->device().destroyProgram(_programs[static_cast<u8>(variant)]);
-    _programs[static_cast<u8>(variant)] = program;
+    _programs[static_cast<u8>(variant)] = std::move(program);
 }
 
-cala::backend::vulkan::ProgramHandle cala::Material::getVariant(cala::Material::Variant variant) {
+const cala::Program& cala::Material::getVariant(cala::Material::Variant variant) {
+    assert(static_cast<u8>(variant) < static_cast<u8>(Variant::MAX));
+    return _programs[static_cast<u8>(variant)];
+}
+
+bool cala::Material::variantPresent(cala::Material::Variant variant) {
     assert(static_cast<u8>(variant) < static_cast<u8>(Variant::MAX));
     return _programs[static_cast<u8>(variant)];
 }

@@ -62,16 +62,18 @@ namespace cala {
             MAX
         };
 
-        void setVariant(Variant variant, backend::vulkan::ProgramHandle program);
+        void setVariant(Variant variant, Program program);
 
-        backend::vulkan::ProgramHandle getVariant(Variant variant);
+        const Program& getVariant(Variant variant);
+
+        bool variantPresent(Variant variant);
 
     private:
         friend MaterialInstance;
 
         Engine* _engine;
 
-        std::array<backend::vulkan::ProgramHandle, static_cast<u8>(Variant::MAX)> _programs;
+        std::array<Program, static_cast<u8>(Variant::MAX)> _programs;
 
         backend::vulkan::CommandBuffer::RasterState _rasterState;
         backend::vulkan::CommandBuffer::DepthState _depthState;

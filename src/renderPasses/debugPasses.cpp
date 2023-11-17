@@ -65,9 +65,9 @@ void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene
         cmd->bindVertexBuffer(0, engine.vertexBuffer());
         cmd->bindIndexBuffer(engine.indexBuffer());
         for (u32 material = 0; material < scene._materialCounts.size(); material++) {
-            auto program = engine.getMaterial(material)->getVariant(cala::Material::Variant::NORMAL);
-            if (!program)
+            if (!engine.getMaterial(material)->getVariant(cala::Material::Variant::NORMAL))
                 continue;
+            auto program = engine.getMaterial(material)->getVariant(cala::Material::Variant::NORMAL).getBackendProgram();
             cmd->bindProgram(program);
             cmd->bindBuffer(2, 0, engine.getMaterial(material)->buffer(), true);
             cmd->bindPipeline();
@@ -108,9 +108,9 @@ void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
         cmd->bindVertexBuffer(0, engine.vertexBuffer());
         cmd->bindIndexBuffer(engine.indexBuffer());
         for (u32 material = 0; material < scene._materialCounts.size(); material++) {
-            auto program = engine.getMaterial(material)->getVariant(cala::Material::Variant::ROUGHNESS);
-            if (!program)
+            if (!engine.getMaterial(material)->getVariant(cala::Material::Variant::ROUGHNESS))
                 continue;
+            auto program = engine.getMaterial(material)->getVariant(cala::Material::Variant::ROUGHNESS).getBackendProgram();
             cmd->bindProgram(program);
             cmd->bindBuffer(2, 0, engine.getMaterial(material)->buffer(), true);
             cmd->bindPipeline();
@@ -151,9 +151,9 @@ void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sce
         cmd->bindVertexBuffer(0, engine.vertexBuffer());
         cmd->bindIndexBuffer(engine.indexBuffer());
         for (u32 material = 0; material < scene._materialCounts.size(); material++) {
-            auto program = engine.getMaterial(material)->getVariant(cala::Material::Variant::METALLIC);
-            if (!program)
+            if (!engine.getMaterial(material)->getVariant(cala::Material::Variant::METALLIC))
                 continue;
+            auto program = engine.getMaterial(material)->getVariant(cala::Material::Variant::METALLIC).getBackendProgram();
             cmd->bindProgram(program);
             cmd->bindBuffer(2, 0, engine.getMaterial(material)->buffer(), true);
             cmd->bindPipeline();
@@ -194,9 +194,9 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene&
         cmd->bindVertexBuffer(0, engine.vertexBuffer());
         cmd->bindIndexBuffer(engine.indexBuffer());
         for (u32 material = 0; material < scene._materialCounts.size(); material++) {
-            auto program = engine.getMaterial(material)->getVariant(cala::Material::Variant::UNLIT);
-            if (!program)
+            if (!engine.getMaterial(material)->getVariant(cala::Material::Variant::UNLIT))
                 continue;
+            auto program = engine.getMaterial(material)->getVariant(cala::Material::Variant::UNLIT).getBackendProgram();
             cmd->bindProgram(program);
             cmd->bindBuffer(2, 0, engine.getMaterial(material)->buffer(), true);
             cmd->bindPipeline();

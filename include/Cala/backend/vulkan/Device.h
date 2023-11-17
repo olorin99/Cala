@@ -101,7 +101,7 @@ namespace cala::backend::vulkan {
 
         Image::View& getImageView(u32 index);
 
-        ProgramHandle createProgram(ShaderProgram&& program);
+//        ProgramHandle createProgram(ShaderProgram&& program);
 
         ShaderModuleHandle createShaderModule(std::span<u32> spirv, ShaderStage stage);
 
@@ -176,7 +176,7 @@ namespace cala::backend::vulkan {
     private:
         friend BufferHandle;
         friend ImageHandle;
-        friend ProgramHandle;
+//        friend ProgramHandle;
         friend SamplerHandle;
         friend ShaderModuleHandle;
         friend PipelineLayoutHandle;
@@ -265,10 +265,6 @@ namespace cala::backend::vulkan {
 
         Sampler _defaultSampler;
         Sampler _defaultShadowSampler;
-
-        std::vector<std::pair<std::unique_ptr<ShaderProgram>, ProgramHandle::Counter*>> _programs;
-        std::vector<u32> _freePrograms;
-        std::vector<std::pair<i32, i32>> _programsToDestroy;
 
         std::vector<std::pair<std::unique_ptr<ShaderModule>, ShaderModuleHandle::Counter*>> _shaderModules;
         std::vector<u32> _freeShaderModules;

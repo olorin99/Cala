@@ -129,17 +129,16 @@ void cala::backend::vulkan::CommandBuffer::end(Framebuffer &framebuffer) {
 }
 
 
-void cala::backend::vulkan::CommandBuffer::bindProgram(ProgramHandle program) {
-    assert(program);
-    if (_pipelineKey.layout != program->layout())
-        _pipelineKey.layout = program->layout();
+void cala::backend::vulkan::CommandBuffer::bindProgram(const ShaderProgram& program) {
+    if (_pipelineKey.layout != program.layout())
+        _pipelineKey.layout = program.layout();
 
     for (u32 i = 0; i < MAX_SET_COUNT; i++) {
-        if (_descriptorKey[i].setLayout != program->setLayout(i))
-            _descriptorKey[i].setLayout = program->setLayout(i);
+        if (_descriptorKey[i].setLayout != program.setLayout(i))
+            _descriptorKey[i].setLayout = program.setLayout(i);
     }
-    for (u32 i = 0; i < program->_modules.size(); i++) {
-        auto& module = program->_modules[i];
+    for (u32 i = 0; i < program._modules.size(); i++) {
+        auto& module = program._modules[i];
 
         VkPipelineShaderStageCreateInfo stageCreateInfo{};
         stageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -148,9 +147,9 @@ void cala::backend::vulkan::CommandBuffer::bindProgram(ProgramHandle program) {
         stageCreateInfo.pName = "main";
         _pipelineKey.shaders[i] = stageCreateInfo;
     }
-    _pipelineKey.shaderCount = program->_modules.size();
-    _boundInterface = &program->interface();
-    _pipelineKey.compute = program->stagePresent(ShaderStage::COMPUTE);
+    _pipelineKey.shaderCount = program._modules.size();
+    _boundInterface = &program.interface();
+    _pipelineKey.compute = program.stagePresent(ShaderStage::COMPUTE);
     _pipelineDirty = true;
 }
 

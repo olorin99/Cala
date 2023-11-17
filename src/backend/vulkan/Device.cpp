@@ -161,8 +161,6 @@ cala::backend::vulkan::Device::~Device() {
 
     _descriptorSets.clear();
 
-    _programs.clear();
-
     for (auto& pipelineLayout : _pipelineLayoutList._resources) {
         *pipelineLayout.first = PipelineLayout(nullptr);
     }
@@ -386,19 +384,6 @@ bool cala::backend::vulkan::Device::gc() {
             _freeImages.push_back(index);
             _imagesToDestroy.erase(it--);
             _logger.info("destroyed image ({})", index);
-        } else
-            --frame;
-    }
-
-    for (auto it = _programsToDestroy.begin(); it != _programsToDestroy.end(); it++) {
-        auto& frame = it->first;
-        auto& handle = it->second;
-        if (frame <= 0) {
-            u32 index = handle;
-            _programs[index].first = std::make_unique<ShaderProgram>(this, std::span<ShaderModuleHandle>{});
-            _freePrograms.push_back(index);
-            _programsToDestroy.erase(it--);
-            _logger.info("destroyed program ({})", index);
         } else
             --frame;
     }
@@ -634,18 +619,6 @@ cala::backend::vulkan::Image::View &cala::backend::vulkan::Device::getImageView(
 cala::backend::vulkan::Image::View &cala::backend::vulkan::Device::getImageView(u32 index) {
     assert(index < _images.size());
     return _imageViews[index];
-}
-
-cala::backend::vulkan::ProgramHandle cala::backend::vulkan::Device::createProgram(ShaderProgram &&program) {
-    u32 index = _programs.size();
-    _programs.emplace_back(std::make_unique<ShaderProgram>(std::move(program)), new ProgramHandle::Counter{1, [this](i32 index) {
-        destroyProgram(index);
-    }});
-    return { this, static_cast<i32>(index), _programs[index].second };
-}
-
-void cala::backend::vulkan::Device::destroyProgram(i32 handle) {
-    _programsToDestroy.push_back(std::make_pair(FRAMES_IN_FLIGHT + 1, handle));
 }
 
 cala::backend::vulkan::ShaderModuleHandle cala::backend::vulkan::Device::createShaderModule(std::span<u32> spirv, ShaderStage stage) {

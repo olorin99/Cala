@@ -45,29 +45,6 @@ bool cala::backend::vulkan::ImageHandle::isValid() const {
 }
 
 
-
-template <>
-cala::backend::vulkan::ShaderProgram &cala::backend::vulkan::ProgramHandle::operator*() noexcept {
-    return *_owner->_programs[_index].first;
-}
-
-template <>
-cala::backend::vulkan::ShaderProgram *cala::backend::vulkan::ProgramHandle::operator->() noexcept {
-    return _owner->_programs[_index].first.get();
-}
-
-template <>
-cala::backend::vulkan::ShaderProgram *cala::backend::vulkan::ProgramHandle::operator->() const noexcept {
-    return _owner->_programs[_index].first.get();
-}
-
-template <>
-bool cala::backend::vulkan::ProgramHandle::isValid() const {
-    return _owner->_programs[_index].first && _owner->_programs[_index].first->layout() != VK_NULL_HANDLE;
-}
-
-
-
 template <>
 cala::backend::vulkan::ShaderModule &cala::backend::vulkan::ShaderModuleHandle::operator*() noexcept {
     return *_owner->_shaderModules[_index].first;

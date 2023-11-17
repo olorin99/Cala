@@ -31,9 +31,9 @@ namespace cala::backend::vulkan {
         ShaderProgram& operator=(ShaderProgram&& rhs) noexcept;
 
 
-        VkPipelineLayout layout();
+        VkPipelineLayout layout() const;
 
-        VkDescriptorSetLayout setLayout(u32 set);
+        VkDescriptorSetLayout setLayout(u32 set) const;
 
         bool stagePresent(ShaderStage stageFlags) const { return interface().stagePresent(stageFlags); }
 

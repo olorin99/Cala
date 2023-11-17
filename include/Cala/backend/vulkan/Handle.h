@@ -99,7 +99,6 @@ namespace cala::backend::vulkan {
 
     using BufferHandle = Handle<Buffer, Device>;
     using ImageHandle = Handle<Image, Device>;
-    using ProgramHandle = Handle<ShaderProgram, Device>;
     using ShaderModuleHandle = Handle<ShaderModule, Device>;
     using PipelineLayoutHandle = Handle<PipelineLayout, Device>;
     using SamplerHandle = Handle<Sampler, Device>;
