@@ -101,7 +101,6 @@ namespace cala::backend::vulkan {
 
         Image::View& getImageView(u32 index);
 
-//        ProgramHandle createProgram(ShaderProgram&& program);
 
         ShaderModuleHandle createShaderModule(std::span<u32> spirv, ShaderStage stage);
 
@@ -218,6 +217,14 @@ namespace cala::backend::vulkan {
             std::vector<u32> _freeResources;
             std::vector<std::pair<i32, i32>> _destroyQueue;
 
+            u32 used() const { return allocated() - free(); }
+
+            u32 allocated() const { return _resources.size(); }
+
+            u32 free() const { return _freeResources.size(); }
+
+            u32 toDestroy() const { return _destroyQueue.size(); }
+
             H getHandle(Device* device, i32 index) { return { device, index, _resources[index].second.get() }; }
 
             T* getResource(i32 index) { return _resources[index].first.get(); }
@@ -247,28 +254,33 @@ namespace cala::backend::vulkan {
                         auto& object = *_resources[it->second].first;
                         func(it->second, object);
                         _destroyQueue.erase(it--);
+                        _freeResources.push_back(it->second);
                     } else
                         it->first--;
                 }
                 return true;
             }
+
+            template <typename F>
+            void clearAll(F func) {
+                for (u32 i = 0; i < _resources.size(); i++) {
+                    func(i, *_resources[i].first);
+                }
+                _resources.clear();
+                _freeResources.clear();
+                _destroyQueue.clear();
+            }
         };
 
-        std::vector<std::pair<std::unique_ptr<Buffer>, BufferHandle::Counter*>> _buffers;
-        std::vector<u32> _freeBuffers;
-        std::vector<std::pair<i32, i32>> _buffersToDestroy;
+        ResourceList<Buffer, BufferHandle> _bufferList;
 
-        std::vector<std::pair<std::unique_ptr<Image>, ImageHandle::Counter*>> _images;
+        ResourceList<Image, ImageHandle> _imageList;
         std::vector<Image::View> _imageViews;
-        std::vector<u32> _freeImages;
-        std::vector<std::pair<i32, i32>> _imagesToDestroy;
 
         Sampler _defaultSampler;
         Sampler _defaultShadowSampler;
 
-        std::vector<std::pair<std::unique_ptr<ShaderModule>, ShaderModuleHandle::Counter*>> _shaderModules;
-        std::vector<u32> _freeShaderModules;
-        std::vector<std::pair<i32, i32>> _shaderModulesToDestroy;
+        ResourceList<ShaderModule, ShaderModuleHandle> _shaderModulesList;
 
         ResourceList<PipelineLayout, PipelineLayoutHandle> _pipelineLayoutList;
 
@@ -288,12 +300,6 @@ namespace cala::backend::vulkan {
 
         u32 _bytesAllocatedPerFrame;
         u32 _bytesUploadedToGPUPerFrame;
-
-        void destroyBuffer(i32 handle);
-
-        void destroyImage(i32 handle);
-
-        void destroyProgram(i32 handle);
 
     };
 

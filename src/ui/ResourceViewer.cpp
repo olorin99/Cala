@@ -44,9 +44,9 @@ void cala::ui::ResourceViewer::render() {
         ImGui::SliderInt("BufferIndex", &_bufferIndex, 0, stats.allocatedBuffers - 1);
         ImGui::Text("Buffer: %d", _bufferIndex);
 
-        auto& buffer = _device->_buffers[_bufferIndex];
-        if (buffer.first->buffer() != VK_NULL_HANDLE) {
-            u32 bytes = buffer.first->size();
+        auto buffer = _device->_bufferList.getResource(_bufferIndex);
+        if (buffer->buffer() != VK_NULL_HANDLE) {
+            u32 bytes = buffer->size();
             u32 kb = bytes / 1000;
             u32 mb = bytes / 1000000;
             u32 gb = bytes / 1000000000;

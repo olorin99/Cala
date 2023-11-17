@@ -4,65 +4,65 @@
 
 template <>
 cala::backend::vulkan::Buffer &cala::backend::vulkan::BufferHandle::operator*() noexcept {
-    return *_owner->_buffers[_index].first;
+    return *_owner->_bufferList.getResource(_index);
 }
 
 template <>
 cala::backend::vulkan::Buffer *cala::backend::vulkan::BufferHandle::operator->() noexcept {
-    return _owner->_buffers[_index].first.get();
+    return _owner->_bufferList.getResource(_index);
 }
 
 template <>
 cala::backend::vulkan::Buffer *cala::backend::vulkan::BufferHandle::operator->() const noexcept {
-    return _owner->_buffers[_index].first.get();
+    return _owner->_bufferList.getResource(_index);
 }
 
 template <>
 bool cala::backend::vulkan::BufferHandle::isValid() const {
-    return _owner->_buffers[_index].first->buffer() != VK_NULL_HANDLE;
+    return _owner->_bufferList.allocated() > _index && _owner->_bufferList.getResource(_index)->buffer() != VK_NULL_HANDLE;
 }
 
 
 
 template <>
 cala::backend::vulkan::Image &cala::backend::vulkan::ImageHandle::operator*() noexcept {
-    return *_owner->_images[_index].first;
+    return *_owner->_imageList.getResource(_index);
 }
 
 template <>
 cala::backend::vulkan::Image *cala::backend::vulkan::ImageHandle::operator->() noexcept {
-    return _owner->_images[_index].first.get();
+    return _owner->_imageList.getResource(_index);
 }
 
 template <>
 cala::backend::vulkan::Image *cala::backend::vulkan::ImageHandle::operator->() const noexcept {
-    return _owner->_images[_index].first.get();
+    return _owner->_imageList.getResource(_index);
 }
 
 template <>
 bool cala::backend::vulkan::ImageHandle::isValid() const {
-    return _owner->_images[_index].first->image() != VK_NULL_HANDLE;
+    return _owner->_imageList.allocated() > _index && _owner->_imageList.getResource(_index)->image() != VK_NULL_HANDLE;
 }
 
 
 template <>
 cala::backend::vulkan::ShaderModule &cala::backend::vulkan::ShaderModuleHandle::operator*() noexcept {
-    return *_owner->_shaderModules[_index].first;
+    return *_owner->_shaderModulesList.getResource(_index);
 }
 
 template <>
 cala::backend::vulkan::ShaderModule *cala::backend::vulkan::ShaderModuleHandle::operator->() noexcept {
-    return _owner->_shaderModules[_index].first.get();
+    return _owner->_shaderModulesList.getResource(_index);
 }
 
 template <>
 cala::backend::vulkan::ShaderModule *cala::backend::vulkan::ShaderModuleHandle::operator->() const noexcept {
-    return _owner->_shaderModules[_index].first.get();
+    return _owner->_shaderModulesList.getResource(_index);
 }
 
 template <>
 bool cala::backend::vulkan::ShaderModuleHandle::isValid() const {
-    return _owner->_shaderModules[_index].first && _owner->_shaderModules[_index].first->module() != VK_NULL_HANDLE;
+    return _owner->_shaderModulesList.allocated() > _index && _owner->_shaderModulesList.getResource(_index)->module() != VK_NULL_HANDLE;
 }
 
 
@@ -128,5 +128,5 @@ cala::backend::vulkan::PipelineLayout *cala::backend::vulkan::PipelineLayoutHand
 
 template <>
 bool cala::backend::vulkan::PipelineLayoutHandle::isValid() const {
-    return _owner->_pipelineLayoutList._resources.size() > _index && _owner->_pipelineLayoutList.getResource(_index)->layout() != VK_NULL_HANDLE;
+    return _owner->_pipelineLayoutList.allocated() > _index && _owner->_pipelineLayoutList.getResource(_index)->layout() != VK_NULL_HANDLE;
 }

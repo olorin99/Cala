@@ -161,44 +161,42 @@ cala::backend::vulkan::Device::~Device() {
 
     _descriptorSets.clear();
 
-    for (auto& pipelineLayout : _pipelineLayoutList._resources) {
-        *pipelineLayout.first = PipelineLayout(nullptr);
-    }
+    _pipelineLayoutList.clearAll([](i32 index, PipelineLayout& layout) {
+        layout = PipelineLayout(nullptr);
+    });
 
-    for (auto& shaderModule : _shaderModules) {
-        vkDestroyShaderModule(context().device(), shaderModule.first->module(), nullptr);
-    }
+    _shaderModulesList.clearAll([this](i32 index, ShaderModule& module) {
+        vkDestroyShaderModule(context().device(), module.module(), nullptr);
+    });
 
 
     for (auto& pipeline : _pipelines)
         vkDestroyPipeline(_context.device(), pipeline.second, nullptr);
     _pipelines.clear();
 
-    for (auto& buffer : _buffers) {
-        buffer.first->_mapped = Buffer::Mapped();
-        VkBuffer buf = buffer.first->_buffer;
-        VmaAllocation allocation = buffer.first->_allocation;
+    _bufferList.clearAll([this](i32 index, Buffer& buffer) {
+        buffer._mapped = Buffer::Mapped();
+        VkBuffer buf = buffer._buffer;
+        VmaAllocation allocation = buffer._allocation;
         if (allocation)
             vmaDestroyBuffer(context().allocator(), buf, allocation);
-        buffer.first->_allocation = nullptr;
-        delete buffer.second;
-    }
+        buffer._allocation = nullptr;
+    });
 
     _imageViews.clear();
-    for (auto& image : _images) {
-        VkImage im = image.first->_image;
-        VmaAllocation allocation = image.first->_allocation;
-        if (im != VK_NULL_HANDLE)
-            vmaDestroyImage(context().allocator(), im, allocation);
-        image.first->_allocation = nullptr;
-        delete image.second;
-    }
-
-//    for (auto& program : _programs) {
-//        program.first.reset();
-//        delete program.second;
-//    }
-//        program = new ShaderProgram(_context.device());
+    _imageList.clearAll([this](i32 index, Image& image) {
+        VmaAllocation allocation = image._allocation;
+        if (image.image() != VK_NULL_HANDLE)
+            vmaDestroyImage(context().allocator(), image.image(), allocation);
+        image._image = VK_NULL_HANDLE;
+        image._allocation = nullptr;
+        image._width = 0;
+        image._height = 0;
+        image._depth = 0;
+        image._layers = 0;
+        image._mips = 0;
+        image._format = Format::UNDEFINED;
+    });
 
     clearFramebuffers();
 
@@ -345,62 +343,42 @@ bool cala::backend::vulkan::Device::gc() {
         _deferredCommands.clear();
     }
 
-    for (auto it = _buffersToDestroy.begin(); it != _buffersToDestroy.end(); it++) {
-        auto& frame = it->first;
-        auto& handle = it->second;
-        if (frame <= 0) {
-            u32 index = handle;
-            _buffers[index].first->_mapped = Buffer::Mapped();
-            VkBuffer buffer = _buffers[index].first->_buffer;
-            VmaAllocation allocation = _buffers[index].first->_allocation;
-            if (allocation)
-                vmaDestroyBuffer(context().allocator(), buffer, allocation);
-            else
-                _logger.warn("attempted to destroy buffer ({}) which has invalid allocation", index);
-            _buffers[index].first->_allocation = nullptr;
-            _buffers[index].first = std::make_unique<Buffer>(this);
-            _freeBuffers.push_back(index);
-            _buffersToDestroy.erase(it--);
-            _logger.info("destroyed buffer ({})", index);
-        } else
-            --frame;
-    }
+    _bufferList.clearDestroyQueue([this](i32 index, Buffer& buffer) {
+        buffer._mapped = Buffer::Mapped();
+        VkBuffer buf = buffer.buffer();
+        VmaAllocation allocation = buffer._allocation;
+        if (allocation)
+            vmaDestroyBuffer(context().allocator(), buf, allocation);
+        else
+            _logger.warn("attempted to destroy buffer ({}) which has invalid allocation", index);
+        buffer._allocation = nullptr;
+        buffer = Buffer(this);
+        _logger.info("destroyed buffer ({})", index);
+    });
 
-    for (auto it = _imagesToDestroy.begin(); it != _imagesToDestroy.end(); it++) {
-        auto& frame = it->first;
-        auto& handle = it->second;
-        if (frame <= 0) {
-            u32 index = handle;
-            VkImage image = _images[index].first->_image;
-            VmaAllocation allocation = _images[index].first->_allocation;
-            _imageViews[index] = backend::vulkan::Image::View();
-            updateBindlessImage(index, _imageViews[0]);
-            if (image != VK_NULL_HANDLE)
-                vmaDestroyImage(context().allocator(), image, allocation);
-            else
-                _logger.warn("attempted to destroy image ({}) which is invalid", index);
-            _images[index].first->_allocation = nullptr;
-            _images[index].first = std::make_unique<Image>(this);
-            _freeImages.push_back(index);
-            _imagesToDestroy.erase(it--);
-            _logger.info("destroyed image ({})", index);
-        } else
-            --frame;
-    }
+    _imageList.clearDestroyQueue([this](i32 index, Image& image) {
+        VmaAllocation allocation = image._allocation;
+        _imageViews[index] = backend::vulkan::Image::View();
+        updateBindlessImage(index, _imageViews[0]);
+        if (image.image() != VK_NULL_HANDLE)
+            vmaDestroyImage(context().allocator(), image.image(), allocation);
+        else
+            _logger.warn("attempted to destroy image ({}) which is invalid", index);
+        image._image = VK_NULL_HANDLE;
+        image._allocation = nullptr;
+        image._width = 0;
+        image._height = 0;
+        image._depth = 0;
+        image._layers = 0;
+        image._mips = 0;
+        image._format = Format::UNDEFINED;
+        _logger.info("destroyed image ({})", index);
+    });
 
-    for (auto it = _shaderModulesToDestroy.begin(); it != _shaderModulesToDestroy.end(); it++) {
-        auto& frame = it->first;
-        auto& handle = it->second;
-        if (frame <= 0) {
-            u32 index = handle;
-            vkDestroyShaderModule(context().device(), _shaderModules[index].first->module(), nullptr);
-            _shaderModules[index].first = std::make_unique<ShaderModule>(this);
-            _freeShaderModules.push_back(index);
-            _shaderModulesToDestroy.erase(it--);
-            _logger.info("destroyed shader module ({})", index);
-        } else
-            --frame;
-    }
+    _shaderModulesList.clearDestroyQueue([this](i32 index, ShaderModule& module) {
+        vkDestroyShaderModule(context().device(), module.module(), nullptr);
+        _logger.info("destroyed shader module ({})", index);
+    });
 
     _pipelineLayoutList.clearDestroyQueue([this](i32 index, PipelineLayout& layout) {
         layout = PipelineLayout(nullptr);
@@ -419,7 +397,7 @@ bool cala::backend::vulkan::Device::gc() {
 }
 
 cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(u32 size, BufferUsage usage, backend::MemoryProperties flags, bool persistentlyMapped, ExtraInfo extraInfo) {
-    u32 index = 0;
+//    u32 index = 0;
     usage = usage | BufferUsage::TRANSFER_DST | BufferUsage::TRANSFER_SRC | BufferUsage::STORAGE | BufferUsage::DEVICE_ADDRESS;
 
     VkBuffer buffer;
@@ -448,30 +426,23 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
     }
 
     VK_TRY(vmaCreateBuffer(context().allocator(), &bufferInfo, &allocInfo, &buffer, &allocation, nullptr));
-    if (!_freeBuffers.empty()) {
-        index = _freeBuffers.back();
-        _freeBuffers.pop_back();
-        _buffers[index].first = std::make_unique<Buffer>(this);
-        _buffers[index].second->count = 1;
-    } else {
-        index = _buffers.size();
-        _buffers.emplace_back(std::make_pair(std::make_unique<Buffer>(this), new BufferHandle::Counter{1, [this](i32 index) {
-            destroyBuffer(index);
-        }}));
-    }
-    _buffers[index].first->_buffer = buffer;
+
+    i32 index = _bufferList.insert(this);
+
+    _bufferList.getResource(index)->_buffer = buffer;
     if (_context.getEnabledFeatures().deviceAddress) {
         VkBufferDeviceAddressInfo deviceAddressInfo{};
         deviceAddressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
         deviceAddressInfo.buffer = buffer;
-        _buffers[index].first->_address = vkGetBufferDeviceAddress(_context.device(), &deviceAddressInfo);
+        _bufferList.getResource(index)->_address = vkGetBufferDeviceAddress(_context.device(), &deviceAddressInfo);
     }
-    _buffers[index].first->_allocation = allocation;
-    _buffers[index].first->_size = size;
-    _buffers[index].first->_usage = usage;
-    _buffers[index].first->_flags = flags;
+    _bufferList.getResource(index)->_allocation = allocation;
+    _bufferList.getResource(index)->_size = size;
+    _bufferList.getResource(index)->_usage = usage;
+    _bufferList.getResource(index)->_flags = flags;
     if (persistentlyMapped)
-        _buffers[index].first->_mapped = _buffers[index].first->map();
+        _bufferList.getResource(index)->_mapped = _bufferList.getResource(index)->map();
+
 
     _bytesAllocatedPerFrame += size;
 
@@ -479,11 +450,7 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
 
     _context.setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)buffer, "Buffer: " + std::to_string(index));
 
-    return { this, static_cast<i32>(index), _buffers[index].second };
-}
-
-void cala::backend::vulkan::Device::destroyBuffer(i32 handle) {
-    _buffersToDestroy.push_back(std::make_pair(FRAMES_IN_FLIGHT + 1, handle));
+    return _bufferList.getHandle(this, index);
 }
 
 cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::resizeBuffer(BufferHandle handle, u32 size, bool transfer) {
@@ -504,8 +471,6 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::resizeBuffer(
 }
 
 cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Image::CreateInfo info) {
-    u32 index = 0;
-
     VkImage image;
     VmaAllocation allocation;
     VkImageCreateInfo imageInfo{};
@@ -560,34 +525,24 @@ cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Im
 
     VK_TRY(vmaCreateImage(context().allocator(), &imageInfo, &allocInfo, &image, &allocation, nullptr));
 
-    if (!_freeImages.empty()) {
-        index = _freeImages.back();
-        _freeBuffers.pop_back();
-        _images[index].first = std::make_unique<Image>(this);
-        _images[index].second->count = 1;
-    } else {
-        index = _images.size();
-        _images.emplace_back(std::make_pair(std::make_unique<Image>(this), new ImageHandle::Counter{ 1, [this](i32 index) {
-            destroyImage(index);
-        }}));
-    }
+    i32 index = _imageList.insert(this);
 
-    _images[index].first->_image = image;
-    _images[index].first->_allocation = allocation;
-    _images[index].first->_width = info.width;
-    _images[index].first->_height = info.height;
-    _images[index].first->_depth = info.depth;
-    _images[index].first->_layers = info.arrayLayers;
-    _images[index].first->_mips = info.mipLevels;
-    _images[index].first->_format = info.format;
-    _images[index].first->_usage = info.usage;
-    _images[index].first->_type = type;
+    _imageList.getResource(index)->_image = image;
+    _imageList.getResource(index)->_allocation = allocation;
+    _imageList.getResource(index)->_width = info.width;
+    _imageList.getResource(index)->_height = info.height;
+    _imageList.getResource(index)->_depth = info.depth;
+    _imageList.getResource(index)->_layers = info.arrayLayers;
+    _imageList.getResource(index)->_mips = info.mipLevels;
+    _imageList.getResource(index)->_format = info.format;
+    _imageList.getResource(index)->_usage = info.usage;
+    _imageList.getResource(index)->_type = type;
 
 
-    _imageViews.resize(_images.size());
-    _imageViews[index] = std::move(_images[index].first->newView(0, _images[index].first->mips()));
+    _imageViews.resize(_imageList.allocated());
+    _imageViews[index] = std::move(_imageList.getResource(index)->newView(0, _imageList.getResource(index)->mips()));
 
-    assert(_images.size() == _imageViews.size());
+    assert(_imageList.allocated() == _imageViews.size());
 
     bool isSampled = (info.usage & ImageUsage::SAMPLED) == ImageUsage::SAMPLED;
     bool isStorage = (info.usage & ImageUsage::STORAGE) == ImageUsage::STORAGE;
@@ -598,17 +553,13 @@ cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Im
     _context.setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)image, "Image: " + std::to_string(index));
     _context.setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_imageViews[index].view, "ImageView: " + std::to_string(index));
 
-    return { this, static_cast<i32>(index), _images[index].second };
-}
-
-void cala::backend::vulkan::Device::destroyImage(i32 handle) {
-    _imagesToDestroy.push_back(std::make_pair(FRAMES_IN_FLIGHT + 1, handle));
+    return _imageList.getHandle(this, index);
+//    return { this, static_cast<i32>(index), _images[index].second };
 }
 
 cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::getImageHandle(u32 index) {
-    assert(index < _images.size());
-    ImageHandle handle = { this, static_cast<i32>(index), _images[index].second };
-    return handle;
+    assert(index < _imageList.allocated());
+    return _imageList.getHandle(this, index);
 }
 
 cala::backend::vulkan::Image::View &cala::backend::vulkan::Device::getImageView(ImageHandle handle) {
@@ -617,13 +568,11 @@ cala::backend::vulkan::Image::View &cala::backend::vulkan::Device::getImageView(
 }
 
 cala::backend::vulkan::Image::View &cala::backend::vulkan::Device::getImageView(u32 index) {
-    assert(index < _images.size());
+    assert(index < _imageViews.size());
     return _imageViews[index];
 }
 
 cala::backend::vulkan::ShaderModuleHandle cala::backend::vulkan::Device::createShaderModule(std::span<u32> spirv, ShaderStage stage) {
-    u32 index = 0;
-
     VkShaderModule module;
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -633,25 +582,14 @@ cala::backend::vulkan::ShaderModuleHandle cala::backend::vulkan::Device::createS
     if (vkCreateShaderModule(context().device(), &createInfo, nullptr, &module) != VK_SUCCESS)
         throw std::runtime_error("Unable to create shader module");
 
-    if (!_freeShaderModules.empty()) {
-        index = _freeShaderModules.back();
-        _freeShaderModules.pop_back();
-        _shaderModules[index].first = std::make_unique<ShaderModule>(this);
-        _shaderModules[index].second->count = 1;
-    } else {
-        index = _shaderModules.size();
-        _shaderModules.emplace_back(std::make_unique<ShaderModule>(this), new ShaderModuleHandle::Counter{1, [this](i32 index) {
-            _shaderModulesToDestroy.push_back(std::make_pair(FRAMES_IN_FLIGHT + 1, index));
-        }});
-    }
-
     ShaderModuleInterface interface(spirv, stage);
 
-    _shaderModules[index].first->_module = module;
-    _shaderModules[index].first->_stage = stage;
-    _shaderModules[index].first->_main = "main";
-    _shaderModules[index].first->_interface = std::move(interface);
-    return { this, static_cast<i32>(index), _shaderModules[index].second };
+    i32 index = _shaderModulesList.insert(this);
+    _shaderModulesList.getResource(index)->_module = module;
+    _shaderModulesList.getResource(index)->_stage = stage;
+    _shaderModulesList.getResource(index)->_main = "main";
+    _shaderModulesList.getResource(index)->_interface = std::move(interface);
+    return _shaderModulesList.getHandle(this, index);
 }
 
 cala::backend::vulkan::PipelineLayoutHandle cala::backend::vulkan::Device::createPipelineLayout(const cala::backend::ShaderInterface &interface) {
@@ -705,7 +643,8 @@ void cala::backend::vulkan::Device::updateBindlessBuffer(u32 index) {
     VkWriteDescriptorSet descriptorWrite{};
     VkDescriptorBufferInfo bufferInfo{};
 
-    auto buffer = _buffers[index].first.get();
+//    auto buffer = _buffers[index].first.get();
+    auto buffer = _bufferList.getResource(index);
 
     bufferInfo.buffer = buffer->buffer();
     bufferInfo.offset = 0;
@@ -1064,10 +1003,10 @@ VkPipeline cala::backend::vulkan::Device::getPipeline(CommandBuffer::PipelineKey
 }
 
 cala::backend::vulkan::Device::Stats cala::backend::vulkan::Device::stats() const {
-    u32 allocatedBuffers = _buffers.size();
-    u32 buffersInUse = allocatedBuffers - _freeBuffers.size();
-    u32 allocatedImages = _images.size();
-    u32 imagesInUse = allocatedImages - _freeImages.size();
+    u32 allocatedBuffers = _bufferList.allocated();
+    u32 buffersInUse = _bufferList.used();
+    u32 allocatedImages = _imageList.allocated();
+    u32 imagesInUse = _imageList.used();
     u32 descriptorSetCount = _descriptorSets.size();
     u32 pipelineCount = _pipelines.size();
     return {
