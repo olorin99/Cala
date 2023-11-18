@@ -3,6 +3,8 @@
 #include <Cala/backend/primitives.h>
 #include <Cala/util.h>
 #include <Cala/Engine.h>
+#include "../../third_party/stb_image.h"
+#include <Cala/backend/primitives.h>
 
 template <>
 cala::backend::vulkan::Handle<cala::backend::vulkan::ShaderModule, cala::backend::vulkan::Device>& cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle>::operator*() noexcept {
@@ -16,6 +18,20 @@ cala::backend::vulkan::Handle<cala::backend::vulkan::ShaderModule, cala::backend
     auto& metadata = _manager->_metadata[_index];
     auto& shaderModuleMetadata = _manager->_shaderModules[metadata.index];
     return shaderModuleMetadata.moduleHandle;
+}
+
+template <>
+cala::backend::vulkan::ImageHandle& cala::AssetManager::Asset<cala::backend::vulkan::ImageHandle>::operator*() noexcept {
+    auto& metadata = _manager->_metadata[_index];
+    auto& imageMetadata = _manager->_images[metadata.index];
+    return imageMetadata.imageHandle;
+}
+
+template <>
+cala::backend::vulkan::ImageHandle& cala::AssetManager::Asset<cala::backend::vulkan::ImageHandle>::operator*() const noexcept {
+    auto& metadata = _manager->_metadata[_index];
+    auto& imageMetadata = _manager->_images[metadata.index];
+    return imageMetadata.imageHandle;
 }
 
 
@@ -65,6 +81,28 @@ i32 cala::AssetManager::registerShaderModule(const std::string& name, const std:
     _shaderModules.push_back({
         {},
         {},
+        {}
+    });
+    return index;
+}
+
+i32 cala::AssetManager::registerImage(const std::string &name, const std::filesystem::path &path, u32 hash) {
+    i32 index = getAssetIndex(hash);
+    if (index >= 0)
+        return index;
+
+    index = _metadata.size();
+    _assetMap.insert(std::make_pair(hash, index));
+    _metadata.push_back({
+        name,
+        path,
+        false,
+        static_cast<i32>(_images.size())
+    });
+    _images.push_back({
+        hash,
+        name,
+        path,
         {}
     });
     return index;
@@ -141,8 +179,6 @@ cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle> cala::Asset
 
     auto module = _engine->device().createShaderModule(expectedSpirV.value(), stage);
 
-    metadata.loaded = true;
-
     auto& moduleMetadata = _shaderModules[metadata.index];
     moduleMetadata.moduleHandle = module;
     moduleMetadata.macros.clear();
@@ -153,6 +189,8 @@ cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle> cala::Asset
     moduleMetadata.path = path;
     moduleMetadata.name = name;
     moduleMetadata.hash = hash;
+
+    metadata.loaded = true;
 
     return { this, index };
 }
@@ -176,6 +214,60 @@ cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle> cala::Asset
     metadata.loaded = true;
     return module;
 }
+
+cala::AssetManager::Asset <cala::backend::vulkan::ImageHandle> cala::AssetManager::loadImage(const std::string &name, const std::filesystem::path &path, bool hdr) {
+    u32 hash = std::hash<std::filesystem::path>()(path);
+
+    i32 index = getAssetIndex(hash);
+    if (index < 0)
+        index = registerImage(name, path, hash);
+
+    auto& metadata = _metadata[index];
+    if (metadata.loaded)
+        return { this, index };
+
+    i32 width, height, channels;
+    u8* data = nullptr;
+    backend::Format format = backend::Format::RGBA8_UNORM;
+    u32 length = 0;
+    if (hdr) {
+        stbi_set_flip_vertically_on_load(true);
+        f32* hdrData = stbi_loadf(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+        data = reinterpret_cast<u8*>(hdrData);
+        format = backend::Format::RGBA32_SFLOAT;
+    } else {
+        data = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+    }
+    if (!data) {
+        _engine->logger().warn("unable to load image: {}", path.string());
+        return { this, index };
+    };
+
+    length = width * height * backend::formatToSize(format);
+    auto handle = _engine->device().createImage({(u32)width, (u32)height, 1, format});
+
+    _engine->stageData(handle, std::span(data, length), {
+        0,
+        static_cast<u32>(width),
+        static_cast<u32>(height),
+        1,
+        backend::formatToSize(format)
+    });
+
+    stbi_image_free(data);
+
+    auto& imageMetadata = _images[metadata.index];
+    imageMetadata.hash = hash;
+    imageMetadata.name = name;
+    imageMetadata.path = path;
+    imageMetadata.hdr = hdr;
+    imageMetadata.imageHandle = handle;
+
+    metadata.loaded = true;
+
+    return { this, index };
+}
+
 
 bool cala::AssetManager::isLoaded(u32 hash) {
     i32 index = getAssetIndex(hash);

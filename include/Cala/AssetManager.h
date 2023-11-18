@@ -34,6 +34,8 @@ namespace cala {
 
         i32 registerShaderModule(const std::string& name, const std::filesystem::path& path, u32 hash);
 
+        i32 registerImage(const std::string& name, const std::filesystem::path& path, u32 hash);
+
         bool isRegistered(u32 hash);
 
         bool isRegistered(const std::filesystem::path& path);
@@ -74,6 +76,12 @@ namespace cala {
 
         Asset<backend::vulkan::ShaderModuleHandle> reloadShaderModule(u32 hash);
 
+
+        Asset<backend::vulkan::ImageHandle> loadImage(const std::string& name, const std::filesystem::path& path, bool hdr = false);
+
+        Asset<backend::vulkan::ImageHandle> reloadImage(u32 hash);
+
+
         bool isLoaded(u32 hash);
 
         bool isLoaded(const std::filesystem::path& path);
@@ -108,6 +116,15 @@ namespace cala {
             backend::vulkan::ShaderModuleHandle moduleHandle;
         };
         std::vector<ShaderModuleMetadata> _shaderModules;
+
+        struct ImageMetadata {
+            u32 hash;
+            std::string name;
+            std::filesystem::path path;
+            bool hdr;
+            backend::vulkan::ImageHandle imageHandle;
+        };
+        std::vector<ImageMetadata> _images;
 
     };
 

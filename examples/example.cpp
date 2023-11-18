@@ -30,32 +30,6 @@ using namespace cala;
 using namespace cala::backend;
 using namespace cala::backend::vulkan;
 
-ImageHandle loadImage(Engine& engine, const std::filesystem::path& path) {
-    i32 width, height, channels;
-    u8* data = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
-    if (!data) throw "unable load image";
-    u32 length = width * height * 4;
-
-    ImageHandle handle = engine.device().createImage({(u32)width, (u32)height, 1, backend::Format::RGBA8_UNORM});
-
-    handle->data(engine.device(), {0, (u32)width, (u32)height, 1, 4}, std::span<u8>(data, length));
-    stbi_image_free(data);
-    return handle;
-}
-
-ImageHandle loadImageHDR(Engine& engine, const std::filesystem::path& path) {
-    stbi_set_flip_vertically_on_load(true);
-    i32 width, height, channels;
-    f32* data = stbi_loadf(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
-    if (!data) throw "unable load image";
-    u32 length = width * height * 4;
-
-    ImageHandle handle = engine.device().createImage({(u32)width, (u32)height, 1, backend::Format::RGBA32_SFLOAT});
-    engine.stageData(handle, std::span(data, length), {0, (u32)width, (u32)height, 1, (u32)4 * 4});
-    stbi_image_free(data);
-    return handle;
-}
-
 Model loadGLTF(Engine* engine, Material* material, const std::filesystem::path& path) {
     tinygltf::TinyGLTF loader;
     tinygltf::Model model;
@@ -418,10 +392,11 @@ int main() {
 //    u32 l2 = scene.addLight(light2);
 //    u32 l3 = scene.addLight(light3);
 
-    ImageHandle background = loadImageHDR(engine, "../../res/textures/TropicalRuins_3k.hdr");
+    auto background = engine.assetManager()->loadImage("background", "../../res/textures/TropicalRuins_3k.hdr", true);
+//    ImageHandle background = loadImageHDR(engine, "../../res/textures/TropicalRuins_3k.hdr");
 //    ImageHandle background = loadImageHDR(engine, "../../res/textures/brown_photostudio_02_4k.hdr");
 //    ImageHandle background = loadImageHDR(engine, "../../res/textures/dresden_station_night_4k.hdr");
-    scene.addSkyLightMap(background, true);
+    scene.addSkyLightMap(*background, true);
 
     scene.addRenderable(sponza, &sponzaTransform, true);
 //    scene.addRenderable(damagedHelmet, &helmetTransform, true);
