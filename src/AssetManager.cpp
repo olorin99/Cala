@@ -113,7 +113,7 @@ inline u32 combineHash(u32 first, u32 second) {
     return first ^= second + 0x9e3779b9 + (first<<6) + (first>>2);
 }
 
-cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle> cala::AssetManager::loadShaderModule(const std::string& name, const std::filesystem::path &path, backend::ShaderStage stage, std::span<const std::pair<std::string_view, std::string_view>> macros, std::span<const std::string> includes) {
+cala::backend::vulkan::ShaderModuleHandle cala::AssetManager::loadShaderModule(const std::string& name, const std::filesystem::path &path, backend::ShaderStage stage, std::span<const std::pair<std::string_view, std::string_view>> macros, std::span<const std::string> includes) {
     u32 hash = std::hash<std::filesystem::path>()(path);
 
     std::hash<std::string_view> hasher;
@@ -128,8 +128,10 @@ cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle> cala::Asset
         index = registerShaderModule(name, path, hash);
 
     auto& metadata = _metadata[index];
-    if (metadata.loaded)
-        return { this, index };
+    if (metadata.loaded) {
+        auto& moduleMetadata = _shaderModules[metadata.index];
+        return moduleMetadata.moduleHandle;
+    }
 
     // if not defined use file extension to find stage
     if (stage == backend::ShaderStage::NONE) {
@@ -146,7 +148,7 @@ cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle> cala::Asset
 
     ende::fs::File file;
     if (!file.open(_rootAssetPath / path))
-        return { this, -1 };
+        return { nullptr, -1, nullptr };
 
     auto rawSource = file.read();
 
@@ -171,15 +173,17 @@ cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle> cala::Asset
             "/home/christian/Documents/Projects/Cala/res/shaders"
     };
 
+    auto& moduleMetadata = _shaderModules[metadata.index];
+
     auto expectedSpirV = util::compileGLSLToSpirv(&_engine->device(), path.string(), source, stage, macros, searchPaths);
     if (!expectedSpirV.has_value()) {
         _engine->logger().warn("unable to load shader: {}", path.string());
-        return { this, index };
+        return moduleMetadata.moduleHandle;
     }
 
-    auto module = _engine->device().createShaderModule(expectedSpirV.value(), stage);
 
-    auto& moduleMetadata = _shaderModules[metadata.index];
+    auto module = _engine->device().recreateShaderModule(moduleMetadata.moduleHandle, expectedSpirV.value(), stage);
+
     moduleMetadata.moduleHandle = module;
     moduleMetadata.macros.clear();
     moduleMetadata.macros.insert(moduleMetadata.macros.begin(), macros.begin(), macros.end());
@@ -192,13 +196,13 @@ cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle> cala::Asset
 
     metadata.loaded = true;
 
-    return { this, index };
+    return module;
 }
 
-cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle> cala::AssetManager::reloadShaderModule(u32 hash) {
+cala::backend::vulkan::ShaderModuleHandle cala::AssetManager::reloadShaderModule(u32 hash) {
     i32 index = getAssetIndex(hash);
     if (index < 0)
-        return { this, -1 };
+        return { nullptr, -1, nullptr };
 
     auto& metadata = _metadata[index];
     auto& moduleMetadata = _shaderModules[metadata.index];

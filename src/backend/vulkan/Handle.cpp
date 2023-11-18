@@ -4,65 +4,65 @@
 
 template <>
 cala::backend::vulkan::Buffer &cala::backend::vulkan::BufferHandle::operator*() noexcept {
-    return *_owner->_bufferList.getResource(_index);
+    return *_owner->_bufferList.getResource(_data->index);
 }
 
 template <>
 cala::backend::vulkan::Buffer *cala::backend::vulkan::BufferHandle::operator->() noexcept {
-    return _owner->_bufferList.getResource(_index);
+    return _owner->_bufferList.getResource(_data->index);
 }
 
 template <>
 cala::backend::vulkan::Buffer *cala::backend::vulkan::BufferHandle::operator->() const noexcept {
-    return _owner->_bufferList.getResource(_index);
+    return _owner->_bufferList.getResource(_data->index);
 }
 
 template <>
 bool cala::backend::vulkan::BufferHandle::isValid() const {
-    return _owner->_bufferList.allocated() > _index && _owner->_bufferList.getResource(_index)->buffer() != VK_NULL_HANDLE;
+    return _owner->_bufferList.allocated() > _data->index && _owner->_bufferList.getResource(_data->index)->buffer() != VK_NULL_HANDLE;
 }
 
 
 
 template <>
 cala::backend::vulkan::Image &cala::backend::vulkan::ImageHandle::operator*() noexcept {
-    return *_owner->_imageList.getResource(_index);
+    return *_owner->_imageList.getResource(_data->index);
 }
 
 template <>
 cala::backend::vulkan::Image *cala::backend::vulkan::ImageHandle::operator->() noexcept {
-    return _owner->_imageList.getResource(_index);
+    return _owner->_imageList.getResource(_data->index);
 }
 
 template <>
 cala::backend::vulkan::Image *cala::backend::vulkan::ImageHandle::operator->() const noexcept {
-    return _owner->_imageList.getResource(_index);
+    return _owner->_imageList.getResource(_data->index);
 }
 
 template <>
 bool cala::backend::vulkan::ImageHandle::isValid() const {
-    return _owner->_imageList.allocated() > _index && _owner->_imageList.getResource(_index)->image() != VK_NULL_HANDLE;
+    return _owner->_imageList.allocated() > _data->index && _owner->_imageList.getResource(_data->index)->image() != VK_NULL_HANDLE;
 }
 
 
 template <>
 cala::backend::vulkan::ShaderModule &cala::backend::vulkan::ShaderModuleHandle::operator*() noexcept {
-    return *_owner->_shaderModulesList.getResource(_index);
+    return *_owner->_shaderModulesList.getResource(_data->index);
 }
 
 template <>
 cala::backend::vulkan::ShaderModule *cala::backend::vulkan::ShaderModuleHandle::operator->() noexcept {
-    return _owner->_shaderModulesList.getResource(_index);
+    return _owner->_shaderModulesList.getResource(_data->index);
 }
 
 template <>
 cala::backend::vulkan::ShaderModule *cala::backend::vulkan::ShaderModuleHandle::operator->() const noexcept {
-    return _owner->_shaderModulesList.getResource(_index);
+    return _owner->_shaderModulesList.getResource(_data->index);
 }
 
 template <>
 bool cala::backend::vulkan::ShaderModuleHandle::isValid() const {
-    return _owner->_shaderModulesList.allocated() > _index && _owner->_shaderModulesList.getResource(_index)->module() != VK_NULL_HANDLE;
+    return _owner->_shaderModulesList.allocated() > _data->index && _owner->_shaderModulesList.getResource(_data->index)->module() != VK_NULL_HANDLE;
 }
 
 
@@ -113,20 +113,20 @@ bool cala::backend::vulkan::CommandHandle::isValid() const {
 
 template <>
 cala::backend::vulkan::PipelineLayout &cala::backend::vulkan::PipelineLayoutHandle::operator*() noexcept {
-    return *_owner->_pipelineLayoutList.getResource(_index);
+    return *_owner->_pipelineLayoutList.getResource(_data->index);
 }
 
 template <>
 cala::backend::vulkan::PipelineLayout *cala::backend::vulkan::PipelineLayoutHandle::operator->() noexcept {
-    return _owner->_pipelineLayoutList.getResource(_index);
+    return _owner->_pipelineLayoutList.getResource(_data->index);
 }
 
 template <>
 cala::backend::vulkan::PipelineLayout *cala::backend::vulkan::PipelineLayoutHandle::operator->() const noexcept {
-    return _owner->_pipelineLayoutList.getResource(_index);
+    return _owner->_pipelineLayoutList.getResource(_data->index);
 }
 
 template <>
 bool cala::backend::vulkan::PipelineLayoutHandle::isValid() const {
-    return _owner->_pipelineLayoutList.allocated() > _index && _owner->_pipelineLayoutList.getResource(_index)->layout() != VK_NULL_HANDLE;
+    return _owner->_pipelineLayoutList.allocated() > _data->index && _owner->_pipelineLayoutList.getResource(_data->index)->layout() != VK_NULL_HANDLE;
 }

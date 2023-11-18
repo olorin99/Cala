@@ -20,17 +20,18 @@ namespace cala::backend::vulkan {
     class Handle {
     public:
 
-        struct Counter {
+        struct Data {
+            i32 index = -1;
             i32 count = 0;
             std::function<void(i32)> deleter;
         };
 
         Handle() = default;
 
-        Handle(O* owner, i32 index, Counter* counter)
+        Handle(O* owner, i32 index, Data* counter)
                 : _owner(owner),
                   _index(index),
-                  _counter(counter)
+                  _data(counter)
         {}
 
         ~Handle() {
@@ -39,23 +40,23 @@ namespace cala::backend::vulkan {
 
         Handle(const Handle& rhs)
             : _owner(rhs._owner),
-            _index(rhs._index),
-            _counter(rhs._counter)
+              _index(rhs._index),
+              _data(rhs._data)
         {
-            if (_counter)
-                ++_counter->count;
+            if (_data)
+                ++_data->count;
         }
 
         Handle& operator=(const Handle& rhs) {
             if (this == &rhs)
                 return *this;
-            if (_index != rhs._index)
+            if (_data != rhs._data)
                 release();
             _owner = rhs._owner;
             _index = rhs._index;
-            _counter = rhs._counter;
-            if (_counter)
-                ++_counter->count;
+            _data = rhs._data;
+            if (_data)
+                ++_data->count;
             return *this;
         }
 
@@ -66,22 +67,26 @@ namespace cala::backend::vulkan {
         T* operator->() const noexcept;
 
         explicit operator bool() const noexcept {
-            return _owner && _index >= 0 && isValid();
+            return _owner && ((_data && _data->index >= 0) || _index >= 0)  && isValid();
         }
 
         bool operator==(Handle<T, O> rhs) const noexcept {
-            return _owner == rhs._owner && _index == rhs._index;
+            return _owner == rhs._owner && _data == rhs._data && _index == rhs._index && (!_data || _data->index == rhs._data->index);
         }
 
-        i32 index() const { return _index; }
+        i32 index() const {
+            if (_data)
+                return _data->index;
+            return _index;
+        }
 
         bool isValid() const;
 
         bool release() {
-            if (_counter) {
-                --_counter->count;
-                if (_counter->count < 1) {
-                    _counter->deleter(_index);
+            if (_data) {
+                --_data->count;
+                if (_data->count < 1) {
+                    _data->deleter(_data->index);
                     return true;
                 }
             }
@@ -93,7 +98,7 @@ namespace cala::backend::vulkan {
 
         O* _owner = nullptr;
         i32 _index = -1;
-        Counter *_counter = nullptr;
+        Data *_data = nullptr;
 
     };
 

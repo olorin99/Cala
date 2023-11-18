@@ -156,7 +156,7 @@ cala::Engine::Engine(backend::Platform &platform)
         auto brdfBarrier = _brdfImage->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_WRITE | backend::Access::SHADER_READ, backend::ImageLayout::GENERAL);
         cmd->pipelineBarrier({ &brdfBarrier, 1 });
 
-        cmd->bindProgram(_brdfProgram.getBackendProgram());
+        cmd->bindProgram(_brdfProgram);
         cmd->bindImage(1, 0, _device.getImageView(_brdfImage), _device.defaultSampler(), true);
         cmd->bindPipeline();
         cmd->bindDescriptors();
@@ -227,7 +227,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::convertToCubeMap(backend::vulka
 //        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &hdrBarrier, 1 });
 
 
-        cmd->bindProgram(_equirectangularToCubeMap.getBackendProgram());
+        cmd->bindProgram(_equirectangularToCubeMap);
         cmd->bindImage(1, 0, equirectangularView, *_lodSampler);
         cmd->bindImage(1, 1, cubeView, _device.defaultSampler(), true);
 
@@ -261,7 +261,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::generateIrradianceMap(backend::
         auto cubeBarrier = cubeMap->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::GENERAL);
         cmd->pipelineBarrier({ &cubeBarrier, 1 });
 
-        cmd->bindProgram(_irradianceProgram.getBackendProgram());
+        cmd->bindProgram(_irradianceProgram);
         cmd->bindImage(1, 0, _device.getImageView(cubeMap), *_lodSampler, true);
         cmd->bindImage(1, 1, _device.getImageView(irradianceMap), _device.defaultSampler(), true);
         cmd->bindPipeline();
@@ -304,7 +304,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::generatePrefilteredIrradiance(b
         cmd->pipelineBarrier({ &prefilterBarrier, 1 });
 
         for (u32 mip = 0; mip < prefilteredMap->mips(); mip++) {
-            cmd->bindProgram(_prefilterProgram.getBackendProgram());
+            cmd->bindProgram(_prefilterProgram);
             cmd->bindImage(1, 0, _device.getImageView(cubeMap), *_lodSampler);
             cmd->bindImage(1, 1, mipViews[mip], _device.defaultSampler(), true);
             f32 roughness = (f32)mip / (f32)prefilteredMap->mips();
@@ -784,7 +784,7 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
                 includedFiles.push_back(eval.first);
 
 
-            Program handle = loadProgram(name, {
+            backend::vulkan::ShaderProgram handle = loadProgram(name, {
                 { "shaders/default.vert", backend::ShaderStage::VERTEX },
                 { "shaders/default/default.frag", backend::ShaderStage::FRAGMENT, {
                     { "MATERIAL_DATA", materialData.second ? "" : materialData.first },
@@ -796,19 +796,19 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
             return handle;
         };
 
-        Program litHandle = addVariant(std::format("{}##lit", path.filename().string()), litEval);
+        backend::vulkan::ShaderProgram litHandle = addVariant(std::format("{}##lit", path.filename().string()), litEval);
         material->setVariant(Material::Variant::LIT, std::move(litHandle));
 
-        Program unlitHandle = addVariant(std::format("{}##unlit", path.filename().string()), unlitEval);
+        backend::vulkan::ShaderProgram unlitHandle = addVariant(std::format("{}##unlit", path.filename().string()), unlitEval);
         material->setVariant(Material::Variant::UNLIT, std::move(unlitHandle));
 
-        Program normalsHandle = addVariant(std::format("{}##normal", path.filename().string()), normalEval);
+        backend::vulkan::ShaderProgram normalsHandle = addVariant(std::format("{}##normal", path.filename().string()), normalEval);
         material->setVariant(Material::Variant::NORMAL, std::move(normalsHandle));
 
-        Program metallicHandle = addVariant(std::format("{}##metallic", path.filename().string()), metallicEval);
+        backend::vulkan::ShaderProgram metallicHandle = addVariant(std::format("{}##metallic", path.filename().string()), metallicEval);
         material->setVariant(Material::Variant::METALLIC, std::move(metallicHandle));
 
-        Program roughnessHandle = addVariant(std::format("{}##roughness", path.filename().string()), roughnessEval);
+        backend::vulkan::ShaderProgram roughnessHandle = addVariant(std::format("{}##roughness", path.filename().string()), roughnessEval);
         material->setVariant(Material::Variant::ROUGHNESS, std::move(roughnessHandle));
 
         material->build();
@@ -820,52 +820,52 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
     }
 }
 
-cala::Program cala::Engine::loadProgram(const std::string& name, const std::vector<ShaderInfo>& shaderInfo) {
-    std::vector<AssetManager::Asset<backend::vulkan::ShaderModuleHandle>> modules;
+cala::backend::vulkan::ShaderProgram cala::Engine::loadProgram(const std::string& name, const std::vector<ShaderInfo>& shaderInfo) {
+    std::vector<backend::vulkan::ShaderModuleHandle> modules;
 
     for (auto& info : shaderInfo) {
         modules.push_back(_assetManager.loadShaderModule(name, info.path, info.stage, info.macros, info.includes));
     }
 
-    return { this, modules };
+    return { &_device, modules };
 }
 
 cala::Material *cala::Engine::getMaterial(u32 index) {
     return &_materials[index];
 }
 
-cala::backend::vulkan::ShaderProgram cala::Engine::getProgram(cala::Engine::ProgramType type) {
+const cala::backend::vulkan::ShaderProgram& cala::Engine::getProgram(cala::Engine::ProgramType type) {
     switch (type) {
         case ProgramType::SHADOW_POINT:
-            return _pointShadowProgram.getBackendProgram();
+            return _pointShadowProgram;
         case ProgramType::SHADOW_DIRECT:
-            return _directShadowProgram.getBackendProgram();
+            return _directShadowProgram;
         case ProgramType::TONEMAP:
-            return _tonemapProgram.getBackendProgram();
+            return _tonemapProgram;
         case ProgramType::CULL:
-            return _cullProgram.getBackendProgram();
+            return _cullProgram;
         case ProgramType::CULL_POINT:
-            return _pointShadowCullProgram.getBackendProgram();
+            return _pointShadowCullProgram;
         case ProgramType::CULL_DIRECT:
-            return _directShadowCullProgram.getBackendProgram();
+            return _directShadowCullProgram;
         case ProgramType::CULL_LIGHTS:
-            return _cullLightsProgram.getBackendProgram();
+            return _cullLightsProgram;
         case ProgramType::CREATE_CLUSTERS:
-            return _createClustersProgram.getBackendProgram();
+            return _createClustersProgram;
         case ProgramType::DEBUG_CLUSTER:
-            return _clusterDebugProgram.getBackendProgram();
+            return _clusterDebugProgram;
         case ProgramType::DEBUG_NORMALS:
-            return _normalsDebugProgram.getBackendProgram();
+            return _normalsDebugProgram;
         case ProgramType::DEBUG_WORLDPOS:
-            return _worldPosDebugProgram.getBackendProgram();
+            return _worldPosDebugProgram;
         case ProgramType::SOLID_COLOUR:
-            return _solidColourProgram.getBackendProgram();
+            return _solidColourProgram;
         case ProgramType::VOXEL_VISUALISE:
-            return _voxelVisualisationProgram.getBackendProgram();
+            return _voxelVisualisationProgram;
         case ProgramType::SKYBOX:
-            return _skyboxProgram.getBackendProgram();
+            return _skyboxProgram;
     }
-    return _solidColourProgram.getBackendProgram();
+    return _solidColourProgram;
 }
 
 u32 cala::Engine::materialCount() const {

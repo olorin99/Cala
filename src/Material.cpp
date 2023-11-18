@@ -70,12 +70,12 @@ void cala::Material::upload() {
     }
 }
 
-void cala::Material::setVariant(cala::Material::Variant variant, Program program) {
+void cala::Material::setVariant(cala::Material::Variant variant, backend::vulkan::ShaderProgram program) {
     assert(static_cast<u8>(variant) < static_cast<u8>(Variant::MAX));
     _programs[static_cast<u8>(variant)] = std::move(program);
 }
 
-const cala::Program& cala::Material::getVariant(cala::Material::Variant variant) {
+const cala::backend::vulkan::ShaderProgram& cala::Material::getVariant(cala::Material::Variant variant) {
     assert(static_cast<u8>(variant) < static_cast<u8>(Variant::MAX));
     return _programs[static_cast<u8>(variant)];
 }
@@ -91,7 +91,7 @@ bool cala::Material::build() {
         if (!program)
             continue;
 
-        u32 programMaterialSize = program.layout()->interface().bindingSize(2, 0);
+        u32 programMaterialSize = program._pipelineLayout->interface().bindingSize(2, 0);
         if (size == 0)
             size = programMaterialSize;
         if (size != programMaterialSize) {

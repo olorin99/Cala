@@ -604,7 +604,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         Material* material = &_engine->_materials[i];
                         if (!material)
                             continue;
-                        cmd->bindProgram(material->getVariant(Material::Variant::VOXELGI).getBackendProgram());
+                        cmd->bindProgram(material->getVariant(Material::Variant::VOXELGI));
                         cmd->bindRasterState({
                             backend::CullMode::NONE
                         });
@@ -755,7 +755,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 Material* material = &_engine->_materials[i];
                 if (!material)
                     continue;
-                cmd->bindProgram(material->getVariant(Material::Variant::LIT).getBackendProgram());
+                cmd->bindProgram(material->getVariant(Material::Variant::LIT));
                 cmd->bindRasterState(material->getRasterState());
                 cmd->bindDepthState(material->getDepthState());
                 cmd->bindBuffer(2, 0, material->buffer(), true);

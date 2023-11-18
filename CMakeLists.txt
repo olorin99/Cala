@@ -35,8 +35,6 @@ add_library(Cala src/backend/vulkan/Context.cpp include/Cala/backend/vulkan/Cont
         include/Cala/backend/vulkan/ShaderModuleInterface.h
         src/ui/AssetManagerWindow.cpp
         include/Cala/ui/AssetManagerWindow.h
-        src/Program.cpp
-        include/Cala/Program.h
         src/backend/vulkan/PipelineLayout.cpp
         include/Cala/backend/vulkan/PipelineLayout.h)
 

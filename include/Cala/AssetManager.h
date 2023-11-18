@@ -72,9 +72,9 @@ namespace cala {
 
         };
 
-        Asset<backend::vulkan::ShaderModuleHandle> loadShaderModule(const std::string& name, const std::filesystem::path& path, backend::ShaderStage stage = backend::ShaderStage::NONE, std::span<const std::pair<std::string_view, std::string_view>> macros = {}, std::span<const std::string> includes = {});
+        backend::vulkan::ShaderModuleHandle loadShaderModule(const std::string& name, const std::filesystem::path& path, backend::ShaderStage stage = backend::ShaderStage::NONE, std::span<const std::pair<std::string_view, std::string_view>> macros = {}, std::span<const std::string> includes = {});
 
-        Asset<backend::vulkan::ShaderModuleHandle> reloadShaderModule(u32 hash);
+        backend::vulkan::ShaderModuleHandle reloadShaderModule(u32 hash);
 
 
         Asset<backend::vulkan::ImageHandle> loadImage(const std::string& name, const std::filesystem::path& path, bool hdr = false);

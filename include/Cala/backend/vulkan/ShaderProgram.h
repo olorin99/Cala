@@ -18,9 +18,9 @@ namespace cala::backend::vulkan {
     class ShaderProgram {
     public:
 
-        ShaderProgram(Device* device, std::span<const ShaderModuleHandle> modules);
+        ShaderProgram();
 
-        ShaderProgram(Device* device);
+        ShaderProgram(Device* device, std::span<const ShaderModuleHandle> modules);
 
         ShaderProgram(const ShaderProgram& rhs) = delete;
 
@@ -29,6 +29,8 @@ namespace cala::backend::vulkan {
         ShaderProgram& operator=(const ShaderProgram& rhs) = delete;
 
         ShaderProgram& operator=(ShaderProgram&& rhs) noexcept;
+
+        operator bool() const noexcept { return _device && !_modules.empty(); }
 
 
         VkPipelineLayout layout() const;

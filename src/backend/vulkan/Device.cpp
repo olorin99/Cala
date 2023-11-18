@@ -591,6 +591,35 @@ cala::backend::vulkan::ShaderModuleHandle cala::backend::vulkan::Device::createS
     return _shaderModulesList.getHandle(this, index);
 }
 
+cala::backend::vulkan::ShaderModuleHandle cala::backend::vulkan::Device::recreateShaderModule(ShaderModuleHandle handle, std::span<u32> spirv, cala::backend::ShaderStage stage) {
+    if (!handle)
+        return createShaderModule(spirv, stage);
+    i32 handleIndex = handle.index();
+    VkShaderModule module;
+    VkShaderModuleCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    createInfo.codeSize = spirv.size() * sizeof(u32);
+    createInfo.pCode = spirv.data();
+
+    if (vkCreateShaderModule(context().device(), &createInfo, nullptr, &module) != VK_SUCCESS)
+        throw std::runtime_error("Unable to create shader module");
+
+    ShaderModuleInterface interface(spirv, stage);
+
+    i32 index = _shaderModulesList.insert(this);
+
+    _shaderModulesList._resources[index].second.swap(_shaderModulesList._resources[handleIndex].second);
+    _shaderModulesList._resources[index].second->index = index;
+    _shaderModulesList._resources[handleIndex].second->index = handleIndex;
+
+
+    _shaderModulesList.getResource(index)->_module = module;
+    _shaderModulesList.getResource(index)->_stage = stage;
+    _shaderModulesList.getResource(index)->_main = "main";
+    _shaderModulesList.getResource(index)->_interface = std::move(interface);
+    return _shaderModulesList.getHandle(this, index);
+}
+
 cala::backend::vulkan::PipelineLayoutHandle cala::backend::vulkan::Device::createPipelineLayout(const cala::backend::ShaderInterface &interface) {
     PipelineLayout layout(this, interface);
 

@@ -12,7 +12,6 @@
 #include <spdlog/spdlog.h>
 
 #include <Cala/AssetManager.h>
-#include <Cala/Program.h>
 
 namespace cala {
 
@@ -70,7 +69,7 @@ namespace cala {
             std::vector<std::pair<std::string_view, std::string_view>> macros = {};
             std::vector<std::string> includes = {};
         };
-        Program loadProgram(const std::string& name, const std::vector<ShaderInfo>& shaderInfo);
+        backend::vulkan::ShaderProgram loadProgram(const std::string& name, const std::vector<ShaderInfo>& shaderInfo);
 
         Material* createMaterial(u32 size);
 
@@ -115,7 +114,7 @@ namespace cala {
         };
 
 
-        backend::vulkan::ShaderProgram getProgram(ProgramType type);
+        const backend::vulkan::ShaderProgram& getProgram(ProgramType type);
 
     private:
         friend Renderer;
@@ -136,26 +135,26 @@ namespace cala {
 
         backend::vulkan::RenderPass _shadowPass;
 
-        Program _pointShadowProgram;
-        Program _directShadowProgram;
+        backend::vulkan::ShaderProgram _pointShadowProgram;
+        backend::vulkan::ShaderProgram _directShadowProgram;
 
-        Program _equirectangularToCubeMap;
-        Program _irradianceProgram;
-        Program _prefilterProgram;
-        Program _brdfProgram;
-        Program _skyboxProgram;
-        Program _tonemapProgram;
-        Program _cullProgram;
-        Program _pointShadowCullProgram;
-        Program _directShadowCullProgram;
-        Program _createClustersProgram;
-        Program _cullLightsProgram;
+        backend::vulkan::ShaderProgram _equirectangularToCubeMap;
+        backend::vulkan::ShaderProgram _irradianceProgram;
+        backend::vulkan::ShaderProgram _prefilterProgram;
+        backend::vulkan::ShaderProgram _brdfProgram;
+        backend::vulkan::ShaderProgram _skyboxProgram;
+        backend::vulkan::ShaderProgram _tonemapProgram;
+        backend::vulkan::ShaderProgram _cullProgram;
+        backend::vulkan::ShaderProgram _pointShadowCullProgram;
+        backend::vulkan::ShaderProgram _directShadowCullProgram;
+        backend::vulkan::ShaderProgram _createClustersProgram;
+        backend::vulkan::ShaderProgram _cullLightsProgram;
 
-        Program _clusterDebugProgram;
-        Program _normalsDebugProgram;
-        Program _worldPosDebugProgram;
-        Program _solidColourProgram;
-        Program _voxelVisualisationProgram;
+        backend::vulkan::ShaderProgram _clusterDebugProgram;
+        backend::vulkan::ShaderProgram _normalsDebugProgram;
+        backend::vulkan::ShaderProgram _worldPosDebugProgram;
+        backend::vulkan::ShaderProgram _solidColourProgram;
+        backend::vulkan::ShaderProgram _voxelVisualisationProgram;
 
         backend::vulkan::ImageHandle _brdfImage;
 

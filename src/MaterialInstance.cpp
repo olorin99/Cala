@@ -16,8 +16,7 @@ cala::MaterialInstance::MaterialInstance(MaterialInstance &&rhs) noexcept
 }
 
 bool cala::MaterialInstance::setParameter(const std::string& name, u8* data, u32 size) {
-    auto layout = _material->_programs[0].layout();
-    auto interface = layout->interface();
+    auto layout = _material->_programs[0]._pipelineLayout;
     auto member = layout->interface().getBindingMember(2, 0, name);
     if (member.size == 0)
         return false;

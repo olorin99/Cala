@@ -62,9 +62,9 @@ namespace cala {
             MAX
         };
 
-        void setVariant(Variant variant, Program program);
+        void setVariant(Variant variant, backend::vulkan::ShaderProgram program);
 
-        const Program& getVariant(Variant variant);
+        const backend::vulkan::ShaderProgram& getVariant(Variant variant);
 
         bool variantPresent(Variant variant);
 
@@ -75,7 +75,7 @@ namespace cala {
 
         Engine* _engine;
 
-        std::array<Program, static_cast<u8>(Variant::MAX)> _programs;
+        std::array<backend::vulkan::ShaderProgram, static_cast<u8>(Variant::MAX)> _programs;
 
         backend::vulkan::CommandBuffer::RasterState _rasterState;
         backend::vulkan::CommandBuffer::DepthState _depthState;

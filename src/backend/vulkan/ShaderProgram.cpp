@@ -5,6 +5,11 @@
 #include <shaderc/shaderc.hpp>
 #include <Ende/filesystem/File.h>
 
+cala::backend::vulkan::ShaderProgram::ShaderProgram()
+        : _device(nullptr),
+          _pipelineLayout()
+{}
+
 cala::backend::vulkan::ShaderProgram::ShaderProgram(cala::backend::vulkan::Device* device, std::span<const cala::backend::vulkan::ShaderModuleHandle> modules)
     : _device(device),
       _pipelineLayout()
@@ -17,13 +22,8 @@ cala::backend::vulkan::ShaderProgram::ShaderProgram(cala::backend::vulkan::Devic
     _pipelineLayout = _device->createPipelineLayout(ShaderInterface(interfaces));
 }
 
-cala::backend::vulkan::ShaderProgram::ShaderProgram(cala::backend::vulkan::Device *device)
-    : _device(device),
-      _pipelineLayout()
-{}
-
 cala::backend::vulkan::ShaderProgram::ShaderProgram(ShaderProgram &&rhs) noexcept
-    : _device(VK_NULL_HANDLE),
+    : _device(nullptr),
     _pipelineLayout()
 {
     if (this == &rhs)
@@ -36,7 +36,6 @@ cala::backend::vulkan::ShaderProgram::ShaderProgram(ShaderProgram &&rhs) noexcep
 cala::backend::vulkan::ShaderProgram &cala::backend::vulkan::ShaderProgram::operator=(ShaderProgram &&rhs) noexcept {
     if (this == &rhs)
         return *this;
-    std::swap(_device, rhs._device);
     std::swap(_device, rhs._device);
     std::swap(_modules, rhs._modules);
     std::swap(_pipelineLayout, rhs._pipelineLayout);

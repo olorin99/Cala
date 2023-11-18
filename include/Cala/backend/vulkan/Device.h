@@ -104,6 +104,8 @@ namespace cala::backend::vulkan {
 
         ShaderModuleHandle createShaderModule(std::span<u32> spirv, ShaderStage stage);
 
+        ShaderModuleHandle recreateShaderModule(ShaderModuleHandle handle, std::span<u32> spirv, ShaderStage stage);
+
         PipelineLayoutHandle createPipelineLayout(const ShaderInterface& interface);
 
 
@@ -213,7 +215,7 @@ namespace cala::backend::vulkan {
 
         template <typename T, typename H>
         struct ResourceList {
-            std::vector<std::pair<std::unique_ptr<T>, std::unique_ptr<typename H::Counter>>> _resources;
+            std::vector<std::pair<std::unique_ptr<T>, std::unique_ptr<typename H::Data>>> _resources;
             std::vector<u32> _freeResources;
             std::vector<std::pair<i32, i32>> _destroyQueue;
 
@@ -225,7 +227,7 @@ namespace cala::backend::vulkan {
 
             u32 toDestroy() const { return _destroyQueue.size(); }
 
-            H getHandle(Device* device, i32 index) { return { device, index, _resources[index].second.get() }; }
+            H getHandle(Device* device, i32 index) { return { device, -1, _resources[index].second.get() }; }
 
             T* getResource(i32 index) { return _resources[index].first.get(); }
 
@@ -237,12 +239,12 @@ namespace cala::backend::vulkan {
                     index = _freeResources.back();
                     _freeResources.pop_back();
                     _resources[index].first = std::make_unique<T>(device);
-                    _resources[index].second = std::make_unique<typename H::Counter>(1, [this](i32 index) {
+                    _resources[index].second = std::make_unique<typename H::Data>(index, 1, [this](i32 index) {
                         _destroyQueue.push_back(std::make_pair(FRAMES_IN_FLIGHT + 1, index));
                     });
                 } else {
                     index = _resources.size();
-                    _resources.emplace_back(std::make_unique<T>(device), std::make_unique<typename H::Counter>(1, [this](i32 index) {
+                    _resources.emplace_back(std::make_unique<T>(device), std::make_unique<typename H::Data>(index, 1, [this](i32 index) {
                         _destroyQueue.push_back(std::make_pair(FRAMES_IN_FLIGHT + 1, index));
                     }));
                 }
