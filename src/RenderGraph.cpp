@@ -685,7 +685,7 @@ void cala::RenderGraph::buildRenderPasses() {
 
             attachments.push_back(attachment);
             attachmentImages.push_back(_engine->device().getImageView(_images[image->index].index()).view);
-            attachmentHashes.push_back(_images[image->index].index());
+            attachmentHashes.push_back(u64(attachmentImages.back()));
         }
 
         if (pass->_depthResource > -1) {

@@ -554,7 +554,6 @@ cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Im
     _context.setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_imageViews[index].view, "ImageView: " + std::to_string(index));
 
     return _imageList.getHandle(this, index);
-//    return { this, static_cast<i32>(index), _images[index].second };
 }
 
 cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::getImageHandle(u32 index) {

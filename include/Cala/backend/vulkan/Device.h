@@ -234,10 +234,12 @@ namespace cala::backend::vulkan {
             i32 insert(Device* device) {
                 i32 index = -1;
                 if (!_freeResources.empty()) {
-                    index + _freeResources.back();
+                    index = _freeResources.back();
                     _freeResources.pop_back();
                     _resources[index].first = std::make_unique<T>(device);
-                    _resources[index].second->count = 1;
+                    _resources[index].second = std::make_unique<typename H::Counter>(1, [this](i32 index) {
+                        _destroyQueue.push_back(std::make_pair(FRAMES_IN_FLIGHT + 1, index));
+                    });
                 } else {
                     index = _resources.size();
                     _resources.emplace_back(std::make_unique<T>(device), std::make_unique<typename H::Counter>(1, [this](i32 index) {
@@ -253,8 +255,8 @@ namespace cala::backend::vulkan {
                     if (it->first <= 0) {
                         auto& object = *_resources[it->second].first;
                         func(it->second, object);
-                        _destroyQueue.erase(it--);
                         _freeResources.push_back(it->second);
+                        _destroyQueue.erase(it--);
                     } else
                         it->first--;
                 }
