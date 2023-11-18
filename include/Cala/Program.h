@@ -30,6 +30,8 @@ namespace cala {
 
         bool stagePresent(backend::ShaderStage stage) { return _pipelineLayout->interface().stagePresent(stage); }
 
+        backend::vulkan::PipelineLayoutHandle layout() const { return _pipelineLayout; }
+
         backend::vulkan::ShaderProgram getBackendProgram() const;
 
     private:

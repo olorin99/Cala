@@ -4,6 +4,7 @@
 #include <Ende/platform.h>
 #include <Cala/backend/primitives.h>
 #include <span>
+#include "../third_party/tsl/robin_map.h"
 
 namespace cala::backend::vulkan {
 
@@ -23,21 +24,49 @@ namespace cala::backend::vulkan {
 
 //    private:
 
+        enum class MemberType {
+            STRUCT,
+            BOOL,
+            INT,
+            UINT,
+            FLOAT,
+            VEC3F,
+            VEC4F,
+            IVEC3,
+            IVEC4,
+            UVEC3,
+            UVEC4,
+            MAT3F,
+            MAT4F
+        };
+
+        struct Member {
+            std::string name;
+            MemberType type = MemberType::STRUCT;
+            u32 size = 0;
+            u32 offset = 0;
+        };
+
         struct Binding {
             u32 binding = 0;
             u32 size = 0;
+            i32 arrayLength = 1;
             BindingType type = BindingType::NONE;
+            ShaderStage stages = ShaderStage::NONE;
+            tsl::robin_map<std::string, Member> members = {};
         };
 
         struct Set {
             u32 set = 0;
             u32 bindingCount = 0;
+            u32 size = 0;
             Binding bindings[MAX_BINDING_PER_SET]{};
         };
 
         struct PushConstant {
             u32 size = 0;
             u32 offset = 0;
+            ShaderStage stages = ShaderStage::NONE;
         };
 
         u32 _setCount = 0;

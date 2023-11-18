@@ -30,9 +30,19 @@ namespace cala::backend {
 
 //        i32 getSamplerBinding(u32 set, const char* name) const;
 
-        u32 setSize(u32 set) const {
-            return sets[set].byteSize;
+//        u32 setSize(u32 set) const {
+//            return sets[set].s;
+//        }
+
+        u32 bindingSize(u32 set, u32 binding) const {
+            return sets[set].bindings[binding].size;
         }
+
+        bool bindingHasMember(u32 set, u32 binding, const std::string& memberName) const;
+
+        vulkan::ShaderModuleInterface::Member getBindingMember(u32 set, u32 binding, const std::string& memberName) const;
+
+        std::vector<vulkan::ShaderModuleInterface::Member> getBindingMemberList(u32 set, u32 binding) const;
 
         bool setPresent(u32 set) const {
             return sets[set].bindingCount > 0;
@@ -45,48 +55,12 @@ namespace cala::backend {
 //    private:
         friend cala::backend::vulkan::ShaderProgram;
 
-        enum class BindingType {
-            NONE = 0,
-            PUSH_CONSTANT = 1,
-            UNIFORM_BUFFER = 2,
-            STORAGE_BUFFER = 3,
-            SAMPLED_IMAGE = 4,
-            STORAGE_IMAGE = 5
-        };
-
-        struct BindingMember {
-            u32 offset;
-            u32 size;
-        };
-
-//        std::unordered_map<std::string, BindingMember>& getMemberList(u32 set, u32 binding);
-//        const std::unordered_map<std::string, BindingMember>& getMemberList(u32 set, u32 binding) const;
-
-        struct {
-            u32 id = 0;
-            u32 byteSize = 0;
-            u32 bindingCount = 0;
-            struct {
-                u32 id = 0;
-                BindingType type = BindingType::NONE;
-                u32 byteSize = 0;
-//                std::unordered_map<std::string, BindingMember> members;
-//                u32 dimensions = 0;
-//                std::string name;
-                ShaderStage stage = ShaderStage::NONE;
-            } bindings[MAX_BINDING_PER_SET] {};
-        } sets[MAX_SET_COUNT] {};
         u32 _setCount = 0;
+        vulkan::ShaderModuleInterface::Set sets[MAX_SET_COUNT]{};
+        u32 pushConstantRangeCount = 0;
+        vulkan::ShaderModuleInterface::PushConstant pushConstantRanges[10]{};
 
-        struct {
-            u32 byteSize = 0;
-            u32 offset = 0;
-            ShaderStage stage = ShaderStage::NONE;
-//            std::unordered_map<std::string, BindingMember> members;
-        } pushConstants[10] {};
-        u32 pushConstantRanges = 0;
-
-        ShaderStage _stages;
+        ShaderStage _stages = ShaderStage::NONE;
 
     };
 

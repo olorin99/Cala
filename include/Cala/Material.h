@@ -68,6 +68,8 @@ namespace cala {
 
         bool variantPresent(Variant variant);
 
+        bool build();
+
     private:
         friend MaterialInstance;
 

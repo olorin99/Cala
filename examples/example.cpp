@@ -110,32 +110,24 @@ Model loadGLTF(Engine* engine, Material* material, const std::filesystem::path& 
     };
 
     std::vector<MaterialInstance> materials;
-    struct PbrMat {
-        i32 albedoIndex = -1;
-        i32 normalIndex = -1;
-        i32 metallicRoughnessIndex = -1;
-    };
-
     for (u32 i = 0; i < model.materials.size(); i++) {
         tinygltf::Material& material1 = model.materials[i];
-        PbrMat mat{};
+        MaterialInstance instance = material->instance();
         if (auto it = material1.values.find("baseColorTexture"); it != material1.values.end()) {
             loadImage(material1, "baseColorTexture", Format::RGBA8_SRGB);
-            mat.albedoIndex = images[model.textures[it->second.TextureIndex()].source].index();
+            instance.setParameter("albedoIndex", images[model.textures[it->second.TextureIndex()].source].index());
         }
         if (auto it = material1.values.find("normalTexture"); it != material1.values.end()) {
             loadImage(material1, "normalTexture", Format::RGBA8_UNORM);
-            mat.normalIndex = images[model.textures[it->second.TextureIndex()].source].index();
+            instance.setParameter("normalIndex", images[model.textures[it->second.TextureIndex()].source].index());
         } else if (auto it1 = material1.additionalValues.find("normalTexture"); it1 != material1.additionalValues.end()) {
             loadImage(material1, "normalTexture", Format::RGBA8_UNORM);
-            mat.normalIndex = images[model.textures[it1->second.TextureIndex()].source].index();
+            instance.setParameter("normalIndex", images[model.textures[it1->second.TextureIndex()].source].index());
         }
         if (auto it = material1.values.find("metallicRoughnessTexture"); it != material1.values.end()) {
             loadImage(material1, "metallicRoughnessTexture", Format::RGBA8_UNORM);
-            mat.metallicRoughnessIndex = images[model.textures[it->second.TextureIndex()].source].index();
+            instance.setParameter("metallicRoughnessIndex", images[model.textures[it->second.TextureIndex()].source].index());
         }
-        MaterialInstance instance = material->instance();
-        instance.setData(mat);
         materials.push_back(std::move(instance));
     }
 
@@ -364,7 +356,7 @@ int main() {
         f32 metallness = 0;
         f32 roughness = 0;
     };
-    Material* material = engine.loadMaterial<Material1Data>("../../res/materials/expanded_pbr.mat");
+    Material* material = engine.loadMaterial("../../res/materials/expanded_pbr.mat");
     if (!material)
         return -1;
 
@@ -374,7 +366,7 @@ int main() {
         i32 metallicRoughness = -1;
     };
 
-    Material* material1 = engine.loadMaterial<MaterialData>("../../res/materials/pbr.mat");
+    Material* material1 = engine.loadMaterial("../../res/materials/pbr.mat");
     if (!material1)
         return -2;
 

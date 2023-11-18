@@ -811,6 +811,8 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
         Program roughnessHandle = addVariant(std::format("{}##roughness", path.filename().string()), roughnessEval);
         material->setVariant(Material::Variant::ROUGHNESS, std::move(roughnessHandle));
 
+        material->build();
+
         return material;
     } catch (std::exception& e) {
         _device.logger().error("Error with material: {}, {}", path.string(), e.what());

@@ -3,6 +3,7 @@
 
 #include <Cala/backend/vulkan/Image.h>
 #include <Cala/backend/vulkan/SamplerArray.h>
+#include <string_view>
 
 namespace cala {
 
@@ -19,40 +20,26 @@ namespace cala {
 
         Material* material() const { return _material; }
 
-//        bool setUniform(u32 set, const char* name, u8* data, u32 size);
 
-//        bool setUniform(const char* name, u8* data, u32 size);
-
-//        template <typename T>
-//        bool setUniform(u32 set, const char* name, const T& data) {
-//            return setUniform(set, name, (u8*)&data, sizeof(data));
-//        }
-
-//        template <typename T>
-//        bool setUniform(const char* name, const T& data) {
-//            return setUniform(name, (u8*)&data, sizeof(data));
-//        }
-
-//        bool setSampler(u32 set, const char* name, cala::backend::vulkan::Image& view, backend::vulkan::Sampler&& sampler);
-//
-//        bool setSampler(const char* name, cala::backend::vulkan::Image& view, backend::vulkan::Sampler&& sampler);
-
-//        bool setSampler(u32 set, const char* name, cala::backend::vulkan::Image::View&& view, backend::vulkan::Sampler&& sampler);
-
-//        bool setSampler(const char* name, cala::backend::vulkan::Image::View&& view, backend::vulkan::Sampler&& sampler);
-
-        void setData(u8* data, u32 size);
+        bool setParameter(const std::string& name, u8* data, u32 size);
 
         template <typename T>
-        void setData(const T& data) {
-            setData((u8*)&data, sizeof(data));
+        bool setParameter(const std::string& name, const T& data) {
+            return setParameter(name, (u8*)&data, sizeof(data));
+        }
+
+
+        void setData(u8* data, u32 size, u32 offset = 0);
+
+        template <typename T>
+        void setData(const T& data, u32 offset = 0) {
+            setData((u8*)&data, sizeof(data), offset);
         }
 
         u32 getOffset() const { return _offset; }
 
         void bind(backend::vulkan::CommandBuffer& cmd, u32 set = 2, u32 first = 0);
 
-//        const backend::vulkan::SamplerArray& samplers() const { return _samplers; }
 
     private:
         friend Material;
@@ -61,7 +48,6 @@ namespace cala {
 
         Material* _material;
         u32 _offset;
-//        backend::vulkan::SamplerArray _samplers;
 
     };
 

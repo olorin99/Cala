@@ -217,7 +217,7 @@ namespace cala::backend::vulkan {
                     VkSampler sampler = VK_NULL_HANDLE;
                     bool storage = false;
                 } images[MAX_BINDING_PER_SET];
-            ShaderInterface::BindingType type;
+            ShaderModuleInterface::BindingType type;
 
             bool operator==(const DescriptorKey& rhs) const {
                 return memcmp(this, &rhs, sizeof(DescriptorKey)) == 0;

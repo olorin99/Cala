@@ -84,3 +84,21 @@ bool cala::Material::variantPresent(cala::Material::Variant variant) {
     assert(static_cast<u8>(variant) < static_cast<u8>(Variant::MAX));
     return _programs[static_cast<u8>(variant)];
 }
+
+bool cala::Material::build() {
+    u32 size = 0;
+    for (auto& program : _programs) {
+        if (!program)
+            continue;
+
+        u32 programMaterialSize = program.layout()->interface().bindingSize(2, 0);
+        if (size == 0)
+            size = programMaterialSize;
+        if (size != programMaterialSize) {
+            _engine->logger().error("material variants have differing material sizes: {} - {}", size, programMaterialSize);
+            return false;
+        }
+    }
+    _setSize = size;
+    return true;
+}

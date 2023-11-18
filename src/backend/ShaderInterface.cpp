@@ -8,19 +8,20 @@ cala::backend::ShaderInterface::ShaderInterface(std::span<vulkan::ShaderModuleIn
             sets[set].bindingCount = std::max(sets[set].bindingCount, interface._sets[set].bindingCount);
 
             for (u32 binding = 0; binding < interface._sets[set].bindingCount; binding++) {
-                sets[set].bindings[binding].id = interface._sets[set].bindings[binding].binding;
-                sets[set].bindings[binding].stage |= interface._stage;
-                sets[set].bindings[binding].byteSize = interface._sets[set].bindings[binding].size;
-                sets[set].bindings[binding].type = static_cast<BindingType>(interface._sets[set].bindings[binding].type);
+                sets[set].bindings[binding].binding = interface._sets[set].bindings[binding].binding;
+                sets[set].bindings[binding].size = interface._sets[set].bindings[binding].size;
+                sets[set].bindings[binding].type = interface._sets[set].bindings[binding].type;
+                sets[set].bindings[binding].stages |= interface._stage;
+                sets[set].bindings[binding].members = interface._sets[set].bindings[binding].members;
             }
         }
 
         for (u32 i = 0; i < interface._pushConstantRangeCount; i++) {
-            pushConstants[i].stage |= interface._stage;
-            pushConstants[i].byteSize = interface._pushConstantRanges[i].size;
-            pushConstants[i].offset = interface._pushConstantRanges[i].offset;
+            pushConstantRanges[i].stages |= interface._stage;
+            pushConstantRanges[i].size = interface._pushConstantRanges[i].size;
+            pushConstantRanges[i].offset = interface._pushConstantRanges[i].offset;
         }
-        pushConstantRanges = std::max(pushConstantRanges, interface._pushConstantRangeCount);
+        pushConstantRangeCount = std::max(pushConstantRangeCount, interface._pushConstantRangeCount);
     }
 }
 
@@ -30,6 +31,30 @@ cala::backend::ShaderInterface::~ShaderInterface() {
 //            binding.members.clear();
 //        }
 //    }
+}
+
+bool cala::backend::ShaderInterface::bindingHasMember(u32 set, u32 binding, const std::string& memberName) const {
+    auto& b = sets[set].bindings[binding];
+    auto it = b.members.find(memberName);
+    if (it != b.members.end())
+        return true;
+    return false;
+}
+
+cala::backend::vulkan::ShaderModuleInterface::Member cala::backend::ShaderInterface::getBindingMember(u32 set, u32 binding, const std::string& memberName) const {
+    auto& b = sets[set].bindings[binding];
+    auto it = b.members.find(memberName);
+    if (it != b.members.end()) {
+        return it->second;
+    }
+    return {};
+}
+
+std::vector<cala::backend::vulkan::ShaderModuleInterface::Member> cala::backend::ShaderInterface::getBindingMemberList(u32 set, u32 binding) const {
+    std::vector<cala::backend::vulkan::ShaderModuleInterface::Member> members;
+    for (auto [key, value] : sets[set].bindings[binding].members)
+        members.push_back(value);
+    return members;
 }
 
 //i32 cala::backend::ShaderInterface::getUniformOffset(u32 set, u32 binding, const char *name) const {

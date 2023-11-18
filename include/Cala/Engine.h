@@ -80,7 +80,7 @@ namespace cala {
         }
 
         //TODO: Return handle cause pointers may not be stable
-        Material* loadMaterial(const std::filesystem::path& path, u32 size);
+        Material* loadMaterial(const std::filesystem::path& path, u32 size = 0);
 
         template <typename T>
         Material* loadMaterial(const std::filesystem::path& path) {

@@ -29,22 +29,22 @@ cala::backend::vulkan::PipelineLayout::PipelineLayout(cala::backend::vulkan::Dev
         for (u32 j = 0; set.bindingCount > 0 && j < MAX_BINDING_PER_SET; j++) {
             auto& binding = set.bindings[j];
 
-            if (binding.type == ShaderInterface::BindingType::NONE)
+            if (binding.type == ShaderModuleInterface::BindingType::NONE)
                 break;
 
             layoutBinding[layoutBindingCount].binding = j;
             VkDescriptorType type;
             switch (binding.type) {
-                case ShaderInterface::BindingType::UNIFORM_BUFFER:
+                case ShaderModuleInterface::BindingType::UNIFORM_BUFFER:
                     type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                     break;
-                case ShaderInterface::BindingType::SAMPLED_IMAGE:
+                case ShaderModuleInterface::BindingType::SAMPLED_IMAGE:
                     type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                     break;
-                case ShaderInterface::BindingType::STORAGE_IMAGE:
+                case ShaderModuleInterface::BindingType::STORAGE_IMAGE:
                     type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
                     break;
-                case ShaderInterface::BindingType::STORAGE_BUFFER:
+                case ShaderModuleInterface::BindingType::STORAGE_BUFFER:
                     type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
                     break;
                 default:
@@ -52,7 +52,7 @@ cala::backend::vulkan::PipelineLayout::PipelineLayout(cala::backend::vulkan::Dev
             }
             layoutBinding[layoutBindingCount].descriptorType = type;
             layoutBinding[layoutBindingCount].descriptorCount = 1;
-            layoutBinding[layoutBindingCount].stageFlags = getShaderStage(binding.stage);
+            layoutBinding[layoutBindingCount].stageFlags = getShaderStage(binding.stages);
             layoutBinding[layoutBindingCount].pImmutableSamplers = nullptr;
             layoutBindingCount++;
         }
@@ -60,10 +60,10 @@ cala::backend::vulkan::PipelineLayout::PipelineLayout(cala::backend::vulkan::Dev
         setLayouts[i] = _device->getSetLayout({layoutBinding, layoutBindingCount});
     }
     VkPushConstantRange pushConstantRange[10]{};
-    for (u32 i = 0; i < _interface.pushConstantRanges && i < 10; i++) {
-        pushConstantRange[i].stageFlags |= getShaderStage(_interface.pushConstants[i].stage);
-        pushConstantRange[i].size = _interface.pushConstants[i].byteSize;
-        pushConstantRange[i].offset = _interface.pushConstants[i].offset;
+    for (u32 i = 0; i < _interface.pushConstantRangeCount && i < 10; i++) {
+        pushConstantRange[i].stageFlags |= getShaderStage(_interface.pushConstantRanges[i].stages);
+        pushConstantRange[i].size = _interface.pushConstantRanges[i].size;
+        pushConstantRange[i].offset = _interface.pushConstantRanges[i].offset;
     }
 
 
@@ -72,7 +72,7 @@ cala::backend::vulkan::PipelineLayout::PipelineLayout(cala::backend::vulkan::Dev
     pipelineLayoutInfo.setLayoutCount = MAX_SET_COUNT;
     pipelineLayoutInfo.pSetLayouts = setLayouts;
 
-    pipelineLayoutInfo.pushConstantRangeCount = _interface.pushConstantRanges;
+    pipelineLayoutInfo.pushConstantRangeCount = _interface.pushConstantRangeCount;
     pipelineLayoutInfo.pPushConstantRanges = pushConstantRange;
 
     VkPipelineLayout  pipelineLayout;
