@@ -36,12 +36,22 @@ void cala::ui::StatisticsWindow::render() {
         auto engineStats = _engine->device().stats();
         ImGui::Text("Allocated Buffers: %d", engineStats.allocatedBuffers);
         ImGui::Text("Buffers In Use: %d", engineStats.buffersInUse);
+
         ImGui::Text("Allocated Images: %d", engineStats.allocatedImages);
         ImGui::Text("Images In Use: %d", engineStats.imagesInUse);
+
+        ImGui::Text("Allocated ShaderModules: %d", engineStats.allocatedShaderModules);
+        ImGui::Text("ShaderModules In Use: %d", engineStats.shaderModulesInUse);
+
+        ImGui::Text("Allocated PipelineLayouts: %d", engineStats.allocatedPipelineLayouts);
+        ImGui::Text("PipelineLayouts In Use: %d", engineStats.pipelineLayoutsInUse);
+
         ImGui::Text("Allocated DescriptorSets: %d", engineStats.descriptorSetCount);
         ImGui::Text("Allocated Pipelines: %d", engineStats.pipelineCount);
         ImGui::Text("Bytes Allocated Per Frame: %d", engineStats.perFrameAllocated);
         ImGui::Text("Bytes Uploaded Per Frame: %d", engineStats.perFrameUploaded);
+        ImGui::Text("Bytes Allocated: %d mb", engineStats.totalAllocated / 1000000);
+        ImGui::Text("Bytes Deallocated: %d mb", engineStats.totalDeallocated / 1000000);
 
         ImGui::End();
     }

@@ -160,10 +160,16 @@ namespace cala::backend::vulkan {
             u32 allocatedBuffers = 0;
             u32 imagesInUse = 0;
             u32 allocatedImages = 0;
+            u32 shaderModulesInUse = 0;
+            u32 allocatedShaderModules = 0;
+            u32 pipelineLayoutsInUse = 0;
+            u32 allocatedPipelineLayouts = 0;
             u32 descriptorSetCount = 0;
             u32 pipelineCount = 0;
             u32 perFrameAllocated = 0;
             u32 perFrameUploaded = 0;
+            u32 totalAllocated = 0;
+            u32 totalDeallocated = 0;
         };
 
         Stats stats() const;
@@ -186,7 +192,7 @@ namespace cala::backend::vulkan {
 
         spdlog::logger& _logger;
         Context _context;
-        CommandPool _commandPools[2][3]; // 0 = graphics, 1 = compute, 2 = transfer
+        CommandPool _commandPools[FRAMES_IN_FLIGHT][3]; // 0 = graphics, 1 = compute, 2 = transfer
         Semaphore _timelineSemaphore;
         u64 _timelineValue;
         u64 _frameValues[FRAMES_IN_FLIGHT];
@@ -304,6 +310,9 @@ namespace cala::backend::vulkan {
 
         u32 _bytesAllocatedPerFrame;
         u32 _bytesUploadedToGPUPerFrame;
+
+        u32 _totalAllocated;
+        u32 _totalDeallocated;
 
     };
 

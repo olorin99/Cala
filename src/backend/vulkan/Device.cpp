@@ -352,6 +352,7 @@ bool cala::backend::vulkan::Device::gc() {
         else
             _logger.warn("attempted to destroy buffer ({}) which has invalid allocation", index);
         buffer._allocation = nullptr;
+        _totalDeallocated += buffer.size();
         buffer = Buffer(this);
         _logger.info("destroyed buffer ({})", index);
     });
@@ -364,6 +365,7 @@ bool cala::backend::vulkan::Device::gc() {
             vmaDestroyImage(context().allocator(), image.image(), allocation);
         else
             _logger.warn("attempted to destroy image ({}) which is invalid", index);
+        _totalDeallocated += image.width() * image.height() * image.depth() * formatToSize(image.format());
         image._image = VK_NULL_HANDLE;
         image._allocation = nullptr;
         image._width = 0;
@@ -410,12 +412,12 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
 
     VmaAllocationCreateInfo allocInfo{};
     allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-    allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+//    allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
     allocInfo.requiredFlags = extraInfo.requiredFlags;
     allocInfo.preferredFlags = extraInfo.preferredFlags;
 
     if ((flags & MemoryProperties::DEVICE) == MemoryProperties::DEVICE) {
-        allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+//        allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
         persistentlyMapped = false;
     }
     if ((flags & MemoryProperties::STAGING) == MemoryProperties::STAGING) {
@@ -426,6 +428,8 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
     }
 
     VK_TRY(vmaCreateBuffer(context().allocator(), &bufferInfo, &allocInfo, &buffer, &allocation, nullptr));
+
+    _totalAllocated += size;
 
     i32 index = _bufferList.insert(this);
 
@@ -524,6 +528,8 @@ cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Im
     allocInfo.flags = 0;
 
     VK_TRY(vmaCreateImage(context().allocator(), &imageInfo, &allocInfo, &image, &allocation, nullptr));
+
+    _totalAllocated += info.width * info.height * info.depth * formatToSize(info.format);
 
     i32 index = _imageList.insert(this);
 
@@ -1042,10 +1048,16 @@ cala::backend::vulkan::Device::Stats cala::backend::vulkan::Device::stats() cons
         allocatedBuffers,
         imagesInUse,
         allocatedImages,
+        _shaderModulesList.used(),
+        _shaderModulesList.allocated(),
+        _pipelineLayoutList.used(),
+        _pipelineLayoutList.allocated(),
         descriptorSetCount,
         pipelineCount,
         _bytesAllocatedPerFrame,
-        _bytesUploadedToGPUPerFrame
+        _bytesUploadedToGPUPerFrame,
+        _totalAllocated,
+        _totalDeallocated
     };
 }
 
