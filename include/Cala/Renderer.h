@@ -28,9 +28,6 @@ namespace cala {
             bool skybox = true;
             bool freezeFrustum = false;
             bool ibl = false;
-            bool vxgi = false;
-            std::pair<ende::math::Vec<3, i32>, ende::math::Vec<3, i32>> voxelBounds = { { -15, -15, -15 }, { 15, 15, 15 } };
-            ende::math::Vec<3, u32> voxelGridDimensions = { 256, 256, 256 };
             bool gpuCulling = true;
             bool boundedFrameTime = false;
             f32 millisecondTarget = 1000.f / 240.f;
@@ -43,7 +40,6 @@ namespace cala {
             bool debugWorldPos = false;
             bool debugWireframe = false;
             bool debugNormalLines = false;
-            bool debugVxgi = false;
             std::array<f32, 4> wireframeColour = { 1.f, 1.f, 1.f, 1.f };
             f32 wireframeThickness = 1.f;
             f32 normalLength = 0.1;

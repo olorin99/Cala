@@ -17,16 +17,6 @@ void cala::ui::RendererSettingsWindow::render() {
         ImGui::Checkbox("Tonemap Pass", &rendererSettings.tonemap);
         ImGui::Checkbox("Freeze Frustum,", &rendererSettings.freezeFrustum);
         ImGui::Checkbox("IBL,", &rendererSettings.ibl);
-        ImGui::Checkbox("VXGI", &rendererSettings.vxgi);
-        if (rendererSettings.vxgi) {
-            auto minBounds = rendererSettings.voxelBounds.first;
-            ImGui::SliderInt3("minBounds", &minBounds[0], -100, 0);
-            auto maxBounds = rendererSettings.voxelBounds.second;
-            ImGui::SliderInt3("maxBounds", &maxBounds[0], 0, 100);
-
-            rendererSettings.voxelBounds.first = minBounds;
-            rendererSettings.voxelBounds.second = maxBounds;
-        }
         ImGui::Checkbox("GPU Culling", &rendererSettings.gpuCulling);
         ImGui::Checkbox("Bounded FrameTime", &rendererSettings.boundedFrameTime);
         ImGui::SliderInt("Target FPS", &_targetFPS, 5, 240);
@@ -74,7 +64,6 @@ void cala::ui::RendererSettingsWindow::render() {
             ImGui::Text("Colour: { %f, %f, %fm %f }", colour[0], colour[1], colour[2], colour[3]);
             rendererSettings.wireframeColour = colour;
         }
-        ImGui::Checkbox("\tVisualize VXGI", &rendererSettings.debugVxgi);
 
         f32 gamma = _renderer->getGamma();
         if (ImGui::SliderFloat("Gamma", &gamma, 0, 5))

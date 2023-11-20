@@ -121,10 +121,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _engine->stageData(_cameraBuffer[_engine->device().frameIndex()], cameraData);
 
     bool overlayDebug = _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugClusters;
-    bool fullscreenDebug = _renderSettings.debugNormals || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugMetallic || _renderSettings.debugRoughness || _renderSettings.debugVxgi;
+    bool fullscreenDebug = _renderSettings.debugNormals || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugMetallic || _renderSettings.debugRoughness;
     bool debugViewEnabled = overlayDebug || fullscreenDebug;
-    if (_renderSettings.debugVxgi)
-        _renderSettings.vxgi = true;
 
     backend::vulkan::CommandHandle cmd = _frameInfo.cmd;
 
@@ -162,7 +160,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             _graph.addBufferResource("drawCommands", drawCommandsResource);
 
             _graph.addBufferResource("shadowDrawCommands", drawCommandsResource);
-            _graph.addBufferResource("vxgiDrawCommands", drawCommandsResource);
         }
         {
             BufferResource drawCountResource;
@@ -355,10 +352,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         debugNormalLinesPass(_graph, *_engine, scene, _renderSettings);
     }
 
-    if (_renderSettings.debugVxgi) {
-        debugVxgi(_graph, *_engine);
-    }
-
 
     {
         ImageResource pointDepth;
@@ -487,159 +480,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         }
     });
 
-    {
-        if (_renderSettings.vxgi) {
-//            auto& cullPass = _graph.addPass("vxgiCull");
-//
-//            cullPass.addUniformBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
-//            cullPass.addStorageBufferRead("transforms", backend::PipelineStage::COMPUTE_SHADER);
-//            cullPass.addStorageBufferRead("meshData", backend::PipelineStage::COMPUTE_SHADER);
-//            cullPass.addStorageBufferWrite("materialCounts", backend::PipelineStage::COMPUTE_SHADER);
-//            cullPass.addStorageBufferWrite("vxgiDrawCommands", backend::PipelineStage::COMPUTE_SHADER);
-//            cullPass.addStorageBufferRead("camera", backend::PipelineStage::COMPUTE_SHADER);
-//
-//            cullPass.setDebugColour({0.3, 0.3, 1, 1});
-//
-//            cullPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
-//                auto global = graph.getBuffer()("global");
-//                auto materialCounts = graph.getBuffer()("materialCounts");
-//                auto drawCommands = graph.getBuffer()("vxgiDrawCommands");
-//
-//                ende::math::Mat4f perspective = ende::math::orthographic<f32>(_renderSettings.voxelBounds.first.x(), _renderSettings.voxelBounds.second.x(), _renderSettings.voxelBounds.first.y(), _renderSettings.voxelBounds.second.y(), _renderSettings.voxelBounds.first.z(), _renderSettings.voxelBounds.second.z());
-//                ende::math::Frustum frustum(perspective);
-//
-//                cmd->clearDescriptors();
-//                cmd->bindProgram(_engine->_cullProgram);
-//                cmd->bindBindings(nullptr);
-//                cmd->bindAttributes(nullptr);
-//                cmd->pushConstants(backend::ShaderModule::COMPUTE, { &frustum, sizeof(frustum) });
-//                cmd->bindBuffer(1, 0, global);
-//                cmd->bindBuffer(2, 0, drawCommands, true);
-//                cmd->bindBuffer(2, 1, _drawCountBuffer[_engine->device().frameIndex()], true);
-//                cmd->bindBuffer(2, 2, materialCounts, true);
-//                cmd->bindPipeline();
-//                cmd->bindDescriptors();
-//                cmd->dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
-//            });
-
-            ImageResource voxelGridResource;
-            voxelGridResource.format = backend::Format::RGBA32_SFLOAT;
-            voxelGridResource.width = _renderSettings.voxelGridDimensions.x();
-            voxelGridResource.height = _renderSettings.voxelGridDimensions.y();
-            voxelGridResource.depth = _renderSettings.voxelGridDimensions.z();
-            voxelGridResource.mipLevels = 5;
-            voxelGridResource.matchSwapchain = false;
-            _graph.addImageResource("voxelGrid", voxelGridResource);
-            _graph.addAlias("voxelGrid", "voxelGridClear");
-            _graph.addAlias("voxelGrid", "voxelGridMipMapped");
-
-            ImageResource voxelOutput;
-            voxelOutput.format = backend::Format::RGBA32_SFLOAT;
-            voxelOutput.matchSwapchain = false;
-            voxelOutput.width = voxelGridResource.width;
-            voxelOutput.height = voxelGridResource.height;
-            _graph.addImageResource("voxelOutput", voxelOutput);
-
-
-            {
-                auto& clearVoxelGridPass = _graph.addPass("clear-voxelGrid", RenderPass::Type::TRANSFER);
-
-                clearVoxelGridPass.addTransferWrite("voxelGridClear");
-
-                clearVoxelGridPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
-                    auto voxelGrid = graph.getImage("voxelGrid");
-                    cmd->clearImage(voxelGrid);
-                });
-            }
-            {
-                auto& voxelMipMapPass = _graph.addPass("voxel-mipmap", RenderPass::Type::TRANSFER);
-                voxelMipMapPass.addTransferWrite("voxelGridMipMapped");
-                voxelMipMapPass.addTransferRead("voxelGrid");
-
-                voxelMipMapPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
-                    auto voxelGrid = graph.getImage("voxelGrid");
-                    voxelGrid->generateMips(cmd);
-                });
-            }
-            {
-                auto& voxelGIPass = _graph.addPass("voxelGI");
-
-                voxelGIPass.setDimensions(voxelGridResource.width, voxelGridResource.height);
-
-                voxelGIPass.addStorageImageRead("voxelGridClear", backend::PipelineStage::FRAGMENT_SHADER);
-                voxelGIPass.addStorageImageWrite("voxelGrid", backend::PipelineStage::FRAGMENT_SHADER);
-                voxelGIPass.addUniformBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
-                voxelGIPass.addIndirectRead("drawCommands");
-                voxelGIPass.addVertexRead("vertexBuffer");
-                voxelGIPass.addIndexRead("indexBuffer");
-
-                voxelGIPass.addStorageBufferRead("meshData", backend::PipelineStage::FRAGMENT_SHADER);
-                voxelGIPass.addStorageBufferRead("lightIndices", backend::PipelineStage::FRAGMENT_SHADER);
-                voxelGIPass.addStorageBufferRead("lightGrid", backend::PipelineStage::FRAGMENT_SHADER);
-                voxelGIPass.addStorageBufferRead("lights", backend::PipelineStage::FRAGMENT_SHADER);
-                voxelGIPass.addIndirectRead("materialCounts");
-                voxelGIPass.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
-
-//                voxelGIPass.addColourWrite("voxelOutput");
-
-                voxelGIPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
-                    auto global = graph.getBuffer("global");
-                    auto drawCommands = graph.getBuffer("drawCommands");
-                    auto lightGrid = graph.getBuffer("lightGrid");
-                    auto lightIndices = graph.getBuffer("lightIndices");
-                    auto materialCounts = graph.getBuffer("materialCounts");
-                    auto voxelGrid = graph.getImage("voxelGrid");
-                    cmd->clearDescriptors();
-                    if (scene._renderables.empty())
-                        return;
-
-                    cmd->bindBuffer(1, 0, global);
-
-                    auto& renderable = scene._renderables[0].second.first;
-
-                    cmd->bindBindings(renderable.bindings);
-                    cmd->bindAttributes(renderable.attributes);
-
-                    for (u32 i = 0; i < scene._materialCounts.size(); i++) {
-                        Material* material = &_engine->_materials[i];
-                        if (!material)
-                            continue;
-                        cmd->bindProgram(material->getVariant(Material::Variant::VOXELGI));
-                        cmd->bindRasterState({
-                            backend::CullMode::NONE
-                        });
-                        cmd->bindDepthState({ false });
-                        cmd->bindBuffer(2, 0, material->buffer(), true);
-
-                        struct VoxelizePush {
-                            ende::math::Vec<4, u32> voxelGridSize;
-                            ende::math::Vec<4, u32> tileSizes;
-                            u64 lightGridBuffer;
-                            u64 lightIndicesBuffer;
-                        } push;
-                        push.voxelGridSize = { voxelGrid->width(), voxelGrid->height(), voxelGrid->depth(), 0 };
-                        push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };;
-                        push.lightGridBuffer = lightGrid->address();
-                        push.lightIndicesBuffer = lightIndices->address();
-
-                        cmd->pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::GEOMETRY | backend::ShaderStage::FRAGMENT, push);
-
-                        cmd->bindPipeline();
-                        cmd->bindDescriptors();
-
-                        cmd->bindVertexBuffer(0, _engine->_globalVertexBuffer);
-                        cmd->bindIndexBuffer(_engine->_globalIndexBuffer);
-
-                        u32 drawCommandOffset = scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand);
-                        u32 countOffset = i * (sizeof(u32) * 2);
-                        cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
-                    }
-                });
-            }
-        }
-    }
-
-
     auto& cullPass = _graph.addPass("cull", RenderPass::Type::COMPUTE);
 
     cullPass.addUniformBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
@@ -727,10 +567,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         forwardPass.addVertexRead("vertexBuffer");
         forwardPass.addIndexRead("indexBuffer");
         forwardPass.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
-
-        if (_renderSettings.vxgi)
-            forwardPass.addStorageImageRead("voxelGridMipMapped", backend::PipelineStage::FRAGMENT_SHADER);
-//        forwardPass.addStorageImageRead("voxelVisualised", backend::PipelineStage::FRAGMENT_SHADER);
 
         forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
 
