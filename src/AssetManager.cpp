@@ -289,7 +289,20 @@ cala::AssetManager::Asset <cala::backend::vulkan::ImageHandle> cala::AssetManage
     };
 
     length = width * height * backend::formatToSize(format);
-    auto handle = _engine->device().createImage({(u32)width, (u32)height, 1, format});
+
+    u32 mips = std::floor(std::log2(std::max(width, height))) + 1;
+    auto handle = _engine->device().createImage({
+        (u32)width,
+        (u32)height,
+        1,
+        format,
+        mips,
+        1,
+        backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST | backend::ImageUsage::TRANSFER_SRC});
+
+    _engine->device().deferred([handle](backend::vulkan::CommandHandle cmd) {
+        handle->generateMips(cmd);
+    });
 
     _engine->stageData(handle, std::span(data, length), {
         0,
@@ -451,7 +464,7 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
         auto& mesh = asset->meshes[meshIndex];
         for (auto& primitive : mesh.primitives) {
 
-            ende::math::Vec3f min = { 10000, 10000, 1000 };
+            ende::math::Vec3f min = { 10000, 10000, 10000 };
             ende::math::Vec3f max = min * -1;
 
             u32 firstIndex = indices.size();
