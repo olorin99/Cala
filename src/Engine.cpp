@@ -180,6 +180,7 @@ cala::Engine::Engine(backend::Platform &platform)
 }
 
 cala::Engine::~Engine() {
+    _assetManager.clear();
     _pointShadowProgram = {};
     _directShadowProgram = {};
 
@@ -474,6 +475,7 @@ void cala::Engine::stageData(backend::vulkan::ImageHandle dstHandle, std::span<c
 }
 
 void cala::Engine::flushStagedData() {
+    PROFILE_NAMED("Engine::flushStagedData");
     if (!_pendingStagedBuffer.empty() || !_pendingStagedImage.empty()) {
         _device.immediate([&](backend::vulkan::CommandHandle cmd) {
             for (auto& staged : _pendingStagedBuffer) {

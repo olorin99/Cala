@@ -334,6 +334,7 @@ cala::backend::vulkan::CommandHandle cala::backend::vulkan::Device::getCommandBu
 
 
 bool cala::backend::vulkan::Device::gc() {
+    PROFILE_NAMED("Device::gc");
     if (!_deferredCommands.empty()) {
         immediate([&](CommandHandle cmd) {
             for (auto& deferredCommand : _deferredCommands) {

@@ -4,6 +4,8 @@
 #include <Ende/platform.h>
 #include <functional>
 
+#include <cstdio>
+
 namespace cala::backend::vulkan {
 
     class Device;

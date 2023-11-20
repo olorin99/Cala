@@ -14,3 +14,6 @@
 [submodule "libs/implot"]
 	path = libs/implot
 	url = https://github.com/epezent/implot.git
+[submodule "libs/fastgltf"]
+	path = libs/fastgltf
+	url = https://github.com/spnda/fastgltf.git

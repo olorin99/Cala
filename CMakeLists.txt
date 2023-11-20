@@ -47,4 +47,4 @@ target_include_directories(Cala
         libs
         third_party)
 
-target_link_libraries(Cala Ende ${SDL2_LIBRARIES} ${X11_LIBRARIES} imgui node_editor implot assimp spirv-cross-cpp ${SHADERC_LIBRARY} volk)
+target_link_libraries(Cala Ende ${SDL2_LIBRARIES} ${X11_LIBRARIES} imgui node_editor implot assimp spirv-cross-cpp ${SHADERC_LIBRARY} volk fastgltf)

@@ -7,6 +7,7 @@
 #include <Cala/backend/vulkan/Handle.h>
 #include <Cala/backend/primitives.h>
 #include <span>
+#include <Cala/Model.h>
 
 namespace cala {
 
@@ -15,6 +16,7 @@ namespace cala {
     }
 
     class Engine;
+    class Material;
 
     class AssetManager {
     public:
@@ -35,6 +37,8 @@ namespace cala {
         i32 registerShaderModule(const std::string& name, const std::filesystem::path& path, u32 hash);
 
         i32 registerImage(const std::string& name, const std::filesystem::path& path, u32 hash);
+
+        i32 registerModel(const std::string& name, const std::filesystem::path& path, u32 hash);
 
         bool isRegistered(u32 hash);
 
@@ -77,14 +81,19 @@ namespace cala {
         backend::vulkan::ShaderModuleHandle reloadShaderModule(u32 hash);
 
 
-        Asset<backend::vulkan::ImageHandle> loadImage(const std::string& name, const std::filesystem::path& path, bool hdr = false);
+        Asset<backend::vulkan::ImageHandle> loadImage(const std::string& name, const std::filesystem::path& path, backend::Format format = backend::Format::RGBA8_UNORM);
 
         Asset<backend::vulkan::ImageHandle> reloadImage(u32 hash);
+
+
+        Asset<Model> loadModel(const std::string& name, const std::filesystem::path& path, Material* material);
 
 
         bool isLoaded(u32 hash);
 
         bool isLoaded(const std::filesystem::path& path);
+
+        void clear();
 
 
     private:
@@ -121,10 +130,18 @@ namespace cala {
             u32 hash;
             std::string name;
             std::filesystem::path path;
-            bool hdr;
+            backend::Format format;
             backend::vulkan::ImageHandle imageHandle;
         };
         std::vector<ImageMetadata> _images;
+
+        struct ModelMetadata {
+            u32 hash;
+            std::string name;
+            std::filesystem::path path;
+            Model model;
+        };
+        std::vector<ModelMetadata> _models;
 
     };
 

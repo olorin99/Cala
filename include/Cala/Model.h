@@ -1,13 +1,16 @@
 #ifndef CALA_MODEL_H
 #define CALA_MODEL_H
 
-#include <Cala/Mesh.h>
 #include <Ende/math/Vec.h>
+#include <Cala/backend/vulkan/Handle.h>
+#include <Cala/MaterialInstance.h>
 
 namespace cala {
 
     class Model {
     public:
+
+        Model() = default;
 
         struct AABB {
             ende::math::Vec3f min;
@@ -24,12 +27,10 @@ namespace cala {
         std::vector<Primitive> primitives;
         std::vector<MaterialInstance> materials;
 
-        backend::vulkan::BufferHandle vertexBuffer;
-        backend::vulkan::BufferHandle indexBuffer;
         std::vector<backend::vulkan::ImageHandle> images;
 
-        VkVertexInputBindingDescription _binding;
-        std::array<backend::Attribute, 4> _attributes;
+        VkVertexInputBindingDescription _binding = {};
+        std::array<backend::Attribute, 4> _attributes = {};
 
     };
 

@@ -63,8 +63,8 @@ void cala::Scene::addRenderable(Model &model, Transform *transform, bool castSha
     for (auto& primitive : model.primitives) {
         auto& matInstance = model.materials[primitive.materialIndex];
         addRenderable({
-            model.vertexBuffer,
-            model.indexBuffer,
+            _engine->_globalVertexBuffer,
+            _engine->_globalIndexBuffer,
             primitive.firstIndex,
             primitive.indexCount,
             &matInstance,
