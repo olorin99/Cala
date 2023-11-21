@@ -49,6 +49,17 @@ void cala::ui::AssetManagerWindow::render() {
             ImGui::TreePop();
         }
 
+        if (ImGui::TreeNode("Images")) {
+            ImGui::Separator();
+            u32 imageID = 0;
+            for (auto& imageMetadata : _assetManager->_images) {
+                ImGui::Text("Name: %s", imageMetadata.name.c_str());
+                ImGui::Text("Path: %s", imageMetadata.path.c_str());
+                ImGui::Text("\tHandle: %i, Count: %i", imageMetadata.imageHandle.index(), imageMetadata.imageHandle.count());
+            }
+            ImGui::TreePop();
+        }
+
         ImGui::End();
     }
 

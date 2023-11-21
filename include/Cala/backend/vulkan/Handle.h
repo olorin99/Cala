@@ -82,6 +82,12 @@ namespace cala::backend::vulkan {
             return _index;
         }
 
+        i32 count() const {
+            if (_data)
+                return _data->count;
+            return 0;
+        }
+
         bool isValid() const;
 
         bool release() {

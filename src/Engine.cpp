@@ -201,6 +201,18 @@ cala::Engine::~Engine() {
     _worldPosDebugProgram = {};
     _solidColourProgram = {};
     _voxelVisualisationProgram = {};
+
+    _lodSampler = {};
+    _irradianceSampler = {};
+
+    _globalIndexBuffer = {};
+    _globalVertexBuffer = {};
+
+    _brdfImage = {};
+
+    _stagingBuffer = {};
+    _shadowMaps.clear();
+    delete _cube;
 }
 
 bool cala::Engine::gc() {

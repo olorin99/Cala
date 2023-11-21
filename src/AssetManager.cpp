@@ -262,7 +262,7 @@ cala::backend::vulkan::ShaderModuleHandle cala::AssetManager::reloadShaderModule
     return module;
 }
 
-cala::AssetManager::Asset <cala::backend::vulkan::ImageHandle> cala::AssetManager::loadImage(const std::string &name, const std::filesystem::path &path, backend::Format format) {
+cala::backend::vulkan::ImageHandle cala::AssetManager::loadImage(const std::string &name, const std::filesystem::path &path, backend::Format format) {
     u32 hash = std::hash<std::filesystem::path>()(path);
 
     i32 index = getAssetIndex(hash);
@@ -270,8 +270,10 @@ cala::AssetManager::Asset <cala::backend::vulkan::ImageHandle> cala::AssetManage
         index = registerImage(name, path, hash);
 
     auto& metadata = _metadata[index];
-    if (metadata.loaded)
-        return { this, index };
+    if (metadata.loaded) {
+        auto& imageMetadata = _images[metadata.index];
+        return imageMetadata.imageHandle;
+    }
 
     i32 width, height, channels;
     u8* data = nullptr;
@@ -285,7 +287,7 @@ cala::AssetManager::Asset <cala::backend::vulkan::ImageHandle> cala::AssetManage
     }
     if (!data) {
         _engine->logger().warn("unable to load image: {}", path.string());
-        return { this, index };
+        return { nullptr, -1, nullptr };
     };
 
     length = width * height * backend::formatToSize(format);
@@ -323,13 +325,13 @@ cala::AssetManager::Asset <cala::backend::vulkan::ImageHandle> cala::AssetManage
 
     metadata.loaded = true;
 
-    return { this, index };
+    return imageMetadata.imageHandle;
 }
 
-cala::AssetManager::Asset<cala::backend::vulkan::ImageHandle> cala::AssetManager::reloadImage(u32 hash) {
+cala::backend::vulkan::ImageHandle cala::AssetManager::reloadImage(u32 hash) {
     i32 index = getAssetIndex(hash);
     if (index < 0)
-        return { this, index };
+        return { nullptr, -1, nullptr };
 
     auto& metadata = _metadata[index];
     auto& imageMetadata = _images[metadata.index];
@@ -380,11 +382,11 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
 
     // load images
     std::vector<backend::vulkan::ImageHandle> images;
-    for (auto& modelImage : asset->images) {
-        if (const auto* filePath = std::get_if<fastgltf::sources::URI>(&modelImage.data); filePath) {
-            images.push_back(*loadImage(modelImage.name.c_str(), path.parent_path() / filePath->uri.path()));
-        }
-    }
+//    for (auto& modelImage : asset->images) {
+//        if (const auto* filePath = std::get_if<fastgltf::sources::URI>(&modelImage.data); filePath) {
+//            images.push_back(*loadImage(modelImage.name.c_str(), path.parent_path() / filePath->uri.path()));
+//        }
+//    }
 
     // load materials
     std::vector<MaterialInstance> materials;
@@ -396,7 +398,7 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             i32 imageIndex = asset->textures[textureIndex].imageIndex.value();
             auto& image = asset->images[imageIndex];
             if (const auto* filePath = std::get_if<fastgltf::sources::URI>(&image.data); filePath) {
-                images.push_back(*loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), backend::Format::RGBA8_SRGB));
+                images.push_back(loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), backend::Format::RGBA8_SRGB));
             }
 //            auto imageHandle = images[imageIndex];
             if (!materialInstance.setParameter("albedoIndex", images.back().index()))
@@ -410,7 +412,7 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             i32 imageIndex = asset->textures[textureIndex].imageIndex.value();
             auto& image = asset->images[imageIndex];
             if (const auto* filePath = std::get_if<fastgltf::sources::URI>(&image.data); filePath) {
-                images.push_back(*loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), backend::Format::RGBA8_UNORM));
+                images.push_back(loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), backend::Format::RGBA8_UNORM));
             }
 //            auto imageHandle = images[imageIndex];
             if (!materialInstance.setParameter("normalIndex", images.back().index()))
@@ -424,7 +426,7 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             i32 imageIndex = asset->textures[textureIndex].imageIndex.value();
             auto& image = asset->images[imageIndex];
             if (const auto* filePath = std::get_if<fastgltf::sources::URI>(&image.data); filePath) {
-                images.push_back(*loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), backend::Format::RGBA8_UNORM));
+                images.push_back(loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), backend::Format::RGBA8_UNORM));
             }
 //            auto imageHandle = images[imageIndex];
             if (!materialInstance.setParameter("metallicRoughnessIndex", images.back().index()))
@@ -473,6 +475,7 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             u32 indexCount = indicesAccessor.count;
             indices.resize(indices.size() + indicesAccessor.count);
             fastgltf::iterateAccessorWithIndex<std::uint32_t>(asset.get(), indicesAccessor, [&](std::uint32_t index, std::size_t idx) {
+                assert(firstIndex + idx < indices.size());
                 indices[firstIndex + idx] = index + firstVertex;
             });
 
@@ -480,6 +483,7 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             auto& positionAccessor = asset->accessors[positionIT->second];
             vertices.resize(vertices.size() + positionAccessor.count);
             fastgltf::iterateAccessorWithIndex<ende::math::Vec3f>(asset.get(), positionAccessor, [&](ende::math::Vec3f position, std::size_t idx) {
+                assert(firstVertex + idx < vertices.size());
                 position = transform.transform(position);
                 vertices[firstVertex + idx].position = position;
                 min = {
@@ -497,18 +501,21 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             auto normalIT = primitive.findAttribute("NORMAL");
             auto& normalAccessor = asset->accessors[normalIT->second];
             fastgltf::iterateAccessorWithIndex<ende::math::Vec3f>(asset.get(), normalAccessor, [&](ende::math::Vec3f normal, std::size_t idx) {
+                assert(firstVertex + idx < vertices.size());
                 vertices[firstVertex + idx].normal = normal;
             });
 
             auto texCoordIT = primitive.findAttribute("TEXCOORD_0");
             auto& texCoordAccessor = asset->accessors[texCoordIT->second];
             fastgltf::iterateAccessorWithIndex<ende::math::Vec<2, f32>>(asset.get(), texCoordAccessor, [&](ende::math::Vec<2, f32> texCoord, std::size_t idx) {
+                assert(firstVertex + idx < vertices.size());
                 vertices[firstVertex + idx].texCoords = texCoord;
             });
 
             auto tangentIT = primitive.findAttribute("TANGENT");
             auto& tangentAccessor = asset->accessors[tangentIT->second];
             fastgltf::iterateAccessorWithIndex<ende::math::Vec4f>(asset.get(), tangentAccessor, [&](ende::math::Vec4f tangent, std::size_t idx) {
+                assert(firstVertex + idx < vertices.size());
                 vertices[firstVertex + idx].tangent = tangent;
             });
 

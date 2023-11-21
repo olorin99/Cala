@@ -164,7 +164,7 @@ int main() {
 //    ImageHandle background = loadImageHDR(engine, "../../res/textures/TropicalRuins_3k.hdr");
 //    ImageHandle background = loadImageHDR(engine, "../../res/textures/brown_photostudio_02_4k.hdr");
 //    ImageHandle background = loadImageHDR(engine, "../../res/textures/dresden_station_night_4k.hdr");
-    scene.addSkyLightMap(*background, true);
+    scene.addSkyLightMap(background, true);
 
     scene.addRenderable(*sponzaAsset, &sponzaTransform, true);
 //    scene.addRenderable(sponza, &sponzaTransform, true);

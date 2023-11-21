@@ -81,9 +81,9 @@ namespace cala {
         backend::vulkan::ShaderModuleHandle reloadShaderModule(u32 hash);
 
 
-        Asset<backend::vulkan::ImageHandle> loadImage(const std::string& name, const std::filesystem::path& path, backend::Format format = backend::Format::RGBA8_UNORM);
+        backend::vulkan::ImageHandle loadImage(const std::string& name, const std::filesystem::path& path, backend::Format format = backend::Format::RGBA8_UNORM);
 
-        Asset<backend::vulkan::ImageHandle> reloadImage(u32 hash);
+        backend::vulkan::ImageHandle reloadImage(u32 hash);
 
 
         Asset<Model> loadModel(const std::string& name, const std::filesystem::path& path, Material* material);

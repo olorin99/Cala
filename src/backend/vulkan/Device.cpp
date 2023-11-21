@@ -160,6 +160,10 @@ cala::backend::vulkan::Device::~Device() {
     }
 
     _descriptorSets.clear();
+    vkDestroyDescriptorSetLayout(_context.device(), _bindlessLayout, nullptr);
+
+    vkDestroyDescriptorPool(_context.device(), _descriptorPool, nullptr);
+    vkDestroyDescriptorPool(_context.device(), _bindlessPool, nullptr);
 
     _pipelineLayoutList.clearAll([](i32 index, PipelineLayout& layout) {
         layout = PipelineLayout(nullptr);
@@ -183,7 +187,9 @@ cala::backend::vulkan::Device::~Device() {
         buffer._allocation = nullptr;
     });
 
-    _imageViews.clear();
+//    _imageViews.clear();
+    for (auto& view : _imageViews)
+        view = Image::View();
     _imageList.clearAll([this](i32 index, Image& image) {
         VmaAllocation allocation = image._allocation;
         if (image.image() != VK_NULL_HANDLE)
@@ -202,11 +208,6 @@ cala::backend::vulkan::Device::~Device() {
 
     for (auto& renderPass : _renderPasses)
         delete renderPass.second;
-
-    vkDestroyDescriptorSetLayout(_context.device(), _bindlessLayout, nullptr);
-
-    vkDestroyDescriptorPool(_context.device(), _descriptorPool, nullptr);
-    vkDestroyDescriptorPool(_context.device(), _bindlessPool, nullptr);
 
     if (!usingTimeline()) {
         for (auto& fence : _frameFences)
