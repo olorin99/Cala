@@ -111,6 +111,7 @@ namespace cala {
             DEBUG_NORMALS,
             DEBUG_WORLDPOS,
             DEBUG_FRUSTUM,
+            DEBUG_DEPTH,
             SOLID_COLOUR,
             VOXEL_VISUALISE,
             SKYBOX
@@ -158,6 +159,7 @@ namespace cala {
         backend::vulkan::ShaderProgram _worldPosDebugProgram;
         backend::vulkan::ShaderProgram _solidColourProgram;
         backend::vulkan::ShaderProgram _frustumDebugProgram;
+        backend::vulkan::ShaderProgram _depthDebugProgram;
         backend::vulkan::ShaderProgram _voxelVisualisationProgram;
 
         backend::vulkan::ImageHandle _brdfImage;

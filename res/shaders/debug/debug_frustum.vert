@@ -10,7 +10,6 @@ layout (location = 0) out VsOut {
 #include "global_data.glsl"
 #include "camera.glsl"
 
-
 layout (set = 2, binding = 0) uniform FrustumVertices {
     vec4 vertex[8];
 };
@@ -30,66 +29,6 @@ const uint cubeIndices[] = {
     1, 3, 7
 };
 
-const vec3 frontTopLeft = vec3(-1, 1, 0);
-const vec3 frontTopRight = vec3(1, 1, 0);
-const vec3 frontBottomLeft = vec3(-1, -1, 0);
-const vec3 frontBottomRight = vec3(1, -1, 0);
-const vec3 backTopLeft = vec3(-1, 1, 1);
-const vec3 backTopRight = vec3(1, 1, 1);
-const vec3 backBottomLeft = vec3(-1, -1, 1);
-const vec3 backBottomRight = vec3(1, -1, 1);
-
-const vec3 cubeNDC[] = {
-//top
-    frontTopLeft,
-    backTopLeft,
-    backTopRight,
-
-    backTopRight,
-    frontTopRight,
-    frontTopLeft,
-//front
-    frontBottomLeft,
-    frontTopLeft,
-    frontTopRight,
-
-    frontTopRight,
-    frontBottomRight,
-    frontBottomLeft,
-//left
-    backBottomLeft,
-    backTopLeft,
-    frontTopLeft,
-
-    frontTopLeft,
-    frontBottomLeft,
-    backBottomLeft,
-//right
-    frontBottomRight,
-    frontTopRight,
-    backTopRight,
-
-    backTopRight,
-    backBottomRight,
-    frontBottomRight,
-//bottom
-    backBottomLeft,
-    frontBottomLeft,
-    frontBottomRight,
-
-    frontBottomRight,
-    backBottomRight,
-    backBottomLeft,
-//back
-    backBottomRight,
-    backTopRight,
-    backTopLeft,
-
-    backTopLeft,
-    backBottomLeft,
-    backBottomRight,
-};
-
 void main() {
     vsOut.FragPos = vec3(0.0);
     vsOut.TexCoords = vec2((gl_VertexIndex << 1) & 2, gl_VertexIndex & 2);
@@ -102,5 +41,4 @@ void main() {
 
     CameraData camera = globalData.cameraBuffer.camera;
     gl_Position = camera.projection * camera.view * vertex;
-//    gl_Position = invViewProj * vec4(cubeNDC[gl_VertexIndex], 1.0);
 }

@@ -336,7 +336,7 @@ void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::
 }
 
 void debugFrustum(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings) {
-    auto& debugFrustum = graph.addPass("debug__frustums");
+    auto& debugFrustum = graph.addPass("debug_frustums");
 
     debugFrustum.addColourRead("backbuffer-debug");
     debugFrustum.addColourWrite("backbuffer");
@@ -372,6 +372,34 @@ void debugFrustum(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& s
         cmd->bindVertexBuffer(0, engine.vertexBuffer());
         cmd->bindIndexBuffer(engine.indexBuffer());
         cmd->draw(engine.unitCube()->indexCount, 1, engine.unitCube()->firstIndex, 0);
+    });
+}
+
+void debugDepthPass(cala::RenderGraph& graph, cala::Engine& engine) {
+    auto& debugDepth = graph.addPass("debug_depth");
+
+    debugDepth.addColourWrite("backbuffer");
+    debugDepth.addSampledImageRead("depth", backend::PipelineStage::FRAGMENT_SHADER);
+
+    debugDepth.addUniformBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+
+    debugDepth.setExecuteFunction([&](cala::backend::vulkan::CommandHandle cmd, cala::RenderGraph& graph) {
+        auto global = graph.getBuffer("global");
+        auto depth = graph.getImage("depth");
+        cmd->clearDescriptors();
+        cmd->bindBuffer(1, 0, global);
+        cmd->bindBindings({});
+        cmd->bindAttributes({});
+        cmd->bindBlendState({ true });
+        cmd->bindProgram(engine.getProgram(Engine::ProgramType::DEBUG_DEPTH));
+        struct ClusterPush {
+            i32 depthImageIndex;
+        } push;
+        push.depthImageIndex = depth.index();
+        cmd->pushConstants(backend::ShaderStage::FRAGMENT, push);
+        cmd->bindPipeline();
+        cmd->bindDescriptors();
+        cmd->draw(3, 1, 0, 0, false);
     });
 }
 

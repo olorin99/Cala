@@ -147,6 +147,12 @@ cala::Engine::Engine(backend::Platform &platform)
         });
     }
     {
+        _depthDebugProgram = loadProgram("depthDebugProgram", {
+                { "shaders/fullscreen.vert", backend::ShaderStage::VERTEX },
+                { "shaders/debug/debug_depth.frag", backend::ShaderStage::FRAGMENT }
+        });
+    }
+    {
 //        _voxelVisualisationProgram = loadProgram({
 ////            { "shaders/fullscreen.vert", backend::ShaderModule::VERTEX },
 ////            { "shaders/voxel/visualise.frag", backend::ShaderModule::FRAGMENT }
@@ -207,6 +213,7 @@ cala::Engine::~Engine() {
     _worldPosDebugProgram = {};
     _frustumDebugProgram = {};
     _solidColourProgram = {};
+    _depthDebugProgram = {};
     _voxelVisualisationProgram = {};
 
     _lodSampler = {};
@@ -881,6 +888,8 @@ const cala::backend::vulkan::ShaderProgram& cala::Engine::getProgram(cala::Engin
             return _worldPosDebugProgram;
         case ProgramType::DEBUG_FRUSTUM:
             return _frustumDebugProgram;
+        case ProgramType::DEBUG_DEPTH:
+            return _depthDebugProgram;
         case ProgramType::SOLID_COLOUR:
             return _solidColourProgram;
         case ProgramType::VOXEL_VISUALISE:

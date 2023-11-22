@@ -23,6 +23,8 @@ void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::
 
 void debugFrustum(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings);
 
+void debugDepthPass(cala::RenderGraph& graph, cala::Engine& engine);
+
 void debugClusterFrustums(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings);
 
 void debugVxgi(cala::RenderGraph& graph, cala::Engine& engine);

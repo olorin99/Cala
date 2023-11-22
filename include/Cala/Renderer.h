@@ -41,6 +41,7 @@ namespace cala {
             bool debugWireframe = false;
             bool debugNormalLines = false;
             bool debugFrustum = false;
+            bool debugDepth = false;
             std::array<f32, 4> wireframeColour = { 1.f, 1.f, 1.f, 1.f };
             f32 wireframeThickness = 1.f;
             f32 normalLength = 0.1;

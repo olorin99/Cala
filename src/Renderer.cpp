@@ -126,7 +126,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _engine->stageData(_cameraBuffer[_engine->device().frameIndex()], cameraData);
     _engine->stageData(_frustumBuffer[_engine->device().frameIndex()], std::span<const u8>((u8*)_frustumCorners.data(), 8 * sizeof(ende::math::Vec4f)));
 
-    bool overlayDebug = _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugClusters || _renderSettings.debugFrustum;
+    bool overlayDebug = _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugClusters || _renderSettings.debugFrustum || _renderSettings.debugDepth;
     bool fullscreenDebug = _renderSettings.debugNormals || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugMetallic || _renderSettings.debugRoughness;
     bool debugViewEnabled = overlayDebug || fullscreenDebug;
 
@@ -366,6 +366,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     if (_renderSettings.debugFrustum) {
         debugFrustum(_graph, *_engine, scene, _renderSettings);
+    }
+
+    if (_renderSettings.debugDepth) {
+        debugDepthPass(_graph, *_engine);
     }
 
 
