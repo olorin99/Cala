@@ -4,6 +4,8 @@
 #include <Ende/math/Mat.h>
 #include <Cala/Transform.h>
 #include <Ende/math/Frustum.h>
+#include <Ende/math/Vec.h>
+#include <vector>
 
 namespace cala {
 
@@ -28,6 +30,9 @@ namespace cala {
         const ende::math::Frustum& frustum() const { return _frustum; }
 
         void updateFrustum();
+
+        // returns the 8 corners of a frustum
+        std::vector<ende::math::Vec4f> getFrustumCorners() const;
 
         void setExposure(f32 exposure);
 

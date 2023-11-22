@@ -76,6 +76,28 @@ void cala::Camera::updateFrustum() {
     _frustum.update(viewProjection());
 }
 
+std::vector<ende::math::Vec4f> cala::Camera::getFrustumCorners() const {
+    const auto inverseViewProjection = viewProjection().inverse();
+
+    std::vector<ende::math::Vec4f> corners;
+    for (unsigned int x = 0; x < 2; ++x)
+    {
+        for (unsigned int y = 0; y < 2; ++y)
+        {
+            for (unsigned int z = 0; z < 2; ++z)
+            {
+                const ende::math::Vec4f pt = inverseViewProjection.transform(ende::math::Vec4f{
+                        2.0f * x - 1.0f,
+                        2.0f * y - 1.0f,
+                        2.0f * z - 1.0f,
+                        1.0f});
+                corners.push_back(pt / pt.w());
+            }
+        }
+    }
+    return corners;
+}
+
 void cala::Camera::setExposure(f32 exposure) {
     _exposure = exposure;
 }

@@ -40,6 +40,7 @@ namespace cala {
             bool debugWorldPos = false;
             bool debugWireframe = false;
             bool debugNormalLines = false;
+            bool debugFrustum = false;
             std::array<f32, 4> wireframeColour = { 1.f, 1.f, 1.f, 1.f };
             f32 wireframeThickness = 1.f;
             f32 normalLength = 0.1;
@@ -74,6 +75,7 @@ namespace cala {
 
         backend::vulkan::BufferHandle _cameraBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
         backend::vulkan::BufferHandle _globalDataBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
+        backend::vulkan::BufferHandle _frustumBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
 
         backend::vulkan::ImageHandle _shadowTarget;
         backend::vulkan::Framebuffer* _shadowFramebuffer;
@@ -112,6 +114,7 @@ namespace cala {
 
         RendererGlobal _globalData;
 
+        std::vector<ende::math::Vec4f> _frustumCorners;
         ende::math::Frustum _cullingFrustum;
 
 

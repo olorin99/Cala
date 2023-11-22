@@ -17,9 +17,10 @@ cala::backend::ShaderInterface::ShaderInterface(std::span<vulkan::ShaderModuleIn
         }
 
         for (u32 i = 0; i < interface._pushConstantRangeCount; i++) {
-            pushConstantRanges[i].stages |= interface._stage;
-            pushConstantRanges[i].size = interface._pushConstantRanges[i].size;
-            pushConstantRanges[i].offset = interface._pushConstantRanges[i].offset;
+            pushConstantRanges.push_back({});
+            pushConstantRanges.back().stages |= interface._stage;
+            pushConstantRanges.back().size = interface._pushConstantRanges[i].size;
+            pushConstantRanges.back().offset = interface._pushConstantRanges[i].offset;
         }
         pushConstantRangeCount = std::max(pushConstantRangeCount, interface._pushConstantRangeCount);
     }

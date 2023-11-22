@@ -91,7 +91,7 @@ cala::backend::vulkan::ShaderModuleInterface::ShaderModuleInterface(std::span<u3
             offset = std::min(offset, memberOffset);
         }
 
-        PushConstant range { size, offset };
+        PushConstant range { size - offset, offset };
 
         _pushConstantRanges[i] = range;
         _pushConstantRangeCount = i + 1;

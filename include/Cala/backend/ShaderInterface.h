@@ -58,7 +58,7 @@ namespace cala::backend {
         u32 _setCount = 0;
         vulkan::ShaderModuleInterface::Set sets[MAX_SET_COUNT]{};
         u32 pushConstantRangeCount = 0;
-        vulkan::ShaderModuleInterface::PushConstant pushConstantRanges[10]{};
+        std::vector<vulkan::ShaderModuleInterface::PushConstant> pushConstantRanges;
 
         ShaderStage _stages = ShaderStage::NONE;
 

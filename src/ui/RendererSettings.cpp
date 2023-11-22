@@ -64,6 +64,7 @@ void cala::ui::RendererSettingsWindow::render() {
             ImGui::Text("Colour: { %f, %f, %fm %f }", colour[0], colour[1], colour[2], colour[3]);
             rendererSettings.wireframeColour = colour;
         }
+        ImGui::Checkbox("\tFrustum", &rendererSettings.debugFrustum);
 
         f32 gamma = _renderer->getGamma();
         if (ImGui::SliderFloat("Gamma", &gamma, 0, 5))

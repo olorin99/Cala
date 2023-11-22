@@ -128,6 +128,12 @@ cala::Engine::Engine(backend::Platform &platform)
         });
     }
     {
+        _frustumDebugProgram = loadProgram("frustumDebugProgram", {
+            { "shaders/debug/debug_frustum.vert", backend::ShaderStage::VERTEX },
+            { "shaders/solid_colour.frag", backend::ShaderStage::FRAGMENT }
+        });
+    }
+    {
         _solidColourProgram = loadProgram("solidColourProgram", {
             { "shaders/default.vert", backend::ShaderStage::VERTEX },
             { "shaders/solid_colour.frag", backend::ShaderStage::FRAGMENT }
@@ -199,6 +205,7 @@ cala::Engine::~Engine() {
     _clusterDebugProgram = {};
     _normalsDebugProgram = {};
     _worldPosDebugProgram = {};
+    _frustumDebugProgram = {};
     _solidColourProgram = {};
     _voxelVisualisationProgram = {};
 
@@ -872,6 +879,8 @@ const cala::backend::vulkan::ShaderProgram& cala::Engine::getProgram(cala::Engin
             return _normalsDebugProgram;
         case ProgramType::DEBUG_WORLDPOS:
             return _worldPosDebugProgram;
+        case ProgramType::DEBUG_FRUSTUM:
+            return _frustumDebugProgram;
         case ProgramType::SOLID_COLOUR:
             return _solidColourProgram;
         case ProgramType::VOXEL_VISUALISE:

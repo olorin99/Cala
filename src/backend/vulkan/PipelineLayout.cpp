@@ -60,7 +60,7 @@ cala::backend::vulkan::PipelineLayout::PipelineLayout(cala::backend::vulkan::Dev
         setLayouts[i] = _device->getSetLayout({layoutBinding, layoutBindingCount});
     }
     VkPushConstantRange pushConstantRange[10]{};
-    for (u32 i = 0; i < _interface.pushConstantRangeCount && i < 10; i++) {
+    for (u32 i = 0; i < _interface.pushConstantRanges.size() && i < 10; i++) {
         pushConstantRange[i].stageFlags |= getShaderStage(_interface.pushConstantRanges[i].stages);
         pushConstantRange[i].size = _interface.pushConstantRanges[i].size;
         pushConstantRange[i].offset = _interface.pushConstantRanges[i].offset;
@@ -72,7 +72,7 @@ cala::backend::vulkan::PipelineLayout::PipelineLayout(cala::backend::vulkan::Dev
     pipelineLayoutInfo.setLayoutCount = MAX_SET_COUNT;
     pipelineLayoutInfo.pSetLayouts = setLayouts;
 
-    pipelineLayoutInfo.pushConstantRangeCount = _interface.pushConstantRangeCount;
+    pipelineLayoutInfo.pushConstantRangeCount = _interface.pushConstantRanges.size();
     pipelineLayoutInfo.pPushConstantRanges = pushConstantRange;
 
     VkPipelineLayout  pipelineLayout;

@@ -96,6 +96,8 @@ namespace cala {
 
         backend::vulkan::BufferHandle indexBuffer() const { return _globalIndexBuffer; }
 
+        Mesh* unitCube() const { return _cube; }
+
         enum class ProgramType {
             SHADOW_POINT,
             SHADOW_DIRECT,
@@ -108,6 +110,7 @@ namespace cala {
             DEBUG_CLUSTER,
             DEBUG_NORMALS,
             DEBUG_WORLDPOS,
+            DEBUG_FRUSTUM,
             SOLID_COLOUR,
             VOXEL_VISUALISE,
             SKYBOX
@@ -154,6 +157,7 @@ namespace cala {
         backend::vulkan::ShaderProgram _normalsDebugProgram;
         backend::vulkan::ShaderProgram _worldPosDebugProgram;
         backend::vulkan::ShaderProgram _solidColourProgram;
+        backend::vulkan::ShaderProgram _frustumDebugProgram;
         backend::vulkan::ShaderProgram _voxelVisualisationProgram;
 
         backend::vulkan::ImageHandle _brdfImage;

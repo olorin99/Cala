@@ -25,6 +25,9 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
     for (auto& buffer : _globalDataBuffer) {
         buffer = engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::DEVICE);
     }
+    for (auto& buffer : _frustumBuffer) {
+        buffer = engine->device().createBuffer(sizeof(ende::math::Vec4f) * 8, backend::BufferUsage::UNIFORM, backend::MemoryProperties::DEVICE);
+    }
 
     _shadowTarget = _engine->device().createImage({
         1024, 1024, 1,
@@ -115,12 +118,15 @@ f64 cala::Renderer::endFrame() {
 
 void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiContext* imGui) {
     PROFILE_NAMED("Renderer::render");
-    if (!_renderSettings.freezeFrustum)
+    if (!_renderSettings.freezeFrustum) {
         _cullingFrustum = camera.frustum();
+        _frustumCorners = camera.getFrustumCorners();
+    }
     auto cameraData = camera.data();
     _engine->stageData(_cameraBuffer[_engine->device().frameIndex()], cameraData);
+    _engine->stageData(_frustumBuffer[_engine->device().frameIndex()], std::span<const u8>((u8*)_frustumCorners.data(), 8 * sizeof(ende::math::Vec4f)));
 
-    bool overlayDebug = _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugClusters;
+    bool overlayDebug = _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugClusters || _renderSettings.debugFrustum;
     bool fullscreenDebug = _renderSettings.debugNormals || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugMetallic || _renderSettings.debugRoughness;
     bool debugViewEnabled = overlayDebug || fullscreenDebug;
 
@@ -225,6 +231,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         lightsResource.size = scene._lightBuffer[_engine->device().frameIndex()]->size();
         lightsResource.usage = scene._lightBuffer[_engine->device().frameIndex()]->usage();
         _graph.addBufferResource("lights", lightsResource, scene._lightBuffer[_engine->device().frameIndex()]);
+    }
+    {
+        BufferResource frustumBufferResource;
+        frustumBufferResource.size = _frustumBuffer[_engine->device().frameIndex()]->size();
+        frustumBufferResource.usage = _frustumBuffer[_engine->device().frameIndex()]->usage();
+        _graph.addBufferResource("frustumBuffer", frustumBufferResource, _frustumBuffer[_engine->device().frameIndex()]);
     }
 
 
@@ -350,6 +362,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     if (_renderSettings.debugNormalLines) {
         debugNormalLinesPass(_graph, *_engine, scene, _renderSettings);
+    }
+
+    if (_renderSettings.debugFrustum) {
+        debugFrustum(_graph, *_engine, scene, _renderSettings);
     }
 
 

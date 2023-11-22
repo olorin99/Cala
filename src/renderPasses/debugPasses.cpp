@@ -335,6 +335,83 @@ void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::
     });
 }
 
+void debugFrustum(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings) {
+    auto& debugFrustum = graph.addPass("debug__frustums");
+
+    debugFrustum.addColourRead("backbuffer-debug");
+    debugFrustum.addColourWrite("backbuffer");
+    debugFrustum.addDepthRead("depth");
+
+    debugFrustum.addUniformBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+    debugFrustum.addStorageBufferRead("frustumBuffer", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+
+    debugFrustum.setExecuteFunction([settings, &engine](cala::backend::vulkan::CommandHandle cmd, cala::RenderGraph& graph) {
+        auto global = graph.getBuffer("global");
+        auto cameraBuffer = graph.getBuffer("camera");
+        auto frustumBuffer = graph.getBuffer("frustumBuffer");
+        cmd->clearDescriptors();
+        cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(2, 0, frustumBuffer);
+
+        cmd->bindBindings({});
+        cmd->bindAttributes({});
+        cmd->bindDepthState({ true, false, cala::backend::CompareOp::LESS_EQUAL });
+        cmd->bindRasterState({
+            .cullMode = backend::CullMode::NONE,
+            .polygonMode = cala::backend::PolygonMode::LINE,
+            .lineWidth = settings.wireframeThickness
+        });
+
+        cmd->bindProgram(engine.getProgram(Engine::ProgramType::DEBUG_FRUSTUM));
+
+        cmd->pushConstants(cala::backend::ShaderStage::FRAGMENT, settings.wireframeColour);
+
+        cmd->bindPipeline();
+        cmd->bindDescriptors();
+
+        cmd->bindVertexBuffer(0, engine.vertexBuffer());
+        cmd->bindIndexBuffer(engine.indexBuffer());
+        cmd->draw(engine.unitCube()->indexCount, 1, engine.unitCube()->firstIndex, 0);
+    });
+}
+
+//void debugClusterFrustums(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings) {
+//    auto& debugClusterFrustums = graph.addPass("debug_cluster_frustums");
+//
+//    debugClusterFrustums.addColourRead("backbuffer-debug");
+//    debugClusterFrustums.addColourWrite("backbuffer");
+//    debugClusterFrustums.addDepthRead("depth");
+//
+//    debugClusterFrustums.addUniformBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+//    debugClusterFrustums.addStorageBufferRead("clusters", backend::PipelineStage::GEOMETRY_SHADER);
+//
+//    debugClusterFrustums.setExecuteFunction([settings, &engine, &scene](cala::backend::vulkan::CommandHandle cmd, cala::RenderGraph& graph) {
+//        auto global = graph.getBuffer("global");
+//        auto clusters = graph.getBuffer("clusters");
+//        cmd->clearDescriptors();
+//        cmd->bindBuffer(1, 0, global);
+//        auto& renderable = scene._renderables[0].second.first;
+//
+//        cmd->bindBindings(renderable.bindings);
+//        cmd->bindAttributes(renderable.attributes);
+//        cmd->bindDepthState({ true, false, cala::backend::CompareOp::LESS_EQUAL });
+//        cmd->bindRasterState({});
+//
+//        cmd->bindProgram(engine.getProgram(Engine::ProgramType::DEBUG_CLUSTER));
+//
+//        struct Push {
+//            u64 clusterBuffer;
+//        } push;
+//        push.clusterBuffer = clusters->address();
+//        cmd->pushConstants(backend::ShaderStage::VERTEX, push);
+//
+//        cmd->bindPipeline();
+//        cmd->bindDescriptors();
+//
+//        cmd->draw(3, 1, 0, 0, false);
+//    });
+//}
+
 void debugVxgi(cala::RenderGraph& graph, cala::Engine& engine) {
     auto& debugVoxel = graph.addPass("voxelVisualisation", RenderPass::Type::COMPUTE);
 

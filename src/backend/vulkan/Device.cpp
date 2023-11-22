@@ -170,7 +170,8 @@ cala::backend::vulkan::Device::~Device() {
     });
 
     _shaderModulesList.clearAll([this](i32 index, ShaderModule& module) {
-        vkDestroyShaderModule(context().device(), module.module(), nullptr);
+        if (module.module() != VK_NULL_HANDLE)
+            vkDestroyShaderModule(context().device(), module.module(), nullptr);
     });
 
 
@@ -381,6 +382,7 @@ bool cala::backend::vulkan::Device::gc() {
 
     _shaderModulesList.clearDestroyQueue([this](i32 index, ShaderModule& module) {
         vkDestroyShaderModule(context().device(), module.module(), nullptr);
+        module._module = VK_NULL_HANDLE;
         _logger.info("destroyed shader module ({})", index);
     });
 
@@ -620,6 +622,8 @@ cala::backend::vulkan::ShaderModuleHandle cala::backend::vulkan::Device::recreat
     _shaderModulesList._resources[index].second->index = index;
     _shaderModulesList._resources[handleIndex].second->index = handleIndex;
 
+    _shaderModulesList._resources[handleIndex].second->count = 0;
+    _shaderModulesList._resources[handleIndex].second->deleter(handleIndex);
 
     _shaderModulesList.getResource(index)->_module = module;
     _shaderModulesList.getResource(index)->_stage = stage;
