@@ -1,19 +1,19 @@
 [submodule "libs/Ende"]
-	path = libs/Ende
+	path = third_party/Ende
 	url = https://github.com/olorin99/Ende
 [submodule "libs/SPIRV-Cross"]
-	path = libs/SPIRV-Cross
+	path = third_party/SPIRV-Cross
 	url = https://github.com/olorin99/SPIRV-Cross.git
 [submodule "libs/imgui"]
-	path = libs/imgui
+	path = third_party/imgui
 	url = https://github.com/olorin99/imgui
 	branch = docking
 [submodule "libs/volk"]
-	path = libs/volk
+	path = third_party/volk
 	url = https://github.com/zeux/volk.git
 [submodule "libs/implot"]
-	path = libs/implot
+	path = third_party/implot
 	url = https://github.com/epezent/implot.git
 [submodule "libs/fastgltf"]
-	path = libs/fastgltf
+	path = third_party/fastgltf
 	url = https://github.com/spnda/fastgltf.git

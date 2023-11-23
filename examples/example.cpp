@@ -7,7 +7,7 @@
 #include <Cala/Material.h>
 #include <Cala/MaterialInstance.h>
 #include <Cala/Scene.h>
-#include "../../third_party/stb_image.h"
+#include <stb_image.h>
 #include "Ende/math/random.h"
 #include <Cala/Mesh.h>
 #include <Cala/Engine.h>

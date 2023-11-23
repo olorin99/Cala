@@ -4,7 +4,7 @@
 #include <Cala/backend/vulkan/Device.h>
 #include <Cala/backend/vulkan/ShaderProgram.h>
 #include <Cala/backend/vulkan/CommandBuffer.h>
-#include "../third_party/tsl/robin_map.h"
+#include <tsl/robin_map.h>
 #include <Cala/MaterialInstance.h>
 #include <Cala/Engine.h>
 

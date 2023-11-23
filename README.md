@@ -4,32 +4,16 @@
 
 Cala is the Quenya word for light so this project is a simulatio of light.
 
-### Dependencies
-- SDL2 - windowing system
-- assimp
-- shaderc - glsl compilation
-
-
-- spirv-cross - spirv reflection
-- imgui - gui
-- Ende - some common functionality
-- stb_image - image loader
-- tiny_gltf - gltf loader
-- vma - vulkan memory allocator
-- nlohmann json - json parser
-- tsl - robin hash map
-
 ### Features:
 - [x] Linux support
-- [ ] Windows support
 - [x] GPU Driven Rendering
 - [x] Rudimentary Render Graph
 - [x] Cook Torrence PBR
 - [x] Point Lights with shadows
-- [ ] Direct Lights with shadows
-- [ ] Spotlights with shadows
 - [x] Clustered forward shading
 - [x] Debug views (normal, roughness, metallic)
+- [x] shader reflection and hot reloading
+- [x] bindless images/buffers
 
 ##### Clustered Forward Lighting
 Compute shaders used to divide view frustum into buckets which are then used to sort lights in the scene according to world position.
@@ -62,3 +46,24 @@ Option to view density of lights per cluster. Green is low density, yellow is me
 Use PROFILE_NAMED() macro to enable profilig of a function. GPU timers are automatically inserted into rendergraph between each renderpass
 
 ![profiler.gif](res/gifs/profiler.gif)
+
+
+### Dependencies
+##### system library
+- SDL2 - windowing system
+- assimp
+- shaderc - glsl compilation
+
+##### git submodules
+- spirv-cross - spirv reflection
+- Ende - some common functionality
+- fastgltf - gltf loader
+- imgui - gui
+- implot - nice plots for gui
+- node_editor - create graphs in gui
+
+##### source included
+- stb_image - image loader
+- vma - vulkan memory allocator
+- nlohmann json - json parser
+- tsl - robin hash map

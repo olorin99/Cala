@@ -4,7 +4,7 @@
 #include <Ende/platform.h>
 #include <Cala/backend/primitives.h>
 #include <span>
-#include "../third_party/tsl/robin_map.h"
+#include <tsl/robin_map.h>
 
 namespace cala::backend::vulkan {
 

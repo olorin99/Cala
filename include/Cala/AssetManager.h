@@ -3,7 +3,7 @@
 
 #include <Ende/platform.h>
 #include <filesystem>
-#include "../third_party/tsl/robin_map.h"
+#include <tsl/robin_map.h>
 #include <Cala/backend/vulkan/Handle.h>
 #include <Cala/backend/primitives.h>
 #include <span>

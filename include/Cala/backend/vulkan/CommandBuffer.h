@@ -12,7 +12,7 @@
 #include <Cala/backend/vulkan/Semaphore.h>
 #include <cstring>
 #include <Ende/util/hash.h>
-#include "../third_party/tsl/robin_map.h"
+#include <tsl/robin_map.h>
 #include "Ende/math/Vec.h"
 
 namespace cala::backend::vulkan {

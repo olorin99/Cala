@@ -3,8 +3,7 @@
 #include <Cala/backend/primitives.h>
 #include <Cala/util.h>
 #include <Cala/Engine.h>
-#include "../../third_party/stb_image.h"
-#include <Cala/backend/primitives.h>
+#include <stb_image.h>
 #include <fastgltf/parser.hpp>
 #include <fastgltf/types.hpp>
 #include <fastgltf/tools.hpp>

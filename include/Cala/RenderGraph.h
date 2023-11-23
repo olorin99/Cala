@@ -3,7 +3,7 @@
 
 #include <Cala/Engine.h>
 #include <functional>
-#include "../third_party/tsl/robin_map.h"
+#include <tsl/robin_map.h>
 #include <Cala/backend/vulkan/Timer.h>
 #include <Ende/math/Vec.h>
 

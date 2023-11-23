@@ -6,7 +6,7 @@
 #include <Cala/backend/vulkan/CommandBuffer.h>
 #include <Cala/backend/vulkan/CommandPool.h>
 #include <Cala/backend/vulkan/Semaphore.h>
-#include "Platform.h"
+#include <Cala/backend/vulkan/Platform.h>
 #include <Cala/backend/vulkan/Handle.h>
 #include <Ende/time/StopWatch.h>
 #include <spdlog/spdlog.h>
