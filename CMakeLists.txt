@@ -5,6 +5,9 @@ set(CMAKE_CXX_STANDARD 23)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENDE_PROFILE -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES")
 
+#add_compile_options(-fsanitize=address)
+#add_link_options(-fsanitize=address)
+
 find_package(SDL2 REQUIRED)
 find_package(assimp)
 find_package(X11 REQUIRED)

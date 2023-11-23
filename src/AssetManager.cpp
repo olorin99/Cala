@@ -360,10 +360,12 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
     if (index < 0)
         index = registerModel(name, path, hash);
 
+    assert(index < _metadata.size());
     auto& metadata = _metadata[index];
     if (metadata.loaded)
         return { this, index };
 
+    assert(metadata.index < _models.size());
     auto& modelMetadata = _models[metadata.index];
 
     fastgltf::Parser parser;
@@ -382,11 +384,6 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
 
     // load images
     std::vector<backend::vulkan::ImageHandle> images;
-//    for (auto& modelImage : asset->images) {
-//        if (const auto* filePath = std::get_if<fastgltf::sources::URI>(&modelImage.data); filePath) {
-//            images.push_back(*loadImage(modelImage.name.c_str(), path.parent_path() / filePath->uri.path()));
-//        }
-//    }
 
     // load materials
     std::vector<MaterialInstance> materials;
@@ -400,7 +397,6 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             if (const auto* filePath = std::get_if<fastgltf::sources::URI>(&image.data); filePath) {
                 images.push_back(loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), backend::Format::RGBA8_SRGB));
             }
-//            auto imageHandle = images[imageIndex];
             if (!materialInstance.setParameter("albedoIndex", images.back().index()))
                 _engine->logger().warn("tried to load \"albedoIndex\" but supplied material does not have appropriate parameter");
         } else
@@ -414,7 +410,6 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             if (const auto* filePath = std::get_if<fastgltf::sources::URI>(&image.data); filePath) {
                 images.push_back(loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), backend::Format::RGBA8_UNORM));
             }
-//            auto imageHandle = images[imageIndex];
             if (!materialInstance.setParameter("normalIndex", images.back().index()))
                 _engine->logger().warn("tried to load \"normalIndex\" but supplied material does not have appropriate parameter");
         } else
@@ -428,7 +423,6 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             if (const auto* filePath = std::get_if<fastgltf::sources::URI>(&image.data); filePath) {
                 images.push_back(loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), backend::Format::RGBA8_UNORM));
             }
-//            auto imageHandle = images[imageIndex];
             if (!materialInstance.setParameter("metallicRoughnessIndex", images.back().index()))
                 _engine->logger().warn("tried to load \"metallicRoughnessIndex\" but supplied material does not have appropriate parameter");
         } else
@@ -556,13 +550,12 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
     model._binding = binding;
     model._attributes = attributes;
 
-
     modelMetadata.hash = hash;
     modelMetadata.name = name;
     modelMetadata.path = path;
     modelMetadata.model = std::move(model);
 
-    metadata.loaded = true;
+    _metadata[index].loaded = true;
 
     return { this, index };
 }

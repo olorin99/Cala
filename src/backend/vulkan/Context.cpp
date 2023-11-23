@@ -296,8 +296,8 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     createInfo.enabledLayerCount = 0;
     createInfo.ppEnabledLayerNames = nullptr;
 #ifndef NDEBUG
-    createInfo.enabledLayerCount = 1;
-    createInfo.ppEnabledLayerNames = validationLayers;
+//    createInfo.enabledLayerCount = 1;
+//    createInfo.ppEnabledLayerNames = validationLayers;
 #endif
 
     VkPhysicalDeviceVulkan11Features vulkan11Features{};

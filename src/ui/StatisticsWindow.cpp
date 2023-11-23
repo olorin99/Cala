@@ -3,7 +3,8 @@
 
 cala::ui::StatisticsWindow::StatisticsWindow(Engine *engine, Renderer *renderer)
     : _engine(engine),
-    _renderer(renderer)
+    _renderer(renderer),
+    _detailedMemoryStats(false)
 {}
 
 void cala::ui::StatisticsWindow::render() {
@@ -24,13 +25,39 @@ void cala::ui::StatisticsWindow::render() {
         ImGui::Text("Fragment Shader Invocations: %lu", pipelineStats.fragmentShaderInvocations);
 
         ImGui::Text("Memory Usage: ");
-        VmaBudget budgets[10]{};
-        vmaGetHeapBudgets(_engine->device().context().allocator(), budgets);
-        for (auto & budget : budgets) {
-            if (budget.usage == 0)
-                break;
-            ImGui::Text("\tUsed: %lu mb", budget.usage / 1000000);
-            ImGui::Text("\tAvailable: %lu mb", budget.budget / 1000000);
+        ImGui::Checkbox("Detailed Memory Statistics", &_detailedMemoryStats);
+        if (_detailedMemoryStats) {
+            VmaTotalStatistics statistics{};
+            vmaCalculateStatistics(_engine->device().context().allocator(), &statistics);
+            for (auto& stats : statistics.memoryHeap) {
+                if (stats.unusedRangeSizeMax == 0 && stats.allocationSizeMax == 0)
+                    break;
+                ImGui::Separator();
+                ImGui::Text("\tAllocations: %u", stats.statistics.allocationCount);
+                ImGui::Text("\tAllocations size: %lu", stats.statistics.allocationBytes / 1000000);
+                ImGui::Text("\tAllocated blocks: %u", stats.statistics.blockCount);
+                ImGui::Text("\tBlock size: %lu mb", stats.statistics.blockBytes / 1000000);
+
+                ImGui::Text("\tLargest allocation: %lu mb", stats.allocationSizeMax / 1000000);
+                ImGui::Text("\tSmallest allocation: %lu b", stats.allocationSizeMin);
+                ImGui::Text("\tUnused range count: %u", stats.unusedRangeCount);
+                ImGui::Text("\tUnused range max: %lu mb", stats.unusedRangeSizeMax / 1000000);
+                ImGui::Text("\tUnused range min: %lu b", stats.unusedRangeSizeMin);
+            }
+        } else {
+            VmaBudget budgets[10]{};
+            vmaGetHeapBudgets(_engine->device().context().allocator(), budgets);
+            for (auto & budget : budgets) {
+                if (budget.usage == 0)
+                    break;
+                ImGui::Separator();
+                ImGui::Text("\tUsed: %lu mb", budget.usage / 1000000);
+                ImGui::Text("\tAvailable: %lu mb", budget.budget / 1000000);
+                ImGui::Text("\tAllocations: %u", budget.statistics.allocationCount);
+                ImGui::Text("\tAllocations size: %lu mb", budget.statistics.allocationBytes / 1000000);
+                ImGui::Text("\tAllocated blocks: %u", budget.statistics.blockCount);
+                ImGui::Text("\tBlock size: %lu mb", budget.statistics.blockBytes / 1000000);
+            }
         }
 
         auto engineStats = _engine->device().stats();
