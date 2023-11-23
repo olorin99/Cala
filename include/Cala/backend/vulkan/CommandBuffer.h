@@ -96,7 +96,7 @@ namespace cala::backend::vulkan {
         void bindBuffer(u32 set, u32 binding, BufferHandle buffer, u32 offset, u32 range, bool storage = false);
         void bindBuffer(u32 set, u32 binding, BufferHandle buffer, bool storage = false);
 
-        void bindImage(u32 set, u32 binding, Image::View& image, Sampler& sampler, bool storage = false);
+        void bindImage(u32 set, u32 binding, Image::View& image, SamplerHandle sampler = {});
 
         void pushConstants(ShaderStage stage, std::span<const u8> data, u32 offset = 0);
 

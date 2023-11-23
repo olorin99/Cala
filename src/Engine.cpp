@@ -152,6 +152,15 @@ cala::Engine::Engine(backend::Platform &platform)
                 { "shaders/debug/debug_depth.frag", backend::ShaderStage::FRAGMENT }
         });
     }
+    _bloomDownsampleProgram = loadProgram("bloomDownsampleProgram", {
+        { "shaders/bloom_downsample.comp", backend::ShaderStage::COMPUTE }
+    });
+    _bloomUpsampleProgram = loadProgram("bloomUpsampleProgram", {
+        { "shaders/bloom_upsample.comp", backend::ShaderStage::COMPUTE }
+    });
+    _bloomCompositeProgram = loadProgram("bloomCompositeProgram", {
+        { "shaders/bloom_composite.comp", backend::ShaderStage::COMPUTE }
+    });
     {
 //        _voxelVisualisationProgram = loadProgram({
 ////            { "shaders/fullscreen.vert", backend::ShaderModule::VERTEX },
@@ -169,7 +178,7 @@ cala::Engine::Engine(backend::Platform &platform)
         cmd->pipelineBarrier({ &brdfBarrier, 1 });
 
         cmd->bindProgram(_brdfProgram);
-        cmd->bindImage(1, 0, _device.getImageView(_brdfImage), _device.defaultSampler(), true);
+        cmd->bindImage(1, 0, _device.getImageView(_brdfImage));
         cmd->bindPipeline();
         cmd->bindDescriptors();
         cmd->dispatchCompute(512 / 32, 512 / 32, 1);
@@ -255,8 +264,8 @@ cala::backend::vulkan::ImageHandle cala::Engine::convertToCubeMap(backend::vulka
 
 
         cmd->bindProgram(_equirectangularToCubeMap);
-        cmd->bindImage(1, 0, equirectangularView, *_lodSampler);
-        cmd->bindImage(1, 1, cubeView, _device.defaultSampler(), true);
+        cmd->bindImage(1, 0, equirectangularView, _lodSampler);
+        cmd->bindImage(1, 1, cubeView);
 
         cmd->bindPipeline();
         cmd->bindDescriptors();
@@ -289,8 +298,8 @@ cala::backend::vulkan::ImageHandle cala::Engine::generateIrradianceMap(backend::
         cmd->pipelineBarrier({ &cubeBarrier, 1 });
 
         cmd->bindProgram(_irradianceProgram);
-        cmd->bindImage(1, 0, _device.getImageView(cubeMap), *_lodSampler, true);
-        cmd->bindImage(1, 1, _device.getImageView(irradianceMap), _device.defaultSampler(), true);
+        cmd->bindImage(1, 0, _device.getImageView(cubeMap));
+        cmd->bindImage(1, 1, _device.getImageView(irradianceMap));
         cmd->bindPipeline();
         cmd->bindDescriptors();
         cmd->dispatchCompute(irradianceMap->width() / 32, irradianceMap->height() / 32, 6);
@@ -332,8 +341,8 @@ cala::backend::vulkan::ImageHandle cala::Engine::generatePrefilteredIrradiance(b
 
         for (u32 mip = 0; mip < prefilteredMap->mips(); mip++) {
             cmd->bindProgram(_prefilterProgram);
-            cmd->bindImage(1, 0, _device.getImageView(cubeMap), *_lodSampler);
-            cmd->bindImage(1, 1, mipViews[mip], _device.defaultSampler(), true);
+            cmd->bindImage(1, 0, _device.getImageView(cubeMap), _lodSampler);
+            cmd->bindImage(1, 1, mipViews[mip]);
             f32 roughness = (f32)mip / (f32)prefilteredMap->mips();
             cmd->pushConstants(backend::ShaderStage::COMPUTE, roughness);
             cmd->bindPipeline();
@@ -870,6 +879,12 @@ const cala::backend::vulkan::ShaderProgram& cala::Engine::getProgram(cala::Engin
             return _directShadowProgram;
         case ProgramType::TONEMAP:
             return _tonemapProgram;
+        case ProgramType::BLOOM_DOWNSAMPLE:
+            return _bloomDownsampleProgram;
+        case ProgramType::BLOOM_UPSAMPLE:
+            return _bloomUpsampleProgram;
+        case ProgramType::BLOOM_COMPOSITE:
+            return _bloomCompositeProgram;
         case ProgramType::CULL:
             return _cullProgram;
         case ProgramType::CULL_POINT:

@@ -638,6 +638,231 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         });
     }
 
+    if (_renderSettings.bloom && !fullscreenDebug) {
+        {
+            /*
+                TODO: need better way to handle mip maps and binding them etc
+                might need to allocate ranges of indices in bindless table for
+                mip maps
+            */
+            ImageResource bloomDownsampleImage;
+            bloomDownsampleImage.matchSwapchain = false;
+            bloomDownsampleImage.format = backend::Format::RGBA32_SFLOAT;
+            bloomDownsampleImage.width = _swapchain->extent().width / 2;
+            bloomDownsampleImage.height = _swapchain->extent().height / 2;
+            _graph.addImageResource("bloomDownsample-0", bloomDownsampleImage);
+            bloomDownsampleImage.width = bloomDownsampleImage.width / 2;
+            bloomDownsampleImage.height = bloomDownsampleImage.height / 2;
+            _graph.addImageResource("bloomDownsample-1", bloomDownsampleImage);
+            bloomDownsampleImage.width = bloomDownsampleImage.width / 2;
+            bloomDownsampleImage.height = bloomDownsampleImage.height / 2;
+            _graph.addImageResource("bloomDownsample-2", bloomDownsampleImage);
+            bloomDownsampleImage.width = bloomDownsampleImage.width / 2;
+            bloomDownsampleImage.height = bloomDownsampleImage.height / 2;
+            _graph.addImageResource("bloomDownsample-3", bloomDownsampleImage);
+            bloomDownsampleImage.width = bloomDownsampleImage.width / 2;
+            bloomDownsampleImage.height = bloomDownsampleImage.height / 2;
+            _graph.addImageResource("bloomDownsample-4", bloomDownsampleImage);
+            bloomDownsampleImage.width = bloomDownsampleImage.width / 2;
+            bloomDownsampleImage.height = bloomDownsampleImage.height / 2;
+
+            ImageResource bloomUpsampleImage;
+            bloomUpsampleImage.matchSwapchain = false;
+            bloomUpsampleImage.format = backend::Format::RGBA32_SFLOAT;
+            bloomUpsampleImage.width = _swapchain->extent().width;
+            bloomUpsampleImage.height = _swapchain->extent().height;
+            _graph.addImageResource("bloomUpsample-0", bloomUpsampleImage);
+            bloomUpsampleImage.width = bloomUpsampleImage.width / 2;
+            bloomUpsampleImage.height = bloomUpsampleImage.height / 2;
+            _graph.addImageResource("bloomUpsample-1", bloomUpsampleImage);
+            bloomUpsampleImage.width = bloomUpsampleImage.width / 2;
+            bloomUpsampleImage.height = bloomUpsampleImage.height / 2;
+            _graph.addImageResource("bloomUpsample-2", bloomUpsampleImage);
+            bloomUpsampleImage.width = bloomUpsampleImage.width / 2;
+            bloomUpsampleImage.height = bloomUpsampleImage.height / 2;
+            _graph.addImageResource("bloomUpsample-3", bloomUpsampleImage);
+            bloomUpsampleImage.width = bloomUpsampleImage.width / 2;
+            bloomUpsampleImage.height = bloomUpsampleImage.height / 2;
+            _graph.addImageResource("bloomUpsample-4", bloomUpsampleImage); // downsample-4 -> upsample-4
+
+            ImageResource bloomFinalImage;
+            bloomFinalImage.format = backend::Format::RGBA32_SFLOAT;
+            _graph.addImageResource("bloomFinal", bloomFinalImage);
+        }
+
+
+        {
+            auto &bloomDownsamplePass = _graph.addPass("bloom-downsample", RenderPass::Type::COMPUTE);
+
+            bloomDownsamplePass.addUniformBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
+            bloomDownsamplePass.addSampledImageRead("hdr", backend::PipelineStage::COMPUTE_SHADER);
+            bloomDownsamplePass.addStorageImageWrite("bloomDownsample-0", backend::PipelineStage::COMPUTE_SHADER);
+            bloomDownsamplePass.addStorageImageWrite("bloomDownsample-1", backend::PipelineStage::COMPUTE_SHADER);
+            bloomDownsamplePass.addStorageImageWrite("bloomDownsample-2", backend::PipelineStage::COMPUTE_SHADER);
+            bloomDownsamplePass.addStorageImageWrite("bloomDownsample-3", backend::PipelineStage::COMPUTE_SHADER);
+            bloomDownsamplePass.addStorageImageWrite("bloomDownsample-4", backend::PipelineStage::COMPUTE_SHADER);
+
+            bloomDownsamplePass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph &graph) {
+                auto global = graph.getBuffer("global");
+                auto hdrImage = graph.getImage("hdr");
+                backend::vulkan::ImageHandle downsample[5] = {
+                        graph.getImage("bloomDownsample-0"),
+                        graph.getImage("bloomDownsample-1"),
+                        graph.getImage("bloomDownsample-2"),
+                        graph.getImage("bloomDownsample-3"),
+                        graph.getImage("bloomDownsample-4")
+                };
+
+                cmd->clearDescriptors();
+
+                cmd->bindProgram(_engine->getProgram(Engine::ProgramType::BLOOM_DOWNSAMPLE));
+                cmd->bindBuffer(1, 0, global);
+
+
+                for (i32 mip = 0; mip < 5; mip++) {
+                    backend::vulkan::ImageHandle inputImage;
+                    if (mip == 0)
+                        inputImage = hdrImage;
+                    else
+                        inputImage = downsample[mip - 1];
+                    backend::vulkan::ImageHandle outputImage = downsample[mip];
+
+                    struct Push {
+                        i32 inputIndex;
+                        i32 outputIndex;
+                        i32 bilinearSampler;
+                    } push;
+                    push.inputIndex = inputImage.index();
+                    push.outputIndex = outputImage.index();
+                    push.bilinearSampler = _engine->device().getSampler({
+                        .filter = VK_FILTER_LINEAR,
+                        .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
+                    }).index();
+                    cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
+
+                    cmd->bindPipeline();
+                    cmd->bindDescriptors();
+                    cmd->dispatchCompute(std::ceil(inputImage->width() / 32.f), std::ceil(inputImage->height() / 32.f), 1);
+
+                    if (mip != 4) {
+                        auto outputBarrier = outputImage->barrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::COMPUTE_SHADER, backend::Access::SHADER_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
+                        cmd->pipelineBarrier({ &outputBarrier, 1 });
+                    }
+                }
+
+            });
+        }
+        {
+            auto& bloomUpsamplePass = _graph.addPass("bloom-upsample", RenderPass::Type::COMPUTE);
+
+            bloomUpsamplePass.addUniformBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
+
+            bloomUpsamplePass.addSampledImageRead("bloomDownsample-4", backend::PipelineStage::COMPUTE_SHADER);
+
+            bloomUpsamplePass.addStorageImageWrite("bloomUpsample-0", backend::PipelineStage::COMPUTE_SHADER);
+            bloomUpsamplePass.addStorageImageWrite("bloomUpsample-1", backend::PipelineStage::COMPUTE_SHADER);
+            bloomUpsamplePass.addStorageImageWrite("bloomUpsample-2", backend::PipelineStage::COMPUTE_SHADER);
+            bloomUpsamplePass.addStorageImageWrite("bloomUpsample-3", backend::PipelineStage::COMPUTE_SHADER);
+            bloomUpsamplePass.addStorageImageWrite("bloomUpsample-4", backend::PipelineStage::COMPUTE_SHADER);
+
+            bloomUpsamplePass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+                auto global = graph.getBuffer("global");
+                backend::vulkan::ImageHandle downsample[5] = {
+                        graph.getImage("bloomDownsample-0"),
+                        graph.getImage("bloomDownsample-1"),
+                        graph.getImage("bloomDownsample-2"),
+                        graph.getImage("bloomDownsample-3"),
+                        graph.getImage("bloomDownsample-4")
+                };
+                backend::vulkan::ImageHandle upsample[5] = {
+                        graph.getImage("bloomUpsample-0"),
+                        graph.getImage("bloomUpsample-1"),
+                        graph.getImage("bloomUpsample-2"),
+                        graph.getImage("bloomUpsample-3"),
+                        graph.getImage("bloomUpsample-4")
+                };
+
+                cmd->clearDescriptors();
+
+                cmd->bindProgram(_engine->getProgram(Engine::ProgramType::BLOOM_UPSAMPLE));
+                cmd->bindBuffer(1, 0, global);
+
+                for (i32 mip = 4; mip > -1; mip--) {
+                    backend::vulkan::ImageHandle inputImage;
+                    backend::vulkan::ImageHandle sumImage;
+                    if (mip == 4) {
+                        inputImage = downsample[4];
+                        sumImage = {};
+                    } else {
+                        inputImage = upsample[mip + 1];
+                        sumImage = downsample[mip];
+                    }
+                    backend::vulkan::ImageHandle outputImage = upsample[mip];
+
+                    struct Push {
+                        i32 inputIndex;
+                        i32 sumIndex;
+                        i32 outputIndex;
+                        i32 bilinearSampler;
+                    } push;
+                    push.inputIndex = inputImage.index();
+                    push.sumIndex = sumImage.index();
+                    push.outputIndex = outputImage.index();
+                    push.bilinearSampler = _engine->device().getSampler({
+                        .filter = VK_FILTER_LINEAR,
+                        .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
+                    }).index();
+                    cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
+
+                    cmd->bindPipeline();
+                    cmd->bindDescriptors();
+                    cmd->dispatchCompute(std::ceil(outputImage->width() / 32.f), std::ceil(outputImage->height() / 32.f), 1);
+
+                    if (mip != 0) {
+                        auto outputBarrier = outputImage->barrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::COMPUTE_SHADER, backend::Access::SHADER_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
+                        cmd->pipelineBarrier({ &outputBarrier, 1 });
+                    }
+                }
+
+            });
+        }
+        {
+            auto& bloomCompositePass = _graph.addPass("bloom-composite", RenderPass::Type::COMPUTE);
+
+            bloomCompositePass.addUniformBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
+
+            bloomCompositePass.addStorageImageRead("hdr", backend::PipelineStage::COMPUTE_SHADER);
+            bloomCompositePass.addStorageImageRead("bloomUpsample-0", backend::PipelineStage::COMPUTE_SHADER);
+            bloomCompositePass.addStorageImageWrite("bloomFinal", backend::PipelineStage::COMPUTE_SHADER);
+
+            bloomCompositePass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+                auto global = graph.getBuffer("global");
+                auto upsample = graph.getImage("bloomUpsample-0");
+                auto hdr = graph.getImage("hdr");
+                auto final = graph.getImage("bloomFinal");
+
+                cmd->clearDescriptors();
+
+                cmd->bindProgram(_engine->getProgram(Engine::ProgramType::BLOOM_COMPOSITE));
+                cmd->bindBuffer(1, 0, global);
+
+                struct Push {
+                    i32 upsampleIndex;
+                    i32 hdrIndex;
+                    i32 finalIndex;
+                } push;
+                push.upsampleIndex = upsample.index();
+                push.hdrIndex = hdr.index();
+                push.finalIndex = final.index();
+                cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
+
+                cmd->bindPipeline();
+                cmd->bindDescriptors();
+                cmd->dispatchCompute(std::ceil(final->width() / 32.f), std::ceil(final->height() / 32.f), 1);
+            });
+        }
+    }
+
     if (_renderSettings.tonemap && !fullscreenDebug) {
         auto& tonemapPass = _graph.addPass("tonemap", RenderPass::Type::COMPUTE);
 
@@ -646,20 +871,31 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             tonemapPass.addStorageImageWrite("backbuffer-debug", backend::PipelineStage::COMPUTE_SHADER);
         else
             tonemapPass.addStorageImageWrite("backbuffer", backend::PipelineStage::COMPUTE_SHADER);
-        tonemapPass.addStorageImageRead("hdr", backend::PipelineStage::COMPUTE_SHADER);
+
+        if (_renderSettings.bloom)
+            tonemapPass.addStorageImageRead("bloomFinal", backend::PipelineStage::COMPUTE_SHADER);
+        else
+            tonemapPass.addStorageImageRead("hdr", backend::PipelineStage::COMPUTE_SHADER);
+
+
+        tonemapPass.addStorageImageRead("bloomUpsample-0", backend::PipelineStage::COMPUTE_SHADER);
 
         tonemapPass.setDebugColour({0.1, 0.4, 0.7, 1});
         tonemapPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
             auto global = graph.getBuffer("global");
-            auto hdrImage = graph.getImage("hdr");
+            backend::vulkan::ImageHandle hdrImage;
+            if (_renderSettings.bloom)
+                hdrImage = graph.getImage("bloomFinal");
+            else
+                hdrImage = graph.getImage("hdr");
             auto backbuffer = graph.getImage("backbuffer");
             cmd->clearDescriptors();
             cmd->bindProgram(_engine->getProgram(Engine::ProgramType::TONEMAP));
             cmd->bindBindings({});
             cmd->bindAttributes({});
             cmd->bindBuffer(1, 0, global);
-            cmd->bindImage(2, 0, _engine->device().getImageView(hdrImage), _engine->device().defaultSampler(), true);
-            cmd->bindImage(2, 1, _engine->device().getImageView(backbuffer), _engine->device().defaultSampler(), true);
+            cmd->bindImage(2, 0, _engine->device().getImageView(hdrImage));
+            cmd->bindImage(2, 1, _engine->device().getImageView(backbuffer));
             cmd->bindPipeline();
             cmd->bindDescriptors();
             cmd->dispatchCompute(std::ceil(backbuffer->width() / 32.f), std::ceil(backbuffer->height() / 32.f), 1);
@@ -743,6 +979,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _globalData.gpuCulling = _renderSettings.gpuCulling;
     _globalData.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
     _globalData.swapchainSize = { _swapchain->extent().width, _swapchain->extent().height };
+    _globalData.bloomStrength = _renderSettings.bloomStrength;
 
     if (_renderSettings.ibl) {
         _globalData.irradianceIndex = scene._skyLightIrradiance.index();

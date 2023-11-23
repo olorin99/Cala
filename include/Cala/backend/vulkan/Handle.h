@@ -69,7 +69,7 @@ namespace cala::backend::vulkan {
         T* operator->() const noexcept;
 
         explicit operator bool() const noexcept {
-            return _owner && ((_data && _data->index >= 0) || _index >= 0)  && isValid();
+            return _owner && ((!_data && _index >= 0) || _data->index >= 0) && isValid();
         }
 
         bool operator==(Handle<T, O> rhs) const noexcept {

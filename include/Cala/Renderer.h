@@ -24,6 +24,8 @@ namespace cala {
             bool forward = true;
             bool deferred = true;
             bool tonemap = true;
+            bool bloom = true;
+            f32 bloomStrength = 0.5;
             bool depthPre = false;
             bool skybox = true;
             bool freezeFrustum = false;
@@ -99,6 +101,7 @@ namespace cala {
             u32 maxDrawCount = 0;
             ende::math::Vec<4, u32> tileSizes = { 0, 0, 0, 0 };
             ende::math::Vec<2, u32> swapchainSize = {0, 0};
+            f32 bloomStrength = 0.5;
             i32 irradianceIndex = -1;
             i32 prefilterIndex = -1;
             i32 brdfIndex = -1;

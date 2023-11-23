@@ -42,7 +42,7 @@ void main() {
 
     ivec2 globCoords = ivec2(gl_GlobalInvocationID.xy);
     ivec2 outputSize = imageSize(backbuffer);
-    if (globCoords.x > outputSize.x || globCoords.y > outputSize.y)
+    if (any(greaterThanEqual(globCoords, outputSize)))
         return;
 
     vec2 texCoords = globCoords / outputSize;

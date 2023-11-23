@@ -13,6 +13,7 @@ struct GlobalData {
     uint maxDrawCount;
     uvec4 tileSizes;
     uvec2 swapchainSize;
+    float bloomStrength;
     int irradianceIndex;
     int prefilterIndex;
     int brdfIndex;

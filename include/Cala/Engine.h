@@ -102,6 +102,9 @@ namespace cala {
             SHADOW_POINT,
             SHADOW_DIRECT,
             TONEMAP,
+            BLOOM_DOWNSAMPLE,
+            BLOOM_UPSAMPLE,
+            BLOOM_COMPOSITE,
             CULL,
             CULL_POINT,
             CULL_DIRECT,
@@ -153,6 +156,10 @@ namespace cala {
         backend::vulkan::ShaderProgram _directShadowCullProgram;
         backend::vulkan::ShaderProgram _createClustersProgram;
         backend::vulkan::ShaderProgram _cullLightsProgram;
+
+        backend::vulkan::ShaderProgram _bloomDownsampleProgram;
+        backend::vulkan::ShaderProgram _bloomUpsampleProgram;
+        backend::vulkan::ShaderProgram _bloomCompositeProgram;
 
         backend::vulkan::ShaderProgram _clusterDebugProgram;
         backend::vulkan::ShaderProgram _normalsDebugProgram;

@@ -1,0 +1,56 @@
+
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+#include "global_data.glsl"
+
+layout (set = 0, binding = 0) uniform texture2D sampledImages[];
+layout (set = 0, binding = 2) uniform sampler samplers[];
+layout (set = 0, binding = 3) uniform writeonly image2D storageImages[];
+
+layout (push_constant) uniform PushData {
+    int inputIndex;
+    int sumIndex;
+    int outputIndex;
+    int bilinearSampler;
+};
+
+// based on "Next Generation Post Processing in Call of Duty Advanced Warfare" SIGGRAPH 2014 presentation
+vec3 upsample(texture2D srcTexture, sampler srcSampler, vec2 texCoord) {
+    vec3 a = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(-1, 1)).rgb;
+    vec3 b = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(0, 1)).rgb;
+    vec3 c = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(1, 1)).rgb;
+
+    vec3 d = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(-1, 0)).rgb;
+    vec3 e = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(0, 0)).rgb;
+    vec3 f = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(1, 0)).rgb;
+
+    vec3 g = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(-1, -1)).rgb;
+    vec3 h = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(0, -1)).rgb;
+    vec3 i = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(1, -1)).rgb;
+
+    vec3 result = e * 4.0;
+    result += (b + d + f + h) * 2.0;
+    result += (a + c + g + i);
+    result *= (1.f / 16.f);
+    return result;
+}
+
+void main() {
+    ivec2 globCoords = ivec2(gl_GlobalInvocationID.xy);
+
+    ivec2 inputSize = imageSize(storageImages[inputIndex]);
+    ivec2 outputSize = imageSize(storageImages[outputIndex]);
+
+    if (any(greaterThanEqual(globCoords, outputSize)))
+        return;
+
+    vec2 texCoords = vec2(globCoords) / outputSize;
+
+    vec3 result = upsample(sampledImages[inputIndex], samplers[bilinearSampler], texCoords);
+
+    if (sumIndex >= 0)
+        result += texture(sampler2D(sampledImages[sumIndex], samplers[bilinearSampler]), texCoords).rgb;
+
+    imageStore(storageImages[outputIndex], globCoords, vec4(result, 1.0));
+
+}

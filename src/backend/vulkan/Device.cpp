@@ -13,12 +13,6 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
         },
       _frameCount(0),
       _bindlessIndex(-1),
-      _defaultSampler(*this, {}),
-      _defaultShadowSampler(*this, {
-          .filter = VK_FILTER_NEAREST,
-          .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-          .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
-      }),
       _timelineSemaphore(this, createInfo.useTimeline ? 10 : -1),
       _timelineValue(10),
       _bytesAllocatedPerFrame(0),
@@ -144,6 +138,12 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
     }
 #endif
 
+    _defaultSampler = getSampler({});
+    _defaultShadowSampler = getSampler({
+        .filter = VK_FILTER_NEAREST,
+        .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+        .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
+    });
 }
 
 cala::backend::vulkan::Device::~Device() {

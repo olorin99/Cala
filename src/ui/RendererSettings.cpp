@@ -15,6 +15,10 @@ void cala::ui::RendererSettingsWindow::render() {
         ImGui::Checkbox("Depth Pre Pass", &rendererSettings.depthPre);
         ImGui::Checkbox("Skybox Pass", &rendererSettings.skybox);
         ImGui::Checkbox("Tonemap Pass", &rendererSettings.tonemap);
+        ImGui::Checkbox("Bloom", &rendererSettings.bloom);
+        if (rendererSettings.bloom) {
+            ImGui::SliderFloat("\tBloom Strength", &rendererSettings.bloomStrength, 0, 1);
+        }
         ImGui::Checkbox("Freeze Frustum,", &rendererSettings.freezeFrustum);
         ImGui::Checkbox("IBL,", &rendererSettings.ibl);
         ImGui::Checkbox("GPU Culling", &rendererSettings.gpuCulling);

@@ -113,9 +113,9 @@ namespace cala::backend::vulkan {
 
 
 
-        Sampler& defaultSampler() { return _defaultSampler; }
+        SamplerHandle defaultSampler() { return _defaultSampler; }
 
-        Sampler& defaultShadowSampler() { return _defaultShadowSampler; }
+        SamplerHandle defaultShadowSampler() { return _defaultShadowSampler; }
 
 
         VkDescriptorSetLayout getSetLayout(std::span<VkDescriptorSetLayoutBinding> bindings);
@@ -287,8 +287,8 @@ namespace cala::backend::vulkan {
         ResourceList<Image, ImageHandle> _imageList;
         std::vector<Image::View> _imageViews;
 
-        Sampler _defaultSampler;
-        Sampler _defaultShadowSampler;
+        SamplerHandle _defaultSampler;
+        SamplerHandle _defaultShadowSampler;
 
         ResourceList<ShaderModule, ShaderModuleHandle> _shaderModulesList;
 

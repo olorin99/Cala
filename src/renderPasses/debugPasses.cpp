@@ -458,7 +458,7 @@ void debugVxgi(cala::RenderGraph& graph, cala::Engine& engine) {
         cmd->bindBindings({});
         cmd->bindAttributes({});
         cmd->bindBuffer(1, 0, global);
-        cmd->bindImage(2, 0, engine.device().getImageView(backbuffer), engine.device().defaultSampler(), true);
+        cmd->bindImage(2, 0, engine.device().getImageView(backbuffer));
         cmd->bindPipeline();
         cmd->bindDescriptors();
         cmd->dispatchCompute(std::ceil(backbuffer->width() / 32.f), std::ceil(backbuffer->height() / 32.f), 1);

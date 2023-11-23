@@ -295,9 +295,10 @@ void cala::backend::vulkan::CommandBuffer::bindBuffer(u32 set, u32 binding, Buff
     _descriptorDirty = true;
 }
 
-void cala::backend::vulkan::CommandBuffer::bindImage(u32 set, u32 binding, Image::View& image, Sampler& sampler, bool storage) {
-    _descriptorKey[set].images[binding] = { image.parent(), image.view, sampler.sampler(), storage };
-    _descriptorKey[set].type = storage ? ShaderModuleInterface::BindingType::STORAGE_IMAGE : ShaderModuleInterface::BindingType::SAMPLED_IMAGE;
+void cala::backend::vulkan::CommandBuffer::bindImage(u32 set, u32 binding, Image::View& image, SamplerHandle sampler) {
+    bool isStorage = !sampler;
+    _descriptorKey[set].images[binding] = { image.parent(), image.view, sampler ? sampler->sampler() : VK_NULL_HANDLE, isStorage };
+    _descriptorKey[set].type = isStorage ? ShaderModuleInterface::BindingType::STORAGE_IMAGE : ShaderModuleInterface::BindingType::SAMPLED_IMAGE;
     _descriptorDirty = true;
 }
 

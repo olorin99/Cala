@@ -127,6 +127,8 @@ namespace cala::backend::vulkan {
 
         u32 size() const { return _width * _height * _depth * _layers * _mips * formatToSize(_format); }
 
+        ImageType type() const { return _type; }
+
     private:
 
         friend Device;

@@ -73,9 +73,9 @@ void cala::ui::ResourceViewer::render() {
                 _destroyQueue.push_back({ 5, std::make_pair( _imageSet, std::move(_imageView)) });
             }
             _imageHandle = _device->getImageHandle(_imageIndex);
-            if (_imageHandle) {
+            if (_imageHandle && _imageHandle->type() == backend::ImageType::IMAGE2D) {
                 _imageView = _imageHandle->newView(_mipIndex, 1, _layerIndex, 1, backend::ImageViewType::VIEW2D);
-                _imageSet = ImGui_ImplVulkan_AddTexture(_device->defaultSampler().sampler(), _imageView.view, backend::vulkan::getImageLayout(_imageHandle->layout()));
+                _imageSet = ImGui_ImplVulkan_AddTexture(_device->defaultSampler()->sampler(), _imageView.view, backend::vulkan::getImageLayout(_imageHandle->layout()));
             }
             _imageDirty = false;
         }
