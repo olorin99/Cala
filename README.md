@@ -52,10 +52,13 @@ Use PROFILE_NAMED() macro to enable profilig of a function. GPU timers are autom
 ##### system library
 - SDL2 - windowing system
 - assimp
-- shaderc - glsl compilation
 
 ##### git submodules
 - spirv-cross - spirv reflection
+- spirv-headers
+- spirv-tools
+- glslang
+- shaderc - glsl compilation
 - Ende - some common functionality
 - fastgltf - gltf loader
 - imgui - gui

@@ -2,8 +2,33 @@ add_library(stb_image STATIC stb_image.cpp stb_image.h)
 
 add_subdirectory(Ende)
 add_subdirectory(fastgltf)
-add_subdirectory(SPIRV-Cross)
 add_subdirectory(volk)
+
+set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
+add_subdirectory(SPIRV-Headers)
+
+set(SPIRV_WARN_EVERYTHING OFF CACHE BOOL "" FORCE)
+set(SPIRV_SKIP_TESTS ON CACHE BOOL "" FORCE)
+set(SKIP_SPIRV_TOOLS_INSTALL ON CACHE BOOL "" FORCE)
+add_subdirectory(SPIRV-Tools)
+
+set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "" FORCE)
+set(ENABLE_GLSLANG_JS OFF CACHE BOOL "" FORCE)
+add_subdirectory(glslang)
+
+set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON CACHE BOOL "" FORCE)
+set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
+set(SPIRV_CROSS_STATIC ON CACHE BOOL "" FORCE)
+add_subdirectory(SPIRV-Cross)
+
+set(SHADERC_SKIP_TESTS ON CACHE BOOL "" FORCE)
+set(SHADERC_SKIP_EXAMPLES ON CACHE BOOL "" FORCE)
+add_subdirectory(shaderc)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(shaderc PUBLIC -Wno-everything -std=c++20)
+    target_compile_options(shaderc_util PUBLIC -Wno-everything -std=c++20)
+endif()
+
 
 set(IMGUI_PATH "imgui")
 #file(GLOB IMGUI_SOURCES ${IMGUI_PATH}/*.cpp)
