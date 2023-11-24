@@ -94,8 +94,8 @@ void cala::ui::ResourceViewer::render() {
             ImGui::Text("Image has been deallocated");
         }
 
-        ImGui::End();
     }
+    ImGui::End();
 
 
 }

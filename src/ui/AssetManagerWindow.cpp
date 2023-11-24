@@ -60,7 +60,7 @@ void cala::ui::AssetManagerWindow::render() {
             ImGui::TreePop();
         }
 
-        ImGui::End();
     }
+    ImGui::End();
 
 }

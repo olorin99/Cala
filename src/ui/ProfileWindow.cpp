@@ -184,8 +184,8 @@ void cala::ui::ProfileWindow::render() {
             ImGui::Text("GPU Avg: %f, StdDev: %f, MaxDev: %f, MinDev: %f", _gpuAvg, gpuStdDev, gpuMaxDev, gpuMinDev);
         }
 
-        ImGui::End();
     }
+    ImGui::End();
 
 
     _frameOffset = (_frameOffset + 1) % MAX_FRAME_COUNT;

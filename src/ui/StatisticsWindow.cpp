@@ -80,6 +80,6 @@ void cala::ui::StatisticsWindow::render() {
         ImGui::Text("Bytes Allocated: %d mb", engineStats.totalAllocated / 1000000);
         ImGui::Text("Bytes Deallocated: %d mb", engineStats.totalDeallocated / 1000000);
 
-        ImGui::End();
     }
+    ImGui::End();
 }

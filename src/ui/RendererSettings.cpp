@@ -15,9 +15,12 @@ void cala::ui::RendererSettingsWindow::render() {
         ImGui::Checkbox("Depth Pre Pass", &rendererSettings.depthPre);
         ImGui::Checkbox("Skybox Pass", &rendererSettings.skybox);
         ImGui::Checkbox("Tonemap Pass", &rendererSettings.tonemap);
-        ImGui::Checkbox("Bloom", &rendererSettings.bloom);
-        if (rendererSettings.bloom) {
-            ImGui::SliderFloat("\tBloom Strength", &rendererSettings.bloomStrength, 0, 1);
+        if (ImGui::TreeNode("BloomSettings")) {
+            ImGui::Checkbox("Bloom", &rendererSettings.bloom);
+            if (rendererSettings.bloom) {
+                ImGui::SliderFloat("\tBloom Strength", &rendererSettings.bloomStrength, 0, 1);
+            }
+            ImGui::TreePop();
         }
         ImGui::Checkbox("Freeze Frustum,", &rendererSettings.freezeFrustum);
         ImGui::Checkbox("IBL,", &rendererSettings.ibl);
@@ -44,37 +47,40 @@ void cala::ui::RendererSettingsWindow::render() {
             }
         }
 
-        ImGui::Text("Debug Settings");
-        ImGui::Checkbox("\tDebug Clusters", &rendererSettings.debugClusters);
-        ImGui::Checkbox("\tNormals", &rendererSettings.debugNormals);
+        if (ImGui::TreeNode("Debug Settings")) {
+            ImGui::Checkbox("\tDebug Clusters", &rendererSettings.debugClusters);
+            ImGui::Checkbox("\tNormals", &rendererSettings.debugNormals);
 //        rendererSettings.forward = false;
-        ImGui::Checkbox("\tRoughness", &rendererSettings.debugRoughness);
-        ImGui::Checkbox("\tMetallic", &rendererSettings.debugMetallic);
-        ImGui::Checkbox("\tWorldPos", &rendererSettings.debugWorldPos);
-        ImGui::Checkbox("\tUnlit", &rendererSettings.debugUnlit);
-        ImGui::Checkbox("\tWireframe", &rendererSettings.debugWireframe);
-        if (rendererSettings.debugWireframe) {
-            ImGui::SliderFloat("\tWireframe Thickness", &rendererSettings.wireframeThickness, 1, 20);
-            auto colour = rendererSettings.wireframeColour;
-            ImGui::ColorEdit3("\tWireframe Colour", &colour[0]);
-            ImGui::Text("Colour: { %f, %f, %fm %f }", colour[0], colour[1], colour[2], colour[3]);
-            rendererSettings.wireframeColour = colour;
-        }
-        ImGui::Checkbox("\tNormal Lines", &rendererSettings.debugNormalLines);
-        if (rendererSettings.debugNormalLines) {
-            ImGui::SliderFloat("\tNormal Length", &rendererSettings.normalLength, 0.01, 1);
-            auto colour = rendererSettings.wireframeColour;
-            ImGui::ColorEdit3("\tWireframe Colour", &colour[0]);
-            ImGui::Text("Colour: { %f, %f, %fm %f }", colour[0], colour[1], colour[2], colour[3]);
-            rendererSettings.wireframeColour = colour;
-        }
-        ImGui::Checkbox("\tFrustum", &rendererSettings.debugFrustum);
-        ImGui::Checkbox("\tDepth", &rendererSettings.debugDepth);
+            ImGui::Checkbox("\tRoughness", &rendererSettings.debugRoughness);
+            ImGui::Checkbox("\tMetallic", &rendererSettings.debugMetallic);
+            ImGui::Checkbox("\tWorldPos", &rendererSettings.debugWorldPos);
+            ImGui::Checkbox("\tUnlit", &rendererSettings.debugUnlit);
+            ImGui::Checkbox("\tWireframe", &rendererSettings.debugWireframe);
+            if (rendererSettings.debugWireframe) {
+                ImGui::SliderFloat("\tWireframe Thickness", &rendererSettings.wireframeThickness, 1, 20);
+                auto colour = rendererSettings.wireframeColour;
+                ImGui::ColorEdit3("\tWireframe Colour", &colour[0]);
+                ImGui::Text("Colour: { %f, %f, %fm %f }", colour[0], colour[1], colour[2], colour[3]);
+                rendererSettings.wireframeColour = colour;
+            }
+            ImGui::Checkbox("\tNormal Lines", &rendererSettings.debugNormalLines);
+            if (rendererSettings.debugNormalLines) {
+                ImGui::SliderFloat("\tNormal Length", &rendererSettings.normalLength, 0.01, 1);
+                auto colour = rendererSettings.wireframeColour;
+                ImGui::ColorEdit3("\tWireframe Colour", &colour[0]);
+                ImGui::Text("Colour: { %f, %f, %fm %f }", colour[0], colour[1], colour[2], colour[3]);
+                rendererSettings.wireframeColour = colour;
+            }
+            ImGui::Checkbox("\tFrustum", &rendererSettings.debugFrustum);
+            ImGui::Checkbox("\tDepth", &rendererSettings.debugDepth);
 
-        f32 gamma = _renderer->getGamma();
-        if (ImGui::SliderFloat("Gamma", &gamma, 0, 5))
-            _renderer->setGamma(gamma);
+            f32 gamma = _renderer->getGamma();
+            if (ImGui::SliderFloat("Gamma", &gamma, 0, 5))
+                _renderer->setGamma(gamma);
 
-        ImGui::End();
+            ImGui::TreePop();
+        }
+
     }
+    ImGui::End();
 }

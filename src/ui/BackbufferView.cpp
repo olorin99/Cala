@@ -53,6 +53,6 @@ void cala::ui::BackbufferView::render() {
             ImGui::Image(_imageSet, { availSize.x, availSize.y }, { u0, v0 }, { u1, v1 });
         }
 
-        ImGui::End();
     }
+    ImGui::End();
 }
