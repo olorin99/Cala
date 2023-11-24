@@ -17,9 +17,9 @@ void cala::ui::RendererSettingsWindow::render() {
         if (ImGui::TreeNode("Tonemapping Settings")) {
             ImGui::Checkbox("Tonemap Pass", &rendererSettings.tonemap);
 
-            const char* modes[] = { "AGX", "ACES", "REINHARD", "REINHARD2" };
+            const char* modes[] = { "AGX", "ACES", "REINHARD", "REINHARD2", "LOTTES", "UCHIMURA" };
             static int modeIndex = 0;
-            if (ImGui::Combo("Tonemap Operator", &modeIndex, modes, 4)) {
+            if (ImGui::Combo("Tonemap Operator", &modeIndex, modes, 6)) {
                 _engine->device().wait();
                 rendererSettings.tonemapType = modeIndex;
             }

@@ -43,7 +43,7 @@ vec3 getAmbient(int irradianceIndex, int prefilterIndex, int brdfIndex, vec3 nor
     vec3 F = fresnelSchlickRoughness(max(dot(normal, V), 0.0), F0, roughness);
     vec3 kD = vec3(1.0) - F;
     kD *= 1.0 - metallic;
-    vec3 diffuse = vec3(0.01) * albedo;
+    vec3 diffuse = vec3(0.0001) * albedo;
     vec3 specular = vec3(0.0);
     if (irradianceIndex >= 0) {
         vec3 irradiance = texture(samplerCube(cubeMaps[irradianceIndex] , samplers[globalData.linearRepeatSampler]), normal).rgb;
