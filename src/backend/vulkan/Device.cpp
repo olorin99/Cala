@@ -14,13 +14,13 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
       _frameCount(0),
       _bindlessIndex(-1),
       _timelineSemaphore(this, createInfo.useTimeline ? 10 : -1),
-      _timelineValue(10),
+      _immediateSemaphore(this, createInfo.useTimeline ? 1 : -1),
       _bytesAllocatedPerFrame(0),
       _bytesUploadedToGPUPerFrame(0)
 {
     if (createInfo.useTimeline) {
         for (auto& value : _frameValues)
-            value = _timelineValue;
+            value = 10;
     } else {
         for (auto& fence : _frameFences) {
             VkFenceCreateInfo fenceCreateInfo{};
@@ -296,23 +296,36 @@ cala::backend::vulkan::CommandHandle cala::backend::vulkan::Device::beginSingleT
 }
 
 void cala::backend::vulkan::Device::endSingleTimeCommands(CommandHandle buffer) {
-    VkFence fence; //TODO: dont create/destroy fence each time
-    VkFenceCreateInfo fenceCreateInfo{};
-    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceCreateInfo.pNext = nullptr;
-    VK_TRY(vkCreateFence(context().device(), &fenceCreateInfo, nullptr, &fence));
-    if (!buffer->submit({}, {}, fence)) {
-        _logger.error("Error submitting command buffer");
-        printMarkers();
-        throw std::runtime_error("Error submitting immediate command buffer");
-    }
+    if (_immediateSemaphore.isTimeline()) {
+        u64 waitValue = _immediateSemaphore.value();
+        u64 signalValue = _immediateSemaphore.increment();
+        std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 1> wait({ { &_immediateSemaphore, waitValue } });
+        std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 1> signal({ { &_immediateSemaphore, signalValue } });
+        if (!buffer->submit(wait, signal)) {
+            _logger.error("Error submitting command buffer");
+            printMarkers();
+            throw std::runtime_error("Error submitting immediate command buffer");
+        }
+        _immediateSemaphore.wait(signalValue);
+    } else {
+        VkFence fence; //TODO: dont create/destroy fence each time
+        VkFenceCreateInfo fenceCreateInfo{};
+        fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceCreateInfo.pNext = nullptr;
+        VK_TRY(vkCreateFence(context().device(), &fenceCreateInfo, nullptr, &fence));
+        if (!buffer->submit({}, {}, fence)) {
+            _logger.error("Error submitting command buffer");
+            printMarkers();
+            throw std::runtime_error("Error submitting immediate command buffer");
+        }
 
-    auto res = vkWaitForFences(context().device(), 1, &fence, true, 1000000000) == VK_SUCCESS;
-    if (res)
-        vkResetFences(context().device(), 1, &fence);
-    else
-        _logger.error("Failed waiting for immediate fence");
-    vkDestroyFence(context().device(), fence, nullptr);
+        auto res = vkWaitForFences(context().device(), 1, &fence, true, 1000000000) == VK_SUCCESS;
+        if (res)
+            vkResetFences(context().device(), 1, &fence);
+        else
+            _logger.error("Failed waiting for immediate fence");
+        vkDestroyFence(context().device(), fence, nullptr);
+    }
 }
 
 cala::backend::vulkan::CommandHandle cala::backend::vulkan::Device::getCommandBuffer(u32 frame, QueueType queueType) {

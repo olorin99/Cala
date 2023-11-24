@@ -194,7 +194,7 @@ namespace cala::backend::vulkan {
         Context _context;
         CommandPool _commandPools[FRAMES_IN_FLIGHT][3]; // 0 = graphics, 1 = compute, 2 = transfer
         Semaphore _timelineSemaphore;
-        u64 _timelineValue;
+        Semaphore _immediateSemaphore;
         u64 _frameValues[FRAMES_IN_FLIGHT];
         VkFence _frameFences[FRAMES_IN_FLIGHT];
         u64 _frameCount;
