@@ -44,7 +44,7 @@ void main() {
     if (any(greaterThanEqual(globCoords, outputSize)))
         return;
 
-    vec2 texCoords = vec2(globCoords) / outputSize;
+    vec2 texCoords = (vec2(globCoords) + 0.5) / outputSize;
 
     vec3 result = upsample(sampledImages[inputIndex], samplers[bilinearSampler], texCoords);
 

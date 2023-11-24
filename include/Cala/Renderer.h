@@ -25,14 +25,14 @@ namespace cala {
             bool deferred = true;
             bool tonemap = true;
             bool bloom = true;
-            f32 bloomStrength = 0.5;
+            f32 bloomStrength = 0.3;
             bool depthPre = false;
             bool skybox = true;
             bool freezeFrustum = false;
             bool ibl = false;
             bool gpuCulling = true;
             bool boundedFrameTime = false;
-            f32 millisecondTarget = 1000.f / 240.f;
+            f32 millisecondTarget = 1000.f / 60.f;
 
             bool debugUnlit = false;
             bool debugClusters = false;

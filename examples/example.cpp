@@ -141,7 +141,7 @@ int main() {
     Transform lightTransform({0, 1, 0}, {0, 0, 0, 1}, {0.1, 0.1, 0.1});
     Light light(cala::Light::POINT, true, lightTransform);
     light.setColour({1, 1, 1});
-    light.setIntensity(20);
+    light.setIntensity(10);
     Transform light1Transform({10, 2, 4});
     Light light1(cala::Light::POINT, false, light1Transform);
     light1.setColour({0, 1, 0});

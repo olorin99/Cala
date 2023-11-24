@@ -731,6 +731,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         i32 inputIndex;
                         i32 outputIndex;
                         i32 bilinearSampler;
+                        i32 mipLevel;
                     } push;
                     push.inputIndex = inputImage.index();
                     push.outputIndex = outputImage.index();
@@ -738,6 +739,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         .filter = VK_FILTER_LINEAR,
                         .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
                     }).index();
+                    push.mipLevel = mip;
                     cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
 
                     cmd->bindPipeline();
