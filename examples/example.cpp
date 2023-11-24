@@ -117,7 +117,7 @@ int main() {
 //    Mesh sphere = cala::shapes::sphereNormalized(1).mesh(&engine);
     Mesh sphere = loadModel("../../res/models/sphere.obj").mesh(&engine);
 
-    auto sponzaAsset = engine.assetManager()->loadModel("sponza", "../../res/models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf", material1);
+    auto sponzaAsset = engine.assetManager()->loadModel("sponza", "models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf", material1);
 
 //    auto sponza = loadGLTF(&engine, material1, "../../res/models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf");
 //    auto damagedHelmet = loadGLTF(&engine, &material, "../../res/models/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf");
@@ -160,10 +160,8 @@ int main() {
 //    u32 l2 = scene.addLight(light2);
 //    u32 l3 = scene.addLight(light3);
 
-    auto background = engine.assetManager()->loadImage("background", "../../res/textures/TropicalRuins_3k.hdr", backend::Format::RGBA32_SFLOAT);
-//    ImageHandle background = loadImageHDR(engine, "../../res/textures/TropicalRuins_3k.hdr");
-//    ImageHandle background = loadImageHDR(engine, "../../res/textures/brown_photostudio_02_4k.hdr");
-//    ImageHandle background = loadImageHDR(engine, "../../res/textures/dresden_station_night_4k.hdr");
+    auto background = engine.assetManager()->loadImage("background", "textures/TropicalRuins_3k.hdr", backend::Format::RGBA32_SFLOAT);
+//    auto background = engine.assetManager()->loadImage("background", "textures/Tropical_Beach_3k.hdr", backend::Format::RGBA32_SFLOAT);
     scene.addSkyLightMap(background, true);
 
     scene.addRenderable(*sponzaAsset, &sponzaTransform, true);

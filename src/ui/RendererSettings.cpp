@@ -14,11 +14,22 @@ void cala::ui::RendererSettingsWindow::render() {
         ImGui::Checkbox("Forward Pass", &rendererSettings.forward);
         ImGui::Checkbox("Depth Pre Pass", &rendererSettings.depthPre);
         ImGui::Checkbox("Skybox Pass", &rendererSettings.skybox);
-        ImGui::Checkbox("Tonemap Pass", &rendererSettings.tonemap);
-        if (ImGui::TreeNode("BloomSettings")) {
+        if (ImGui::TreeNode("Tonemapping Settings")) {
+            ImGui::Checkbox("Tonemap Pass", &rendererSettings.tonemap);
+
+            const char* modes[] = { "AGX", "ACES", "REINHARD", "REINHARD2" };
+            static int modeIndex = 0;
+            if (ImGui::Combo("Tonemap Operator", &modeIndex, modes, 4)) {
+                _engine->device().wait();
+                rendererSettings.tonemapType = modeIndex;
+            }
+
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("Bloom Settings")) {
             ImGui::Checkbox("Bloom", &rendererSettings.bloom);
             if (rendererSettings.bloom) {
-                ImGui::SliderFloat("\tBloom Strength", &rendererSettings.bloomStrength, 0, 1);
+                ImGui::SliderFloat("Bloom Strength", &rendererSettings.bloomStrength, 0, 1);
             }
             ImGui::TreePop();
         }
@@ -29,7 +40,6 @@ void cala::ui::RendererSettingsWindow::render() {
         ImGui::SliderInt("Target FPS", &_targetFPS, 5, 240);
         rendererSettings.millisecondTarget = 1000.f / _targetFPS;
 
-        backend::PresentMode presentMode = _swapchain->getPresentMode();
         const char* modes[] = { "FIFO", "MAILBOX", "IMMEDIATE" };
         static int modeIndex = 0;
         if (ImGui::Combo("PresentMode", &modeIndex, modes, 3)) {

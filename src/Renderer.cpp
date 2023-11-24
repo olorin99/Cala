@@ -898,6 +898,13 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd->bindBuffer(1, 0, global);
             cmd->bindImage(2, 0, _engine->device().getImageView(hdrImage));
             cmd->bindImage(2, 1, _engine->device().getImageView(backbuffer));
+
+            struct Push {
+                i32 type;
+            } push;
+            push.type = _renderSettings.tonemapType;
+            cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
+
             cmd->bindPipeline();
             cmd->bindDescriptors();
             cmd->dispatchCompute(std::ceil(backbuffer->width() / 32.f), std::ceil(backbuffer->height() / 32.f), 1);

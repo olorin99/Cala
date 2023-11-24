@@ -24,6 +24,7 @@ namespace cala {
             bool forward = true;
             bool deferred = true;
             bool tonemap = true;
+            i32 tonemapType = 0;
             bool bloom = true;
             f32 bloomStrength = 0.3;
             bool depthPre = false;

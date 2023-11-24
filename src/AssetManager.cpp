@@ -274,15 +274,17 @@ cala::backend::vulkan::ImageHandle cala::AssetManager::loadImage(const std::stri
         return imageMetadata.imageHandle;
     }
 
+    auto filePath = _rootAssetPath / path;
+
     i32 width, height, channels;
     u8* data = nullptr;
     u32 length = 0;
     if (backend::formatToSize(format) > 4) {
         stbi_set_flip_vertically_on_load(true);
-        f32* hdrData = stbi_loadf(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+        f32* hdrData = stbi_loadf(filePath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
         data = reinterpret_cast<u8*>(hdrData);
     } else {
-        data = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+        data = stbi_load(filePath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
     }
     if (!data) {
         _engine->logger().warn("unable to load image: {}", path.string());
@@ -367,14 +369,16 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
     assert(metadata.index < _models.size());
     auto& modelMetadata = _models[metadata.index];
 
+    auto filePath = _rootAssetPath / path;
+
     fastgltf::Parser parser;
     fastgltf::GltfDataBuffer data;
-    data.loadFromFile(path);
+    data.loadFromFile(filePath);
 
     auto type = fastgltf::determineGltfFileType(&data);
     auto asset = type == fastgltf::GltfType::GLB ?
-            parser.loadBinaryGLTF(&data, path.parent_path(), fastgltf::Options::None) :
-            parser.loadGLTF(&data, path.parent_path(), fastgltf::Options::LoadGLBBuffers | fastgltf::Options::LoadExternalBuffers);
+            parser.loadBinaryGLTF(&data, filePath.parent_path(), fastgltf::Options::None) :
+            parser.loadGLTF(&data, filePath.parent_path(), fastgltf::Options::LoadGLBBuffers | fastgltf::Options::LoadExternalBuffers);
 
     if (auto error = asset.error(); error != fastgltf::Error::None) {
         _engine->logger().warn("unable to load model: {}", path.string());

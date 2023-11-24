@@ -6,6 +6,10 @@ layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 layout (rgba32f, set = 2, binding = 0) uniform readonly image2D hdrMap;
 layout (set = 2, binding = 1) uniform writeonly image2D backbuffer;
 
+layout (push_constant) uniform PushData {
+    int type;
+};
+
 vec3 uncharted2Tonemap(vec3 x) {
     float A = 0.15;
     float B = 0.50;
@@ -111,19 +115,29 @@ void main() {
 
     vec3 hdr = imageLoad(hdrMap, globCoords).rgb;
 
-//    vec3 result = aces(hdr * globalData.cameraBuffer.camera.exposure);
+    vec3 result = vec3(0.0);
+    switch (type) {
+        case 0:
+            result = agx(hdr * globalData.cameraBuffer.camera.exposure);
+            result = agxLook(result);
+            result = agxEotf(result);
+            break;
+        case 1:
+            result = aces(hdr * globalData.cameraBuffer.camera.exposure);
+            break;
+        case 2:
+            result = reinhard(hdr * globalData.cameraBuffer.camera.exposure);
+            break;
+        case 3:
+            result = reinhard2(hdr * globalData.cameraBuffer.camera.exposure);
+            break;
+    }
 
-    vec3 result = agx(hdr);
-    result = agxLook(result);
-    result = agxEotf(result);
 
 //    vec3 result = vec3(1.0) - exp(-hdr * globalData.cameraBuffer.camera.exposure);
 
 //    vec3 result = uncharted2Tonemap(hdr * globalData.cameraBuffer.camera.exposure);
 //    result = result * (1.0 / uncharted2Tonemap(vec3(11.2f)));
-
-//    vec3 result = reinhard(hdr * globalData.cameraBuffer.camera.exposure);
-//    vec3 result = reinhard2(hdr * globalData.cameraBuffer.camera.exposure);
 
 //    result = pow(result, vec3(1.0 / globalData.gamma)); //TODO: find how to write to srgb storage images
 
