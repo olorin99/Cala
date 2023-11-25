@@ -24,9 +24,15 @@ void cala::ui::LightWindow::render() {
         if (ImGui::DragFloat3("Position", &position[0], 0.1, -10, 10))
             lightRef.setPosition(position);
     } else {
-        ende::math::Quaternion direction = lightRef.transform().rot();
-        if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1))
-            lightRef.setDirection(direction);
+        ende::math::Vec3f eulerAngles = lightRef.transform().rot().unit().toEuler();
+        ende::math::Vec3f angleDegrees = { (f32)ende::math::deg(eulerAngles.x()), (f32)ende::math::deg(eulerAngles.y()), (f32)ende::math::deg(eulerAngles.z()) };
+        if (ImGui::DragFloat3("Direction", &angleDegrees[0], 0.1)) {
+            lightRef.setDirection(ende::math::Quaternion(ende::math::rad(angleDegrees.x()), ende::math::rad(angleDegrees.y()), ende::math::rad(angleDegrees.z())));
+//            lightRef.setDirection(ende::math::Quaternion(eulerAngles.x(), eulerAngles.y(), eulerAngles.z()));
+        }
+//        ende::math::Quaternion direction = lightRef.transform().rot();
+//        if (ImGui::DragFloat4("Direction", &direction[0], 0.01, -1, 1))
+//            lightRef.setDirection(direction);
     }
     if (ImGui::ColorEdit3("Colour", &colour[0]))
         lightRef.setColour(colour);

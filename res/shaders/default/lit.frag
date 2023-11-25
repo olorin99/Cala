@@ -23,7 +23,14 @@ vec4 evalMaterial(Material material) {
     for (uint i = 0; i < grid.count; i++) {
         uint lightIndex = lightIndicesBuffer.lightIndices[grid.offset + i];
         Light light = globalData.lightBuffer.lights[lightIndex];
-        Lo += pointLight(light, material.normal, viewPos, V, F0, material.albedo, material.roughness, material.metallic);
+        switch (light.type) {
+            case 0:
+                Lo += directionalLight(light, material.normal, viewPos, V, F0, material.albedo, material.roughness, material.metallic);
+                break;
+            case 1:
+                Lo += pointLight(light, material.normal, viewPos, V, F0, material.albedo, material.roughness, material.metallic);
+                break;
+        }
     }
 
     vec3 ambient = getAmbient(globalData.irradianceIndex, globalData.prefilterIndex, globalData.brdfIndex, material.normal, V, F0, material.albedo, material.roughness, material.metallic);

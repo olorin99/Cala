@@ -61,7 +61,7 @@ void main() {
         barrier();
 
         for (uint light = 0; light < batchSize; light++) {
-            if (visibleLightCount < maxVisibleLights && intersect(sharedLights[light], clusters[tileIndex])) {
+            if (visibleLightCount < maxVisibleLights && (sharedLights[light].type == 0 || intersect(sharedLights[light], clusters[tileIndex]))) {
                 visibleLightIndices[visibleLightCount] = lightOffset + light;
                 visibleLightCount++;
             }
