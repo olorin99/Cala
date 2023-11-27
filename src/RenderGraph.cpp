@@ -654,7 +654,6 @@ void cala::RenderGraph::buildRenderPasses() {
 
         std::vector<backend::vulkan::RenderPass::Attachment> attachments;
         std::vector<VkImageView> attachmentImages;
-        std::vector<u32> attachmentHashes;
 
         u32 width = pass->_width, height = pass->_height;
 
@@ -685,7 +684,6 @@ void cala::RenderGraph::buildRenderPasses() {
 
             attachments.push_back(attachment);
             attachmentImages.push_back(_engine->device().getImageView(_images[image->index].index()).view);
-            attachmentHashes.push_back(u64(attachmentImages.back()));
         }
 
         if (pass->_depthResource > -1) {
@@ -711,11 +709,10 @@ void cala::RenderGraph::buildRenderPasses() {
 
             attachments.push_back(attachment);
             attachmentImages.push_back(_engine->device().getImageView(_images[depthResource->index].index()).view);
-            attachmentHashes.push_back(_images[depthResource->index].index());
         }
 
         auto renderPass = _engine->device().getRenderPass(attachments);
-        auto framebuffer = _engine->device().getFramebuffer(renderPass, attachmentImages, attachmentHashes, width, height);
+        auto framebuffer = _engine->device().getFramebuffer(renderPass, attachmentImages, width, height);
 
         pass->_framebuffer = framebuffer;
     }

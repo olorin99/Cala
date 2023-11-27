@@ -123,6 +123,8 @@ namespace cala {
 
         const backend::vulkan::ShaderProgram& getProgram(ProgramType type);
 
+        backend::vulkan::ImageHandle getShadowMap(u32 index);
+
     private:
         friend Renderer;
         friend Scene;
@@ -205,8 +207,6 @@ namespace cala {
         std::vector<backend::vulkan::ImageHandle> _shadowMaps;
 
         std::vector<Material> _materials;
-
-        backend::vulkan::ImageHandle getShadowMap(u32 index);
 
         void updateMaterialdata();
 

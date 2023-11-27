@@ -133,11 +133,6 @@ int main() {
     auto matInstance = material->instance();
 
 
-    ende::math::Quaternion r(ende::math::rad(90), 0, 0);
-    auto angles = r.toEuler();
-
-    std::printf("%f %f %f", angles.x(), angles.y(), angles.z());
-
     matInstance.setData(MaterialData{});
 
     ui::LightWindow lightWindow(&scene);
@@ -150,9 +145,9 @@ int main() {
     Light light1(cala::Light::POINT, false, light1Transform);
     light1.setColour({0, 1, 0});
     light1.setIntensity(10);
-    Transform light2Transform({0, 0, 0}, ende::math::Quaternion(0, ende::math::rad(-20), 0));
+    Transform light2Transform({0, 0, 0}, ende::math::Quaternion(ende::math::rad(-61), 0, 0));
     Light light2(cala::Light::DIRECTIONAL, true, light2Transform);
-    light2.setColour({0, 0, 1});
+    light2.setColour({ 255.f / 255.f, 202.f / 255.f, 136.f / 255.f });
     light2.setIntensity(20);
     light2.setShadowing(false);
     Transform light3Transform({-10, 2, 4});

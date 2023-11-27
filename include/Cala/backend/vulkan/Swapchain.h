@@ -28,7 +28,6 @@ namespace cala::backend::vulkan {
             u64 id = 0;
             u32 index = 0;
             SemaphorePair semaphores = {{nullptr}, {nullptr}};
-            Framebuffer* framebuffer = nullptr;
         };
 
         std::expected<Frame, i32> nextImage();
@@ -52,10 +51,6 @@ namespace cala::backend::vulkan {
         u32 size() const { return _images.size(); }
 
         VkImageView view(u32 i) const { return _imageViews[i]; }
-
-        RenderPass& renderPass() const { return *_renderPass; }
-
-        Framebuffer& framebuffer(u32 i) { return *_framebuffers[i]; }
 
         void setPresentMode(PresentMode mode);
 
@@ -83,12 +78,6 @@ namespace cala::backend::vulkan {
         std::vector<VkImageView> _imageViews;
         std::vector<SemaphorePair> _semaphores;
         std::vector<VmaAllocation> _allocations;
-
-        ImageHandle _depthImage;
-        Image::View _depthView;
-
-        RenderPass* _renderPass;
-        std::vector<Framebuffer*> _framebuffers;
 
     };
 

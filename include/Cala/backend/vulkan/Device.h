@@ -136,7 +136,7 @@ namespace cala::backend::vulkan {
 
         RenderPass* getRenderPass(std::span<RenderPass::Attachment> attachments);
 
-        Framebuffer* getFramebuffer(RenderPass* renderPass, std::span<VkImageView> attachments, std::span<u32> attachmentHashes, u32 width, u32 height);
+        Framebuffer* getFramebuffer(RenderPass* renderPass, std::span<VkImageView> attachments, u32 width, u32 height);
 
         void clearFramebuffers();
 

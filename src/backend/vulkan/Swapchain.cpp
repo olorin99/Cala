@@ -62,8 +62,6 @@ cala::backend::vulkan::Swapchain::Swapchain(Device &driver, Platform& platform, 
     : _driver(driver),
     _swapchain(VK_NULL_HANDLE),
     _frame(0),
-    _depthImage({}),
-    _depthView(),
     _mode(PresentMode::MAILBOX)
 {
     _surface = platform.surface(_driver.context().instance());
@@ -78,49 +76,9 @@ cala::backend::vulkan::Swapchain::Swapchain(Device &driver, Platform& platform, 
     if (!createSwapchain()) throw std::runtime_error("Unable to create swapchain");
     if (!createImageViews()) throw std::runtime_error("Unable to create swapchains image views");
     if (!createSemaphores()) throw std::runtime_error("Unable to create swapchains semaphores");
-
-    _depthImage = driver.createImage({
-            _extent.width, _extent.height, 1, driver.context().depthFormat(), 1, 1, backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT | ImageUsage::SAMPLED
-    });
-    _depthView = _depthImage->newView();
-
-    std::array<RenderPass::Attachment, 2> attachments = {
-            RenderPass::Attachment{
-                    format(),
-                    VK_SAMPLE_COUNT_1_BIT,
-                    clear ? LoadOp::CLEAR : LoadOp::LOAD,
-                    StoreOp::STORE,
-                    LoadOp::DONT_CARE,
-                    StoreOp::DONT_CARE,
-                    clear ? ImageLayout::UNDEFINED : ImageLayout::PRESENT,
-                    ImageLayout::PRESENT,
-                    ImageLayout::COLOUR_ATTACHMENT
-            },
-            RenderPass::Attachment{
-                    _driver.context().depthFormat(),
-                    VK_SAMPLE_COUNT_1_BIT,
-                    clear ? LoadOp::CLEAR : LoadOp::DONT_CARE,
-                    StoreOp::STORE,
-                    LoadOp::CLEAR,
-                    StoreOp::DONT_CARE,
-                    ImageLayout::UNDEFINED,
-                    ImageLayout::DEPTH_STENCIL_ATTACHMENT,
-                    ImageLayout::DEPTH_STENCIL_ATTACHMENT
-            }
-    };
-
-    _renderPass = _driver.getRenderPass(attachments);
-
-    for (auto& view : _imageViews) {
-        VkImageView framebufferAttachments[2] = { view, _depthView.view };
-        u32 hashes[2] = { 0, 0 };
-        _framebuffers.emplace_back(_driver.getFramebuffer(_renderPass, framebufferAttachments, hashes, _extent.width, _extent.height));
-    }
 }
 
 cala::backend::vulkan::Swapchain::~Swapchain() {
-//    _driver.destroyImage(_depthImage);
-    _depthImage.release();
 
     for (auto& view : _imageViews)
         vkDestroyImageView(_driver.context().device(), view, nullptr);
@@ -142,13 +100,13 @@ std::expected<cala::backend::vulkan::Swapchain::Frame, i32> cala::backend::vulka
     if (_surface != VK_NULL_HANDLE) {
         VkResult result = vkAcquireNextImageKHR(_driver.context().device(), _swapchain, std::numeric_limits<u64>::max(), semaphorePair.acquire.semaphore(), VK_NULL_HANDLE, &index);
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-            resize(_depthImage->width(), _depthImage->height());
+            resize(_extent.width, _extent.height);
         } else if (result == VK_ERROR_DEVICE_LOST)
             return std::unexpected((i32)VK_ERROR_DEVICE_LOST);
     } else {
         index = (index + 1) % 2;
     }
-    return Frame{ _frame++, index, std::move(semaphorePair), _framebuffers[index] };
+    return Frame{ _frame++, index, std::move(semaphorePair) };
 }
 
 bool cala::backend::vulkan::Swapchain::present(Frame frame) {
@@ -181,7 +139,6 @@ bool cala::backend::vulkan::Swapchain::present(Frame frame) {
 }
 
 bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {
-    _framebuffers.clear();
     for (auto& view : _imageViews)
         vkDestroyImageView(_driver.context().device(), view, nullptr);
 
@@ -189,16 +146,6 @@ bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {
 
     createSwapchain();
     createImageViews();
-
-//    _driver.destroyImage(_depthImage);
-    _depthImage = _driver.createImage({ _extent.width, _extent.height, 1, _driver.context().depthFormat(), 1, 1, ImageUsage::DEPTH_STENCIL_ATTACHMENT | ImageUsage::SAMPLED });
-    _depthView = _depthImage->newView();
-
-    for (auto& view : _imageViews) {
-        VkImageView framebufferAttachments[2] = { view, _depthView.view };
-        u32 hashes[2] = { 0, 0 };
-        _framebuffers.emplace_back(_driver.getFramebuffer(_renderPass, framebufferAttachments, hashes, _extent.width, _extent.height));
-    }
     return true;
 }
 

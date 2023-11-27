@@ -36,7 +36,9 @@ add_library(Cala src/backend/vulkan/Context.cpp include/Cala/backend/vulkan/Cont
         src/ui/AssetManagerWindow.cpp
         include/Cala/ui/AssetManagerWindow.h
         src/backend/vulkan/PipelineLayout.cpp
-        include/Cala/backend/vulkan/PipelineLayout.h)
+        include/Cala/backend/vulkan/PipelineLayout.h
+        src/renderPasses/shadowPasses.cpp
+        src/renderPasses/shadowPasses.h)
 
 target_include_directories(Cala
         PUBLIC

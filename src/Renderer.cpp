@@ -8,6 +8,7 @@
 #include <Ende/thread/thread.h>
 
 #include "renderPasses/debugPasses.h"
+#include "renderPasses/shadowPasses.h"
 #include "Cala/backend/vulkan/primitives.h"
 
 cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings)
@@ -52,8 +53,7 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
             backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT
     };
     auto shadowRenderPass = _engine->device().getRenderPass({&shadowAttachment, 1 });
-    u32 h = _shadowTarget.index();
-    _shadowFramebuffer = _engine->device().getFramebuffer(shadowRenderPass, {&_engine->device().getImageView(_shadowTarget).view, 1 }, {&h, 1 }, 1024, 1024);
+    _shadowFramebuffer = _engine->device().getFramebuffer(shadowRenderPass, {&_engine->device().getImageView(_shadowTarget).view, 1 }, 1024, 1024);
 }
 
 bool cala::Renderer::beginFrame(cala::backend::vulkan::Swapchain* swapchain) {
@@ -373,132 +373,133 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     }
 
 
-    {
-        ImageResource pointDepth;
-        pointDepth.format = backend::Format::RGBA8_UNORM;
-        pointDepth.matchSwapchain = false;
-        pointDepth.width = 10;
-        pointDepth.height = 10;
-        _graph.addImageResource("pointDepth", pointDepth);
-    }
-
-    auto& pointShadows = _graph.addPass("point_shadows", RenderPass::Type::COMPUTE);
-
-    pointShadows.addUniformBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
-    pointShadows.addStorageImageWrite("pointDepth", backend::PipelineStage::FRAGMENT_SHADER);
-    pointShadows.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
-//    pointShadows.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER);
-    pointShadows.addVertexRead("vertexBuffer");
-    pointShadows.addIndexRead("indexBuffer");
-    pointShadows.addIndirectRead("shadowDrawCommands");
-
-    pointShadows.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
-        auto global = graph.getBuffer("global");
-        auto drawCommands = graph.getBuffer("shadowDrawCommands");
-        auto drawCount = graph.getBuffer("drawCount");
-        u32 shadowIndex = 0;
-        for (u32 i = 0; i < scene._lights.size(); i++) {
-            auto& light = scene._lights[i].second;
-            if (light.shadowing() && light.type() == Light::LightType::POINT) {
-                Transform shadowTransform(light.transform().pos());
-                Camera shadowCam(ende::math::rad(90.f), 1024.f, 1024.f, light.getNear(), light.getFar(), shadowTransform);
-                auto shadowMap = _engine->getShadowMap(shadowIndex++);
-
-                for (u32 face = 0; face < 6; face++) {
-                    switch (face) {
-                        case 0:
-                            shadowTransform.rotate({0, 1, 0}, ende::math::rad(90));
-                            break;
-                        case 1:
-                            shadowTransform.rotate({0, 1, 0}, ende::math::rad(180));
-                            break;
-                        case 2:
-                            shadowTransform.rotate({0, 1, 0}, ende::math::rad(90));
-                            shadowTransform.rotate({1, 0, 0}, ende::math::rad(90));
-                            break;
-                        case 3:
-                            shadowTransform.rotate({1, 0, 0}, ende::math::rad(180));
-                            break;
-                        case 4:
-                            shadowTransform.rotate({1, 0, 0}, ende::math::rad(90));
-                            break;
-                        case 5:
-                            shadowTransform.rotate({0, 1, 0}, ende::math::rad(180));
-                            break;
-                    }
-                    shadowCam.updateFrustum();
-                    ende::math::Frustum shadowFrustum = shadowCam.frustum();
-
-                    cmd->clearDescriptors();
-                    cmd->bindProgram(_engine->getProgram(Engine::ProgramType::CULL_POINT));
-                    cmd->bindBindings({});
-                    cmd->bindAttributes({});
-                    cmd->pushConstants(backend::ShaderStage::COMPUTE, shadowFrustum);
-                    cmd->bindBuffer(1, 0, global);
-                    cmd->bindBuffer(2, 0, drawCommands, true);
-                    cmd->bindBuffer(2, 1, drawCount, true);
-                    cmd->bindPipeline();
-                    cmd->bindDescriptors();
-                    cmd->dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
-
-
-                    cmd->begin(*_shadowFramebuffer);
-
-                    cmd->clearDescriptors();
-                    cmd->bindRasterState({
-                        backend::CullMode::FRONT
-                    });
-                    cmd->bindDepthState({
-                        true, true,
-                        backend::CompareOp::LESS_EQUAL
-                    });
-
-                    cmd->bindProgram(_engine->getProgram(Engine::ProgramType::SHADOW_POINT));
-
-                    cmd->bindBuffer(3, 0, scene._lightBuffer[_engine->device().frameIndex()], sizeof(Light::Data) * i, sizeof(Light::Data), true);
-
-                    struct ShadowData {
-                        ende::math::Mat4f viewProjection;
-                        ende::math::Vec3f position;
-                        f32 near;
-                        f32 far;
-                    };
-                    ShadowData shadowData {
-                        shadowCam.viewProjection(),
-                        shadowCam.transform().pos(),
-                        shadowCam.near(),
-                        shadowCam.far()
-                    };
-                    cmd->pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::FRAGMENT, shadowData);
-
-                    auto& renderable = scene._renderables[0].second.first;
-                    cmd->bindBindings(renderable.bindings);
-                    cmd->bindAttributes(renderable.attributes);
-
-                    cmd->bindBuffer(1, 0, global);
-
-                    cmd->bindPipeline();
-                    cmd->bindDescriptors();
-                    cmd->bindVertexBuffer(0, _engine->_globalVertexBuffer);
-                    cmd->bindIndexBuffer(_engine->_globalIndexBuffer);
-                    cmd->drawIndirectCount(drawCommands, 0, drawCount, 0);
-
-                    cmd->end(*_shadowFramebuffer);
-
-                    auto srcBarrier = _shadowTarget->barrier(backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::TRANSFER, backend::Access::DEPTH_STENCIL_WRITE, backend::Access::TRANSFER_READ, backend::ImageLayout::TRANSFER_SRC);
-                    auto dstBarrier = shadowMap->barrier(backend::PipelineStage::FRAGMENT_SHADER, backend::PipelineStage::TRANSFER, backend::Access::SHADER_READ, backend::Access::TRANSFER_WRITE, backend::ImageLayout::TRANSFER_DST, face);
-                    cmd->pipelineBarrier({ &srcBarrier, 1 });
-                    cmd->pipelineBarrier({ &dstBarrier, 1 });
-
-                    _shadowTarget->copy(cmd, *shadowMap, 0, face);
-                    srcBarrier = _shadowTarget->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::EARLY_FRAGMENT, backend::Access::TRANSFER_READ, backend::Access::DEPTH_STENCIL_WRITE, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
-                    dstBarrier = shadowMap->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::FRAGMENT_SHADER, backend::Access::TRANSFER_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY, face);
-                    cmd->pipelineBarrier({ &srcBarrier, 1 });
-                    cmd->pipelineBarrier({ &dstBarrier, 1 });
-                }
-            }
-        }
-    });
+    shadowPoint(_graph, *_engine, scene, _shadowFramebuffer, _shadowTarget);
+//    {
+//        ImageResource pointDepth;
+//        pointDepth.format = backend::Format::RGBA8_UNORM;
+//        pointDepth.matchSwapchain = false;
+//        pointDepth.width = 10;
+//        pointDepth.height = 10;
+//        _graph.addImageResource("pointDepth", pointDepth);
+//    }
+//
+//    auto& pointShadows = _graph.addPass("point_shadows", RenderPass::Type::COMPUTE);
+//
+//    pointShadows.addUniformBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+//    pointShadows.addStorageImageWrite("pointDepth", backend::PipelineStage::FRAGMENT_SHADER);
+//    pointShadows.addStorageBufferRead("transforms", backend::PipelineStage::VERTEX_SHADER);
+////    pointShadows.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER);
+//    pointShadows.addVertexRead("vertexBuffer");
+//    pointShadows.addIndexRead("indexBuffer");
+//    pointShadows.addIndirectRead("shadowDrawCommands");
+//
+//    pointShadows.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+//        auto global = graph.getBuffer("global");
+//        auto drawCommands = graph.getBuffer("shadowDrawCommands");
+//        auto drawCount = graph.getBuffer("drawCount");
+//        u32 shadowIndex = 0;
+//        for (u32 i = 0; i < scene._lights.size(); i++) {
+//            auto& light = scene._lights[i].second;
+//            if (light.shadowing() && light.type() == Light::LightType::POINT) {
+//                Transform shadowTransform(light.transform().pos());
+//                Camera shadowCam(ende::math::rad(90.f), 1024.f, 1024.f, light.getNear(), light.getFar(), shadowTransform);
+//                auto shadowMap = _engine->getShadowMap(shadowIndex++);
+//
+//                for (u32 face = 0; face < 6; face++) {
+//                    switch (face) {
+//                        case 0:
+//                            shadowTransform.rotate({0, 1, 0}, ende::math::rad(90));
+//                            break;
+//                        case 1:
+//                            shadowTransform.rotate({0, 1, 0}, ende::math::rad(180));
+//                            break;
+//                        case 2:
+//                            shadowTransform.rotate({0, 1, 0}, ende::math::rad(90));
+//                            shadowTransform.rotate({1, 0, 0}, ende::math::rad(90));
+//                            break;
+//                        case 3:
+//                            shadowTransform.rotate({1, 0, 0}, ende::math::rad(180));
+//                            break;
+//                        case 4:
+//                            shadowTransform.rotate({1, 0, 0}, ende::math::rad(90));
+//                            break;
+//                        case 5:
+//                            shadowTransform.rotate({0, 1, 0}, ende::math::rad(180));
+//                            break;
+//                    }
+//                    shadowCam.updateFrustum();
+//                    ende::math::Frustum shadowFrustum = shadowCam.frustum();
+//
+//                    cmd->clearDescriptors();
+//                    cmd->bindProgram(_engine->getProgram(Engine::ProgramType::CULL_POINT));
+//                    cmd->bindBindings({});
+//                    cmd->bindAttributes({});
+//                    cmd->pushConstants(backend::ShaderStage::COMPUTE, shadowFrustum);
+//                    cmd->bindBuffer(1, 0, global);
+//                    cmd->bindBuffer(2, 0, drawCommands, true);
+//                    cmd->bindBuffer(2, 1, drawCount, true);
+//                    cmd->bindPipeline();
+//                    cmd->bindDescriptors();
+//                    cmd->dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
+//
+//
+//                    cmd->begin(*_shadowFramebuffer);
+//
+//                    cmd->clearDescriptors();
+//                    cmd->bindRasterState({
+//                        backend::CullMode::FRONT
+//                    });
+//                    cmd->bindDepthState({
+//                        true, true,
+//                        backend::CompareOp::LESS_EQUAL
+//                    });
+//
+//                    cmd->bindProgram(_engine->getProgram(Engine::ProgramType::SHADOW_POINT));
+//
+//                    cmd->bindBuffer(3, 0, scene._lightBuffer[_engine->device().frameIndex()], sizeof(Light::Data) * i, sizeof(Light::Data), true);
+//
+//                    struct ShadowData {
+//                        ende::math::Mat4f viewProjection;
+//                        ende::math::Vec3f position;
+//                        f32 near;
+//                        f32 far;
+//                    };
+//                    ShadowData shadowData {
+//                        shadowCam.viewProjection(),
+//                        shadowCam.transform().pos(),
+//                        shadowCam.near(),
+//                        shadowCam.far()
+//                    };
+//                    cmd->pushConstants(backend::ShaderStage::VERTEX | backend::ShaderStage::FRAGMENT, shadowData);
+//
+//                    auto& renderable = scene._renderables[0].second.first;
+//                    cmd->bindBindings(renderable.bindings);
+//                    cmd->bindAttributes(renderable.attributes);
+//
+//                    cmd->bindBuffer(1, 0, global);
+//
+//                    cmd->bindPipeline();
+//                    cmd->bindDescriptors();
+//                    cmd->bindVertexBuffer(0, _engine->_globalVertexBuffer);
+//                    cmd->bindIndexBuffer(_engine->_globalIndexBuffer);
+//                    cmd->drawIndirectCount(drawCommands, 0, drawCount, 0);
+//
+//                    cmd->end(*_shadowFramebuffer);
+//
+//                    auto srcBarrier = _shadowTarget->barrier(backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::TRANSFER, backend::Access::DEPTH_STENCIL_WRITE, backend::Access::TRANSFER_READ, backend::ImageLayout::TRANSFER_SRC);
+//                    auto dstBarrier = shadowMap->barrier(backend::PipelineStage::FRAGMENT_SHADER, backend::PipelineStage::TRANSFER, backend::Access::SHADER_READ, backend::Access::TRANSFER_WRITE, backend::ImageLayout::TRANSFER_DST, face);
+//                    cmd->pipelineBarrier({ &srcBarrier, 1 });
+//                    cmd->pipelineBarrier({ &dstBarrier, 1 });
+//
+//                    _shadowTarget->copy(cmd, *shadowMap, 0, face);
+//                    srcBarrier = _shadowTarget->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::EARLY_FRAGMENT, backend::Access::TRANSFER_READ, backend::Access::DEPTH_STENCIL_WRITE, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+//                    dstBarrier = shadowMap->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::FRAGMENT_SHADER, backend::Access::TRANSFER_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY, face);
+//                    cmd->pipelineBarrier({ &srcBarrier, 1 });
+//                    cmd->pipelineBarrier({ &dstBarrier, 1 });
+//                }
+//            }
+//        }
+//    });
 
     auto& cullPass = _graph.addPass("cull", RenderPass::Type::COMPUTE);
 
