@@ -412,6 +412,15 @@ bool cala::backend::vulkan::Device::gc() {
         } else
             --frame;
     }
+
+    for (auto it = _framebuffers.begin(); it != _framebuffers.end(); it++) {
+        auto& frame = it.value().first;
+        if (frame < 0) {
+            delete it.value().second;
+            _framebuffers.erase(it);
+        } else
+            --frame;
+    }
     return true;
 }
 
@@ -800,16 +809,18 @@ cala::backend::vulkan::Framebuffer *cala::backend::vulkan::Device::getFramebuffe
         hash |= attachment;
 
     auto it = _framebuffers.find(hash);
-    if (it != _framebuffers.end())
-        return it.value();
+    if (it != _framebuffers.end()) {
+        it.value().first = FRAMES_IN_FLIGHT + 1;
+        return it.value().second;
+    }
 
-    auto a = _framebuffers.emplace(std::make_pair(hash, new Framebuffer(_context.device(), *renderPass, attachmentImages, width, height)));
-    return a.first.value();
+    auto a = _framebuffers.emplace(std::make_pair(hash, std::make_pair(FRAMES_IN_FLIGHT + 1, new Framebuffer(_context.device(), *renderPass, attachmentImages, width, height))));
+    return a.first.value().second;
 }
 
 void cala::backend::vulkan::Device::clearFramebuffers() {
     for (auto& framebuffer : _framebuffers)
-        delete framebuffer.second;
+        delete framebuffer.second.second;
     _framebuffers.clear();
 }
 

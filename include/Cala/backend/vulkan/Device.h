@@ -204,7 +204,7 @@ namespace cala::backend::vulkan {
         std::vector<std::function<void(CommandHandle)>> _deferredCommands;
 
         tsl::robin_map<u64, RenderPass*> _renderPasses;
-        tsl::robin_map<u64, Framebuffer*> _framebuffers;
+        tsl::robin_map<u64, std::pair<i32, Framebuffer*>> _framebuffers;
 
         struct SetLayoutKey {
             VkDescriptorSetLayoutBinding bindings[8];

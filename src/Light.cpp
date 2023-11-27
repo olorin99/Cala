@@ -20,10 +20,10 @@ cala::Light::Light(LightType type, bool shadows, Transform &transform)
             _range = 100;
             f32 halfRange = _range / 2;
             _camera = Camera(ende::math::orthographic<f32>(-20, 20, -20, 20, -halfRange, halfRange), *_transform);
-//            _camera = Camera(ende::math::rad(90), 1024, 1024, 0.1, _range, *_transform);
         }
             break;
         default:
+            _camera = Camera(ende::math::rad(90), 1024, 1024, 0.1, _range, transform);
             break;
     }
 }
@@ -96,7 +96,8 @@ void cala::Light::setRange(f32 range) {
     if (_type == DIRECTIONAL) {
         f32 halfRange = _range / 2;
         _camera = Camera(ende::math::orthographic<f32>(-20, 20, -20, 20, -halfRange, halfRange), *_transform);
-
+    } else {
+        _camera = Camera(ende::math::rad(90), 1024, 1024, 0.1, _range, *_transform);
     }
     _dirty = true;
 }

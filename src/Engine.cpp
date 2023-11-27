@@ -43,7 +43,8 @@ cala::Engine::Engine(backend::Platform &platform)
       _indexOffset(0),
       _stagingSize(1 << 24), // 16mb
       _stagingOffset(0),
-      _stagingBuffer(_device.createBuffer(_stagingSize, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING, true))
+      _stagingBuffer(_device.createBuffer(_stagingSize, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING, true)),
+      _shadowMapSize(0)
 {
     spdlog::flush_every(std::chrono::seconds(5));
     _device.setBindlessSetIndex(0);
@@ -197,6 +198,8 @@ cala::Engine::Engine(backend::Platform &platform)
     _cube = new Mesh(shapes::cube().mesh(this));
 
     _materials.reserve(10);
+
+    setShadowMapSize(1024);
 
 }
 
@@ -367,7 +370,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::getShadowMap(u32 index, bool po
     }
 
     auto map = _device.createImage({
-        1024, 1024, 1,
+        _shadowMapSize, _shadowMapSize, 1,
         backend::Format::D32_SFLOAT,
         1, point ? (u32)6 : (u32)1,
         backend::ImageUsage::SAMPLED | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT | backend::ImageUsage::TRANSFER_DST
@@ -384,6 +387,56 @@ cala::backend::vulkan::ImageHandle cala::Engine::getShadowMap(u32 index, bool po
         cmd->pipelineBarrier({ &cubeBarrier, 1 });
     });
     return map;
+}
+
+void cala::Engine::setShadowMapSize(u32 size) {
+    if (_shadowMapSize == size)
+        return;
+
+    _shadowMapSize = size;
+    _shadowMaps.clear();
+    _shadowTarget = device().createImage({
+        _shadowMapSize, _shadowMapSize, 1,
+        backend::Format::D32_SFLOAT,
+        1, 1,
+        backend::ImageUsage::SAMPLED | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT | backend::ImageUsage::TRANSFER_SRC
+    });
+    device().immediate([&](backend::vulkan::CommandHandle cmd) {
+        auto targetBarrier = _shadowTarget->barrier(backend::PipelineStage::TOP, backend::PipelineStage::EARLY_FRAGMENT, backend::Access::NONE, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+        cmd->pipelineBarrier({ &targetBarrier, 1 });
+    });
+    backend::vulkan::RenderPass::Attachment shadowAttachment = {
+            cala::backend::Format::D32_SFLOAT,
+            VK_SAMPLE_COUNT_1_BIT,
+            backend::LoadOp::CLEAR,
+            backend::StoreOp::STORE,
+            backend::LoadOp::DONT_CARE,
+            backend::StoreOp::DONT_CARE,
+            backend::ImageLayout::UNDEFINED,
+            backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT,
+            backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT
+    };
+    auto shadowRenderPass = device().getRenderPass({&shadowAttachment, 1 });
+    u32 h = _shadowTarget.index() * _shadowMapSize;
+    _shadowFramebuffer = device().getFramebuffer(shadowRenderPass, { &device().getImageView(_shadowTarget).view, 1 }, { &h, 1 }, _shadowMapSize, _shadowMapSize);
+}
+
+cala::backend::vulkan::Framebuffer *cala::Engine::getShadowFramebuffer() {
+    backend::vulkan::RenderPass::Attachment shadowAttachment = {
+            cala::backend::Format::D32_SFLOAT,
+            VK_SAMPLE_COUNT_1_BIT,
+            backend::LoadOp::CLEAR,
+            backend::StoreOp::STORE,
+            backend::LoadOp::DONT_CARE,
+            backend::StoreOp::DONT_CARE,
+            backend::ImageLayout::UNDEFINED,
+            backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT,
+            backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT
+    };
+    auto shadowRenderPass = device().getRenderPass({&shadowAttachment, 1 });
+    u32 h = _shadowTarget.index() * _shadowMapSize;
+    _shadowFramebuffer = device().getFramebuffer(shadowRenderPass, { &device().getImageView(_shadowTarget).view, 1 }, { &h, 1 }, _shadowMapSize, _shadowMapSize);
+    return _shadowFramebuffer;
 }
 
 void cala::Engine::updateMaterialdata() {

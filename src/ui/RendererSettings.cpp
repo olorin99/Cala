@@ -14,13 +14,21 @@ void cala::ui::RendererSettingsWindow::render() {
         ImGui::Checkbox("Forward Pass", &rendererSettings.forward);
         ImGui::Checkbox("Depth Pre Pass", &rendererSettings.depthPre);
         ImGui::Checkbox("Skybox Pass", &rendererSettings.skybox);
+        if (ImGui::TreeNode("Shadows")) {
+            const char* modes[] = { "256", "512", "1024", "2048", "4096" };
+            u32 sizes[] = { 256, 512, 1024, 2048, 4096 };
+            static int modeIndex = 0;
+            if (ImGui::Combo("ShadowMap Size", &modeIndex, modes, 5)) {
+                _engine->setShadowMapSize(sizes[modeIndex]);
+            }
+            ImGui::TreePop();
+        }
         if (ImGui::TreeNode("Tonemapping Settings")) {
             ImGui::Checkbox("Tonemap Pass", &rendererSettings.tonemap);
 
             const char* modes[] = { "AGX", "ACES", "REINHARD", "REINHARD2", "LOTTES", "UCHIMURA" };
             static int modeIndex = 0;
             if (ImGui::Combo("Tonemap Operator", &modeIndex, modes, 6)) {
-                _engine->device().wait();
                 rendererSettings.tonemapType = modeIndex;
             }
 

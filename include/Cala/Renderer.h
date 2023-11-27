@@ -81,9 +81,6 @@ namespace cala {
         backend::vulkan::BufferHandle _globalDataBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
         backend::vulkan::BufferHandle _frustumBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
 
-        backend::vulkan::ImageHandle _shadowTarget;
-        backend::vulkan::Framebuffer* _shadowFramebuffer;
-
     public:
         RenderGraph _graph;
 

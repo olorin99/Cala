@@ -125,6 +125,14 @@ namespace cala {
 
         backend::vulkan::ImageHandle getShadowMap(u32 index, bool point);
 
+        void setShadowMapSize(u32 size);
+
+        u32 getShadowMapSize() const { return _shadowMapSize; }
+
+        backend::vulkan::ImageHandle getShadowTarget() const { return _shadowTarget; }
+
+        backend::vulkan::Framebuffer* getShadowFramebuffer();
+
     private:
         friend Renderer;
         friend Scene;
@@ -205,6 +213,9 @@ namespace cala {
         Mesh* _cube;
 
         std::vector<backend::vulkan::ImageHandle> _shadowMaps;
+        u32 _shadowMapSize;
+        backend::vulkan::ImageHandle _shadowTarget;
+        backend::vulkan::Framebuffer* _shadowFramebuffer;
 
         std::vector<Material> _materials;
 

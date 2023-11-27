@@ -29,32 +29,6 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
     for (auto& buffer : _frustumBuffer) {
         buffer = engine->device().createBuffer(sizeof(ende::math::Vec4f) * 8, backend::BufferUsage::UNIFORM, backend::MemoryProperties::DEVICE);
     }
-
-    _shadowTarget = _engine->device().createImage({
-        1024, 1024, 1,
-        backend::Format::D32_SFLOAT,
-        1, 1,
-        backend::ImageUsage::SAMPLED | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT | backend::ImageUsage::TRANSFER_SRC
-    });
-    _engine->device().immediate([&](backend::vulkan::CommandHandle cmd) {
-        auto targetBarrier = _shadowTarget->barrier(backend::PipelineStage::TOP, backend::PipelineStage::EARLY_FRAGMENT, backend::Access::NONE, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
-
-        cmd->pipelineBarrier({ &targetBarrier, 1 });
-    });
-    backend::vulkan::RenderPass::Attachment shadowAttachment = {
-            cala::backend::Format::D32_SFLOAT,
-            VK_SAMPLE_COUNT_1_BIT,
-            backend::LoadOp::CLEAR,
-            backend::StoreOp::STORE,
-            backend::LoadOp::DONT_CARE,
-            backend::StoreOp::DONT_CARE,
-            backend::ImageLayout::UNDEFINED,
-            backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT,
-            backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT
-    };
-    auto shadowRenderPass = _engine->device().getRenderPass({&shadowAttachment, 1 });
-    u32 h = _shadowTarget.index();
-    _shadowFramebuffer = _engine->device().getFramebuffer(shadowRenderPass, {&_engine->device().getImageView(_shadowTarget).view, 1 }, { &h, 1 }, 1024, 1024);
 }
 
 bool cala::Renderer::beginFrame(cala::backend::vulkan::Swapchain* swapchain) {
@@ -387,7 +361,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     }
 
 
-    shadowPoint(_graph, *_engine, scene, _shadowFramebuffer, _shadowTarget);
+    shadowPoint(_graph, *_engine, scene);
 
 
 

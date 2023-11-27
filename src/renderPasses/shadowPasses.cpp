@@ -1,6 +1,6 @@
 #include "shadowPasses.h"
 
-void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::backend::vulkan::Framebuffer* framebuffer, cala::backend::vulkan::ImageHandle target) {
+void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     {
         cala::ImageResource pointDepth;
         pointDepth.format = cala::backend::Format::RGBA8_UNORM;
@@ -20,7 +20,7 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
     pointShadows.addIndexRead("indexBuffer");
     pointShadows.addIndirectRead("shadowDrawCommands");
 
-    pointShadows.setExecuteFunction([framebuffer, target, &engine, &scene](cala::backend::vulkan::CommandHandle cmd, cala::RenderGraph& graph) {
+    pointShadows.setExecuteFunction([&engine, &scene](cala::backend::vulkan::CommandHandle cmd, cala::RenderGraph& graph) {
         auto global = graph.getBuffer("global");
         auto drawCommands = graph.getBuffer("shadowDrawCommands");
         auto drawCount = graph.getBuffer("drawCount");
@@ -49,7 +49,7 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                         cmd->bindDescriptors();
                         cmd->dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
 
-                        cmd->begin(*framebuffer);
+                        cmd->begin(*engine.getShadowFramebuffer());
 
                         cmd->clearDescriptors();
                         cmd->bindRasterState({
@@ -88,9 +88,9 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                         cmd->bindIndexBuffer(engine.indexBuffer());
                         cmd->drawIndirectCount(drawCommands, 0, drawCount, 0);
 
-                        cmd->end(*framebuffer);
+                        cmd->end(*engine.getShadowFramebuffer());
 
-                        auto srcBarrier = target->barrier(cala::backend::PipelineStage::LATE_FRAGMENT,
+                        auto srcBarrier = engine.getShadowTarget()->barrier(cala::backend::PipelineStage::LATE_FRAGMENT,
                                                           cala::backend::PipelineStage::TRANSFER,
                                                           cala::backend::Access::DEPTH_STENCIL_WRITE,
                                                           cala::backend::Access::TRANSFER_READ,
@@ -103,8 +103,8 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                         cmd->pipelineBarrier({&srcBarrier, 1});
                         cmd->pipelineBarrier({&dstBarrier, 1});
 
-                        target->copy(cmd, *directionalShadowMap, 0);
-                        srcBarrier = target->barrier(cala::backend::PipelineStage::TRANSFER,
+                        engine.getShadowTarget()->copy(cmd, *directionalShadowMap, 0);
+                        srcBarrier = engine.getShadowTarget()->barrier(cala::backend::PipelineStage::TRANSFER,
                                                      cala::backend::PipelineStage::EARLY_FRAGMENT,
                                                      cala::backend::Access::TRANSFER_READ,
                                                      cala::backend::Access::DEPTH_STENCIL_WRITE,
@@ -121,7 +121,7 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                     case cala::Light::LightType::POINT:
                     {
                         cala::Transform shadowTransform(light.transform().pos());
-                        cala::Camera shadowCam(ende::math::rad(90.f), 1024.f, 1024.f, light.getNear(), light.getFar(), shadowTransform);
+                        cala::Camera shadowCam(ende::math::rad(90.f), engine.getShadowMapSize(), engine.getShadowMapSize(), light.getNear(), light.getFar(), shadowTransform);
                         auto shadowMap = engine.getShadowMap(shadowIndex++, true);
                         light.setShadowMap(shadowMap);
 
@@ -163,7 +163,7 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                             cmd->dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
 
 
-                            cmd->begin(*framebuffer);
+                            cmd->begin(*engine.getShadowFramebuffer());
 
                             cmd->clearDescriptors();
                             cmd->bindRasterState({
@@ -207,9 +207,9 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                             cmd->bindIndexBuffer(engine.indexBuffer());
                             cmd->drawIndirectCount(drawCommands, 0, drawCount, 0);
 
-                            cmd->end(*framebuffer);
+                            cmd->end(*engine.getShadowFramebuffer());
 
-                            auto srcBarrier = target->barrier(cala::backend::PipelineStage::LATE_FRAGMENT,
+                            auto srcBarrier = engine.getShadowTarget()->barrier(cala::backend::PipelineStage::LATE_FRAGMENT,
                                                               cala::backend::PipelineStage::TRANSFER,
                                                               cala::backend::Access::DEPTH_STENCIL_WRITE,
                                                               cala::backend::Access::TRANSFER_READ,
@@ -222,8 +222,8 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                             cmd->pipelineBarrier({&srcBarrier, 1});
                             cmd->pipelineBarrier({&dstBarrier, 1});
 
-                            target->copy(cmd, *shadowMap, 0, face);
-                            srcBarrier = target->barrier(cala::backend::PipelineStage::TRANSFER,
+                            engine.getShadowTarget()->copy(cmd, *shadowMap, 0, face);
+                            srcBarrier = engine.getShadowTarget()->barrier(cala::backend::PipelineStage::TRANSFER,
                                                          cala::backend::PipelineStage::EARLY_FRAGMENT,
                                                          cala::backend::Access::TRANSFER_READ,
                                                          cala::backend::Access::DEPTH_STENCIL_WRITE,
