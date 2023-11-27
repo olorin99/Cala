@@ -358,20 +358,27 @@ cala::backend::vulkan::ImageHandle cala::Engine::generatePrefilteredIrradiance(b
 }
 
 
-cala::backend::vulkan::ImageHandle cala::Engine::getShadowMap(u32 index) {
-    if (index < _shadowMaps.size())
-        return _shadowMaps[index];
+cala::backend::vulkan::ImageHandle cala::Engine::getShadowMap(u32 index, bool point) {
+    if (index < _shadowMaps.size()) {
+        if (!point && _shadowMaps[index]->layers() != 6)
+            return _shadowMaps[index];
+        if (_shadowMaps[index]->layers() == 6)
+            return _shadowMaps[index];
+    }
 
     auto map = _device.createImage({
         1024, 1024, 1,
         backend::Format::D32_SFLOAT,
-        1, 6,
+        1, point ? (u32)6 : (u32)1,
         backend::ImageUsage::SAMPLED | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT | backend::ImageUsage::TRANSFER_DST
     });
     std::string debugLabel = "ShadowMap: " + std::to_string(index);
     _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)map->image(), debugLabel);
     _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_device.getImageView(map).view, "shadowMap_View");
-    _shadowMaps.push_back(map);
+    if (index < _shadowMaps.size())
+        _shadowMaps[index] = map;
+    else
+        _shadowMaps.push_back(map);
     _device.immediate([&](backend::vulkan::CommandHandle cmd) {
         auto cubeBarrier = map->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::SHADER_READ_ONLY);
         cmd->pipelineBarrier({ &cubeBarrier, 1 });

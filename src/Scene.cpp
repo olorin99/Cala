@@ -202,14 +202,15 @@ void cala::Scene::prepare(cala::Camera& camera) {
             return lhs.type < rhs.type;
         });
         _lightData.clear();
-        u32 shadowIndex = 0;
+//        u32 shadowIndex = 0;
         for (u32 i = 0; i < _lights.size(); i++) {
             auto& light = _lights[i].second;
             auto data = light.data();
-            if (light.shadowing())
-                data.shadowIndex = _engine->getShadowMap(shadowIndex++).index();
-            else
-                data.shadowIndex = -1;
+            data.cameraIndex = i + 1;
+//            if (light.shadowing())
+//                data.shadowIndex = _engine->getShadowMap(shadowIndex++).index();
+//            else
+//                data.shadowIndex = -1;
 
             _lightData.push_back(data);
         }

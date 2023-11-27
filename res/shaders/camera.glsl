@@ -12,7 +12,7 @@ struct CameraData {
 
 //layout (set = 0, binding = 1) buffer BindlessCameraBuffer { CameraData camera; } bindlessBuffersCamera[];
 
-layout (std430, buffer_reference, buffer_reference_align = 8) readonly buffer CameraBuffer {
+layout (scalar, buffer_reference, buffer_reference_align = 8) readonly buffer CameraBuffer {
     CameraData camera;
 };
 

@@ -48,18 +48,26 @@ vec3 pointLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 al
 }
 
 vec3 directionalLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 albedo, float roughness, float metallic) {
-    vec3 L = normalize(-light.position);
+    vec3 L = normalize(light.position);
     float NdotL = max(dot(normal, L), 0.0);
 
     float shadow = 1.0;
 
     if (light.shadowIndex >= 0) {
+        CameraData shadowCamera = CameraBuffer(uint64_t(globalData.cameraBuffer) + 152 * light.cameraIndex).camera;
+
+        vec4 shadowPos = shadowCamera.projection * shadowCamera.view * vec4(fsIn.FragPos, 1.0);
+        vec3 shadowCoords = vec3(shadowPos.xy * 0.5 + 0.5, shadowPos.z);
+
+//        return shadowCoords;
+
         float bias = max(light.shadowBias * (1.0 - dot(normal, L)), 0.0001);
-        shadow = filterPCF(light.shadowIndex, light.position, bias, light.shadowRange);
+//        shadow = sampleShadow(light.shadowIndex, shadowCoords, vec2(0), bias);
+        shadow = filterPCF2D(light.shadowIndex, light.position, shadowCoords, bias);
     }
 
     if (shadow == 0)
-    return vec3(0.0);
+        return vec3(0.0);
 
     vec3 H = normalize(V + L);
     vec3 radiance = light.colour * light.intensity;

@@ -23,6 +23,7 @@ struct Light {
     float radius;
     float shadowBias;
     int shadowIndex;
+    int cameraIndex;
 };
 
 layout (scalar, buffer_reference, buffer_reference_align = 8) readonly buffer LightBuffer {

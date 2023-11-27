@@ -4,6 +4,7 @@
 #include <Ende/math/Vec.h>
 #include <Cala/Transform.h>
 #include <Cala/Camera.h>
+#include <Cala/backend/vulkan/Handle.h>
 
 namespace cala {
 
@@ -29,6 +30,7 @@ namespace cala {
             f32 radius;
             f32 shadowBias;
             i32 shadowIndex = -1;
+            i32 cameraIndex = -1;
         };
 
         Data data() const;
@@ -75,6 +77,8 @@ namespace cala {
 
         void setShadowBias(f32 bias);
 
+        void setShadowMap(backend::vulkan::ImageHandle shadowMap);
+
     private:
         Transform* _transform;
         Camera _camera;
@@ -88,6 +92,8 @@ namespace cala {
         f32 _shadowBias;
         f32 _radius;
         f32 _range;
+
+        backend::vulkan::ImageHandle _shadowMap;
     };
 
 }

@@ -123,7 +123,7 @@ namespace cala {
 
         const backend::vulkan::ShaderProgram& getProgram(ProgramType type);
 
-        backend::vulkan::ImageHandle getShadowMap(u32 index);
+        backend::vulkan::ImageHandle getShadowMap(u32 index, bool point);
 
     private:
         friend Renderer;

@@ -88,16 +88,16 @@ int main() {
     ui::GuiWindow guiWindow(engine, renderer, scene, swapchain, platform.window());
 
 
-    struct Material1Data {
-        i32 albedoIndex = -1;
-        i32 normalIndex = -1;
-        i32 metallicRoughness = -1;
-        f32 metallness = 0;
-        f32 roughness = 0;
-    };
-    Material* material = engine.loadMaterial("../../res/materials/expanded_pbr.mat");
-    if (!material)
-        return -1;
+//    struct Material1Data {
+//        i32 albedoIndex = -1;
+//        i32 normalIndex = -1;
+//        i32 metallicRoughness = -1;
+//        f32 metallness = 0;
+//        f32 roughness = 0;
+//    };
+//    Material* material = engine.loadMaterial("../../res/materials/expanded_pbr.mat");
+//    if (!material)
+//        return -1;
 
     struct MaterialData {
         i32 albedoIndex = -1;
@@ -111,7 +111,7 @@ int main() {
 
     Transform sponzaTransform;
 
-    Transform helmetTransform({0, 1, 0});
+    Transform helmetTransform({0, 0, 0}, {0, 0, 0, 1}, { 50, 0.1, 50});
 
     Mesh cube = cala::shapes::cube().mesh(&engine);
 //    Mesh sphere = cala::shapes::sphereNormalized(1).mesh(&engine);
@@ -130,7 +130,7 @@ int main() {
 
     Sampler sampler(engine.device(), {});
 
-    auto matInstance = material->instance();
+    auto matInstance = material1->instance();
 
 
     matInstance.setData(MaterialData{});
@@ -141,28 +141,29 @@ int main() {
     Light light(cala::Light::POINT, true, lightTransform);
     light.setColour({ 255.f / 255.f, 202.f / 255.f, 136.f / 255.f });
     light.setIntensity(4.649);
+    light.setShadowing(false);
     Transform light1Transform({10, 2, 4});
     Light light1(cala::Light::POINT, false, light1Transform);
     light1.setColour({0, 1, 0});
     light1.setIntensity(10);
-    Transform light2Transform({0, 0, 0}, ende::math::Quaternion(ende::math::rad(-61), 0, 0));
+    Transform light2Transform({0, 0, 0}, ende::math::Quaternion(ende::math::rad(-84), 0, ende::math::rad(-11)));
     Light light2(cala::Light::DIRECTIONAL, true, light2Transform);
     light2.setColour({ 255.f / 255.f, 202.f / 255.f, 136.f / 255.f });
-    light2.setIntensity(20);
-    light2.setShadowing(false);
+    light2.setIntensity(2);
+    light2.setShadowing(true);
     Transform light3Transform({-10, 2, 4});
     Light light3(cala::Light::POINT, false, light3Transform);
     light3.setIntensity(1);
     light3.setColour({0.23, 0.46, 0.10});
 
-    u32 l0 = scene.addLight(light);
 //    u32 l1 = scene.addLight(light1);
     u32 l2 = scene.addLight(light2);
+    u32 l0 = scene.addLight(light);
 //    u32 l3 = scene.addLight(light3);
 
-    auto background = engine.assetManager()->loadImage("background", "textures/TropicalRuins_3k.hdr", backend::Format::RGBA32_SFLOAT);
+//    auto background = engine.assetManager()->loadImage("background", "textures/TropicalRuins_3k.hdr", backend::Format::RGBA32_SFLOAT);
 //    auto background = engine.assetManager()->loadImage("background", "textures/Tropical_Beach_3k.hdr", backend::Format::RGBA32_SFLOAT);
-    scene.addSkyLightMap(background, true);
+//    scene.addSkyLightMap(background, true);
 
     scene.addRenderable(*sponzaAsset, &sponzaTransform, true);
 //    scene.addRenderable(sponza, &sponzaTransform, true);
@@ -170,67 +171,69 @@ int main() {
 
     scene.addRenderable(sphere, &matInstance, &lightTransform, false);
 
+//    scene.addRenderable(cube, &matInstance, &helmetTransform, false);
+
     f32 sceneSize = std::max(objectCount / 10, 20u);
 
     f32 sceneBounds = 10;
 
-    MaterialInstance instances[10] = {
-            material->instance(),
-            material->instance(),
-            material->instance(),
-            material->instance(),
-            material->instance(),
-            material->instance(),
-            material->instance(),
-            material->instance(),
-            material->instance(),
-            material->instance()
-    };
-    ImageHandle roughnessImages[10];
-    for (u32 i = 0; i < 10; i++) {
-        roughnessImages[i] = engine.device().createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST, backend::ImageType::IMAGE2D});
-        f32 metallicRoughnessData[] = { 0.f, static_cast<f32>(i) / 10.f, 0.f, 1.f };
-        engine.stageData(roughnessImages[i], std::span<f32>(metallicRoughnessData, 4), {0, 1, 1, 1, 4 * 4 });
-//        roughnessImages[i]->data(engine.device(), {0, 1, 1, 1, 4 * 4 }, std::span<f32>(metallicRoughnessData, 4));
-
-        Material1Data materialData1 {
-                -1,
-                -1,
-                roughnessImages[i].index(),
-                1.0,
-                0.0
-        };
-
-        instances[i].setData(materialData1);
-    }
+//    MaterialInstance instances[10] = {
+//            material->instance(),
+//            material->instance(),
+//            material->instance(),
+//            material->instance(),
+//            material->instance(),
+//            material->instance(),
+//            material->instance(),
+//            material->instance(),
+//            material->instance(),
+//            material->instance()
+//    };
+//    ImageHandle roughnessImages[10];
+//    for (u32 i = 0; i < 10; i++) {
+//        roughnessImages[i] = engine.device().createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST, backend::ImageType::IMAGE2D});
+//        f32 metallicRoughnessData[] = { 0.f, static_cast<f32>(i) / 10.f, 0.f, 1.f };
+//        engine.stageData(roughnessImages[i], std::span<f32>(metallicRoughnessData, 4), {0, 1, 1, 1, 4 * 4 });
+////        roughnessImages[i]->data(engine.device(), {0, 1, 1, 1, 4 * 4 }, std::span<f32>(metallicRoughnessData, 4));
+//
+//        Material1Data materialData1 {
+//                -1,
+//                -1,
+//                roughnessImages[i].index(),
+//                1.0,
+//                0.0
+//        };
+//
+//        instances[i].setData(materialData1);
+//    }
 
 
     u32 width = 10;
     u32 height = 10;
     u32 depth = 10;
 
-    Transform transform;
-    std::vector<Transform> transforms;
-    transforms.reserve(width * height * depth * 10);
-    for (u32 i = 0; i < width; i++) {
-        auto xpos = transform.pos();
-        for (u32 j = 0; j < height; j++) {
-            auto ypos = transform.pos();
-            for (u32 k = 0; k < depth; k++) {
-                transform.addPos({0, 0, 3});
-                transforms.push_back(transform);
-                scene.addRenderable(sphere, &instances[k], &transforms.back(), false);
-            }
-            transform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
-        }
-        transform.setPos(xpos + ende::math::Vec3f{3, 0, 0});
-    }
+//    Transform transform;
+//    std::vector<Transform> transforms;
+//    transforms.reserve(width * height * depth * 10);
+//    for (u32 i = 0; i < width; i++) {
+//        auto xpos = transform.pos();
+//        for (u32 j = 0; j < height; j++) {
+//            auto ypos = transform.pos();
+//            for (u32 k = 0; k < depth; k++) {
+//                transform.addPos({0, 0, 3});
+//                transforms.push_back(transform);
+//                scene.addRenderable(sphere, &instances[k], &transforms.back(), false);
+//            }
+//            transform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
+//        }
+//        transform.setPos(xpos + ende::math::Vec3f{3, 0, 0});
+//    }
 
 
     Transform t1({ 0, 4, 0 });
     Transform t2({ 2, 1, 0 }, {}, { 1, 1, 1 }, &t1);
 
-    scene.addRenderable(sphere, &instances[0], &t2, true);
+    scene.addRenderable(sphere, &matInstance, &t2, true);
 
 
 
@@ -322,15 +325,15 @@ int main() {
                     t2.parent()->setPos(parentPos);
             }
 
-            if (ImGui::Button("Add 10")) {
-                transform.setPos({ (f32)width * 3, 0, 0 });
-                for (u32 i = 0; i < depth; i++) {
-                    transforms.push_back(transform);
-                    scene.addRenderable(cube, &matInstance, &transforms.back(), false);
-                    transform.addPos({0, 0, 3});
-                }
-                width += 3;
-            }
+//            if (ImGui::Button("Add 10")) {
+//                transform.setPos({ (f32)width * 3, 0, 0 });
+//                for (u32 i = 0; i < depth; i++) {
+//                    transforms.push_back(transform);
+//                    scene.addRenderable(cube, &matInstance, &transforms.back(), false);
+//                    transform.addPos({0, 0, 3});
+//                }
+//                width += 3;
+//            }
 
             ImGui::End();
 

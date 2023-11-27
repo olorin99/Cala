@@ -38,5 +38,4 @@ vec4 evalMaterial(Material material) {
     vec3 colour = (ambient + Lo);
 
     return vec4(colour, 1.0);
-//    return vec4(1.0, 0.0, 0.0, 1.0);
 }

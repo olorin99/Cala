@@ -199,7 +199,8 @@ cala::backend::vulkan::ShaderModuleHandle cala::AssetManager::loadShaderModule(c
         "#extension GL_EXT_nonuniform_qualifier : enable\n"
         "#extension GL_GOOGLE_include_directive : enable\n"
         "#extension GL_EXT_buffer_reference : enable\n"
-        "#extension GL_EXT_scalar_block_layout : enable\n\n";
+        "#extension GL_EXT_scalar_block_layout : enable\n"
+        "#extension GL_EXT_shader_explicit_arithmetic_types : enable\n\n";
 
     source += rawSource;
 

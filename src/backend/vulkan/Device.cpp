@@ -794,10 +794,10 @@ cala::backend::vulkan::RenderPass* cala::backend::vulkan::Device::getRenderPass(
     return a.first.value();
 }
 
-cala::backend::vulkan::Framebuffer *cala::backend::vulkan::Device::getFramebuffer(RenderPass *renderPass, std::span<VkImageView> attachmentImages, u32 width, u32 height) {
+cala::backend::vulkan::Framebuffer *cala::backend::vulkan::Device::getFramebuffer(RenderPass *renderPass, std::span<VkImageView> attachmentImages, std::span<u32> hashes, u32 width, u32 height) {
     u64 hash = ((u64)renderPass->id() << 32);
-    for (auto& attachment : attachmentImages)
-        hash |= (u64)attachment;
+    for (auto& attachment : hashes)
+        hash |= attachment;
 
     auto it = _framebuffers.find(hash);
     if (it != _framebuffers.end())
