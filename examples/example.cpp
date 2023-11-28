@@ -78,7 +78,6 @@ int main() {
 
     Engine engine(platform);
     backend::vulkan::Swapchain swapchain(engine.device(), platform);
-    backend::vulkan::Swapchain offlineSwapchain(engine.device(), offlinePlatform);
     Renderer renderer(&engine, {});
     swapchain.setPresentMode(backend::PresentMode::FIFO);
 
@@ -155,7 +154,7 @@ int main() {
     light3.setColour({0.23, 0.46, 0.10});
 
 //    u32 l1 = scene.addLight(light1);
-    u32 l2 = scene.addLight(light2);
+//    u32 l2 = scene.addLight(light2);
     u32 l0 = scene.addLight(light);
 //    u32 l3 = scene.addLight(light3);
 

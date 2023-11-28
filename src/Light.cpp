@@ -9,7 +9,7 @@ cala::Light::Light(LightType type, bool shadows, Transform &transform)
       _colour({1, 1, 1}),
       _intensity(1),
       _constant(1),
-      _shadowBias(type == POINT ? 0.1 : 0.015),
+      _shadowBias(0.015),
       _radius(std::sqrt(_intensity / 0.01)),
       _range(_radius),
       _dirty(true)

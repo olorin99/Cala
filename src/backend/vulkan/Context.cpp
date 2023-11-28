@@ -220,12 +220,14 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     _limits.maxDescriptorSetSampledImages = deviceProperties.limits.maxDescriptorSetSampledImages;
     _limits.maxDescriptorSetStorageImages = deviceProperties.limits.maxDescriptorSetStorageImages;
 
+    u32 maxBindlessCount = 1 << 16;
+
     // Check against limits for case when driver doesnt report correct correct values (e.g. amdgpu-pro on linux)
-    _limits.maxBindlessSamplers = indexingProperties.maxDescriptorSetUpdateAfterBindSamplers < std::numeric_limits<u32>::max() - 10000 ? indexingProperties.maxDescriptorSetUpdateAfterBindSamplers : 10000;
-    _limits.maxBindlessUniformBuffers = indexingProperties.maxDescriptorSetUpdateAfterBindUniformBuffers < std::numeric_limits<u32>::max() - 10000 ? indexingProperties.maxDescriptorSetUpdateAfterBindUniformBuffers : 1000;
-    _limits.maxBindlessStorageBuffers = indexingProperties.maxDescriptorSetUpdateAfterBindStorageBuffers < std::numeric_limits<u32>::max() - 10000 ? indexingProperties.maxDescriptorSetUpdateAfterBindStorageBuffers : 1000;
-    _limits.maxBindlessSampledImages = indexingProperties.maxDescriptorSetUpdateAfterBindSampledImages < std::numeric_limits<u32>::max() - 10000 ? indexingProperties.maxDescriptorSetUpdateAfterBindSampledImages : 1000;
-    _limits.maxBindlessStorageImages = indexingProperties.maxDescriptorSetUpdateAfterBindStorageImages < std::numeric_limits<u32>::max() - 10000 ? indexingProperties.maxDescriptorSetUpdateAfterBindStorageImages : 1000;
+    _limits.maxBindlessSamplers = indexingProperties.maxDescriptorSetUpdateAfterBindSamplers < std::numeric_limits<u32>::max() - 10000 ? std::min(indexingProperties.maxDescriptorSetUpdateAfterBindSamplers - 100, maxBindlessCount) : 10000;
+    _limits.maxBindlessUniformBuffers = indexingProperties.maxDescriptorSetUpdateAfterBindUniformBuffers < std::numeric_limits<u32>::max() - 10000 ? std::min(indexingProperties.maxDescriptorSetUpdateAfterBindUniformBuffers - 100, maxBindlessCount) : 1000;
+    _limits.maxBindlessStorageBuffers = indexingProperties.maxDescriptorSetUpdateAfterBindStorageBuffers < std::numeric_limits<u32>::max() - 10000 ? std::min(indexingProperties.maxDescriptorSetUpdateAfterBindStorageBuffers - 100, maxBindlessCount) : 1000;
+    _limits.maxBindlessSampledImages = indexingProperties.maxDescriptorSetUpdateAfterBindSampledImages < std::numeric_limits<u32>::max() - 10000 ? std::min(indexingProperties.maxDescriptorSetUpdateAfterBindSampledImages - 100, maxBindlessCount) : 1000;
+    _limits.maxBindlessStorageImages = indexingProperties.maxDescriptorSetUpdateAfterBindStorageImages < std::numeric_limits<u32>::max() - 10000 ? std::min(indexingProperties.maxDescriptorSetUpdateAfterBindStorageImages - 100, maxBindlessCount) : 1000;
 
     _limits.maxSamplerAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
 

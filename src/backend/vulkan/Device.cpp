@@ -31,10 +31,10 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
     }
 
     VkDescriptorPoolSize poolSizes[] = {
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, _context.getLimits().maxBindlessSampledImages - 100 },
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _context.getLimits().maxBindlessStorageBuffers - 100 },
-            { VK_DESCRIPTOR_TYPE_SAMPLER, _context.getLimits().maxBindlessSamplers - 100 },
-            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, _context.getLimits().maxBindlessStorageImages - 100 }
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, _context.getLimits().maxBindlessSampledImages },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _context.getLimits().maxBindlessStorageBuffers },
+            { VK_DESCRIPTOR_TYPE_SAMPLER, _context.getLimits().maxBindlessSamplers },
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, _context.getLimits().maxBindlessStorageImages }
     };
 
     VkDescriptorPoolCreateInfo poolCreateInfo{};
@@ -50,28 +50,28 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
 
     // images
     bindlessLayoutBinding[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-    bindlessLayoutBinding[0].descriptorCount = _context.getLimits().maxBindlessSampledImages - 100;
+    bindlessLayoutBinding[0].descriptorCount = _context.getLimits().maxBindlessSampledImages;
     bindlessLayoutBinding[0].binding = 0;
     bindlessLayoutBinding[0].stageFlags = VK_SHADER_STAGE_ALL;
     bindlessLayoutBinding[0].pImmutableSamplers = nullptr;
 
     // buffers
     bindlessLayoutBinding[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    bindlessLayoutBinding[1].descriptorCount = _context.getLimits().maxBindlessStorageBuffers - 100;
+    bindlessLayoutBinding[1].descriptorCount = _context.getLimits().maxBindlessStorageBuffers;
     bindlessLayoutBinding[1].binding = 1;
     bindlessLayoutBinding[1].stageFlags = VK_SHADER_STAGE_ALL;
     bindlessLayoutBinding[1].pImmutableSamplers = nullptr;
 
     // samplers
     bindlessLayoutBinding[2].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-    bindlessLayoutBinding[2].descriptorCount = _context.getLimits().maxBindlessSamplers - 100;
+    bindlessLayoutBinding[2].descriptorCount = _context.getLimits().maxBindlessSamplers;
     bindlessLayoutBinding[2].binding = 2;
     bindlessLayoutBinding[2].stageFlags = VK_SHADER_STAGE_ALL;
     bindlessLayoutBinding[2].pImmutableSamplers = nullptr;
 
     // storage images
     bindlessLayoutBinding[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    bindlessLayoutBinding[3].descriptorCount = _context.getLimits().maxBindlessStorageImages - 100;
+    bindlessLayoutBinding[3].descriptorCount = _context.getLimits().maxBindlessStorageImages;
     bindlessLayoutBinding[3].binding = 3;
     bindlessLayoutBinding[3].stageFlags = VK_SHADER_STAGE_ALL;
     bindlessLayoutBinding[3].pImmutableSamplers = nullptr;
