@@ -16,6 +16,10 @@ void cala::ui::RenderGraphWindow::render() {
                 auto& image = _graph->_images[imageResource->index];
                 ImGui::Text(imageResource->label);
                 ImGui::Text("Handle: %i", image.index());
+                std::string buttonLabel = std::format("Save##{}", i);
+                if (ImGui::Button(buttonLabel.c_str())) {
+                    _graph->_engine->saveImageToDisk(std::format("{}.jpg", imageResource->label), image);
+                }
                 std::string label = std::format("Image##{}", i);
                 if (ImGui::TreeNode(label.c_str())) {
                     auto availSize = ImGui::GetContentRegionAvail();

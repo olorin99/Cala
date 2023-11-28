@@ -8,6 +8,7 @@
 
 #include <json.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <stb_image_write.h>
 
 cala::backend::vulkan::RenderPass::Attachment shadowPassAttachment {
         cala::backend::Format::D32_SFLOAT,
@@ -977,4 +978,15 @@ const cala::backend::vulkan::ShaderProgram& cala::Engine::getProgram(cala::Engin
 
 u32 cala::Engine::materialCount() const {
     return _materials.size();
+}
+
+void cala::Engine::saveImageToDisk(const std::filesystem::path& path, backend::vulkan::ImageHandle handle) {
+    auto buffer = _device.createBuffer(handle->size(), backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::READBACK, true);
+    _device.immediate([path, handle, buffer](backend::vulkan::CommandHandle cmd) {
+        auto b = handle->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_READ, backend::ImageLayout::TRANSFER_SRC);
+        cmd->pipelineBarrier({ &b, 1 });
+
+        handle->copy(cmd, *buffer, 0);
+    });
+    stbi_write_jpg(path.c_str(), handle->width(), handle->height(), 4, buffer->persistentMapping(), 100);
 }

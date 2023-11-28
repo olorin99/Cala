@@ -64,6 +64,8 @@ namespace cala::backend::vulkan {
 
         T& operator*() noexcept;
 
+        T& operator*() const noexcept;
+
         T* operator->() noexcept;
 
         T* operator->() const noexcept;

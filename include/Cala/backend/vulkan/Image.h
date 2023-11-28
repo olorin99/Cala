@@ -58,7 +58,7 @@ namespace cala::backend::vulkan {
 
         void unmap();
 
-        void copy(CommandHandle buffer, Buffer& dst, u32 srcLayer = 0, u32 srcMipLevel = 0, u32 dstOffset = 0);
+        void copy(CommandHandle buffer, Buffer& dst, u32 dstOffset, u32 srcLayer = 0, u32 srcMipLevel = 0);
 
         void copy(CommandHandle buffer, Image& dst, u32 srcLayer = 0, u32 dstLayer = 0, u32 srcMipLevel = 0, u32 dstMipLevel = 0);
 

@@ -133,6 +133,9 @@ namespace cala {
 
         backend::vulkan::Framebuffer* getShadowFramebuffer();
 
+
+        void saveImageToDisk(const std::filesystem::path& path, backend::vulkan::ImageHandle handle);
+
     private:
         friend Renderer;
         friend Scene;

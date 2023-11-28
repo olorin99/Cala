@@ -1,5 +1,7 @@
 add_library(stb_image STATIC stb_image.cpp stb_image.h)
 
+add_library(stb_image_write STATIC stb_image_write.cpp stb_image_write.h)
+
 add_subdirectory(Ende)
 add_subdirectory(fastgltf)
 add_subdirectory(volk)

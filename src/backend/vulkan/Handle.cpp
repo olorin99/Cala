@@ -8,6 +8,11 @@ cala::backend::vulkan::Buffer &cala::backend::vulkan::BufferHandle::operator*() 
 }
 
 template <>
+cala::backend::vulkan::Buffer &cala::backend::vulkan::BufferHandle::operator*() const noexcept {
+    return *_owner->_bufferList.getResource(_data->index);
+}
+
+template <>
 cala::backend::vulkan::Buffer *cala::backend::vulkan::BufferHandle::operator->() noexcept {
     return _owner->_bufferList.getResource(_data->index);
 }
