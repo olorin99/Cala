@@ -163,6 +163,25 @@ void cala::backend::vulkan::Image::copy(cala::backend::vulkan::CommandHandle buf
     vkCmdCopyImage(buffer->buffer(), _image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst.image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
+void cala::backend::vulkan::Image::copy(cala::backend::vulkan::CommandHandle buffer, cala::backend::vulkan::Buffer &dst, u32 srcLayer, u32 srcMipLevel, u32 dstOffset) {
+    VkBufferImageCopy region{};
+
+    region.imageSubresource.aspectMask = isDepthFormat(_format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = srcMipLevel;
+    region.imageSubresource.baseArrayLayer = srcLayer;
+    region.imageSubresource.layerCount = 1;
+
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+
+    region.imageOffset = { 0, 0, 0 };
+    region.imageExtent = { _width, _height, _depth };
+
+    region.bufferOffset = dstOffset;
+
+    vkCmdCopyImageToBuffer(buffer->buffer(), _image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst.buffer(), 1, &region);
+}
+
 void cala::backend::vulkan::Image::generateMips() {
     _device->immediate([&](CommandHandle cmd) {
 //        Barrier b = barrier(Access::SHADER_READ, Access::TRANSFER_WRITE, ImageLayout::TRANSFER_DST);

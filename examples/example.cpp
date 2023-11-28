@@ -135,8 +135,6 @@ int main() {
 
     matInstance.setData(MaterialData{});
 
-    ui::LightWindow lightWindow(&scene);
-
     Transform lightTransform({0, 1, 0}, {0, 0, 0, 1}, {0.1, 0.1, 0.1});
     Light light(cala::Light::POINT, true, lightTransform);
     light.setColour({ 255.f / 255.f, 202.f / 255.f, 136.f / 255.f });
@@ -324,16 +322,6 @@ int main() {
                 if (ImGui::DragFloat3("parent", &parentPos[0], 0.1, -10, 10))
                     t2.parent()->setPos(parentPos);
             }
-
-//            if (ImGui::Button("Add 10")) {
-//                transform.setPos({ (f32)width * 3, 0, 0 });
-//                for (u32 i = 0; i < depth; i++) {
-//                    transforms.push_back(transform);
-//                    scene.addRenderable(cube, &matInstance, &transforms.back(), false);
-//                    transform.addPos({0, 0, 3});
-//                }
-//                width += 3;
-//            }
 
             ImGui::End();
 

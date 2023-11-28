@@ -9,7 +9,7 @@ namespace cala::ui {
     class LightWindow : public Window {
     public:
 
-        LightWindow(Scene* scene);
+        LightWindow(ImGuiContext* context, Scene* scene);
 
         void render() override;
 

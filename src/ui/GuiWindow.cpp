@@ -6,14 +6,15 @@ cala::ui::GuiWindow::GuiWindow(cala::Engine &engine, cala::Renderer& renderer, c
       _renderer(&renderer),
       _context(engine.device(), &swapchain, window),
 
-      _renderGraphViewer(&renderer._graph),
-      _lightWindow(&scene),
-      _profileWindow(&engine, &renderer),
-      _rendererSettings(&engine, &renderer, &swapchain),
-      _resourceViewer(&engine.device()),
-      _statisticsWindow(&engine, &renderer),
-      _backbufferView(&engine.device()),
-      _assetManager(engine.assetManager()),
+      _renderGraphViewer(&_context, &renderer._graph),
+      _lightWindow(&_context, &scene),
+      _profileWindow(&_context, &engine, &renderer),
+      _rendererSettings(&_context, &engine, &renderer, &swapchain),
+      _resourceViewer(&_context, &engine.device()),
+      _statisticsWindow(&_context, &engine, &renderer),
+      _backbufferView(&_context, &engine.device()),
+      _assetManager(&_context, engine.assetManager()),
+      _renderGraphWindow(&_context, &renderer._graph),
 
       _showRenderGraph(false),
       _showLightWindow(true),
@@ -22,7 +23,8 @@ cala::ui::GuiWindow::GuiWindow(cala::Engine &engine, cala::Renderer& renderer, c
       _showResourceViewer(true),
       _showStatisticsWindow(true),
       _showBackbufferView(true),
-      _showAssetmanager(true)
+      _showAssetmanager(true),
+      _showRenderGraphWindow(true)
 {}
 
 void cala::ui::GuiWindow::render() {
@@ -53,7 +55,7 @@ void cala::ui::GuiWindow::render() {
                 ImGui::MenuItem("RendererSettings", nullptr, &_showRendererSettings, true);
                 ImGui::MenuItem("ResourceViewer", nullptr, &_showResourceViewer, true);
                 ImGui::MenuItem("Statistics", nullptr, &_showStatisticsWindow, true);
-                ImGui::MenuItem("BackbufferView", nullptr, &_showBackbufferView, true);
+                ImGui::MenuItem("ImageView", nullptr, &_showBackbufferView, true);
 
                 ImGui::EndMenu();
             }
@@ -66,6 +68,9 @@ void cala::ui::GuiWindow::render() {
         ImGui::DockSpace(dockspaceID, {0, 0}, dockspaceFlags);
         ImGui::End();
     }
+
+    if (_showRenderGraphWindow)
+        _renderGraphWindow.render();
 
     if (_showRenderGraph)
         _renderGraphViewer.render();

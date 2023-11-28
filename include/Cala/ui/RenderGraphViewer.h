@@ -10,7 +10,7 @@ namespace cala::ui {
     class RenderGraphViewer : public Window {
     public:
 
-        RenderGraphViewer(RenderGraph* graph);
+        RenderGraphViewer(ImGuiContext* context, RenderGraph* graph);
 
         void render() override;
 

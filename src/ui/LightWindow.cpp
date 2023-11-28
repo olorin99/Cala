@@ -1,8 +1,9 @@
 #include "Cala/ui/LightWindow.h"
 #include <imgui.h>
 
-cala::ui::LightWindow::LightWindow(Scene *scene)
-    : _scene(scene),
+cala::ui::LightWindow::LightWindow(ImGuiContext* context, Scene *scene)
+    : Window(context),
+    _scene(scene),
     _lightIndex(0)
 {}
 

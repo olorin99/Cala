@@ -9,7 +9,7 @@ namespace cala::ui {
     class ProfileWindow : public Window {
     public:
 
-        ProfileWindow(Engine* engine, Renderer* renderer);
+        ProfileWindow(ImGuiContext* context, Engine* engine, Renderer* renderer);
 
         void render() override;
 

@@ -9,7 +9,7 @@ namespace cala::ui {
     class StatisticsWindow : public Window {
     public:
 
-        StatisticsWindow(Engine* engine, Renderer* renderer);
+        StatisticsWindow(ImGuiContext* context, Engine* engine, Renderer* renderer);
 
         void render() override;
 

@@ -20,6 +20,8 @@ public:
 
     void render(cala::backend::vulkan::CommandHandle buffer);
 
+    void destroySet(VkDescriptorSet set);
+
 private:
 
     VkDevice _device;
@@ -27,6 +29,8 @@ private:
     VkDescriptorPool _descriptorPool;
     VkCommandPool _commandPool;
     SDL_Window* _window;
+
+    std::vector<std::pair<i32, VkDescriptorSet>> _descriptorDestroyQueue;
 
 };
 

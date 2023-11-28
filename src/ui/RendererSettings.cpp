@@ -1,8 +1,9 @@
 #include "Cala/ui/RendererSettingsWindow.h"
 #include <imgui.h>
 
-cala::ui::RendererSettingsWindow::RendererSettingsWindow(Engine* engine, Renderer *renderer, backend::vulkan::Swapchain* swapchain)
-    : _engine(engine),
+cala::ui::RendererSettingsWindow::RendererSettingsWindow(ImGuiContext* context, Engine* engine, Renderer *renderer, backend::vulkan::Swapchain* swapchain)
+    : Window(context),
+    _engine(engine),
     _renderer(renderer),
     _swapchain(swapchain),
     _targetFPS(240)

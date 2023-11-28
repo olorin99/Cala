@@ -3,13 +3,14 @@
 
 #include "Window.h"
 #include <Cala/AssetManager.h>
+#include <Cala/ui/ImageView.h>
 
 namespace cala::ui {
 
     class AssetManagerWindow : public Window {
     public:
 
-        AssetManagerWindow(AssetManager* assetManager);
+        AssetManagerWindow(ImGuiContext* context, AssetManager* assetManager);
 
         ~AssetManagerWindow();
 
@@ -20,6 +21,8 @@ namespace cala::ui {
         AssetManager* _assetManager;
 
         AssetManager::AssetMetadata _currentAssetMetadata;
+
+        std::vector<ui::ImageView> _assetViews;
 
     };
 

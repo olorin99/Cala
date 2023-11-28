@@ -1,8 +1,9 @@
 #include "Cala/ui/RenderGraphViewer.h"
 #include <node_editor/imgui_node_editor.h>
 
-cala::ui::RenderGraphViewer::RenderGraphViewer(cala::RenderGraph *graph)
-    : _graph(graph),
+cala::ui::RenderGraphViewer::RenderGraphViewer(ImGuiContext* context, cala::RenderGraph *graph)
+    : Window(context),
+    _graph(graph),
     _config(),
     _context(nullptr)
 {

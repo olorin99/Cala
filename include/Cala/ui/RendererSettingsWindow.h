@@ -9,7 +9,7 @@ namespace cala::ui {
     class RendererSettingsWindow : public Window {
     public:
 
-        RendererSettingsWindow(Engine* engine, Renderer* renderer, backend::vulkan::Swapchain* swapchain);
+        RendererSettingsWindow(ImGuiContext* context, Engine* engine, Renderer* renderer, backend::vulkan::Swapchain* swapchain);
 
         void render() override;
 

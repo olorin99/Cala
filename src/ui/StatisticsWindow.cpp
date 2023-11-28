@@ -1,8 +1,9 @@
 #include "Cala/ui/StatisticsWindow.h"
 #include <imgui.h>
 
-cala::ui::StatisticsWindow::StatisticsWindow(Engine *engine, Renderer *renderer)
-    : _engine(engine),
+cala::ui::StatisticsWindow::StatisticsWindow(ImGuiContext* context, Engine *engine, Renderer *renderer)
+    : Window(context),
+    _engine(engine),
     _renderer(renderer),
     _detailedMemoryStats(false)
 {}

@@ -9,7 +9,7 @@ namespace cala::ui {
     class ResourceViewer : public Window {
     public:
 
-        ResourceViewer(backend::vulkan::Device* device);
+        ResourceViewer(ImGuiContext* context, backend::vulkan::Device* device);
 
         ~ResourceViewer();
 

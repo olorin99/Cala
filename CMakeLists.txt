@@ -21,8 +21,8 @@ add_library(Cala src/backend/vulkan/Context.cpp include/Cala/backend/vulkan/Cont
         include/Cala/ui/RenderGraphViewer.h
         src/backend/vulkan/Semaphore.cpp
         include/Cala/backend/vulkan/Semaphore.h
-        src/ui/BackbufferView.cpp
-        include/Cala/ui/BackbufferView.h
+        src/ui/ImageView.cpp
+        include/Cala/ui/ImageView.h
         src/ui/GuiWindow.cpp
         include/Cala/ui/GuiWindow.h
         src/AssetManager.cpp
@@ -38,7 +38,11 @@ add_library(Cala src/backend/vulkan/Context.cpp include/Cala/backend/vulkan/Cont
         src/backend/vulkan/PipelineLayout.cpp
         include/Cala/backend/vulkan/PipelineLayout.h
         src/renderPasses/shadowPasses.cpp
-        src/renderPasses/shadowPasses.h)
+        src/renderPasses/shadowPasses.h
+        src/ui/RenderGraphWindow.cpp
+        include/Cala/ui/RenderGraphWindow.h
+        src/ui/BackbufferWindow.cpp
+        include/Cala/ui/BackbufferWindow.h)
 
 target_include_directories(Cala
         PUBLIC

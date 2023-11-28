@@ -11,8 +11,9 @@
 #include <Cala/ui/RendererSettingsWindow.h>
 #include <Cala/ui/ResourceViewer.h>
 #include <Cala/ui/StatisticsWindow.h>
-#include <Cala/ui/BackbufferView.h>
+#include <Cala/ui/BackbufferWindow.h>
 #include <Cala/ui/AssetManagerWindow.h>
+#include <Cala/ui/RenderGraphWindow.h>
 
 namespace cala::ui {
 
@@ -51,10 +52,13 @@ namespace cala::ui {
         StatisticsWindow _statisticsWindow;
 
         bool _showBackbufferView;
-        BackbufferView _backbufferView;
+        BackbufferWindow _backbufferView;
 
         bool _showAssetmanager;
         AssetManagerWindow _assetManager;
+
+        bool _showRenderGraphWindow;
+        RenderGraphWindow _renderGraphWindow;
 
 
     };

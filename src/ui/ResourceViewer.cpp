@@ -4,8 +4,9 @@
 #include <imgui/backends/imgui_impl_vulkan.h>
 #include <Cala/backend/vulkan/CommandBuffer.h>
 
-cala::ui::ResourceViewer::ResourceViewer(backend::vulkan::Device *device)
-    : _device(device),
+cala::ui::ResourceViewer::ResourceViewer(ImGuiContext* context, backend::vulkan::Device *device)
+    : Window(context),
+    _device(device),
     _bufferIndex(0),
     _imageIndex(0),
     _imageDirty(true),

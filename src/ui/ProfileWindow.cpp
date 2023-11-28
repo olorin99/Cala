@@ -3,8 +3,9 @@
 #include <Ende/profile/ProfileManager.h>
 #include <implot/implot.h>
 
-cala::ui::ProfileWindow::ProfileWindow(Engine* engine, Renderer *renderer)
-    : _engine(engine),
+cala::ui::ProfileWindow::ProfileWindow(ImGuiContext* context, Engine* engine, Renderer *renderer)
+    : Window(context),
+    _engine(engine),
     _renderer(renderer),
     _cpuAvg(0),
     _gpuAvg(0),

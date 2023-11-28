@@ -144,6 +144,8 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Device &driver, cala::backend:
 }
 
 ImGuiContext::~ImGuiContext() {
+    for (auto& set : _descriptorDestroyQueue)
+        ImGui_ImplVulkan_RemoveTexture(set.second);
     ImGui_ImplVulkan_DestroyFontUploadObjects();
     vkDestroyCommandPool(_device, _commandPool, nullptr);
     ImGui_ImplVulkan_Shutdown();
@@ -170,7 +172,21 @@ void ImGuiContext::processEvent(void *event) {
 }
 
 void ImGuiContext::render(cala::backend::vulkan::CommandHandle buffer) {
-//    buffer.begin(*_renderPass);TODO: use own renderpass/framebuffers
-    if (_window)
+    if (_window) {
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer->buffer());
+
+        for (auto it = _descriptorDestroyQueue.begin(); it != _descriptorDestroyQueue.end(); it++) {
+            auto& frame = it->first;
+            auto& set = it->second;
+            if (frame < 0) {
+                ImGui_ImplVulkan_RemoveTexture(set);
+                _descriptorDestroyQueue.erase(it--);
+            } else
+                frame--;
+        }
+    }
+}
+
+void ImGuiContext::destroySet(VkDescriptorSet set) {
+    _descriptorDestroyQueue.push_back(std::make_pair(5, set));
 }
