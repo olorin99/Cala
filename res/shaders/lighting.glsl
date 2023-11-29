@@ -3,6 +3,8 @@
 
 #include "light_data.glsl"
 
+//#define sizeof(Type) (uint64_t(Type(uint64_t(0))+1))
+
 vec3 pointLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 albedo, float roughness, float metallic) {
     vec3 lightVec = light.position - fsIn.FragPos;
     vec3 L = normalize(lightVec);
@@ -23,7 +25,6 @@ vec3 pointLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 al
     float dpr = distanceSqared / max(0.0001, rangeSquared);
     dpr *= dpr;
     float attenuation = clamp(1 - dpr, 0, 1.0) / max(0.0001, distanceSqared);
-//    float attenuation = 1.0 / distanceSqared;
 
     vec3 H = normalize(V + L);
     vec3 radiance = light.colour * light.intensity * attenuation;
@@ -40,10 +41,6 @@ vec3 pointLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 al
     vec3 kD = vec3(1.0) - kS;
     kD *= 1.0 - metallic;
 
-//    return normal;
-//    return vec3(NdotL);
-//    return L;
-//    return ((L + vec3(1.0)) / 2);
     return (kD * albedo / PI + specular) * radiance * NdotL * shadow;
 }
 
@@ -54,15 +51,12 @@ vec3 directionalLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, v
     float shadow = 1.0;
 
     if (light.shadowIndex >= 0) {
-        CameraData shadowCamera = CameraBuffer(uint64_t(globalData.cameraBuffer) + 152 * light.cameraIndex).camera;
+        CameraData shadowCamera = globalData.cameraBuffer[light.cameraIndex].camera;
 
         vec4 shadowPos = shadowCamera.projection * shadowCamera.view * vec4(fsIn.FragPos, 1.0);
         vec3 shadowCoords = vec3(shadowPos.xy * 0.5 + 0.5, shadowPos.z);
 
-//        return shadowCoords;
-
         float bias = max(light.shadowBias * (1.0 - dot(normal, L)), 0.0001);
-//        shadow = sampleShadow(light.shadowIndex, shadowCoords, vec2(0), bias);
         shadow = filterPCF2D(light.shadowIndex, light.position, shadowCoords, bias);
     }
 
