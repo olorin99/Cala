@@ -56,10 +56,10 @@ void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene
 
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
-        auto& renderable = scene._renderables[0].second.first;
-
-        cmd->bindBindings(renderable.bindings);
-        cmd->bindAttributes(renderable.attributes);
+        auto binding = engine.globalBinding();
+        auto attributes = engine.globalVertexAttributes();
+        cmd->bindBindings({ &binding, 1 });
+        cmd->bindAttributes(attributes);
         cmd->bindDepthState({ true, true, cala::backend::CompareOp::LESS_EQUAL });
         cmd->bindRasterState({});
         cmd->bindVertexBuffer(0, engine.vertexBuffer());
@@ -99,10 +99,12 @@ void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
         auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
-        auto& renderable = scene._renderables[0].second.first;
 
-        cmd->bindBindings(renderable.bindings);
-        cmd->bindAttributes(renderable.attributes);
+        auto binding = engine.globalBinding();
+        auto attributes = engine.globalVertexAttributes();
+        cmd->bindBindings({ &binding, 1 });
+        cmd->bindAttributes(attributes);
+
         cmd->bindDepthState({ true, true, cala::backend::CompareOp::LESS_EQUAL });
         cmd->bindRasterState({});
         cmd->bindVertexBuffer(0, engine.vertexBuffer());
@@ -142,10 +144,12 @@ void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sce
         auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
-        auto& renderable = scene._renderables[0].second.first;
 
-        cmd->bindBindings(renderable.bindings);
-        cmd->bindAttributes(renderable.attributes);
+        auto binding = engine.globalBinding();
+        auto attributes = engine.globalVertexAttributes();
+        cmd->bindBindings({ &binding, 1 });
+        cmd->bindAttributes(attributes);
+
         cmd->bindDepthState({ true, true, cala::backend::CompareOp::LESS_EQUAL });
         cmd->bindRasterState({});
         cmd->bindVertexBuffer(0, engine.vertexBuffer());
@@ -185,10 +189,12 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene&
         auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
-        auto& renderable = scene._renderables[0].second.first;
 
-        cmd->bindBindings(renderable.bindings);
-        cmd->bindAttributes(renderable.attributes);
+        auto binding = engine.globalBinding();
+        auto attributes = engine.globalVertexAttributes();
+        cmd->bindBindings({ &binding, 1 });
+        cmd->bindAttributes(attributes);
+
         cmd->bindDepthState({ true, true, cala::backend::CompareOp::LESS_EQUAL });
         cmd->bindRasterState({});
         cmd->bindVertexBuffer(0, engine.vertexBuffer());
@@ -228,10 +234,12 @@ void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala
         auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
-        auto& renderable = scene._renderables[0].second.first;
 
-        cmd->bindBindings(renderable.bindings);
-        cmd->bindAttributes(renderable.attributes);
+        auto binding = engine.globalBinding();
+        auto attributes = engine.globalVertexAttributes();
+        cmd->bindBindings({ &binding, 1 });
+        cmd->bindAttributes(attributes);
+
         cmd->bindDepthState({ true, true, cala::backend::CompareOp::LESS_EQUAL });
         cmd->bindRasterState({});
 //            cmd->bindPipeline();
@@ -269,10 +277,12 @@ void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
         auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
-        auto& renderable = scene._renderables[0].second.first;
 
-        cmd->bindBindings(renderable.bindings);
-        cmd->bindAttributes(renderable.attributes);
+        auto binding = engine.globalBinding();
+        auto attributes = engine.globalVertexAttributes();
+        cmd->bindBindings({ &binding, 1 });
+        cmd->bindAttributes(attributes);
+
         cmd->bindDepthState({ true, false, cala::backend::CompareOp::LESS_EQUAL });
         cmd->bindRasterState({
             .polygonMode = cala::backend::PolygonMode::LINE,
@@ -313,10 +323,12 @@ void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::
         auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
-        auto& renderable = scene._renderables[0].second.first;
 
-        cmd->bindBindings(renderable.bindings);
-        cmd->bindAttributes(renderable.attributes);
+        auto binding = engine.globalBinding();
+        auto attributes = engine.globalVertexAttributes();
+        cmd->bindBindings({ &binding, 1 });
+        cmd->bindAttributes(attributes);
+
         cmd->bindDepthState({ true, false, cala::backend::CompareOp::LESS_EQUAL });
         cmd->bindRasterState({});
         cmd->bindVertexBuffer(0, engine.vertexBuffer());

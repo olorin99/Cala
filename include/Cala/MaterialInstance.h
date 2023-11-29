@@ -28,6 +28,16 @@ namespace cala {
             return setParameter(name, (u8*)&data, sizeof(data));
         }
 
+        void* getParameter(const std::string& name, u32 size);
+
+        template <typename T>
+        T getParameter(const std::string& name) {
+            void* data = getParameter(name, sizeof(T));
+            if (!data)
+                return T();
+            return *reinterpret_cast<T*>(data);
+        }
+
 
         void setData(u8* data, u32 size, u32 offset = 0);
 
@@ -37,6 +47,8 @@ namespace cala {
         }
 
         u32 getOffset() const { return _offset; }
+
+        u32 getIndex() const;
 
         void bind(backend::vulkan::CommandBuffer& cmd, u32 set = 2, u32 first = 0);
 

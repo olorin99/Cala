@@ -15,6 +15,7 @@ cala::ui::GuiWindow::GuiWindow(cala::Engine &engine, cala::Renderer& renderer, c
       _backbufferView(&_context, &engine.device()),
       _assetManager(&_context, engine.assetManager()),
       _renderGraphWindow(&_context, &renderer._graph),
+      _sceneGraphWindow(&_context, &scene),
 
       _showRenderGraph(false),
       _showLightWindow(true),
@@ -24,7 +25,8 @@ cala::ui::GuiWindow::GuiWindow(cala::Engine &engine, cala::Renderer& renderer, c
       _showStatisticsWindow(true),
       _showBackbufferView(true),
       _showAssetmanager(true),
-      _showRenderGraphWindow(true)
+      _showRenderGraphWindow(true),
+      _showSceneGraphWindow(true)
 {}
 
 void cala::ui::GuiWindow::render() {
@@ -97,4 +99,7 @@ void cala::ui::GuiWindow::render() {
 
     if (_showLightWindow)
         _lightWindow.render();
+
+    if (_showSceneGraphWindow)
+        _sceneGraphWindow.render();
 }

@@ -149,7 +149,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         }
         {
             BufferResource drawCommandsResource;
-            drawCommandsResource.size = scene._renderables.size() * sizeof(VkDrawIndexedIndirectCommand);
+            drawCommandsResource.size = scene.meshCount() * sizeof(VkDrawIndexedIndirectCommand);
             drawCommandsResource.usage = backend::BufferUsage::INDIRECT;
             _graph.addBufferResource("drawCommands", drawCommandsResource);
 
@@ -180,9 +180,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     }
     {
         BufferResource transformsResource;
-        transformsResource.size = scene._modelBuffer[_engine->device().frameIndex()]->size();
-        transformsResource.usage = scene._modelBuffer[_engine->device().frameIndex()]->usage();
-        _graph.addBufferResource("transforms", transformsResource, scene._modelBuffer[_engine->device().frameIndex()]);
+        transformsResource.size = scene._meshTransformsBuffer[_engine->device().frameIndex()]->size();
+        transformsResource.usage = scene._meshTransformsBuffer[_engine->device().frameIndex()]->usage();
+        _graph.addBufferResource("transforms", transformsResource, scene._meshTransformsBuffer[_engine->device().frameIndex()]);
     }
     {
         BufferResource meshDataResource;
@@ -390,7 +390,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd->bindBuffer(2, 1, materialCounts, true);
         cmd->bindPipeline();
         cmd->bindDescriptors();
-        cmd->dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
+        cmd->dispatchCompute(std::ceil(scene.meshCount() / 16.f), 1, 1);
     });
 
 
@@ -412,10 +412,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto materialCounts = graph.getBuffer("materialCounts");
             cmd->clearDescriptors();
             cmd->bindBuffer(1, 0, global);
-            auto& renderable = scene._renderables[0].second.first;
 
-            cmd->bindBindings(renderable.bindings);
-            cmd->bindAttributes(renderable.attributes);
+            auto binding = _engine->globalBinding();
+            auto attributes = _engine->globalVertexAttributes();
+            cmd->bindBindings({ &binding, 1 });
+            cmd->bindAttributes(attributes);
+
             cmd->bindProgram(_engine->getProgram(Engine::ProgramType::SHADOW_DIRECT));
             cmd->bindDepthState({ true, true, backend::CompareOp::LESS });
             cmd->bindPipeline();
@@ -462,15 +464,15 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             auto lightIndices = graph.getBuffer("lightIndices");
             auto materialCounts = graph.getBuffer("materialCounts");
             cmd->clearDescriptors();
-            if (scene._renderables.empty())
+            if (scene.meshCount() == 0)
                 return;
 
             cmd->bindBuffer(1, 0, global);
 
-            auto& renderable = scene._renderables[0].second.first;
-
-            cmd->bindBindings(renderable.bindings);
-            cmd->bindAttributes(renderable.attributes);
+            auto binding = _engine->globalBinding();
+            auto attributes = _engine->globalVertexAttributes();
+            cmd->bindBindings({ &binding, 1 });
+            cmd->bindAttributes(attributes);
 
             for (u32 i = 0; i < scene._materialCounts.size(); i++) {
                 Material* material = &_engine->_materials[i];
@@ -849,7 +851,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
 
 
-    _globalData.maxDrawCount = scene._renderables.size();
+    _globalData.maxDrawCount = scene.meshCount();
     _globalData.gpuCulling = _renderSettings.gpuCulling;
     _globalData.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
     _globalData.swapchainSize = { _swapchain->extent().width, _swapchain->extent().height };
@@ -886,7 +888,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     }).index();
 
     _globalData.meshBuffer = scene._meshDataBuffer[_engine->device().frameIndex()]->address();
-    _globalData.transformsBuffer = scene._modelBuffer[_engine->device().frameIndex()]->address();
+    _globalData.transformsBuffer = scene._meshTransformsBuffer[_engine->device().frameIndex()]->address();
     _globalData.cameraBuffer = _cameraBuffer[_engine->device().frameIndex()]->address();
     _globalData.lightBuffer = scene._lightBuffer[_engine->device().frameIndex()]->address();
     _globalData.lightCountBuffer = scene._lightCountBuffer[_engine->device().frameIndex()]->address();

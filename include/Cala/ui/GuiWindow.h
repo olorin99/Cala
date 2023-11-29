@@ -14,6 +14,7 @@
 #include <Cala/ui/BackbufferWindow.h>
 #include <Cala/ui/AssetManagerWindow.h>
 #include <Cala/ui/RenderGraphWindow.h>
+#include <Cala/ui/SceneGraphWindow.h>
 
 namespace cala::ui {
 
@@ -60,6 +61,8 @@ namespace cala::ui {
         bool _showRenderGraphWindow;
         RenderGraphWindow _renderGraphWindow;
 
+        bool _showSceneGraphWindow;
+        SceneGraphWindow _sceneGraphWindow;
 
     };
 

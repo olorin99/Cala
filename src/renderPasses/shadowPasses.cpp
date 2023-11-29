@@ -47,7 +47,7 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                         cmd->bindBuffer(2, 1, drawCount, true);
                         cmd->bindPipeline();
                         cmd->bindDescriptors();
-                        cmd->dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
+                        cmd->dispatchCompute(std::ceil(scene.meshCount() / 16.f), 1, 1);
 
                         cmd->begin(*engine.getShadowFramebuffer());
 
@@ -76,9 +76,10 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                         };
                         cmd->pushConstants(cala::backend::ShaderStage::VERTEX, shadowData);
 
-                        auto &renderable = scene._renderables[0].second.first;
-                        cmd->bindBindings(renderable.bindings);
-                        cmd->bindAttributes(renderable.attributes);
+                        auto binding = engine.globalBinding();
+                        auto attributes = engine.globalVertexAttributes();
+                        cmd->bindBindings({ &binding, 1 });
+                        cmd->bindAttributes(attributes);
 
                         cmd->bindBuffer(1, 0, global);
 
@@ -160,7 +161,7 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                             cmd->bindBuffer(2, 1, drawCount, true);
                             cmd->bindPipeline();
                             cmd->bindDescriptors();
-                            cmd->dispatchCompute(std::ceil(scene._renderables.size() / 16.f), 1, 1);
+                            cmd->dispatchCompute(std::ceil(scene.meshCount() / 16.f), 1, 1);
 
 
                             cmd->begin(*engine.getShadowFramebuffer());
@@ -195,9 +196,10 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                                     cala::backend::ShaderStage::VERTEX | cala::backend::ShaderStage::FRAGMENT,
                                     shadowData);
 
-                            auto &renderable = scene._renderables[0].second.first;
-                            cmd->bindBindings(renderable.bindings);
-                            cmd->bindAttributes(renderable.attributes);
+                            auto binding = engine.globalBinding();
+                            auto attributes = engine.globalVertexAttributes();
+                            cmd->bindBindings({ &binding, 1 });
+                            cmd->bindAttributes(attributes);
 
                             cmd->bindBuffer(1, 0, global);
 

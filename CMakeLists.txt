@@ -42,7 +42,9 @@ add_library(Cala src/backend/vulkan/Context.cpp include/Cala/backend/vulkan/Cont
         src/ui/RenderGraphWindow.cpp
         include/Cala/ui/RenderGraphWindow.h
         src/ui/BackbufferWindow.cpp
-        include/Cala/ui/BackbufferWindow.h)
+        include/Cala/ui/BackbufferWindow.h
+        src/ui/SceneGraphWindow.cpp
+        include/Cala/ui/SceneGraphWindow.h)
 
 target_include_directories(Cala
         PUBLIC

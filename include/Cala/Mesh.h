@@ -8,12 +8,10 @@
 namespace cala {
 
     struct Mesh {
-
-        backend::vulkan::BufferHandle _vertex;
-        backend::vulkan::BufferHandle _index; // optional
-
         u32 firstIndex = 0;
         u32 indexCount = 0;
+        ende::math::Vec4f min = { -1, -1, -1 };
+        ende::math::Vec4f max = { 1, 1, 1 };
 
         VkVertexInputBindingDescription _binding;
         std::array<backend::Attribute, 4> _attributes;

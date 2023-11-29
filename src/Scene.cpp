@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <Ende/thread/thread.h>
 #include <Cala/Material.h>
-#include <Cala/Probe.h>
 #include <Ende/profile/profile.h>
 
 cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
@@ -16,9 +15,9 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
         engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_meshDataBuffer[i]->buffer(), debugLabel);
     }
     for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
-        _modelBuffer[i] = engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::DEVICE);
+        _meshTransformsBuffer[i] = engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::DEVICE);
         std::string debugLabel = "ModelBuffer: " + std::to_string(i);
-        engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_modelBuffer[i]->buffer(), debugLabel);
+        engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_meshTransformsBuffer[i]->buffer(), debugLabel);
     }
     for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
         _lightBuffer[i] = engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::DEVICE);
@@ -35,53 +34,8 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
         std::string debugLabel = "MaterialCountBuffer: " + std::to_string(i);
         engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_materialCountBuffer[i]->buffer(), debugLabel);
     }
-}
 
-
-void cala::Scene::addRenderable(cala::Scene::Renderable &&renderable, cala::Transform *transform) {
-    u32 key = 0;
-
-    assert(transform);
-    _renderables.push_back(std::make_pair(2, std::make_pair(renderable, transform)));
-}
-
-void cala::Scene::addRenderable(cala::Mesh &mesh, cala::MaterialInstance *materialInstance, cala::Transform *transform, bool castShadow) {
-    addRenderable({
-        mesh._vertex,
-        mesh._index,
-        mesh.firstIndex,
-        mesh.indexCount,
-        materialInstance,
-        { &mesh._binding, 1 },
-        mesh._attributes,
-        castShadow,
-        { { -1, -1, -1 }, { 1, 1, 1 } }
-    }, transform);
-}
-
-void cala::Scene::addRenderable(Model &model, Transform *transform, bool castShadow) {
-    for (auto& primitive : model.primitives) {
-        auto& matInstance = model.materials[primitive.materialIndex];
-        addRenderable({
-            _engine->_globalVertexBuffer,
-            _engine->_globalIndexBuffer,
-            primitive.firstIndex,
-            primitive.indexCount,
-            &matInstance,
-            { &model._binding, 1 },
-            model._attributes,
-            castShadow,
-            { { primitive.aabb.min.x(), primitive.aabb.min.y(), primitive.aabb.min.z(), 1.f }, { primitive.aabb.max.x(), primitive.aabb.max.y(), primitive.aabb.max.z(), 1.f } }
-        }, transform);
-    }
-}
-
-u32 cala::Scene::addLight(cala::Light &light) {
-    if (light.type() == Light::DIRECTIONAL)
-        ++_directionalLightCount;
-    _lights.push_back(std::make_pair(2, std::move(light)));
-    _lightsDirtyFrame = 2;
-    return _lights.size() - 1;
+    _root = std::make_unique<SceneNode>();
 }
 
 void cala::Scene::addSkyLightMap(backend::vulkan::ImageHandle skyLightMap, bool equirectangular, bool hdr) {
@@ -108,6 +62,17 @@ void assignMemory(void* address, u32 offset, T* data, u32 count) {
     std::memcpy(start, data, count * sizeof(T));
 }
 
+void traverseNode(cala::Scene::SceneNode* node, ende::math::Mat4f worldTransform, std::vector<ende::math::Mat4f>& meshTransforms) {
+    worldTransform = worldTransform * node->transform.local();
+    if (auto meshNode = dynamic_cast<cala::Scene::MeshNode*>(node); meshNode && node->transform.isDirty())
+        meshTransforms[meshNode->index] = worldTransform;
+
+    for (auto& child : node->children) {
+        child->transform.setDirty(node->transform.isDirty());
+        traverseNode(child.get(), worldTransform, meshTransforms);
+    }
+}
+
 void cala::Scene::prepare(cala::Camera& camera) {
     PROFILE_NAMED("Scene::prepare");
     u32 frame = _engine->device().frameIndex();
@@ -116,124 +81,52 @@ void cala::Scene::prepare(cala::Camera& camera) {
     for (auto& materialCount : _materialCounts)
         materialCount.count = 0;
 
-    u32 objectCount = _renderables.size();
+
+    u32 meshCount = _meshData.size();
     // resize buffers to fit and update persistent mappings
-    if (objectCount * sizeof(MeshData) >= _meshDataBuffer[frame]->size()) {
-        _meshDataBuffer[frame] = _engine->device().resizeBuffer(_meshDataBuffer[frame], objectCount * sizeof(MeshData) * 2);
+    if (meshCount * sizeof(MeshData) >= _meshDataBuffer[frame]->size()) {
+        _meshDataBuffer[frame] = _engine->device().resizeBuffer(_meshDataBuffer[frame], meshCount * sizeof(MeshData) * 2);
         std::string debugLabel = "MeshDataBuffer: " + std::to_string(frame);
         _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_meshDataBuffer[frame]->buffer(), debugLabel);
     }
-    if (objectCount * sizeof(ende::math::Mat4f) >= _modelBuffer[frame]->size()) {
-        _modelBuffer[frame] = _engine->device().resizeBuffer(_modelBuffer[frame], objectCount * sizeof(ende::math::Mat4f) * 2);
+    if (meshCount * sizeof(ende::math::Mat4f) >= _meshTransformsBuffer[frame]->size()) {
+        _meshTransformsBuffer[frame] = _engine->device().resizeBuffer(_meshTransformsBuffer[frame], meshCount * sizeof(ende::math::Mat4f) * 2);
         std::string debugLabel = "ModelBuffer: " + std::to_string(frame);
-        _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_modelBuffer[frame]->buffer(), debugLabel);
+        _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_meshTransformsBuffer[frame]->buffer(), debugLabel);
     }
     if (_materialCounts.size() * sizeof(MaterialCount) > _materialCountBuffer[frame]->size()) {
         _materialCountBuffer[frame] = _engine->device().resizeBuffer(_materialCountBuffer[frame], _materialCounts.size() * sizeof(MaterialCount));
         std::string debugLabel = "MaterialCountBuffer: " + std::to_string(frame);
         _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_materialCountBuffer[frame]->buffer(), debugLabel);
     }
-
-    for (u32 i = 0; i < _renderables.size(); i++) {
-        auto& f = _renderables[i].first;
-        auto& renderable = _renderables[i].second.first;
-        auto& transform = _renderables[i].second.second;
-        if (!transform)
-            continue;
-
-        auto material = renderable.materialInstance->material();
-        _materialCounts[material->id()].count++;
-
-        transform->updateWorld();
-        if (transform->isDirty()) {
-            f = 2;
-            transform->setDirty(false);
-        }
-        if (f > 0) {
-            u32 meshOffset = i * sizeof(MeshData);
-            MeshData mesh{ renderable.firstIndex, renderable.indexCount, material->id(), static_cast<u32>(renderable.materialInstance->getOffset() / renderable.materialInstance->material()->size()), renderable.aabb.min, renderable.aabb.max };
-//            _engine->stageData(_meshDataBuffer[frame], std::span<u8>(reinterpret_cast<u8*>(&mesh), sizeof(mesh)), meshOffset);
-            _engine->stageData(_meshDataBuffer[frame], mesh, meshOffset);
-//            assignMemory(_meshDataBuffer[frame]->persistentMapping(), meshOffset, mesh);
-            _meshDataBuffer[frame]->invalidate();
-
-            u32 transformOffset = i * sizeof(ende::math::Mat4f);
-            auto model = transform->world();
-            _engine->stageData(_modelBuffer[frame], model, transformOffset);
-//            assignMemory(_modelBuffer[frame]->persistentMapping(), transformOffset, model);
-            _modelBuffer[frame]->invalidate();
-            f--;
-        }
+    if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame]->size()) {
+        _lightBuffer[frame] = _engine->device().resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(Light::Data) * 2);
+        std::string debugLabel = "LightBuffer: " + std::to_string(frame);
+        _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_lightBuffer[frame]->buffer(), debugLabel);
     }
 
-//    u32 lightCount[2] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount) };
-//    _lightCountBuffer[frame]->data({ lightCount, sizeof(u32) * 2 });
-//    u32 shadowIndex = 0;
-//    for(u32 i = 0; i < _lights.size(); i++) {
-//        auto& f = _lights[i].first;
-//        auto& light = _lights[i].second;
-//
-//        if (light.isDirty()) {
-//            f = 2;
-//            light.setDirty(false);
-//        }
-//        if (f > 0) {
-//            u32 lightOffset = i * sizeof(Light::Data);
-//            auto lightData = light.data();
-//            if (light.shadowing())
-//                lightData.shadowIndex = _engine->getShadowMap(shadowIndex++).index();
-//            else
-//                lightData.shadowIndex = -1;
-//            assignMemory(_lightBuffer[frame]->persistentMapping(), lightOffset, lightData);
-//            f--;
-//        }
-//    }
+    // update transforms
+    traverseNode(_root.get(), _root->transform.local(), _meshTransforms);
 
-    for (auto& [f, light] : _lights) {
-        if (light.isDirty()) {
-            _lightsDirtyFrame = 2;
-            light.setDirty(false);
-        }
+    _engine->stageData(_meshDataBuffer[frame], std::span<const u8>(reinterpret_cast<const u8*>(_meshData.data()), _meshData.size() * sizeof(MeshData)));
+    _engine->stageData(_meshTransformsBuffer[frame], std::span<const u8>(reinterpret_cast<const u8*>(_meshTransforms.data()), _meshTransforms.size() * sizeof(ende::math::Mat4f)));
+
+    std::sort(_lightData.begin(), _lightData.end(), [](const Light::Data& lhs, const Light::Data& rhs) {
+        return lhs.type < rhs.type;
+    });
+    _lightData.clear();
+    for (u32 lightIndex = 0; lightIndex < _lights.size(); lightIndex++) {
+        auto& light = _lights[lightIndex].second;
+        auto data = light.data();
+        data.cameraIndex = lightIndex + 1;
+        _lightData.push_back(data);
     }
+    _engine->stageData(_lightBuffer[frame], std::span<const u8>(reinterpret_cast<const u8*>(_lightData.data()), _lightData.size() * sizeof(Light::Data)));
 
+    u32 lightCount[2] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount) };
+    std::span<const u8> ls(reinterpret_cast<const u8*>(lightCount), sizeof(u32) * 2);
+    _engine->stageData(_lightCountBuffer[frame], ls);
 
-    if (_lightsDirtyFrame > 0) {
-        std::sort(_lightData.begin(), _lightData.end(), [](const Light::Data& lhs, const Light::Data& rhs) {
-            return lhs.type < rhs.type;
-        });
-        _lightData.clear();
-//        u32 shadowIndex = 0;
-        for (u32 i = 0; i < _lights.size(); i++) {
-            auto& light = _lights[i].second;
-            auto data = light.data();
-            data.cameraIndex = i + 1;
-//            if (light.shadowing())
-//                data.shadowIndex = _engine->getShadowMap(shadowIndex++).index();
-//            else
-//                data.shadowIndex = -1;
-
-            _lightData.push_back(data);
-        }
-        if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame]->size()) {
-            _lightBuffer[frame] = _engine->device().resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(Light::Data) * 2);
-            std::string debugLabel = "LightBuffer: " + std::to_string(frame);
-            _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_lightBuffer[frame]->buffer(), debugLabel);
-        }
-        u32 lightCount[2] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount) };
-        std::span<const u8> ls(reinterpret_cast<const u8*>(lightCount), sizeof(u32) * 2);
-        _engine->stageData(_lightCountBuffer[frame], ls);
-//        _lightCountBuffer[frame]->data(ls);
-//        ende::log::info("lightData size: {}", _lightBuffer[frame]->size());
-        assert(_lightData.size() * sizeof(Light::Data) <= _lightBuffer[frame]->size());
-        _engine->stageData(_lightBuffer[frame], std::span<const u8>(reinterpret_cast<const u8*>(_lightData.data()), _lightData.size() * sizeof(Light::Data)));
-//        assignMemory(_lightBuffer[frame]->persistentMapping(), 0, _lights.size());
-//        assignMemory(_lightBuffer[frame]->persistentMapping(), 0, _lightData.data(), _lightData.size());
-//        assignMemory(_lightBuffer[frame]->persistentMapping(), sizeof(u32) * 4, _lightData.data(), _lightData.size());
-        //TODO: find reason for crash when copying memory at offset into mapped lightbuffer memory
-
-        _lightBuffer[frame]->invalidate();
-        _lightsDirtyFrame--;
-    }
 
     u32 offset = 0;
     for (auto& count : _materialCounts) {
@@ -241,8 +134,71 @@ void cala::Scene::prepare(cala::Camera& camera) {
         offset += count.count;
     }
     _engine->stageData(_materialCountBuffer[frame], std::span<const u8>(reinterpret_cast<const u8*>(_materialCounts.data()), _materialCounts.size() * sizeof(MaterialCount)));
-//    std::memcpy(_materialCountBuffer[frame]->persistentMapping(), _materialCounts.data(), _materialCounts.size() * sizeof(MaterialCount));
-    _materialCountBuffer[frame]->invalidate();
 
     _engine->updateMaterialdata();
+}
+
+void cala::Scene::addModel(cala::Model &model, const cala::Transform& transform, cala::Scene::SceneNode *parent) {
+    for (auto& mesh : model.primitives) {
+        addMesh({
+            mesh.firstIndex,
+            mesh.indexCount,
+            { mesh.aabb.min.x(), mesh.aabb.min.y(), mesh.aabb.min.z(), 1.0 },
+            { mesh.aabb.max.x(), mesh.aabb.max.y(), mesh.aabb.max.z(), 1.0 },
+        }, &model.materials[mesh.materialIndex], transform, parent);
+    }
+}
+
+cala::Scene::SceneNode *cala::Scene::addMesh(const cala::Mesh &mesh, cala::MaterialInstance *materialInstance, const cala::Transform &transform, cala::Scene::SceneNode *parent) {
+    i32 index = _meshData.size();
+    _meshData.push_back({
+        mesh.firstIndex,
+        mesh.indexCount,
+        materialInstance->material()->id(),
+        materialInstance->getIndex(),
+        mesh.min,
+        mesh.max
+    });
+    _meshes.push_back({
+        mesh.firstIndex,
+        mesh.indexCount,
+        materialInstance,
+        mesh.min,
+        mesh.max
+    });
+    _meshTransforms.push_back(transform.local());
+    assert(_meshData.size() == _meshTransforms.size());
+    assert(_meshData.size() == _meshes.size());
+    auto node = std::make_unique<MeshNode>();
+    node->index = index;
+    node->type = NodeType::MESH;
+    node->transform = transform;
+    if (parent) {
+        node->parent = parent;
+
+        parent->children.push_back(std::move(node));
+        return parent->children.back().get();
+    } else { // add to root
+        node->parent = _root.get();
+        _root->children.push_back(std::move(node));
+        return _root->children.back().get();
+    }
+}
+
+cala::Scene::SceneNode *cala::Scene::addLight(const cala::Light &light, const cala::Transform &transform, cala::Scene::SceneNode *parent) {
+    i32 index = _lights.size();
+    _lights.push_back(std::make_pair(2, light));
+    auto node = std::make_unique<LightNode>();
+    node->index = index;
+    node->type = NodeType::LIGHT;
+    node->transform = transform;
+    if (parent) {
+        node->parent = parent;
+        parent->children.push_back(std::move(node));
+        return parent->children.back().get();
+    } else { // add to root
+        node->parent = _root.get();
+        _root->children.push_back(std::move(node));
+        return _root->children.back().get();
+    }
 }

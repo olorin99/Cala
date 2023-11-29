@@ -96,6 +96,25 @@ namespace cala {
 
         backend::vulkan::BufferHandle indexBuffer() const { return _globalIndexBuffer; }
 
+        VkVertexInputBindingDescription globalBinding() const {
+            VkVertexInputBindingDescription binding{};
+            binding.binding = 0;
+            binding.stride = 12 * sizeof(f32);
+            binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+            return binding;
+        }
+
+        std::array<backend::Attribute, 4> globalVertexAttributes() const {
+            std::array<backend::Attribute, 4> attributes = {
+                    backend::Attribute{0, 0, backend::AttribType::Vec3f},
+                    backend::Attribute{1, 0, backend::AttribType::Vec3f},
+                    backend::Attribute{2, 0, backend::AttribType::Vec2f},
+                    backend::Attribute{3, 0, backend::AttribType::Vec4f}
+            };
+            return attributes;
+        }
+
+
         Mesh* unitCube() const { return _cube; }
 
         enum class ProgramType {

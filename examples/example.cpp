@@ -115,6 +115,8 @@ int main() {
     Mesh cube = cala::shapes::cube().mesh(&engine);
 //    Mesh sphere = cala::shapes::sphereNormalized(1).mesh(&engine);
     Mesh sphere = loadModel("../../res/models/sphere.obj").mesh(&engine);
+    sphere.min = { -1, -1, -1 };
+    sphere.max = { 1, 1, 1 };
 
     auto sponzaAsset = engine.assetManager()->loadModel("sponza", "models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf", material1);
 
@@ -155,20 +157,18 @@ int main() {
 
 //    u32 l1 = scene.addLight(light1);
 //    u32 l2 = scene.addLight(light2);
-    u32 l0 = scene.addLight(light);
+//    u32 l0 = scene.addLight(light);
 //    u32 l3 = scene.addLight(light3);
+
+    scene.addLight(light, lightTransform);
 
 //    auto background = engine.assetManager()->loadImage("background", "textures/TropicalRuins_3k.hdr", backend::Format::RGBA32_SFLOAT);
 //    auto background = engine.assetManager()->loadImage("background", "textures/Tropical_Beach_3k.hdr", backend::Format::RGBA32_SFLOAT);
 //    scene.addSkyLightMap(background, true);
 
-    scene.addRenderable(*sponzaAsset, &sponzaTransform, true);
-//    scene.addRenderable(sponza, &sponzaTransform, true);
-//    scene.addRenderable(damagedHelmet, &helmetTransform, true);
+    scene.addModel(*sponzaAsset, sponzaTransform);
 
-    scene.addRenderable(sphere, &matInstance, &lightTransform, false);
-
-//    scene.addRenderable(cube, &matInstance, &helmetTransform, false);
+    scene.addMesh(sphere, &matInstance, lightTransform);
 
     f32 sceneSize = std::max(objectCount / 10, 20u);
 
@@ -230,7 +230,7 @@ int main() {
     Transform t1({ 0, 4, 0 });
     Transform t2({ 2, 1, 0 }, {}, { 1, 1, 1 }, &t1);
 
-    scene.addRenderable(sphere, &matInstance, &t2, true);
+    scene.addMesh(sphere, &matInstance, t2);
 
 
 
@@ -241,12 +241,10 @@ int main() {
         Light l(cala::Light::POINT, false, lightTransforms.back());
         l.setIntensity(ende::math::rand(10.f, 1000.f));
         l.setColour({ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f)});
-        scene.addLight(l);
+        scene.addLight(l, lightTransforms.back());
     }
 
     i32 newLights = 10;
-
-    bool renderGraphOpen = false;
 
     f64 dt = 1.f / 60.f;
     bool running = true;
@@ -309,7 +307,7 @@ int main() {
 //                l.setIntensity(0.1f);
                     l.setRange(1);
                     l.setColour({ ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f) });
-                    scene.addLight(l);
+                    scene.addLight(l, lightTransforms.back());
                 }
             }
 

@@ -78,6 +78,6 @@ cala::Mesh cala::MeshData::mesh(cala::Engine* engine) {
             backend::Attribute{3, 0, backend::AttribType::Vec4f}
     };
 
-    Mesh mesh = {{}, {}, static_cast<u32>(indexOffset / sizeof(u32)), (u32)_indices.size(), binding, attributes};
+    Mesh mesh = {static_cast<u32>(indexOffset / sizeof(u32)), (u32)_indices.size(), {}, {}, binding, attributes};
     return std::move(mesh);
 }
