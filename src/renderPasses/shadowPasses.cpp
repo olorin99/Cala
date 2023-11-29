@@ -34,8 +34,13 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                         auto directionalShadowMap = engine.getShadowMap(shadowIndex++, false);
                         light.setShadowMap(directionalShadowMap);
 
-                        light.camera().updateFrustum();
-                        auto frustum = light.camera().frustum();
+                        f32 halfRange = (light.getFar() - light.getNear()) / 2;
+
+                        cala::Transform transform(light.getPosition(), light.getDirection());
+                        cala::Camera camera(ende::math::orthographic<f32>(-20, 20, -20, 20, -halfRange, halfRange), transform);
+                        camera.updateFrustum();
+
+                        auto frustum = camera.frustum();
 
                         cmd->clearDescriptors();
                         cmd->bindProgram(engine.getProgram(cala::Engine::ProgramType::CULL_POINT));
@@ -69,10 +74,10 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                             f32 far;
                         };
                         ShadowData shadowData{
-                                light.camera().viewProjection(),
-                                light.camera().transform().pos(),
-                                light.camera().near(),
-                                light.camera().far()
+                                camera.viewProjection(),
+                                camera.transform().pos(),
+                                camera.near(),
+                                camera.far()
                         };
                         cmd->pushConstants(cala::backend::ShaderStage::VERTEX, shadowData);
 
@@ -121,7 +126,7 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                         break;
                     case cala::Light::LightType::POINT:
                     {
-                        cala::Transform shadowTransform(light.transform().pos());
+                        cala::Transform shadowTransform(light.getPosition());
                         cala::Camera shadowCam(ende::math::rad(90.f), engine.getShadowMapSize(), engine.getShadowMapSize(), light.getNear(), light.getFar(), shadowTransform);
                         auto shadowMap = engine.getShadowMap(shadowIndex++, true);
                         light.setShadowMap(shadowMap);

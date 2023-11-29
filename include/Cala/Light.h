@@ -17,7 +17,7 @@ namespace cala {
             SPOT = 2
         };
 
-        Light(LightType type, bool shadows, Transform& transform);
+        Light(LightType type, bool shadows);
 
         Light& operator=(const Light& rhs);
 
@@ -37,13 +37,19 @@ namespace cala {
 
         LightType type() const { return _type; }
 
+        void setType(LightType type) { _type = type; }
+
         bool shadowing() const { return _shadowing; }
 
         void setShadowing(bool shadowing = false);
 
         void setDirection(const ende::math::Quaternion& dir);
 
+        ende::math::Quaternion getDirection() const { return _rotation; }
+
         void setPosition(const ende::math::Vec3f& pos);
+
+        ende::math::Vec3f getPosition() const { return _position; }
 
         void setColour(const ende::math::Vec3f& colour);
 
@@ -65,10 +71,6 @@ namespace cala {
 
         f32 getFar() const { return getNear() + _range; }
 
-        Transform& transform() const { return *_transform; }
-
-        Camera& camera() { return _camera; }
-
         bool isDirty() const { return _dirty; }
 
         void setDirty(bool dirty) { _dirty = dirty; }
@@ -80,8 +82,8 @@ namespace cala {
         void setShadowMap(backend::vulkan::ImageHandle shadowMap);
 
     private:
-        Transform* _transform;
-        Camera _camera;
+        ende::math::Vec3f _position;
+        ende::math::Quaternion _rotation;
         LightType _type;
         bool _shadowing;
         bool _dirty;

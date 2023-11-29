@@ -137,21 +137,22 @@ int main() {
     matInstance.setData(MaterialData{});
 
     Transform lightTransform({0, 1, 0}, {0, 0, 0, 1}, {0.1, 0.1, 0.1});
-    Light light(cala::Light::POINT, true, lightTransform);
+    Light light(cala::Light::POINT, true);
+    light.setPosition({ 0, 1, 0 });
     light.setColour({ 255.f / 255.f, 202.f / 255.f, 136.f / 255.f });
     light.setIntensity(4.649);
     light.setShadowing(false);
-    Transform light1Transform({10, 2, 4});
-    Light light1(cala::Light::POINT, false, light1Transform);
+    Light light1(cala::Light::POINT, false);
+    light1.setPosition({ 10, 2, 4 });
     light1.setColour({0, 1, 0});
     light1.setIntensity(10);
-    Transform light2Transform({0, 0, 0}, ende::math::Quaternion(ende::math::rad(-84), 0, ende::math::rad(-11)));
-    Light light2(cala::Light::DIRECTIONAL, true, light2Transform);
+    Light light2(cala::Light::DIRECTIONAL, true);
+    light2.setDirection(ende::math::Quaternion(ende::math::rad(-84), 0, ende::math::rad(-11)));
     light2.setColour({ 255.f / 255.f, 202.f / 255.f, 136.f / 255.f });
     light2.setIntensity(2);
     light2.setShadowing(true);
-    Transform light3Transform({-10, 2, 4});
-    Light light3(cala::Light::POINT, false, light3Transform);
+    Light light3(cala::Light::POINT, false);
+    light3.setPosition({ -10, 2, 4 });
     light3.setIntensity(1);
     light3.setColour({0.23, 0.46, 0.10});
 
@@ -238,7 +239,7 @@ int main() {
     lightTransforms.reserve(10000);
     for (u32 i = 0; i < 0; i++) {
         lightTransforms.push_back(Transform({ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f)}));
-        Light l(cala::Light::POINT, false, lightTransforms.back());
+        Light l(cala::Light::POINT, false);
         l.setIntensity(ende::math::rand(10.f, 1000.f));
         l.setColour({ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f)});
         scene.addLight(l, lightTransforms.back());
@@ -302,7 +303,8 @@ int main() {
             if (ImGui::Button("Add Lights")) {
                 for (u32 i = 0; i < newLights; i++) {
                     lightTransforms.push_back(Transform({ende::math::rand(-sceneBounds, sceneBounds), ende::math::rand(0.f, sceneBounds), ende::math::rand(-sceneBounds, sceneBounds)}));
-                    Light l(Light::LightType::POINT, false, lightTransforms.back());
+                    Light l(Light::LightType::POINT, false);
+                    l.setPosition(lightTransforms.back().pos());
 //                l.setIntensity(ende::math::rand(0.1f, 5.f));
 //                l.setIntensity(0.1f);
                     l.setRange(1);

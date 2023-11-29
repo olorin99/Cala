@@ -366,7 +366,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::getShadowMap(u32 index, bool po
     if (index < _shadowMaps.size()) {
         if (!point && _shadowMaps[index]->layers() != 6)
             return _shadowMaps[index];
-        if (_shadowMaps[index]->layers() == 6)
+        if (point && _shadowMaps[index]->layers() == 6)
             return _shadowMaps[index];
     }
 

@@ -109,9 +109,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _engine->stageData(_frustumBuffer[_engine->device().frameIndex()], std::span<const u8>((u8*)_frustumCorners.data(), 8 * sizeof(ende::math::Vec4f)));
 
     for (u32 i = 0; i < scene._lights.size(); i++) {
-        auto& light = scene._lights[i];
-        auto cameraData = light.second.camera().data();
-        _engine->stageData(_cameraBuffer[_engine->device().frameIndex()], cameraData, sizeof(cameraData) * (i + 1));
+        auto& light = scene._lights[i].second;
+        cala::Transform transform(light.getPosition(), light.getDirection() );
+        f32 halfRange = (light.getFar() - light.getNear()) / 2;
+        cala::Camera lightCam(ende::math::orthographic<f32>(-20, 20, -20, 20, -halfRange, halfRange), transform);
+        auto lightCameraData = lightCam.data();
+        _engine->stageData(_cameraBuffer[_engine->device().frameIndex()], lightCameraData, sizeof(lightCameraData) * (i + 1));
     }
 
     bool overlayDebug = _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugClusters || _renderSettings.debugFrustum || _renderSettings.debugDepth;

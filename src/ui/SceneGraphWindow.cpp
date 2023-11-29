@@ -90,6 +90,13 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                 if (ImGui::TreeNode(label.c_str())) {
                     auto& light = scene->_lights[lightNode->index].second;
 
+                    const char* modes[] = { "DIRECTIONAL", "POINT" };
+                    cala::Light::LightType types[] = { cala::Light::LightType::DIRECTIONAL, cala::Light::LightType::POINT };
+                    static int modeIndex = 0;
+                    if (ImGui::Combo("Type", &modeIndex, modes, 2)) {
+                        light.setType(types[modeIndex]);
+                    }
+
                     auto position = lightNode->transform.pos();
                     auto colour = light.getColour();
                     f32 intensity = light.getIntensity();
