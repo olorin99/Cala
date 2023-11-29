@@ -33,6 +33,9 @@ vec4 evalMaterial(Material material) {
         }
     }
 
+    vec3 emissive = material.albedo * material.emissive * material.emissiveStrength;
+    Lo += emissive;
+
     vec3 ambient = getAmbient(globalData.irradianceIndex, globalData.prefilterIndex, globalData.brdfIndex, material.normal, V, F0, material.albedo, material.roughness, material.metallic);
 
     vec3 colour = (ambient + Lo);

@@ -22,7 +22,11 @@ void main() {
 //    mat4 model = bindlessBuffersTransforms[globalData.transformsBufferIndex].transforms[gl_BaseInstance];
     mat4 model = globalData.transformsBuffer.transforms[gl_BaseInstance];
 
-    vec3 T = normalize(mat3(model) * inTangent.xyz) * inTangent.w;
+    float tangentDirection = inTangent.w;
+    if (tangentDirection == 0)
+        tangentDirection = 1;
+
+    vec3 T = normalize(mat3(model) * inTangent.xyz) * tangentDirection;
     vec3 N = normalize(mat3(model) * inNormal);
     T = normalize(T - dot(T, N) * N);
     vec3 B = cross(N, T);

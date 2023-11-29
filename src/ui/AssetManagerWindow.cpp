@@ -35,7 +35,7 @@ void cala::ui::AssetManagerWindow::render() {
                 if (!shaderModuleMetadata.macros.empty()) {
                     if (ImGui::TreeNode((void*)shaderID++, "Macros")) {
                         for (auto& macro : shaderModuleMetadata.macros) {
-                            ImGui::Text("%s: %s", macro.first.data(), macro.second.data());
+                            ImGui::Text("%s: %s", macro.name.c_str(), macro.value.c_str());
                         }
                         ImGui::TreePop();
                     }

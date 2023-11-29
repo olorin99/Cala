@@ -7,6 +7,7 @@
 #include <Cala/backend/vulkan/Handle.h>
 #include <Cala/backend/primitives.h>
 #include <span>
+#include <Cala/util.h>
 #include <Cala/Model.h>
 
 namespace cala {
@@ -76,7 +77,7 @@ namespace cala {
 
         };
 
-        backend::vulkan::ShaderModuleHandle loadShaderModule(const std::string& name, const std::filesystem::path& path, backend::ShaderStage stage = backend::ShaderStage::NONE, std::span<const std::pair<std::string_view, std::string_view>> macros = {}, std::span<const std::string> includes = {});
+        backend::vulkan::ShaderModuleHandle loadShaderModule(const std::string& name, const std::filesystem::path& path, backend::ShaderStage stage = backend::ShaderStage::NONE, const std::vector<util::Macro>& macros = {}, std::span<const std::string> includes = {});
 
         backend::vulkan::ShaderModuleHandle reloadShaderModule(u32 hash);
 
@@ -120,7 +121,7 @@ namespace cala {
             std::string name;
             std::filesystem::path path;
             backend::ShaderStage stage;
-            std::vector<std::pair<std::string, std::string>> macros;
+            std::vector<util::Macro> macros;
             std::vector<std::string> includes;
             backend::vulkan::ShaderModuleHandle moduleHandle;
         };

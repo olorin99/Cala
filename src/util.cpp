@@ -111,7 +111,7 @@ std::string macroize(std::string_view str) {
     return result;
 }
 
-std::expected<std::vector<u32>, u32> cala::util::compileGLSLToSpirv(backend::vulkan::Device *device, std::string_view name, std::string_view glsl, backend::ShaderStage stage, std::span<const std::pair<std::string_view, std::string_view>> macros, std::span<const std::filesystem::path> searchPaths) {
+std::expected<std::vector<u32>, u32> cala::util::compileGLSLToSpirv(backend::vulkan::Device *device, std::string_view name, std::string_view glsl, backend::ShaderStage stage, const std::vector<Macro>& macros, std::span<const std::filesystem::path> searchPaths) {
 
     shaderc_shader_kind kind{};
     switch (stage) {
@@ -147,7 +147,7 @@ std::expected<std::vector<u32>, u32> cala::util::compileGLSLToSpirv(backend::vul
     options.SetIncluder(std::make_unique<FileIncluder>(&finder));
 
     for (auto& macro : macros)
-        options.AddMacroDefinition(macro.first.data(), macroize(macro.second));
+        options.AddMacroDefinition(macro.name, macroize(macro.value));
 
     shaderc::PreprocessedSourceCompilationResult  preprocessedResult = compiler.PreprocessGlsl(glsl.data(), kind, name.data(), options);
     if (preprocessedResult.GetCompilationStatus() != shaderc_compilation_status_success) {
@@ -158,7 +158,7 @@ std::expected<std::vector<u32>, u32> cala::util::compileGLSLToSpirv(backend::vul
     shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(glsl.data(), kind, name.data(), options);
     if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
         std::string preprocessed = { preprocessedResult.begin(), preprocessedResult.end() };
-        device->logger().error("Failed to compile shader {}:\n\tErrors: {}\n\tWarnings: {}\n\tMessage: {}\n{}", name, result.GetNumErrors(), result.GetNumWarnings(), result.GetErrorMessage(), glsl);
+        device->logger().error("Failed to compile shader {}:\n\tErrors: {}\n\tWarnings: {}\n\tMessage: {}\n{}", name, result.GetNumErrors(), result.GetNumWarnings(), result.GetErrorMessage(), preprocessed);
         return std::unexpected(1);
     }
 

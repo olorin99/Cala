@@ -119,11 +119,7 @@ int main() {
     sphere.max = { 1, 1, 1 };
 
     auto sponzaAsset = engine.assetManager()->loadModel("sponza", "models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf", material1);
-
-//    auto sponza = loadGLTF(&engine, material1, "../../res/models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf");
-//    auto damagedHelmet = loadGLTF(&engine, &material, "../../res/models/gltf/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf");
-    Model damagedHelmet;
-//    bool addHelmet = false;
+    auto damagedHelmet = engine.assetManager()->loadModel("damagedHelmet", "models/gltf/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf", material1);
 
 
     Transform cameraTransform({10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(-90)));
@@ -163,11 +159,12 @@ int main() {
 
     scene.addLight(light, lightTransform);
 
-//    auto background = engine.assetManager()->loadImage("background", "textures/TropicalRuins_3k.hdr", backend::Format::RGBA32_SFLOAT);
+    auto background = engine.assetManager()->loadImage("background", "textures/TropicalRuins_3k.hdr", backend::Format::RGBA32_SFLOAT);
 //    auto background = engine.assetManager()->loadImage("background", "textures/Tropical_Beach_3k.hdr", backend::Format::RGBA32_SFLOAT);
-//    scene.addSkyLightMap(background, true);
+    scene.addSkyLightMap(background, true);
 
     scene.addModel(*sponzaAsset, sponzaTransform);
+    scene.addModel(*damagedHelmet, sponzaTransform);
 
     scene.addMesh(sphere, &matInstance, lightTransform);
 

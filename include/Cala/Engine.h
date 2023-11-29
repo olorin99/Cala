@@ -66,7 +66,7 @@ namespace cala {
         struct ShaderInfo {
             std::filesystem::path path;
             backend::ShaderStage stage;
-            std::vector<std::pair<std::string_view, std::string_view>> macros = {};
+            std::vector<util::Macro> macros = {};
             std::vector<std::string> includes = {};
         };
         backend::vulkan::ShaderProgram loadProgram(const std::string& name, const std::vector<ShaderInfo>& shaderInfo);

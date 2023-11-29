@@ -155,12 +155,12 @@ inline u32 combineHash(u32 first, u32 second) {
     return first ^= second + 0x9e3779b9 + (first<<6) + (first>>2);
 }
 
-cala::backend::vulkan::ShaderModuleHandle cala::AssetManager::loadShaderModule(const std::string& name, const std::filesystem::path &path, backend::ShaderStage stage, std::span<const std::pair<std::string_view, std::string_view>> macros, std::span<const std::string> includes) {
+cala::backend::vulkan::ShaderModuleHandle cala::AssetManager::loadShaderModule(const std::string& name, const std::filesystem::path &path, backend::ShaderStage stage, const std::vector<util::Macro>& macros, std::span<const std::string> includes) {
     u32 hash = std::hash<std::filesystem::path>()(path);
 
     std::hash<std::string_view> hasher;
     for (auto& macro : macros) {
-        u32 h = hasher(macro.second);
+        u32 h = hasher(macro.value);
         hash = combineHash(hash, h);
     }
 
@@ -229,9 +229,13 @@ cala::backend::vulkan::ShaderModuleHandle cala::AssetManager::loadShaderModule(c
 
     moduleMetadata.moduleHandle = module;
     moduleMetadata.macros.clear();
-    moduleMetadata.macros.insert(moduleMetadata.macros.begin(), macros.begin(), macros.end());
+    for (auto& macro : macros)
+        moduleMetadata.macros.push_back(macro);
+//    moduleMetadata.macros.insert(moduleMetadata.macros.begin(), macros.begin(), macros.end());
     moduleMetadata.includes.clear();
-    moduleMetadata.includes.insert(moduleMetadata.includes.begin(), includes.begin(), includes.end());
+    for (auto& include : includes)
+        moduleMetadata.includes.push_back(include);
+//    moduleMetadata.includes.insert(moduleMetadata.includes.begin(), includes.begin(), includes.end());
     moduleMetadata.stage = stage;
     moduleMetadata.path = path;
     moduleMetadata.name = name;
@@ -252,11 +256,15 @@ cala::backend::vulkan::ShaderModuleHandle cala::AssetManager::reloadShaderModule
 
     metadata.loaded = false;
 
-    std::vector<std::pair<std::string_view, std::string_view>> macros;
+    std::vector<util::Macro> macros;
     for (auto& macro : moduleMetadata.macros)
-        macros.push_back({macro.first, macro.second});
+        macros.push_back(macro);
 
-    auto module = loadShaderModule(moduleMetadata.name, moduleMetadata.path, moduleMetadata.stage, macros, moduleMetadata.includes);
+    std::vector<std::string> includes;
+    for (auto& include : moduleMetadata.includes)
+        includes.push_back(include);
+
+    auto module = loadShaderModule(moduleMetadata.name, moduleMetadata.path, moduleMetadata.stage, macros, includes);
 
     metadata.loaded = true;
     return module;
@@ -431,6 +439,25 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
                 _engine->logger().warn("tried to load \"metallicRoughnessIndex\" but supplied material does not have appropriate parameter");
         } else
             materialInstance.setParameter("metallicRoughnessIndex", -1);
+
+        if (modelMaterial.emissiveTexture.has_value()) {
+            i32 textureIndex = modelMaterial.emissiveTexture->textureIndex;
+            i32 imageIndex = asset->textures[textureIndex].imageIndex.value();
+            auto& image = asset->images[imageIndex];
+            if (const auto* filePath = std::get_if<fastgltf::sources::URI>(&image.data); filePath) {
+                images.push_back(loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), backend::Format::RGBA8_UNORM));
+            }
+            if (!materialInstance.setParameter("emissiveIndex", images.back().index()))
+                _engine->logger().warn("tried to load \"emissiveIndex\" but supplied material does not have appropriate parameter");
+        } else
+            materialInstance.setParameter("emissiveIndex", -1);
+
+        if (modelMaterial.emissiveStrength.has_value()) {
+            f32 emissiveStrength = modelMaterial.emissiveStrength.value();
+            if (!materialInstance.setParameter("emissiveStrength", emissiveStrength))
+                _engine->logger().warn("tried to load \"emissiveStrength\" but supplied material does not have appropriate parameter");
+        } else
+            materialInstance.setParameter("emissiveStrength", 0);
 
         materials.push_back(std::move(materialInstance));
     }

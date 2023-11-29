@@ -7,7 +7,12 @@
 
 namespace cala::util {
 
-    std::expected<std::vector<u32>, u32> compileGLSLToSpirv(backend::vulkan::Device* device, std::string_view name, std::string_view glsl, backend::ShaderStage stage, std::span<const std::pair<std::string_view, std::string_view>> macros = {}, std::span<const std::filesystem::path> searchPaths = {});
+    struct Macro {
+        std::string name;
+        std::string value;
+    };
+
+    std::expected<std::vector<u32>, u32> compileGLSLToSpirv(backend::vulkan::Device* device, std::string_view name, std::string_view glsl, backend::ShaderStage stage, const std::vector<Macro>& macros = {}, std::span<const std::filesystem::path> searchPaths = {});
 
 }
 
