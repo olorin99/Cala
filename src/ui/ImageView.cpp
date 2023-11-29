@@ -33,7 +33,7 @@ void cala::ui::ImageView::render() {
             _context->destroySet(_imageSet);
 
         if (_image) {
-            _imageSet = ImGui_ImplVulkan_AddTexture(_device->defaultSampler()->sampler(), _device->getImageView(_image).view, backend::vulkan::getImageLayout(_image->layout()));
+            _imageSet = ImGui_ImplVulkan_AddTexture(_device->defaultSampler()->sampler(), _image->defaultView().view, backend::vulkan::getImageLayout(_image->layout()));
         }
         _dirty = false;
     }

@@ -766,8 +766,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd->bindBindings({});
             cmd->bindAttributes({});
             cmd->bindBuffer(1, 0, global);
-            cmd->bindImage(2, 0, _engine->device().getImageView(hdrImage));
-            cmd->bindImage(2, 1, _engine->device().getImageView(backbuffer));
+            cmd->bindImage(2, 0, hdrImage->defaultView());
+            cmd->bindImage(2, 1, backbuffer->defaultView());
 
             struct Push {
                 i32 type;

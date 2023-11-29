@@ -188,10 +188,8 @@ cala::backend::vulkan::Device::~Device() {
         buffer._allocation = nullptr;
     });
 
-//    _imageViews.clear();
-    for (auto& view : _imageViews)
-        view = Image::View();
     _imageList.clearAll([this](i32 index, Image& image) {
+        image._defaultView = Image::View();
         VmaAllocation allocation = image._allocation;
         if (image.image() != VK_NULL_HANDLE)
             vmaDestroyImage(context().allocator(), image.image(), allocation);
@@ -375,8 +373,8 @@ bool cala::backend::vulkan::Device::gc() {
 
     _imageList.clearDestroyQueue([this](i32 index, Image& image) {
         VmaAllocation allocation = image._allocation;
-        _imageViews[index] = backend::vulkan::Image::View();
-        updateBindlessImage(index, _imageViews[0]);
+        image._defaultView = backend::vulkan::Image::View();
+        updateBindlessImage(index, _imageList.getResource(0)->_defaultView);
         if (image.image() != VK_NULL_HANDLE)
             vmaDestroyImage(context().allocator(), image.image(), allocation);
         else
@@ -570,20 +568,15 @@ cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Im
     _imageList.getResource(index)->_usage = info.usage;
     _imageList.getResource(index)->_type = type;
 
-
-    _imageViews.resize(_imageList.allocated());
-    _imageViews[index] = std::move(_imageList.getResource(index)->newView(0, _imageList.getResource(index)->mips()));
-
-    assert(_imageList.allocated() == _imageViews.size());
+    _imageList.getResource(index)->_defaultView = std::move(_imageList.getResource(index)->newView(0, _imageList.getResource(index)->mips()));
 
     bool isSampled = (info.usage & ImageUsage::SAMPLED) == ImageUsage::SAMPLED;
     bool isStorage = (info.usage & ImageUsage::STORAGE) == ImageUsage::STORAGE;
-    updateBindlessImage(index, _imageViews[index], isSampled, isStorage);
+    updateBindlessImage(index, _imageList.getResource(index)->_defaultView, isSampled, isStorage);
 
     _bytesAllocatedPerFrame += (info.width * info.height * info.depth * formatToSize(info.format));
 
     _context.setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)image, "Image: " + std::to_string(index));
-    _context.setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_imageViews[index].view, "ImageView: " + std::to_string(index));
 
     return _imageList.getHandle(this, index);
 }
@@ -591,16 +584,6 @@ cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Im
 cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::getImageHandle(u32 index) {
     assert(index < _imageList.allocated());
     return _imageList.getHandle(this, index);
-}
-
-cala::backend::vulkan::Image::View &cala::backend::vulkan::Device::getImageView(ImageHandle handle) {
-    assert(handle);
-    return _imageViews[handle.index()];
-}
-
-cala::backend::vulkan::Image::View &cala::backend::vulkan::Device::getImageView(u32 index) {
-    assert(index < _imageViews.size());
-    return _imageViews[index];
 }
 
 cala::backend::vulkan::ShaderModuleHandle cala::backend::vulkan::Device::createShaderModule(std::span<u32> spirv, ShaderStage stage) {

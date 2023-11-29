@@ -18,7 +18,8 @@ cala::backend::vulkan::Image::Image(Image &&rhs) noexcept
       _depth(0),
       _format(Format::UNDEFINED),
       _usage(ImageUsage::COLOUR_ATTACHMENT),
-      _layout(ImageLayout::UNDEFINED)
+      _layout(ImageLayout::UNDEFINED),
+      _defaultView()
 {
     std::swap(_image, rhs._image);
     std::swap(_allocation, rhs._allocation);
@@ -28,6 +29,7 @@ cala::backend::vulkan::Image::Image(Image &&rhs) noexcept
     std::swap(_format, rhs._format);
     std::swap(_usage, rhs._usage);
     std::swap(_layout, rhs._layout);
+    std::swap(_defaultView, rhs._defaultView);
 }
 
 cala::backend::vulkan::Image &cala::backend::vulkan::Image::operator=(Image &&rhs) noexcept {
@@ -40,6 +42,7 @@ cala::backend::vulkan::Image &cala::backend::vulkan::Image::operator=(Image &&rh
     std::swap(_format, rhs._format);
     std::swap(_usage, rhs._usage);
     std::swap(_layout, rhs._layout);
+    std::swap(_defaultView, rhs._defaultView);
     return *this;
 }
 

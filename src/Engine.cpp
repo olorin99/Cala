@@ -173,14 +173,14 @@ cala::Engine::Engine(backend::Platform &platform)
 
     _brdfImage = _device.createImage({ 512, 512, 1, backend::Format::RG16_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE });
     _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)_brdfImage->image(), "brdf");
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_device.getImageView(_brdfImage).view, "brdf_View");
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_brdfImage->defaultView().view, "brdf_View");
 
     _device.immediate([&](backend::vulkan::CommandHandle cmd) {
         auto brdfBarrier = _brdfImage->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_WRITE | backend::Access::SHADER_READ, backend::ImageLayout::GENERAL);
         cmd->pipelineBarrier({ &brdfBarrier, 1 });
 
         cmd->bindProgram(_brdfProgram);
-        cmd->bindImage(1, 0, _device.getImageView(_brdfImage));
+        cmd->bindImage(1, 0, _brdfImage->defaultView());
         cmd->bindPipeline();
         cmd->bindDescriptors();
         cmd->dispatchCompute(512 / 32, 512 / 32, 1);
@@ -257,7 +257,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::convertToCubeMap(backend::vulka
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST
     });
     _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)cubeMap->image(), "cubeMap");
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_device.getImageView(cubeMap).view, "cubeMap_View");
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)cubeMap->defaultView().view, "cubeMap_View");
     auto equirectangularView = equirectangular->newView();
     auto cubeView = cubeMap->newView(0, 10);
     _device.immediate([&](backend::vulkan::CommandHandle cmd) {
@@ -294,7 +294,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::generateIrradianceMap(backend::
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
     });
     _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)irradianceMap->image(), "irradianceMap");
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_device.getImageView(irradianceMap).view, "irradianceMap_View");
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)irradianceMap->defaultView().view, "irradianceMap_View");
     _device.immediate([&](backend::vulkan::CommandHandle cmd) {
         auto irradianceBarrier = irradianceMap->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
         cmd->pipelineBarrier({ &irradianceBarrier, 1 });
@@ -302,8 +302,8 @@ cala::backend::vulkan::ImageHandle cala::Engine::generateIrradianceMap(backend::
         cmd->pipelineBarrier({ &cubeBarrier, 1 });
 
         cmd->bindProgram(_irradianceProgram);
-        cmd->bindImage(1, 0, _device.getImageView(cubeMap));
-        cmd->bindImage(1, 1, _device.getImageView(irradianceMap));
+        cmd->bindImage(1, 0, cubeMap);
+        cmd->bindImage(1, 1, irradianceMap);
         cmd->bindPipeline();
         cmd->bindDescriptors();
         cmd->dispatchCompute(irradianceMap->width() / 32, irradianceMap->height() / 32, 6);
@@ -324,7 +324,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::generatePrefilteredIrradiance(b
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
     });
     _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)prefilteredMap->image(), "prefilterMap");
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_device.getImageView(prefilteredMap).view, "prefilterMap_View");
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)prefilteredMap->defaultView().view, "prefilterMap_View");
     backend::vulkan::Image::View mipViews[10] = {
             prefilteredMap->newView(0),
             prefilteredMap->newView(1),
@@ -345,7 +345,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::generatePrefilteredIrradiance(b
 
         for (u32 mip = 0; mip < prefilteredMap->mips(); mip++) {
             cmd->bindProgram(_prefilterProgram);
-            cmd->bindImage(1, 0, _device.getImageView(cubeMap), _lodSampler);
+            cmd->bindImage(1, 0, cubeMap, _lodSampler);
             cmd->bindImage(1, 1, mipViews[mip]);
             f32 roughness = (f32)mip / (f32)prefilteredMap->mips();
             cmd->pushConstants(backend::ShaderStage::COMPUTE, roughness);
@@ -378,7 +378,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::getShadowMap(u32 index, bool po
     });
     std::string debugLabel = "ShadowMap: " + std::to_string(index);
     _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)map->image(), debugLabel);
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_device.getImageView(map).view, "shadowMap_View");
+    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)map->defaultView().view, "shadowMap_View");
     if (index < _shadowMaps.size())
         _shadowMaps[index] = map;
     else
@@ -419,7 +419,7 @@ void cala::Engine::setShadowMapSize(u32 size) {
     };
     auto shadowRenderPass = device().getRenderPass({&shadowAttachment, 1 });
     u32 h = _shadowTarget.index() * _shadowMapSize;
-    _shadowFramebuffer = device().getFramebuffer(shadowRenderPass, { &device().getImageView(_shadowTarget).view, 1 }, { &h, 1 }, _shadowMapSize, _shadowMapSize);
+    _shadowFramebuffer = device().getFramebuffer(shadowRenderPass, { &_shadowTarget->defaultView().view, 1 }, { &h, 1 }, _shadowMapSize, _shadowMapSize);
 }
 
 cala::backend::vulkan::Framebuffer *cala::Engine::getShadowFramebuffer() {
@@ -436,7 +436,7 @@ cala::backend::vulkan::Framebuffer *cala::Engine::getShadowFramebuffer() {
     };
     auto shadowRenderPass = device().getRenderPass({&shadowAttachment, 1 });
     u32 h = _shadowTarget.index() * _shadowMapSize;
-    _shadowFramebuffer = device().getFramebuffer(shadowRenderPass, { &device().getImageView(_shadowTarget).view, 1 }, { &h, 1 }, _shadowMapSize, _shadowMapSize);
+    _shadowFramebuffer = device().getFramebuffer(shadowRenderPass, { &_shadowTarget->defaultView().view, 1 }, { &h, 1 }, _shadowMapSize, _shadowMapSize);
     return _shadowFramebuffer;
 }
 

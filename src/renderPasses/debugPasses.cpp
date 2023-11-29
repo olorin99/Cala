@@ -28,7 +28,7 @@ void debugClusters(cala::RenderGraph& graph, cala::Engine& engine, cala::backend
         } push;
         push.lightGridBuffer = lightGrid->address();
         cmd->pushConstants(backend::ShaderStage::FRAGMENT, push);
-        cmd->bindImage(1, 1, engine.device().getImageView(depthBuffer), engine.device().defaultShadowSampler());
+        cmd->bindImage(1, 1, depthBuffer->defaultView(), engine.device().defaultShadowSampler());
         cmd->bindPipeline();
         cmd->bindDescriptors();
         cmd->draw(3, 1, 0, 0, false);
@@ -470,7 +470,7 @@ void debugVxgi(cala::RenderGraph& graph, cala::Engine& engine) {
         cmd->bindBindings({});
         cmd->bindAttributes({});
         cmd->bindBuffer(1, 0, global);
-        cmd->bindImage(2, 0, engine.device().getImageView(backbuffer));
+        cmd->bindImage(2, 0, backbuffer->defaultView());
         cmd->bindPipeline();
         cmd->bindDescriptors();
         cmd->dispatchCompute(std::ceil(backbuffer->width() / 32.f), std::ceil(backbuffer->height() / 32.f), 1);

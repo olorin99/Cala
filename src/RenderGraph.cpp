@@ -684,7 +684,7 @@ void cala::RenderGraph::buildRenderPasses() {
 
 
             attachments.push_back(attachment);
-            attachmentImages.push_back(_engine->device().getImageView(_images[image->index].index()).view);
+            attachmentImages.push_back(_images[image->index]->defaultView().view);
             hashes.push_back(_images[image->index].index());
         }
 
@@ -710,7 +710,7 @@ void cala::RenderGraph::buildRenderPasses() {
             height = std::max(height, depthResource->height);
 
             attachments.push_back(attachment);
-            attachmentImages.push_back(_engine->device().getImageView(_images[depthResource->index].index()).view);
+            attachmentImages.push_back(_images[depthResource->index]->defaultView().view);
             hashes.push_back(_images[depthResource->index].index());
         }
 

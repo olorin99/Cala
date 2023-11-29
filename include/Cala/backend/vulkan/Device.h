@@ -97,10 +97,6 @@ namespace cala::backend::vulkan {
 
         ImageHandle getImageHandle(u32 index);
 
-        Image::View& getImageView(ImageHandle handle);
-
-        Image::View& getImageView(u32 index);
-
 
         ShaderModuleHandle createShaderModule(std::span<u32> spirv, ShaderStage stage);
 
@@ -285,7 +281,6 @@ namespace cala::backend::vulkan {
         ResourceList<Buffer, BufferHandle> _bufferList;
 
         ResourceList<Image, ImageHandle> _imageList;
-        std::vector<Image::View> _imageViews;
 
         SamplerHandle _defaultSampler;
         SamplerHandle _defaultShadowSampler;

@@ -302,6 +302,10 @@ void cala::backend::vulkan::CommandBuffer::bindImage(u32 set, u32 binding, Image
     _descriptorDirty = true;
 }
 
+void cala::backend::vulkan::CommandBuffer::bindImage(u32 set, u32 binding, cala::backend::vulkan::ImageHandle image, cala::backend::vulkan::SamplerHandle sampler) {
+    bindImage(set, binding, image->defaultView(), sampler);
+}
+
 void cala::backend::vulkan::CommandBuffer::pushConstants(ShaderStage stage, std::span<const u8> data, u32 offset) {
     assert(offset + data.size() <= 128);
     vkCmdPushConstants(_buffer, _pipelineKey.layout, getShaderStage(stage), offset, data.size(), data.data());
