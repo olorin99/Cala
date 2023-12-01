@@ -63,13 +63,13 @@ void assignMemory(void* address, u32 offset, T* data, u32 count) {
 }
 
 void traverseNode(cala::Scene::SceneNode* node, ende::math::Mat4f worldTransform, std::vector<ende::math::Mat4f>& meshTransforms) {
-    worldTransform = worldTransform * node->transform.local();
+    auto transform = worldTransform * node->transform.local();
     if (auto meshNode = dynamic_cast<cala::Scene::MeshNode*>(node); meshNode && node->transform.isDirty())
-        meshTransforms[meshNode->index] = worldTransform;
+        meshTransforms[meshNode->index] = transform;
 
     for (auto& child : node->children) {
         child->transform.setDirty(node->transform.isDirty());
-        traverseNode(child.get(), worldTransform, meshTransforms);
+        traverseNode(child.get(), transform, meshTransforms);
     }
 }
 
@@ -138,31 +138,61 @@ void cala::Scene::prepare(cala::Camera& camera) {
     _engine->updateMaterialdata();
 }
 
-void cala::Scene::addModel(cala::Model &model, const cala::Transform& transform, cala::Scene::SceneNode *parent) {
-    for (auto& mesh : model.primitives) {
-        addMesh({
-            mesh.firstIndex,
-            mesh.indexCount,
-            { mesh.aabb.min.x(), mesh.aabb.min.y(), mesh.aabb.min.z(), 1.0 },
-            { mesh.aabb.max.x(), mesh.aabb.max.y(), mesh.aabb.max.z(), 1.0 },
-        }, &model.materials[mesh.materialIndex], transform, parent);
+cala::Scene::SceneNode* cala::Scene::addNode(const cala::Transform &transform, cala::Scene::SceneNode *parent) {
+    auto node = std::make_unique<SceneNode>();
+    node->type = NodeType::NONE;
+    node->transform = transform;
+    if (parent) {
+        node->parent = parent;
+        parent->children.push_back(std::move(node));
+        return parent->children.back().get();
+    } else {
+        node->parent = _root.get();
+        _root->children.push_back(std::move(node));
+        return _root->children.back().get();
     }
 }
 
-cala::Scene::SceneNode *cala::Scene::addMesh(const cala::Mesh &mesh, cala::MaterialInstance *materialInstance, const cala::Transform &transform, cala::Scene::SceneNode *parent) {
+cala::Scene::SceneNode* addModelNode(cala::Scene& scene, cala::Model& model, cala::Model::Node& node, const cala::Transform& transform, cala::Scene::SceneNode* parent) {
+    auto sceneNode = scene.addNode(transform, parent);
+    for (auto primitiveIndex : node.primitives) {
+        auto& primitive = model.primitives[primitiveIndex];
+        scene.addMesh({
+            primitive.firstIndex,
+            primitive.indexCount,
+            &model.materials[primitive.materialIndex],
+            { primitive.aabb.min.x(), primitive.aabb.min.y(), primitive.aabb.min.z(), 1.0 },
+            { primitive.aabb.max.x(), primitive.aabb.max.y(), primitive.aabb.max.z(), 1.0 },
+        }, cala::Transform(), nullptr, sceneNode);
+    }
+
+    for (auto& child : node.children) {
+        auto& modelNode = model.nodes[child];
+        addModelNode(scene, model, modelNode, cala::Transform(), sceneNode);
+    }
+    return sceneNode;
+}
+
+cala::Scene::SceneNode *cala::Scene::addModel(cala::Model &model, const cala::Transform& transform, cala::Scene::SceneNode *parent) {
+    auto& rootNode = model.nodes.front();
+    return addModelNode(*this, model, rootNode, transform, parent);
+}
+
+cala::Scene::SceneNode *cala::Scene::addMesh(const cala::Mesh &mesh, const cala::Transform &transform, cala::MaterialInstance *materialInstance, cala::Scene::SceneNode *parent) {
+    MaterialInstance* instance = materialInstance ? materialInstance : mesh.materialInstance;
     i32 index = _meshData.size();
     _meshData.push_back({
         mesh.firstIndex,
         mesh.indexCount,
-        materialInstance->material()->id(),
-        materialInstance->getIndex(),
+        instance->material()->id(),
+        instance->getIndex(),
         mesh.min,
         mesh.max
     });
     _meshes.push_back({
         mesh.firstIndex,
         mesh.indexCount,
-        materialInstance,
+        instance,
         mesh.min,
         mesh.max
     });

@@ -58,13 +58,7 @@ namespace cala {
         std::vector<ende::math::Mat4f> _meshTransforms;
         std::vector<Light::Data> _lightData;
 
-        struct Mesh {
-            u32 firstIndex;
-            u32 indexCount;
-            MaterialInstance* materialInstance;
-            ende::math::Vec4f min;
-            ende::math::Vec4f max;
-        };
+
         std::vector<Mesh> _meshes;
         std::vector<std::pair<i32, Light>> _lights;
 
@@ -100,9 +94,11 @@ namespace cala {
 
         std::unique_ptr<SceneNode> _root;
 
-        void addModel(Model& model, const Transform& transform, SceneNode* parent = nullptr);
+        SceneNode* addNode(const Transform& transform, SceneNode* parent = nullptr);
 
-        SceneNode* addMesh(const cala::Mesh& mesh, MaterialInstance* materialInstance, const Transform& transform, SceneNode* parent = nullptr);
+        SceneNode* addModel(Model& model, const Transform& transform, SceneNode* parent = nullptr);
+
+        SceneNode* addMesh(const Mesh& mesh, const Transform& transform, MaterialInstance* materialInstance = nullptr, SceneNode* parent = nullptr);
 
         SceneNode* addLight(const Light& light, const Transform& transform, SceneNode* parent = nullptr);
 

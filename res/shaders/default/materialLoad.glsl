@@ -25,7 +25,7 @@ Material loadMaterial(MaterialData data) {
     }
 
     if (data.emissiveIndex < 0) {
-        material.emissive = vec3(0);
+        material.emissive = vec3(1);
     } else {
         material.emissive = texture(sampler2D(textureMaps[data.emissiveIndex], samplers[globalData.linearRepeatSampler]), fsIn.TexCoords).rgb;
     }

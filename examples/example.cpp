@@ -114,11 +114,13 @@ int main() {
 
     Mesh cube = cala::shapes::cube().mesh(&engine);
 //    Mesh sphere = cala::shapes::sphereNormalized(1).mesh(&engine);
-    Mesh sphere = loadModel("../../res/models/sphere.obj").mesh(&engine);
-    sphere.min = { -1, -1, -1 };
-    sphere.max = { 1, 1, 1 };
+//    Mesh sphere = loadModel("../../res/models/sphere.obj").mesh(&engine);
+//    sphere.min = { -1, -1, -1 };
+//    sphere.max = { 1, 1, 1 };
 
+    auto sphere = engine.assetManager()->loadModel("sphere", "models/sphere.glb", material1);
     auto sponzaAsset = engine.assetManager()->loadModel("sponza", "models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf", material1);
+    auto bistro = engine.assetManager()->loadModel("bistro", "models/bistro/gltf/Bistro_Exterior.gltf", material1);
     auto damagedHelmet = engine.assetManager()->loadModel("damagedHelmet", "models/gltf/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf", material1);
 
 
@@ -164,9 +166,10 @@ int main() {
     scene.addSkyLightMap(background, true);
 
     scene.addModel(*sponzaAsset, sponzaTransform);
+    scene.addModel(*bistro, sponzaTransform);
     scene.addModel(*damagedHelmet, sponzaTransform);
 
-    scene.addMesh(sphere, &matInstance, lightTransform);
+    scene.addModel(*sphere, lightTransform);
 
     f32 sceneSize = std::max(objectCount / 10, 20u);
 
@@ -228,7 +231,7 @@ int main() {
     Transform t1({ 0, 4, 0 });
     Transform t2({ 2, 1, 0 }, {}, { 1, 1, 1 }, &t1);
 
-    scene.addMesh(sphere, &matInstance, t2);
+    scene.addModel(*sphere, t2);
 
 
 

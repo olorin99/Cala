@@ -11,6 +11,7 @@
 #include <Cala/MaterialInstance.h>
 #include <Ende/math/Mat.h>
 #include <Ende/math/Quaternion.h>
+#include <stack>
 
 template <>
 cala::backend::vulkan::Handle<cala::backend::vulkan::ShaderModule, cala::backend::vulkan::Device>& cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle>::operator*() noexcept {
@@ -462,6 +463,10 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
         materials.push_back(std::move(materialInstance));
     }
 
+    if (materials.empty()) {
+        materials.push_back(material->instance());
+    }
+
     // load meshes
     struct Vertex {
         ende::math::Vec3f position = { 0, 0, 0 };
@@ -474,22 +479,65 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
 
     std::vector<Model::Primitive> meshes;
 
-    for (auto& node : asset->nodes) {
-        ende::math::Mat4f transform = ende::math::identity<4, f32>();
-        if (auto* trs = std::get_if<fastgltf::Node::TRS>(&node.transform); trs) {
+    Model result;
+
+    struct NodeInfo {
+        u32 assetIndex;
+        u32 modelIndex;
+        ende::math::Mat4f parentTransform;
+    };
+    std::stack<NodeInfo> nodeIndices;
+
+    for (auto& index : asset->scenes.front().nodeIndices) {
+        NodeInfo info{};
+        info.assetIndex = index;
+        info.modelIndex = result.nodes.size();
+        info.parentTransform = ende::math::identity<4, f32>();
+        nodeIndices.push(info);
+        result.nodes.push_back({});
+    }
+
+    while (!nodeIndices.empty()) {
+        auto [ assetIndex, modelIndex, parentTransform ] = nodeIndices.top();
+        nodeIndices.pop();
+
+        auto& assetNode = asset->nodes[assetIndex];
+
+        Transform transform;
+        if (auto* trs = std::get_if<fastgltf::Node::TRS>(&assetNode.transform); trs) {
             ende::math::Quaternion rotation(trs->rotation[0], trs->rotation[1], trs->rotation[2], trs->rotation[3]);
             ende::math::Vec3f scale{ trs->scale[0], trs->scale[1], trs->scale[2] };
             ende::math::Vec3f translation{ trs->translation[0], trs->translation[1], trs->translation[2] };
 
-//            transform = ende::math::scale<4>(scale);
-            transform = ende::math::translation<4, f32>(translation) * rotation.toMat() * ende::math::scale<4, f32>(scale);
-        } else if (auto* mat = std::get_if<fastgltf::Node::TransformMatrix>(&node.transform); mat) {
-            transform = ende::math::Mat4f(*mat);
+            transform.setPos(translation);
+            transform.setRot(rotation);
+            transform.setScale(scale);
+//            transform = ende::math::translation<4, f32>(translation) * rotation.toMat() * ende::math::scale<4, f32>(scale);
+        } else if (auto* mat = std::get_if<fastgltf::Node::TransformMatrix>(&assetNode.transform); mat) {
+//            transform = ende::math::Mat4f(*mat);
+        }
+        ende::math::Mat4f localMatrix = transform.local();
+        ende::math::Mat4f worldMatrix = parentTransform * localMatrix;
+
+        for (auto& child : assetNode.children) {
+            NodeInfo info{};
+            info.assetIndex = child;
+            info.modelIndex = result.nodes.size();
+            info.parentTransform = worldMatrix;
+            result.nodes[modelIndex].children.push_back(info.modelIndex);
+            nodeIndices.push(info);
+            result.nodes.push_back({});
         }
 
-        u32 meshIndex = node.meshIndex.value();
-        auto& mesh = asset->meshes[meshIndex];
-        for (auto& primitive : mesh.primitives) {
+        auto& modelNode = result.nodes[modelIndex];
+
+        modelNode.transform = transform;
+
+        if (!assetNode.meshIndex.has_value())
+            continue;
+        u32 meshIndex = assetNode.meshIndex.value();
+        auto& assetMesh = asset->meshes[meshIndex];
+        for (auto& primitive : assetMesh.primitives) {
 
             ende::math::Vec3f min = { 10000, 10000, 10000 };
             ende::math::Vec3f max = min * -1;
@@ -504,53 +552,58 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
                 indices[firstIndex + idx] = index + firstVertex;
             });
 
-            auto positionIT = primitive.findAttribute("POSITION");
-            auto& positionAccessor = asset->accessors[positionIT->second];
-            vertices.resize(vertices.size() + positionAccessor.count);
-            fastgltf::iterateAccessorWithIndex<ende::math::Vec3f>(asset.get(), positionAccessor, [&](ende::math::Vec3f position, std::size_t idx) {
-                assert(firstVertex + idx < vertices.size());
-                position = transform.transform(position);
-                vertices[firstVertex + idx].position = position;
-                min = {
-                        std::min(min.x(), position.x()),
-                        std::min(min.y(), position.y()),
-                        std::min(min.z(), position.z())
-                };
-                max = {
-                        std::max(max.x(), position.x()),
-                        std::max(max.y(), position.y()),
-                        std::max(max.z(), position.z())
-                };
-            });
+            if (auto positionIT = primitive.findAttribute("POSITION"); positionIT != primitive.attributes.end()) {
+                auto& positionAccessor = asset->accessors[positionIT->second];
+                vertices.resize(vertices.size() + positionAccessor.count);
+                fastgltf::iterateAccessorWithIndex<ende::math::Vec3f>(asset.get(), positionAccessor, [&](ende::math::Vec3f position, std::size_t idx) {
+                    assert(firstVertex + idx < vertices.size());
+                    position = worldMatrix.transform(position);
+                    vertices[firstVertex + idx].position = position;
+                    min = {
+                            std::min(min.x(), position.x()),
+                            std::min(min.y(), position.y()),
+                            std::min(min.z(), position.z())
+                    };
+                    max = {
+                            std::max(max.x(), position.x()),
+                            std::max(max.y(), position.y()),
+                            std::max(max.z(), position.z())
+                    };
+                });
+            }
 
-            auto normalIT = primitive.findAttribute("NORMAL");
-            auto& normalAccessor = asset->accessors[normalIT->second];
-            fastgltf::iterateAccessorWithIndex<ende::math::Vec3f>(asset.get(), normalAccessor, [&](ende::math::Vec3f normal, std::size_t idx) {
-                assert(firstVertex + idx < vertices.size());
-                vertices[firstVertex + idx].normal = normal;
-            });
+            if (auto normalIT = primitive.findAttribute("NORMAL"); normalIT != primitive.attributes.end()) {
+                auto& normalAccessor = asset->accessors[normalIT->second];
+                fastgltf::iterateAccessorWithIndex<ende::math::Vec3f>(asset.get(), normalAccessor, [&](ende::math::Vec3f normal, std::size_t idx) {
+                    assert(firstVertex + idx < vertices.size());
+                    vertices[firstVertex + idx].normal = normal;
+                });
+            }
 
-            auto texCoordIT = primitive.findAttribute("TEXCOORD_0");
-            auto& texCoordAccessor = asset->accessors[texCoordIT->second];
-            fastgltf::iterateAccessorWithIndex<ende::math::Vec<2, f32>>(asset.get(), texCoordAccessor, [&](ende::math::Vec<2, f32> texCoord, std::size_t idx) {
-                assert(firstVertex + idx < vertices.size());
-                vertices[firstVertex + idx].texCoords = texCoord;
-            });
+            if (auto texCoordIT = primitive.findAttribute("TEXCOORD_0"); texCoordIT != primitive.attributes.end()) {
+                auto& texCoordAccessor = asset->accessors[texCoordIT->second];
+                fastgltf::iterateAccessorWithIndex<ende::math::Vec<2, f32>>(asset.get(), texCoordAccessor, [&](ende::math::Vec<2, f32> texCoord, std::size_t idx) {
+                    assert(firstVertex + idx < vertices.size());
+                    vertices[firstVertex + idx].texCoords = texCoord;
+                });
+            }
 
-            auto tangentIT = primitive.findAttribute("TANGENT");
-            auto& tangentAccessor = asset->accessors[tangentIT->second];
-            fastgltf::iterateAccessorWithIndex<ende::math::Vec4f>(asset.get(), tangentAccessor, [&](ende::math::Vec4f tangent, std::size_t idx) {
-                assert(firstVertex + idx < vertices.size());
-                vertices[firstVertex + idx].tangent = tangent;
-            });
+            if (auto tangentIT = primitive.findAttribute("TANGENT"); tangentIT != primitive.attributes.end()) {
+                auto& tangentAccessor = asset->accessors[tangentIT->second];
+                fastgltf::iterateAccessorWithIndex<ende::math::Vec4f>(asset.get(), tangentAccessor, [&](ende::math::Vec4f tangent, std::size_t idx) {
+                    assert(firstVertex + idx < vertices.size());
+                    vertices[firstVertex + idx].tangent = tangent;
+                });
+            }
 
-            Model::Primitive model{};
-            model.firstIndex = firstIndex;
-            model.indexCount = indexCount;
-            model.materialIndex = primitive.materialIndex.value();
-            model.aabb.min = min;
-            model.aabb.max = max;
-            meshes.push_back(model);
+            Model::Primitive mesh{};
+            mesh.firstIndex = firstIndex;
+            mesh.indexCount = indexCount;
+            mesh.materialIndex = primitive.materialIndex.has_value() ? primitive.materialIndex.value() : 0;
+            mesh.aabb.min = min;
+            mesh.aabb.max = max;
+            modelNode.primitives.push_back(meshes.size());
+            meshes.push_back(mesh);
         }
     }
 
@@ -574,17 +627,17 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
     for (auto& mesh : meshes)
         mesh.firstIndex += indexOffset / sizeof(u32);
 
-    Model model;
-    model.primitives = std::move(meshes);
-    model.images = images;
-    model.materials = std::move(materials);
-    model._binding = binding;
-    model._attributes = attributes;
+//    Model model;
+    result.primitives = std::move(meshes);
+    result.images = images;
+    result.materials = std::move(materials);
+    result._binding = binding;
+    result._attributes = attributes;
 
     modelMetadata.hash = hash;
     modelMetadata.name = name;
     modelMetadata.path = path;
-    modelMetadata.model = std::move(model);
+    modelMetadata.model = std::move(result);
 
     _metadata[index].loaded = true;
 

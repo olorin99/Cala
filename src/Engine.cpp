@@ -570,8 +570,9 @@ void cala::Engine::stageData(backend::vulkan::ImageHandle dstHandle, std::span<c
     }
 }
 
-void cala::Engine::flushStagedData() {
+u32 cala::Engine::flushStagedData() {
     PROFILE_NAMED("Engine::flushStagedData");
+    u32 bytesUploaded = 0;
     if (!_pendingStagedBuffer.empty() || !_pendingStagedImage.empty()) {
         _device.immediate([&](backend::vulkan::CommandHandle cmd) {
             for (auto& staged : _pendingStagedBuffer) {
@@ -581,6 +582,7 @@ void cala::Engine::flushStagedData() {
                 bufferCopy.size = staged.srcSize;
                 assert(staged.dstBuffer->size() >= bufferCopy.dstOffset + bufferCopy.size);
                 vkCmdCopyBuffer(cmd->buffer(), _stagingBuffer->buffer(), staged.dstBuffer->buffer(), 1, &bufferCopy);
+                bytesUploaded += staged.srcSize;
             }
             for (auto& staged : _pendingStagedImage) {
                 auto barrier = staged.dstImage->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::TRANSFER_DST);
@@ -606,12 +608,15 @@ void cala::Engine::flushStagedData() {
 
                 barrier = staged.dstImage->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::COMPUTE_SHADER, backend::Access::TRANSFER_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
                 cmd->pipelineBarrier({ &barrier, 1 });
+                bytesUploaded += staged.srcSize;
             }
         });
         _pendingStagedBuffer.clear();
         _pendingStagedImage.clear();
         _stagingOffset = 0;
     }
+    _device.increaseDataUploadCount(bytesUploaded);
+    return bytesUploaded;
 }
 
 

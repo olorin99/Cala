@@ -61,7 +61,7 @@ namespace cala {
 
         void stageData(backend::vulkan::ImageHandle dstHandle, std::span<const u8> data, backend::vulkan::Image::DataInfo dataInfo);
 
-        void flushStagedData();
+        u32 flushStagedData();
 
         struct ShaderInfo {
             std::filesystem::path path;

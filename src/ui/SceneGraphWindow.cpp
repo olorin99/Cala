@@ -12,6 +12,26 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
         ImGui::PushID(std::hash<const void*>()(child.get()));
         switch (child->type) {
             case cala::Scene::NodeType::NONE:
+            {
+                if (ImGui::TreeNode("Node")) {
+                    auto position = child->transform.pos();
+                    if (ImGui::DragFloat3("Position", &position[0], 0.1)) {
+                        child->transform.setPos(position);
+                    }
+                    ende::math::Vec3f eulerAngles = child->transform.rot().unit().toEuler();
+                    ende::math::Vec3f angleDegrees = { (f32)ende::math::deg(eulerAngles.x()), (f32)ende::math::deg(eulerAngles.y()), (f32)ende::math::deg(eulerAngles.z()) };
+                    if (ImGui::DragFloat3("Rotation", &angleDegrees[0], 0.1)) {
+                        ende::math::Quaternion rotation(ende::math::rad(angleDegrees.x()), ende::math::rad(angleDegrees.y()), ende::math::rad(angleDegrees.z()));
+                        child->transform.setRot(rotation);
+                    }
+                    auto scale = child->transform.scale();
+                    if (ImGui::DragFloat3("Scale", &scale[0], 0.1)) {
+                        child->transform.setScale(scale);
+                    }
+                    traverseSceneNode(child.get(), scene);
+                    ImGui::TreePop();
+                }
+            }
                 break;
             case cala::Scene::NodeType::MESH:
             {
@@ -78,7 +98,7 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                                 break;
                         }
                     }
-
+                    traverseSceneNode(child.get(), scene);
                     ImGui::TreePop();
                 }
             }
@@ -129,6 +149,7 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                     if (ImGui::Checkbox("Shadowing", &shadowing))
                         light.setShadowing(shadowing);
 
+                    traverseSceneNode(child.get(), scene);
                     ImGui::TreePop();
                 }
             }

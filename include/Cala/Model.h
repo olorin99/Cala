@@ -4,6 +4,7 @@
 #include <Ende/math/Vec.h>
 #include <Cala/backend/vulkan/Handle.h>
 #include <Cala/MaterialInstance.h>
+#include <Cala/Transform.h>
 
 namespace cala {
 
@@ -20,9 +21,17 @@ namespace cala {
         struct Primitive {
             u32 firstIndex;
             u32 indexCount;
-            u32 materialIndex;
+            i32 materialIndex;
             AABB aabb;
         };
+
+        struct Node {
+            std::vector<u32> primitives;
+            std::vector<u32> children;
+            Transform transform;
+        };
+
+        std::vector<Node> nodes;
 
         std::vector<Primitive> primitives;
         std::vector<MaterialInstance> materials;
