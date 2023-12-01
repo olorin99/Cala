@@ -86,53 +86,14 @@ int main() {
 
     ui::GuiWindow guiWindow(engine, renderer, scene, swapchain, platform.window());
 
-
-//    struct Material1Data {
-//        i32 albedoIndex = -1;
-//        i32 normalIndex = -1;
-//        i32 metallicRoughness = -1;
-//        f32 metallness = 0;
-//        f32 roughness = 0;
-//    };
-//    Material* material = engine.loadMaterial("../../res/materials/expanded_pbr.mat");
-//    if (!material)
-//        return -1;
-
-    struct MaterialData {
-        i32 albedoIndex = -1;
-        i32 normalIndex = -1;
-        i32 metallicRoughness = -1;
-    };
-
     Material* material1 = engine.loadMaterial("../../res/materials/pbr.mat");
     if (!material1)
         return -2;
-
-    Transform sponzaTransform;
-
-    Transform helmetTransform({0, 0, 0}, {0, 0, 0, 1}, { 50, 0.1, 50});
-
-    Mesh cube = cala::shapes::cube().mesh(&engine);
-//    Mesh sphere = cala::shapes::sphereNormalized(1).mesh(&engine);
-//    Mesh sphere = loadModel("../../res/models/sphere.obj").mesh(&engine);
-//    sphere.min = { -1, -1, -1 };
-//    sphere.max = { 1, 1, 1 };
-
-    auto sphere = engine.assetManager()->loadModel("sphere", "models/sphere.glb", material1);
-    auto sponzaAsset = engine.assetManager()->loadModel("sponza", "models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf", material1);
-    auto bistro = engine.assetManager()->loadModel("bistro", "models/bistro/gltf/Bistro_Exterior.gltf", material1);
-//    auto damagedHelmet = engine.assetManager()->loadModel("damagedHelmet", "models/gltf/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf", material1);
-
 
     Transform cameraTransform({10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(-90)));
     Camera camera((f32)ende::math::rad(54.4), platform.windowSize().first, platform.windowSize().second, 0.1f, 100.f, cameraTransform);
 
     Sampler sampler(engine.device(), {});
-
-    auto matInstance = material1->instance();
-
-
-    matInstance.setData(MaterialData{});
 
     Transform lightTransform({0, 1, 0}, {0, 0, 0, 1}, {0.1, 0.1, 0.1});
     Light light(cala::Light::POINT, true);
@@ -154,96 +115,32 @@ int main() {
     light3.setIntensity(1);
     light3.setColour({0.23, 0.46, 0.10});
 
-//    u32 l1 = scene.addLight(light1);
-//    u32 l2 = scene.addLight(light2);
-//    u32 l0 = scene.addLight(light);
-//    u32 l3 = scene.addLight(light3);
-
     scene.addLight(light, lightTransform);
 
     auto background = engine.assetManager()->loadImage("background", "textures/TropicalRuins_3k.hdr", backend::Format::RGBA32_SFLOAT);
 //    auto background = engine.assetManager()->loadImage("background", "textures/Tropical_Beach_3k.hdr", backend::Format::RGBA32_SFLOAT);
     scene.addSkyLightMap(background, true);
 
-    scene.addModel(*sponzaAsset, sponzaTransform);
-    scene.addModel(*bistro, sponzaTransform);
+    Mesh cube = cala::shapes::cube().mesh(&engine);
+
+    auto sphere = engine.assetManager()->loadModel("sphere", "models/sphere.glb", material1);
+    auto sponzaAsset = engine.assetManager()->loadModel("sponza", "models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf", material1);
+//    auto bistro = engine.assetManager()->loadModel("bistro", "models/bistro/gltf/Bistro_Exterior.gltf", material1);
+//    auto damagedHelmet = engine.assetManager()->loadModel("damagedHelmet", "models/gltf/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf", material1);
+
+
+    Transform defaultTransform;
+    scene.addModel(*sponzaAsset, defaultTransform);
+//    scene.addModel(*bistro, defaultTransform);
 //    scene.addModel(*damagedHelmet, sponzaTransform);
-
-    scene.addModel(*sphere, lightTransform);
-
-    f32 sceneSize = std::max(objectCount / 10, 20u);
+    auto sphereNode = scene.addModel(*sphere, lightTransform);
 
     f32 sceneBounds = 10;
-
-//    MaterialInstance instances[10] = {
-//            material->instance(),
-//            material->instance(),
-//            material->instance(),
-//            material->instance(),
-//            material->instance(),
-//            material->instance(),
-//            material->instance(),
-//            material->instance(),
-//            material->instance(),
-//            material->instance()
-//    };
-//    ImageHandle roughnessImages[10];
-//    for (u32 i = 0; i < 10; i++) {
-//        roughnessImages[i] = engine.device().createImage({1, 1, 1, backend::Format::RGBA32_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST, backend::ImageType::IMAGE2D});
-//        f32 metallicRoughnessData[] = { 0.f, static_cast<f32>(i) / 10.f, 0.f, 1.f };
-//        engine.stageData(roughnessImages[i], std::span<f32>(metallicRoughnessData, 4), {0, 1, 1, 1, 4 * 4 });
-////        roughnessImages[i]->data(engine.device(), {0, 1, 1, 1, 4 * 4 }, std::span<f32>(metallicRoughnessData, 4));
-//
-//        Material1Data materialData1 {
-//                -1,
-//                -1,
-//                roughnessImages[i].index(),
-//                1.0,
-//                0.0
-//        };
-//
-//        instances[i].setData(materialData1);
-//    }
-
-
-    u32 width = 10;
-    u32 height = 10;
-    u32 depth = 10;
-
-//    Transform transform;
-//    std::vector<Transform> transforms;
-//    transforms.reserve(width * height * depth * 10);
-//    for (u32 i = 0; i < width; i++) {
-//        auto xpos = transform.pos();
-//        for (u32 j = 0; j < height; j++) {
-//            auto ypos = transform.pos();
-//            for (u32 k = 0; k < depth; k++) {
-//                transform.addPos({0, 0, 3});
-//                transforms.push_back(transform);
-//                scene.addRenderable(sphere, &instances[k], &transforms.back(), false);
-//            }
-//            transform.setPos(ypos + ende::math::Vec3f{0, 3, 0});
-//        }
-//        transform.setPos(xpos + ende::math::Vec3f{3, 0, 0});
-//    }
-
 
     Transform t1({ 0, 4, 0 });
     Transform t2({ 2, 1, 0 }, {}, { 1, 1, 1 }, &t1);
 
     scene.addModel(*sphere, t2);
-
-
-
-    std::vector<Transform> lightTransforms;
-    lightTransforms.reserve(10000);
-    for (u32 i = 0; i < 0; i++) {
-        lightTransforms.push_back(Transform({ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f), ende::math::rand(-sceneSize * 1.5f, sceneSize * 1.5f)}));
-        Light l(cala::Light::POINT, false);
-        l.setIntensity(ende::math::rand(10.f, 1000.f));
-        l.setColour({ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f)});
-        scene.addLight(l, lightTransforms.back());
-    }
 
     i32 newLights = 10;
 
@@ -302,14 +199,14 @@ int main() {
             ImGui::SliderInt("New Lights", &newLights, 0, 100);
             if (ImGui::Button("Add Lights")) {
                 for (u32 i = 0; i < newLights; i++) {
-                    lightTransforms.push_back(Transform({ende::math::rand(-sceneBounds, sceneBounds), ende::math::rand(0.f, sceneBounds), ende::math::rand(-sceneBounds, sceneBounds)}));
+                    Transform transform({ende::math::rand(-sceneBounds, sceneBounds), ende::math::rand(0.f, sceneBounds), ende::math::rand(-sceneBounds, sceneBounds)});
                     Light l(Light::LightType::POINT, false);
-                    l.setPosition(lightTransforms.back().pos());
+                    l.setPosition(transform.pos());
 //                l.setIntensity(ende::math::rand(0.1f, 5.f));
 //                l.setIntensity(0.1f);
                     l.setRange(1);
                     l.setColour({ ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f) });
-                    scene.addLight(l, lightTransforms.back());
+                    scene.addLight(l, transform);
                 }
             }
 
@@ -328,9 +225,12 @@ int main() {
         }
 
         {
-//            helmetTransform.rotate(ende::math::Vec3f{0, 1, 0}, ende::math::rad(45) * dt);
-            lightTransform.rotate(ende::math::Vec3f{0, 1, 1}, ende::math::rad(45) * dt);
+            f32 seconds = engine.getRunningTime().milliseconds() / 1000.f;
+            f32 factor = std::clamp(seconds / 100, 0.f, 1.f);
+            auto currentPos = ende::math::Vec3f{-10, 1, 0}.lerp(ende::math::Vec3f{10, 1, 0}, factor);
+            sphereNode->transform.setPos(currentPos);
         }
+
         if (renderer.beginFrame(&swapchain)) {
             scene.prepare(camera);
 
