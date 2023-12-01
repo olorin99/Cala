@@ -13,7 +13,7 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
         switch (child->type) {
             case cala::Scene::NodeType::NONE:
             {
-                if (ImGui::TreeNode("Node")) {
+                if (ImGui::TreeNode(child->name.c_str())) {
                     auto position = child->transform.pos();
                     if (ImGui::DragFloat3("Position", &position[0], 0.1)) {
                         child->transform.setPos(position);

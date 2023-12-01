@@ -514,7 +514,7 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             transform.setScale(scale);
 //            transform = ende::math::translation<4, f32>(translation) * rotation.toMat() * ende::math::scale<4, f32>(scale);
         } else if (auto* mat = std::get_if<fastgltf::Node::TransformMatrix>(&assetNode.transform); mat) {
-//            transform = ende::math::Mat4f(*mat);
+            transform = ende::math::Mat4f(*mat);
         }
         ende::math::Mat4f localMatrix = transform.local();
         ende::math::Mat4f worldMatrix = parentTransform * localMatrix;
@@ -530,6 +530,10 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
         }
 
         auto& modelNode = result.nodes[modelIndex];
+        if (assetNode.name.empty())
+            modelNode.name = name;
+        else
+            modelNode.name = assetNode.name;
 
         modelNode.transform = transform;
 

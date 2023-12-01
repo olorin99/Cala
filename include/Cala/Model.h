@@ -5,6 +5,7 @@
 #include <Cala/backend/vulkan/Handle.h>
 #include <Cala/MaterialInstance.h>
 #include <Cala/Transform.h>
+#include <string>
 
 namespace cala {
 
@@ -29,6 +30,7 @@ namespace cala {
             std::vector<u32> primitives;
             std::vector<u32> children;
             Transform transform;
+            std::string name;
         };
 
         std::vector<Node> nodes;

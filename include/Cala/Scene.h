@@ -79,7 +79,7 @@ namespace cala {
 
             NodeType type = NodeType::NONE;
             Transform transform = {};
-
+            std::string name;
             SceneNode* parent = nullptr;
             std::vector<std::unique_ptr<SceneNode>> children;
         };
@@ -94,7 +94,7 @@ namespace cala {
 
         std::unique_ptr<SceneNode> _root;
 
-        SceneNode* addNode(const Transform& transform, SceneNode* parent = nullptr);
+        SceneNode* addNode(const std::string& name, const Transform& transform, SceneNode* parent = nullptr);
 
         SceneNode* addModel(Model& model, const Transform& transform, SceneNode* parent = nullptr);
 

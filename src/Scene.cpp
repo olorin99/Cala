@@ -138,10 +138,11 @@ void cala::Scene::prepare(cala::Camera& camera) {
     _engine->updateMaterialdata();
 }
 
-cala::Scene::SceneNode* cala::Scene::addNode(const cala::Transform &transform, cala::Scene::SceneNode *parent) {
+cala::Scene::SceneNode* cala::Scene::addNode(const std::string& name, const cala::Transform &transform, cala::Scene::SceneNode *parent) {
     auto node = std::make_unique<SceneNode>();
     node->type = NodeType::NONE;
     node->transform = transform;
+    node->name = name;
     if (parent) {
         node->parent = parent;
         parent->children.push_back(std::move(node));
@@ -154,7 +155,7 @@ cala::Scene::SceneNode* cala::Scene::addNode(const cala::Transform &transform, c
 }
 
 cala::Scene::SceneNode* addModelNode(cala::Scene& scene, cala::Model& model, cala::Model::Node& node, const cala::Transform& transform, cala::Scene::SceneNode* parent) {
-    auto sceneNode = scene.addNode(transform, parent);
+    auto sceneNode = scene.addNode(node.name, transform, parent);
     for (auto primitiveIndex : node.primitives) {
         auto& primitive = model.primitives[primitiveIndex];
         scene.addMesh({

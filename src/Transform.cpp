@@ -10,6 +10,12 @@ cala::Transform::Transform(const ende::math::Vec3f &pos, const ende::math::Quate
     _dirty(true)
 {}
 
+cala::Transform::Transform(const ende::math::Mat4f &matrix) {
+    _position = ende::math::Vec3f{ matrix[3][0], matrix[3][1], matrix[3][2] };
+    _scale = { 1, 1, 1 }; // TODO: get scale from matrix
+    _rotation = matrix;
+}
+
 ende::math::Mat4f cala::Transform::local() const {
     ende::math::Mat4f translation = ende::math::translation<4, f32>(_position);
     ende::math::Mat4f rotation = _rotation.toMat();

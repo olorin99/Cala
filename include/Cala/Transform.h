@@ -12,6 +12,7 @@ namespace cala {
 
         Transform(const ende::math::Vec3f& pos = { 0, 0, 0 }, const ende::math::Quaternion& rot = { 0, 0, 0, 1 }, const ende::math::Vec3f& scale = { 1, 1, 1 }, Transform* parent = nullptr);
 
+        Transform(const ende::math::Mat4f& matrix);
 
         ende::math::Mat4f local() const;
 
