@@ -53,6 +53,22 @@ cala::MaterialInstance cala::Material::instance() {
     u32 offset = _data.size();
     _data.resize(offset + _setSize);
     auto mat = MaterialInstance(this, offset);
+    for (auto& parameter : _programs[0].interface().getBindingMemberList(2, 0)) {
+        switch (parameter.type) {
+            case backend::vulkan::ShaderModuleInterface::MemberType::INT:
+                mat.setParameter(parameter.name, -1);
+                break;
+            case backend::vulkan::ShaderModuleInterface::MemberType::FLOAT:
+                mat.setParameter(parameter.name, 0);
+                break;
+            case backend::vulkan::ShaderModuleInterface::MemberType::VEC3F:
+                mat.setParameter(parameter.name, ende::math::Vec3f{0, 0, 0});
+                break;
+            case backend::vulkan::ShaderModuleInterface::MemberType::VEC4F:
+                mat.setParameter(parameter.name, ende::math::Vec4f{0, 0, 0});
+                break;
+        }
+    }
     return std::move(mat);
 }
 
