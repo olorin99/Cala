@@ -1,11 +1,14 @@
 
 layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
-#include "global_data.glsl"
+#include "shaderBridge.h"
+#include "bindings.glsl"
 
-layout (set = 0, binding = 0) uniform texture2D sampledImages[];
-layout (set = 0, binding = 2) uniform sampler samplers[];
-layout (set = 0, binding = 3) uniform writeonly image2D storageImages[];
+CALA_USE_SAMPLED_IMAGE(2D)
+CALA_USE_STORAGE_IMAGE(2D, writeonly)
+
+#define INPUT_IMAGE CALA_COMBINED_SAMPLER2D(inputIndex, bilinearSampler)
+#define OUTPUT_IMAGE CALA_GET_STORAGE_IMAGE2D(writeonly, outputIndex)
 
 layout (push_constant) uniform PushData {
     int inputIndex;
@@ -26,24 +29,24 @@ float karisAverage(vec3 colour) {
 }
 
 // based on "Next Generation Post Processing in Call of Duty Advanced Warfare" SIGGRAPH 2014 presentation
-vec3 downsample(texture2D srcTexture, sampler srcSampler, vec2 texCoord) {
-    vec3 a = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(-2, 2)).rgb;
-    vec3 b = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(0, 2)).rgb;
-    vec3 c = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(2, 2)).rgb;
+vec3 downsample(vec2 texCoord) {
+    vec3 a = textureOffset(INPUT_IMAGE, texCoord, ivec2(-2, 2)).rgb;
+    vec3 b = textureOffset(INPUT_IMAGE, texCoord, ivec2(0, 2)).rgb;
+    vec3 c = textureOffset(INPUT_IMAGE, texCoord, ivec2(2, 2)).rgb;
 
-    vec3 d = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(-2, 0)).rgb;
-    vec3 e = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(0, 0)).rgb;
-    vec3 f = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(2, 0)).rgb;
+    vec3 d = textureOffset(INPUT_IMAGE, texCoord, ivec2(-2, 0)).rgb;
+    vec3 e = textureOffset(INPUT_IMAGE, texCoord, ivec2(0, 0)).rgb;
+    vec3 f = textureOffset(INPUT_IMAGE, texCoord, ivec2(2, 0)).rgb;
 
-    vec3 g = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(-2, -2)).rgb;
-    vec3 h = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(0, -2)).rgb;
-    vec3 i = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(2, -2)).rgb;
+    vec3 g = textureOffset(INPUT_IMAGE, texCoord, ivec2(-2, -2)).rgb;
+    vec3 h = textureOffset(INPUT_IMAGE, texCoord, ivec2(0, -2)).rgb;
+    vec3 i = textureOffset(INPUT_IMAGE, texCoord, ivec2(2, -2)).rgb;
 
-    vec3 j = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(-1, 1)).rgb;
-    vec3 k = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(1, 1)).rgb;
+    vec3 j = textureOffset(INPUT_IMAGE, texCoord, ivec2(-1, 1)).rgb;
+    vec3 k = textureOffset(INPUT_IMAGE, texCoord, ivec2(1, 1)).rgb;
 
-    vec3 l = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(-1, -1)).rgb;
-    vec3 m = textureOffset(sampler2D(srcTexture, srcSampler), texCoord, ivec2(1, -1)).rgb;
+    vec3 l = textureOffset(INPUT_IMAGE, texCoord, ivec2(-1, -1)).rgb;
+    vec3 m = textureOffset(INPUT_IMAGE, texCoord, ivec2(1, -1)).rgb;
 
     vec3 result = vec3(0.0);
     if (mipLevel == 0) {
@@ -73,16 +76,16 @@ vec3 downsample(texture2D srcTexture, sampler srcSampler, vec2 texCoord) {
 void main() {
     ivec2 globCoords = ivec2(gl_GlobalInvocationID.xy);
 
-    ivec2 inputSize = imageSize(storageImages[inputIndex]);
-    ivec2 outputSize = imageSize(storageImages[outputIndex]);
+    ivec2 inputSize = textureSize(INPUT_IMAGE, 0);
+    ivec2 outputSize = imageSize(OUTPUT_IMAGE);
 
     if (any(greaterThanEqual(globCoords, outputSize)))
         return;
 
     vec2 texCoords = (vec2(globCoords) + 0.5) / outputSize;
 
-    vec3 result = max(downsample(sampledImages[inputIndex], samplers[bilinearSampler], texCoords), 0.0001);
+    vec3 result = max(downsample(texCoords), 0.0001);
 
-    imageStore(storageImages[outputIndex], globCoords, vec4(result, 1.0));
+    imageStore(OUTPUT_IMAGE, globCoords, vec4(result, 1.0));
 
 }

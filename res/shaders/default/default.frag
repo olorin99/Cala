@@ -9,14 +9,8 @@ layout (location = 0) in VsOut {
 
 layout (location = 0) out vec4 FragColour;
 
-layout (set = 0, binding = 0) uniform textureCube cubeMaps[];
-layout (set = 0, binding = 0) uniform texture2D textureMaps[];
-layout (set = 0, binding = 0) uniform texture3D textureMaps3D[];
-layout (set = 0, binding = 2) uniform sampler samplers[];
-
-#include "camera.glsl"
-
-#include "global_data.glsl"
+#include "shaderBridge.h"
+#include "bindings.glsl"
 
 layout (push_constant) uniform IBLData {
     LightGridBuffer lightGridBuffer;
@@ -35,14 +29,12 @@ MATERIAL_EVAL;
 
 INCLUDES_GO_HERE;
 
-layout (set = 2, binding = 0) readonly buffer MatData {
+layout (set = CALA_MATERIAL_SET, binding = CALA_MATERIAL_BINDING) readonly buffer MatData {
     MaterialData materials[];
 };
 
-#include "mesh_data.glsl"
-
 void main() {
-    Mesh mesh = globalData.meshBuffer.meshData[fsIn.drawID];
+    GPUMesh mesh = globalData.meshBuffer.meshData[fsIn.drawID];
     MaterialData materialData = materials[mesh.materialInstanceIndex];
     Material material = loadMaterial(materialData);
     FragColour = evalMaterial(material);

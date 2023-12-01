@@ -12,11 +12,7 @@ layout (location = 0) out VsOut {
     flat uint drawID;
 } vsOut;
 
-#include "camera.glsl"
-
-#include "global_data.glsl"
-
-#include "transforms_data.glsl"
+#include "shaderBridge.h"
 
 void main() {
 //    mat4 model = bindlessBuffersTransforms[globalData.transformsBufferIndex].transforms[gl_BaseInstance];

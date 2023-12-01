@@ -7,8 +7,7 @@ layout (location = 0) out VsOut {
     flat uint drawID;
 } vsOut;
 
-#include "global_data.glsl"
-#include "camera.glsl"
+#include "shaderBridge.h"
 
 layout (set = 2, binding = 0) uniform FrustumVertices {
     vec4 vertex[8];

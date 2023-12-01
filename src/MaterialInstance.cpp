@@ -1,6 +1,7 @@
 #include "Cala/MaterialInstance.h"
 #include <Cala/Material.h>
 #include <Cala/backend/vulkan/CommandBuffer.h>
+#include "Cala/shaderBridge.h"
 
 cala::MaterialInstance::MaterialInstance(Material *material, u32 offset)
     : _material(material),
@@ -17,7 +18,7 @@ cala::MaterialInstance::MaterialInstance(MaterialInstance &&rhs) noexcept
 
 bool cala::MaterialInstance::setParameter(const std::string& name, u8* data, u32 size) {
     auto layout = _material->_programs[0]._pipelineLayout;
-    auto member = layout->interface().getBindingMember(2, 0, name);
+    auto member = layout->interface().getBindingMember(CALA_MATERIAL_SET, CALA_MATERIAL_BINDING, name);
     if (member.size == 0)
         return false;
 
@@ -28,7 +29,7 @@ bool cala::MaterialInstance::setParameter(const std::string& name, u8* data, u32
 
 void *cala::MaterialInstance::getParameter(const std::string &name, u32 size) {
     auto layout = _material->_programs[0]._pipelineLayout;
-    auto member = layout->interface().getBindingMember(2, 0, name);
+    auto member = layout->interface().getBindingMember(CALA_MATERIAL_SET, CALA_MATERIAL_BINDING, name);
     if (member.size == 0)
         return nullptr;
     assert(_material->_data.size() >= member.offset + _offset + size);

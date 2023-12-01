@@ -484,7 +484,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 cmd->bindProgram(material->getVariant(Material::Variant::LIT));
                 cmd->bindRasterState(material->getRasterState());
                 cmd->bindDepthState(material->getDepthState());
-                cmd->bindBuffer(2, 0, material->buffer(), true);
+                cmd->bindBuffer(CALA_MATERIAL_SET, CALA_MATERIAL_BINDING, material->buffer(), true);
 
                 struct ForwardPush {
                     u64 lightGridBuffer;

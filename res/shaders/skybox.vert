@@ -8,9 +8,7 @@ layout (location = 0) out VsOut {
     vec3 TexCoords;
 } vsOut;
 
-#include "camera.glsl"
-
-#include "global_data.glsl"
+#include "shaderBridge.h"
 
 void main() {
     vsOut.TexCoords = inPosition;

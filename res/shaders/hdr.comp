@@ -1,7 +1,7 @@
 
 layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
-#include "global_data.glsl"
+#include "shaderBridge.h"
 
 layout (rgba32f, set = 2, binding = 0) uniform readonly image2D hdrMap;
 layout (set = 2, binding = 1) uniform writeonly image2D backbuffer;

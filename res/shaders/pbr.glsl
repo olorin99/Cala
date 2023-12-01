@@ -1,6 +1,10 @@
 #ifndef PBR_GLSL
 #define PBR_GLSL
 
+#include "bindings.glsl"
+CALA_USE_SAMPLED_IMAGE(Cube);
+CALA_USE_SAMPLED_IMAGE(2D);
+
 const float PI = 3.1415926559;
 
 float distributionGGX(vec3 N, vec3 H, float roughness) {
@@ -46,7 +50,7 @@ vec3 getAmbient(int irradianceIndex, int prefilterIndex, int brdfIndex, vec3 nor
     vec3 diffuse = vec3(0.0001) * albedo;
     vec3 specular = vec3(0.0);
     if (irradianceIndex >= 0) {
-        vec3 irradiance = texture(samplerCube(cubeMaps[irradianceIndex] , samplers[globalData.linearRepeatSampler]), normal).rgb;
+        vec3 irradiance = texture(CALA_COMBINED_SAMPLERCUBE(irradianceIndex, globalData.linearRepeatSampler), normal).rgb;
         diffuse = irradiance * albedo;
     }
     if (prefilterIndex >= 0 && brdfIndex >= 0) {
@@ -54,11 +58,11 @@ vec3 getAmbient(int irradianceIndex, int prefilterIndex, int brdfIndex, vec3 nor
         float lod = roughness * MAX_REFLECTION_LOD;
         float lodf = floor(lod);
         float lodc = clamp(ceil(lod), 0.0, MAX_REFLECTION_LOD);
-        vec3 a = textureLod(samplerCube(cubeMaps[prefilterIndex], samplers[globalData.linearRepeatSampler]), R, lodf).rgb;
-        vec3 b = textureLod(samplerCube(cubeMaps[prefilterIndex], samplers[globalData.linearRepeatSampler]), R, lodc).rgb;
+        vec3 a = textureLod(CALA_COMBINED_SAMPLERCUBE(prefilterIndex, globalData.linearRepeatSampler), R, lodf).rgb;
+        vec3 b = textureLod(CALA_COMBINED_SAMPLERCUBE(prefilterIndex, globalData.linearRepeatSampler), R, lodc).rgb;
         vec3 prefilteredColour = mix(a, b, lod - lodf);
 
-        vec2 brdf = texture(sampler2D(textureMaps[brdfIndex], samplers[globalData.linearRepeatSampler]), vec2(max(dot(normal, V), 0.0), roughness)).rg;
+        vec2 brdf = texture(CALA_COMBINED_SAMPLER2D(brdfIndex, globalData.linearRepeatSampler), vec2(max(dot(normal, V), 0.0), roughness)).rg;
         specular = prefilteredColour * (F * brdf.x + brdf.y);
     }
     return kD * diffuse + specular;

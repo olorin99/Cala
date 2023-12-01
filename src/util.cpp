@@ -142,6 +142,7 @@ std::expected<std::vector<u32>, u32> cala::util::compileGLSLToSpirv(backend::vul
     shaderc::CompileOptions options;
 
     FileFinder finder;
+    finder.addSearchPath("../../include/Cala");
     for (auto& path : searchPaths)
         finder.addSearchPath(path);
     options.SetIncluder(std::make_unique<FileIncluder>(&finder));

@@ -1,11 +1,9 @@
 #ifndef LIGHTING_GLSL
 #define LIGHTING_GLSL
 
-#include "light_data.glsl"
-
 //#define sizeof(Type) (uint64_t(Type(uint64_t(0))+1))
 
-vec3 pointLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 albedo, float roughness, float metallic) {
+vec3 pointLight(GPULight light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 albedo, float roughness, float metallic) {
     vec3 lightVec = light.position - fsIn.FragPos;
     vec3 L = normalize(lightVec);
     float NdotL = max(dot(normal, L), 0.0);
@@ -44,7 +42,7 @@ vec3 pointLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 al
     return (kD * albedo / PI + specular) * radiance * NdotL * shadow;
 }
 
-vec3 directionalLight(Light light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 albedo, float roughness, float metallic) {
+vec3 directionalLight(GPULight light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 albedo, float roughness, float metallic) {
     vec3 L = normalize(light.position);
     float NdotL = max(dot(normal, L), 0.0);
 

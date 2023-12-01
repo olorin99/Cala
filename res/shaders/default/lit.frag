@@ -1,5 +1,4 @@
 
-
 #include "pbr.glsl"
 #include "shadow.glsl"
 #include "lighting.glsl"
@@ -22,7 +21,7 @@ vec4 evalMaterial(Material material) {
 
     for (uint i = 0; i < grid.count; i++) {
         uint lightIndex = lightIndicesBuffer.lightIndices[grid.offset + i];
-        Light light = globalData.lightBuffer.lights[lightIndex];
+        GPULight light = globalData.lightBuffer.lights[lightIndex];
         switch (light.type) {
             case 0:
                 Lo += directionalLight(light, material.normal, viewPos, V, F0, material.albedo, material.roughness, material.metallic);

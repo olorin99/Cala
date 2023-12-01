@@ -7,6 +7,8 @@
 #include <Cala/backend/vulkan/Timer.h>
 #include <Cala/RenderGraph.h>
 
+#include "shaderBridge.h"
+
 class ImGuiContext;
 
 namespace cala {
@@ -114,7 +116,7 @@ namespace cala {
             u64 lightCountBuffer;
         };
 
-        RendererGlobal _globalData;
+        GlobalData _globalData;
 
         std::vector<ende::math::Vec4f> _frustumCorners;
         ende::math::Frustum _cullingFrustum;

@@ -1,3 +1,6 @@
+#ifndef SHADER_UTIL_GLSL
+#define SHADER_UTIL_GLSL
+
 float linearDepth(float depth, float near, float far) {
     float depthRange = depth;
     return 2.0 * near * far / (far + near - depthRange * (far - near));
@@ -12,3 +15,5 @@ uint getTileIndex(vec3 position, uvec4 tileSizes, uvec2 screenSize, float near, 
     uint tileIndex = tiles.x + tileSizes.x * tiles.y + (tileSizes.x * tileSizes.y) * tiles.z;
     return tileIndex;
 }
+
+#endif

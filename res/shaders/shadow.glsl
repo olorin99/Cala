@@ -1,16 +1,19 @@
 #ifndef SHADOW_GLSL
 #define SHADOW_GLSL
 
+CALA_USE_SAMPLED_IMAGE(Cube)
+CALA_USE_SAMPLED_IMAGE(2D)
+
 float calcShadows(uint index, vec3 viewDir, vec3 offset, float bias, float range) {
     float shadow = 1.0;
-    if(texture(samplerCube(cubeMaps[index], samplers[globalData.shadowSampler]), viewDir + offset).r < length(viewDir) / range - bias) {
+    if(texture(CALA_COMBINED_SAMPLERCUBE(index, globalData.shadowSampler), viewDir + offset).r < length(viewDir) / range - bias) {
         shadow = 0.0;
     }
     return shadow;
 }
 
 float sampleShadow(int index, vec3 shadowCoords, vec2 offset, float bias) {
-    float closestDepth = texture(sampler2D(textureMaps[index], samplers[globalData.shadowSampler]), shadowCoords.xy + offset).r;
+    float closestDepth = texture(CALA_COMBINED_SAMPLER2D(index, globalData.shadowSampler), shadowCoords.xy + offset).r;
     if (closestDepth < shadowCoords.z - bias)
         return 0.0;
     return 1.0;
@@ -42,7 +45,7 @@ float filterPCF2D(int index, vec3 lightPos, vec3 shadowCoords, float bias) {
         return 0.0;
     float shadow = 0;
 
-    vec2 texelSize = 1.0 / textureSize(sampler2D(textureMaps[index], samplers[globalData.shadowSampler]), 0);
+    vec2 texelSize = 1.0 / textureSize(CALA_COMBINED_SAMPLER2D(index, globalData.shadowSampler), 0);
     for(int x = -1; x <= 1; ++x)
     {
         for(int y = -1; y <= 1; ++y)

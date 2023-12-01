@@ -1,14 +1,11 @@
 
 layout (local_size_x = 16) in;
 
-#include "global_data.glsl"
+#include "shaderBridge.h"
 
 layout (push_constant) uniform FrameData {
     vec4 planes[6];
 };
-
-#include "mesh_data.glsl"
-#include "transforms_data.glsl"
 
 struct IndexedIndirectCommand {
     uint indexCount;
@@ -46,7 +43,7 @@ void main() {
 
     barrier();
 
-    Mesh mesh = globalData.meshBuffer.meshData[idx];
+    GPUMesh mesh = globalData.meshBuffer.meshData[idx];
     vec3 center = (mesh.max.xyz + mesh.min.xyz) * 0.5;
     center = (globalData.transformsBuffer.transforms[idx] * vec4(center, 1.0)).xyz;
     vec3 halfExtent = (mesh.max.xyz - mesh.min.xyz) * 0.5;

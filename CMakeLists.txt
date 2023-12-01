@@ -44,7 +44,8 @@ add_library(Cala src/backend/vulkan/Context.cpp include/Cala/backend/vulkan/Cont
         src/ui/BackbufferWindow.cpp
         include/Cala/ui/BackbufferWindow.h
         src/ui/SceneGraphWindow.cpp
-        include/Cala/ui/SceneGraphWindow.h)
+        include/Cala/ui/SceneGraphWindow.h
+        include/Cala/shaderBridge.h)
 
 target_include_directories(Cala
         PUBLIC

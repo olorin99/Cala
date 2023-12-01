@@ -1,7 +1,7 @@
 
 layout (local_size_x = 16, local_size_y = 9, local_size_z = 4) in;
 
-#include "global_data.glsl"
+#include "shaderBridge.h"
 
 layout (push_constant) uniform ScreenViewInfo {
     mat4 inverseProjection;
@@ -10,8 +10,6 @@ layout (push_constant) uniform ScreenViewInfo {
     LightGridBuffer lightGridBuffer;
     LightIndicesBuffer lightIndicesBuffer;
 };
-
-#include "camera.glsl"
 
 struct Cluster {
     vec4 minPoint;
@@ -22,15 +20,13 @@ layout (set = 1, binding = 1) buffer ClusterSSBO {
     Cluster clusters[];
 };
 
-#include "light_data.glsl"
-
 layout (set = 1, binding = 2) buffer GlobalIndex {
     uint globalIndexCount;
 };
 
-shared Light sharedLights[16 * 9 * 4];
+shared GPULight sharedLights[16 * 9 * 4];
 
-bool intersect(Light light, Cluster cluster) {
+bool intersect(GPULight light, Cluster cluster) {
     vec4 lightPos = (globalData.cameraBuffer.camera.view * vec4(light.position, 1.0));
 
     vec4 closest = max(cluster.minPoint, min(lightPos, cluster.maxPoint));

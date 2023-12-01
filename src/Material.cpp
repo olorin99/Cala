@@ -1,4 +1,5 @@
 #include "Cala/Material.h"
+#include "Cala/shaderBridge.h"
 
 cala::Material::Material(cala::Engine* engine, u32 id, u32 size)
     : _engine(engine),
@@ -53,7 +54,7 @@ cala::MaterialInstance cala::Material::instance() {
     u32 offset = _data.size();
     _data.resize(offset + _setSize);
     auto mat = MaterialInstance(this, offset);
-    for (auto& parameter : _programs[0].interface().getBindingMemberList(2, 0)) {
+    for (auto& parameter : _programs[0].interface().getBindingMemberList(CALA_MATERIAL_SET, CALA_MATERIAL_BINDING)) {
         switch (parameter.type) {
             case backend::vulkan::ShaderModuleInterface::MemberType::INT:
                 mat.setParameter(parameter.name, -1);

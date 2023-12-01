@@ -5,9 +5,7 @@ layout (location = 0) in VsOut {
 
 layout (location = 0) out vec4 FragColour;
 
-#include "camera.glsl"
-
-#include "global_data.glsl"
+#include "shaderBridge.h"
 
 layout (push_constant) uniform TileData {
     LightGridBuffer lightGridBuffer;

@@ -120,8 +120,8 @@ int main() {
 
     auto sphere = engine.assetManager()->loadModel("sphere", "models/sphere.glb", material1);
     auto sponzaAsset = engine.assetManager()->loadModel("sponza", "models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf", material1);
-    auto bistro = engine.assetManager()->loadModel("bistro", "models/bistro/gltf/Bistro_Exterior.gltf", material1);
-    auto damagedHelmet = engine.assetManager()->loadModel("damagedHelmet", "models/gltf/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf", material1);
+//    auto bistro = engine.assetManager()->loadModel("bistro", "models/bistro/gltf/Bistro_Exterior.gltf", material1);
+//    auto damagedHelmet = engine.assetManager()->loadModel("damagedHelmet", "models/gltf/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf", material1);
 
 
     Transform cameraTransform({10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(-90)));
@@ -166,8 +166,8 @@ int main() {
     scene.addSkyLightMap(background, true);
 
     scene.addModel(*sponzaAsset, sponzaTransform);
-    scene.addModel(*bistro, sponzaTransform);
-    scene.addModel(*damagedHelmet, sponzaTransform);
+//    scene.addModel(*bistro, sponzaTransform);
+//    scene.addModel(*damagedHelmet, sponzaTransform);
 
     scene.addModel(*sphere, lightTransform);
 

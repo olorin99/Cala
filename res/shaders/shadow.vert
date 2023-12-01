@@ -15,10 +15,7 @@ layout (push_constant) uniform PushConstants {
     ShadowCameraData camera;
 };
 
-
-#include "global_data.glsl"
-
-#include "transforms_data.glsl"
+#include "shaderBridge.h"
 
 void main() {
     mat4 model = globalData.transformsBuffer.transforms[gl_BaseInstance];

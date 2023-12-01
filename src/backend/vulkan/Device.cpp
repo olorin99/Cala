@@ -3,6 +3,7 @@
 #include "Ende/filesystem/File.h"
 #include <Ende/profile/profile.h>
 #include <Cala/backend/vulkan/ShaderModule.h>
+#include "Cala/shaderBridge.h"
 
 cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog::logger& logger, CreateInfo createInfo)
     : _logger(logger),
@@ -51,28 +52,28 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
     // images
     bindlessLayoutBinding[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     bindlessLayoutBinding[0].descriptorCount = _context.getLimits().maxBindlessSampledImages;
-    bindlessLayoutBinding[0].binding = 0;
+    bindlessLayoutBinding[0].binding = CALA_BINDLESS_SAMPLED_IMAGE;
     bindlessLayoutBinding[0].stageFlags = VK_SHADER_STAGE_ALL;
     bindlessLayoutBinding[0].pImmutableSamplers = nullptr;
 
     // buffers
     bindlessLayoutBinding[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     bindlessLayoutBinding[1].descriptorCount = _context.getLimits().maxBindlessStorageBuffers;
-    bindlessLayoutBinding[1].binding = 1;
+    bindlessLayoutBinding[1].binding = CALA_BINDLESS_BUFFERS;
     bindlessLayoutBinding[1].stageFlags = VK_SHADER_STAGE_ALL;
     bindlessLayoutBinding[1].pImmutableSamplers = nullptr;
 
     // samplers
     bindlessLayoutBinding[2].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
     bindlessLayoutBinding[2].descriptorCount = _context.getLimits().maxBindlessSamplers;
-    bindlessLayoutBinding[2].binding = 2;
+    bindlessLayoutBinding[2].binding = CALA_BINDLESS_SAMPLERS;
     bindlessLayoutBinding[2].stageFlags = VK_SHADER_STAGE_ALL;
     bindlessLayoutBinding[2].pImmutableSamplers = nullptr;
 
     // storage images
     bindlessLayoutBinding[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     bindlessLayoutBinding[3].descriptorCount = _context.getLimits().maxBindlessStorageImages;
-    bindlessLayoutBinding[3].binding = 3;
+    bindlessLayoutBinding[3].binding = CALA_BINDLESS_STORAGE_IMAGE;
     bindlessLayoutBinding[3].stageFlags = VK_SHADER_STAGE_ALL;
     bindlessLayoutBinding[3].pImmutableSamplers = nullptr;
 
@@ -700,7 +701,7 @@ void cala::backend::vulkan::Device::updateBindlessBuffer(u32 index) {
     descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     descriptorWrite.dstArrayElement = index;
     descriptorWrite.dstSet = _bindlessSet;
-    descriptorWrite.dstBinding = 1;
+    descriptorWrite.dstBinding = CALA_BINDLESS_BUFFERS;
     descriptorWrite.pBufferInfo = &bufferInfo;
 
     vkUpdateDescriptorSets(_context.device(), 1, &descriptorWrite, 0, nullptr);
@@ -720,7 +721,7 @@ void cala::backend::vulkan::Device::updateBindlessImage(u32 index, Image::View &
         descriptorWrite[writeNum].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
         descriptorWrite[writeNum].dstArrayElement = index;
         descriptorWrite[writeNum].dstSet = _bindlessSet;
-        descriptorWrite[writeNum].dstBinding = 0;
+        descriptorWrite[writeNum].dstBinding = CALA_BINDLESS_SAMPLED_IMAGE;
         descriptorWrite[writeNum].pImageInfo = &sampledImageInfo;
         writeNum++;
     }
@@ -735,7 +736,7 @@ void cala::backend::vulkan::Device::updateBindlessImage(u32 index, Image::View &
         descriptorWrite[writeNum].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         descriptorWrite[writeNum].dstArrayElement = index;
         descriptorWrite[writeNum].dstSet = _bindlessSet;
-        descriptorWrite[writeNum].dstBinding = 3;
+        descriptorWrite[writeNum].dstBinding = CALA_BINDLESS_STORAGE_IMAGE;
         descriptorWrite[writeNum].pImageInfo = &storageImageInfo;
         writeNum++;
     }
@@ -754,7 +755,7 @@ void cala::backend::vulkan::Device::updateBindlessSampler(u32 index) {
     descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
     descriptorWrite.dstArrayElement = index;
     descriptorWrite.dstSet = _bindlessSet;
-    descriptorWrite.dstBinding = 2;
+    descriptorWrite.dstBinding = CALA_BINDLESS_SAMPLERS;
     descriptorWrite.pImageInfo = &imageInfo;
 
     vkUpdateDescriptorSets(_context.device(), 1, &descriptorWrite, 0, nullptr);

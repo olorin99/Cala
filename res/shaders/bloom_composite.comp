@@ -1,10 +1,13 @@
 
 layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
-#include "global_data.glsl"
+#include "shaderBridge.h"
+#include "bindings.glsl"
 
-layout (set = 0, binding = 0) uniform texture2D sampledImages[];
-layout (set = 0, binding = 2) uniform sampler samplers[];
+CALA_USE_STORAGE_IMAGE(2D, writeonly)
+CALA_USE_STORAGE_IMAGE_FORMAT(2D, readonly, rgba32f)
+
+
 layout (set = 0, binding = 3) uniform writeonly image2D storageImages[];
 layout (rgba32f, set = 0, binding = 3) uniform readonly image2D readStorageImages[];
 
@@ -17,18 +20,18 @@ layout (push_constant) uniform PushData {
 void main() {
     ivec2 globCoords = ivec2(gl_GlobalInvocationID.xy);
 
-    ivec2 upsampleSize = imageSize(readStorageImages[upsampleIndex]);
-    ivec2 hdrSize = imageSize(readStorageImages[hdrIndex]);
-    ivec2 outputSize = imageSize(storageImages[outputIndex]);
+    ivec2 upsampleSize = imageSize(CALA_GET_STORAGE_IMAGE_FORMAT(2D, readonly, rgba32f, upsampleIndex));
+    ivec2 hdrSize = imageSize(CALA_GET_STORAGE_IMAGE_FORMAT(2D, readonly, rgba32f, hdrIndex));
+    ivec2 outputSize = imageSize(CALA_GET_STORAGE_IMAGE2D(writeonly, outputIndex));
 
     if (any(greaterThanEqual(globCoords, outputSize)))
         return;
 
-    vec4 upsample = imageLoad(readStorageImages[upsampleIndex], globCoords) / 5;
-    vec4 hdr = imageLoad(readStorageImages[hdrIndex], globCoords);
+    vec4 upsample = imageLoad(CALA_GET_STORAGE_IMAGE_FORMAT(2D, readonly, rgba32f, upsampleIndex), globCoords) / 5;
+    vec4 hdr = imageLoad(CALA_GET_STORAGE_IMAGE_FORMAT(2D, readonly, rgba32f, hdrIndex), globCoords);
 
     vec4 result = mix(hdr, upsample, globalData.bloomStrength);
 
-    imageStore(storageImages[outputIndex], globCoords, result);
+    imageStore(CALA_GET_STORAGE_IMAGE2D(writeonly, outputIndex), globCoords, result);
 
 }

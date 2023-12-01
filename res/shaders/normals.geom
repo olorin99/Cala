@@ -22,9 +22,8 @@ layout (push_constant) uniform PushData {
     layout(offset = 16) float length;
 };
 
-#include "camera.glsl"
 
-#include "global_data.glsl"
+#include "shaderBridge.h"
 
 void genLine(int index) {
     CameraData camera = globalData.cameraBuffer.camera;
