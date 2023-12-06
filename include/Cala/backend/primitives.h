@@ -19,6 +19,7 @@ namespace cala::backend {
         DEVICE_MEMORY = -2,
         DEVICE_LOST = -4,
 
+        INVALID_GPU = -8,
         INVALID_COMMAND_BUFFER = -9,
         INVALID_SURFACE = -10
     };

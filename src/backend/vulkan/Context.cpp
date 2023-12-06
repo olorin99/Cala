@@ -68,35 +68,104 @@ bool checkDeviceSuitable(VkPhysicalDevice device, VkPhysicalDeviceFeatures* devi
 
 //    VkPhysicalDeviceFeatures deviceFeatures;
     vkGetPhysicalDeviceFeatures(device, deviceFeatures);
-
     return deviceFeatures->geometryShader;
 }
 
-cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, cala::backend::Platform& platform)
-    : _device(device),
-    _physicalDevice(VK_NULL_HANDLE),
-    _logicalDevice(VK_NULL_HANDLE),
-    _graphicsQueue(VK_NULL_HANDLE),
-    _computeQueue(VK_NULL_HANDLE),
-    _transferQueue(VK_NULL_HANDLE)
-{
+cala::backend::vulkan::DeviceProperties getDeviceProperties(VkPhysicalDevice physicalDevice) {
+    cala::backend::vulkan::DeviceProperties properties{};
+
+    VkPhysicalDeviceProperties2 deviceProperties2{};
+    VkPhysicalDeviceDescriptorIndexingProperties indexingProperties{};
+    indexingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES;
+
+    deviceProperties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+    deviceProperties2.pNext = &indexingProperties;
+
+    vkGetPhysicalDeviceProperties2(physicalDevice, &deviceProperties2);
+
+    VkPhysicalDeviceProperties deviceProperties = deviceProperties2.properties;
+
+    properties.apiVersion = deviceProperties.apiVersion;
+    properties.driverVersion = deviceProperties.driverVersion;
+    properties.vendorID = deviceProperties.vendorID;
+    switch (deviceProperties.vendorID) {
+        case 0x1002:
+            properties.vendorName = "AMD";
+            break;
+        case 0x1010:
+            properties.vendorName = "ImgTec";
+            break;
+        case 0x10DE:
+            properties.vendorName = "NVIDIA";
+            break;
+        case 0x13B5:
+            properties.vendorName = "ARM";
+            break;
+        case 0x5143:
+            properties.vendorName = "Qualcomm";
+            break;
+        case 0x8086:
+            properties.vendorName = "INTEL";
+            break;
+    }
+    properties.deviceID = deviceProperties.deviceID;
+    properties.deviceType = static_cast<cala::backend::PhysicalDeviceType>(deviceProperties.deviceType);
+    properties.deviceName = deviceProperties.deviceName;
+
+    properties.deviceLimits.maxImageDimensions1D = deviceProperties.limits.maxImageDimension1D;
+    properties.deviceLimits.maxImageDimensions2D = deviceProperties.limits.maxImageDimension2D;
+    properties.deviceLimits.maxImageDimensions3D = deviceProperties.limits.maxImageDimension3D;
+    properties.deviceLimits.maxImageDimensionsCube = deviceProperties.limits.maxImageDimensionCube;
+
+    properties.deviceLimits.maxDescriptorSetSamplers = deviceProperties.limits.maxDescriptorSetSamplers;
+    properties.deviceLimits.maxDescriptorSetUniformBuffers = deviceProperties.limits.maxDescriptorSetUniformBuffers;
+    properties.deviceLimits.maxDescriptorSetStorageBuffers = deviceProperties.limits.maxDescriptorSetStorageBuffers;
+    properties.deviceLimits.maxDescriptorSetSampledImages = deviceProperties.limits.maxDescriptorSetSampledImages;
+    properties.deviceLimits.maxDescriptorSetStorageImages = deviceProperties.limits.maxDescriptorSetStorageImages;
+
+    u32 maxBindlessCount = 1 << 16;
+
+    // Check against limits for case when driver doesnt report correct correct values (e.g. amdgpu-pro on linux)
+    properties.deviceLimits.maxBindlessSamplers = indexingProperties.maxDescriptorSetUpdateAfterBindSamplers < std::numeric_limits<u32>::max() - 10000 ? std::min(indexingProperties.maxDescriptorSetUpdateAfterBindSamplers - 100, maxBindlessCount) : 10000;
+    properties.deviceLimits.maxBindlessUniformBuffers = indexingProperties.maxDescriptorSetUpdateAfterBindUniformBuffers < std::numeric_limits<u32>::max() - 10000 ? std::min(indexingProperties.maxDescriptorSetUpdateAfterBindUniformBuffers - 100, maxBindlessCount) : 1000;
+    properties.deviceLimits.maxBindlessStorageBuffers = indexingProperties.maxDescriptorSetUpdateAfterBindStorageBuffers < std::numeric_limits<u32>::max() - 10000 ? std::min(indexingProperties.maxDescriptorSetUpdateAfterBindStorageBuffers - 100, maxBindlessCount) : 1000;
+    properties.deviceLimits.maxBindlessSampledImages = indexingProperties.maxDescriptorSetUpdateAfterBindSampledImages < std::numeric_limits<u32>::max() - 10000 ? std::min(indexingProperties.maxDescriptorSetUpdateAfterBindSampledImages - 100, maxBindlessCount) : 1000;
+    properties.deviceLimits.maxBindlessStorageImages = indexingProperties.maxDescriptorSetUpdateAfterBindStorageImages < std::numeric_limits<u32>::max() - 10000 ? std::min(indexingProperties.maxDescriptorSetUpdateAfterBindStorageImages - 100, maxBindlessCount) : 1000;
+
+    properties.deviceLimits.maxSamplerAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
+
+    properties.deviceLimits.timestampPeriod = deviceProperties.limits.timestampPeriod;
+    return properties;
+}
+
+template <typename T, typename U>
+void appendFeatureChain(T* start, U* next) {
+    auto* oldNext = start->pNext;
+    start->pNext = next;
+    next->pNext = oldNext;
+}
+
+std::expected<cala::backend::vulkan::Context, cala::backend::Error> cala::backend::vulkan::Context::create(cala::backend::vulkan::Device* device, cala::backend::vulkan::Context::ContextInfo info) {
+    Context context;
+    context._device = device;
+
     VK_TRY(volkInitialize());
 
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Cala";
+    appInfo.pApplicationName = info.applicationName.c_str();
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.pEngineName = "Cala";
+    appInfo.pEngineName = info.engineName.c_str();
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_3;
+    assert(info.apiVersion >= VK_API_VERSION_1_3);
+    appInfo.apiVersion = info.apiVersion;
 
-    auto instanceExtensions = platform.requiredExtensions();
+    std::vector<const char*> instanceExtensions;
+    instanceExtensions.insert(instanceExtensions.begin(), info.instanceExtensions.begin(), info.instanceExtensions.end());
 #ifndef NDEBUG
     instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
     instanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-
-//    instanceExtensions.push(VK_EXT_validation_features);
 
     VkValidationFeatureEnableEXT v[5] = {VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT, VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT, VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT};
     VkValidationFeaturesEXT validationFeatures{};
@@ -112,11 +181,10 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     instanceCreateInfo.ppEnabledLayerNames = validationLayers;
     instanceCreateInfo.enabledExtensionCount = instanceExtensions.size();
     instanceCreateInfo.ppEnabledExtensionNames = instanceExtensions.data();
-//    instanceCreateInfo.pNext = &validationFeatures;
 
-    VK_TRY(vkCreateInstance(&instanceCreateInfo, nullptr, &_instance));
+    VK_TRY(vkCreateInstance(&instanceCreateInfo, nullptr, &context._instance));
 
-    volkLoadInstanceOnly(_instance);
+    volkLoadInstanceOnly(context._instance);
 
     //create debug messenger
 #ifndef NDEBUG
@@ -125,36 +193,109 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     debugInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
     debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
     debugInfo.pfnUserCallback = debugCallback;
-    debugInfo.pUserData = _device;
+    debugInfo.pUserData = device;
 
-    auto createDebugUtils = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(_instance, "vkCreateDebugUtilsMessengerEXT");
-    VK_TRY(createDebugUtils(_instance, &debugInfo, nullptr, &_debugMessenger));
+    auto createDebugUtils = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(context._instance, "vkCreateDebugUtilsMessengerEXT");
+    VK_TRY(createDebugUtils(context._instance, &debugInfo, nullptr, &context._debugMessenger));
 #endif
 
     //get physical device
     u32 deviceCount = 0;
-    VK_TRY(vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr));
+    VK_TRY(vkEnumeratePhysicalDevices(context._instance, &deviceCount, nullptr));
     if (deviceCount == 0)
-        throw VulkanContextException("No GPUs found with vulkan support");
+        return std::unexpected(Error::INVALID_GPU);
 
     std::vector<VkPhysicalDevice> devices(deviceCount);
-    VK_TRY(vkEnumeratePhysicalDevices(_instance, &deviceCount, devices.data()));
+    std::vector<u32> deviceScores(deviceCount);
+    VK_TRY(vkEnumeratePhysicalDevices(context._instance, &deviceCount, devices.data()));
 
-    VkPhysicalDeviceFeatures deviceFeatures;
-    for (auto& device : devices) {
-        if (checkDeviceSuitable(device, &deviceFeatures)) {
-            _physicalDevice = device;
-            break;
+    const auto defaultSelector = [](const DeviceProperties& properties) -> u32 {
+        switch (properties.deviceType) {
+            case cala::backend::PhysicalDeviceType::DISCRETE_GPU:
+                return 1000;
+            case cala::backend::PhysicalDeviceType::INTEGRATED_GPU:
+                return 100;
+        }
+        return 0;
+    };
+
+    u32 maxIndex = 0;
+    u32 maxScore = 0;
+    for (u32 i = 0; i < deviceCount; i++) {
+        auto properties = getDeviceProperties(devices[i]);
+        u32 score = info.selector ? info.selector(properties) : defaultSelector(properties);
+        deviceScores[i] = score;
+        if (score > maxScore) {
+            maxScore = score;
+            maxIndex = i;
+            context._deviceProperties = properties;
+        }
+    }
+    context._physicalDevice = devices[maxIndex];
+
+    if (context._physicalDevice == VK_NULL_HANDLE)
+        return std::unexpected(Error::INVALID_GPU);
+
+
+    // enable extensions
+    u32 supportedDeviceExtensionsCount = 0;
+    vkEnumerateDeviceExtensionProperties(context._physicalDevice, nullptr, &supportedDeviceExtensionsCount, nullptr);
+    std::vector<VkExtensionProperties> supportedDeviceExtensions(supportedDeviceExtensionsCount);
+    vkEnumerateDeviceExtensionProperties(context._physicalDevice, nullptr, &supportedDeviceExtensionsCount, supportedDeviceExtensions.data());
+
+    auto checkExtension = [](const std::vector<VkExtensionProperties>& supportedExtensions, const char* name) {
+        for (auto& extension : supportedExtensions) {
+            if (strcmp(extension.extensionName, name) == 0)
+                return true;
+        }
+        return false;
+    };
+
+    std::vector<const char*> deviceExtensions;
+    for (auto& extension : info.deviceExtensions) {
+        if (checkExtension(supportedDeviceExtensions, extension)) {
+            deviceExtensions.push_back(extension);
         }
     }
 
-    if (_physicalDevice == VK_NULL_HANDLE)
-        throw VulkanContextException("No GPUs found with required functionality");
+    {
+        context._supportedExtensions.KHR_swapchain = checkExtension(supportedDeviceExtensions, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+        context._supportedExtensions.KHR_shader_draw_parameters = checkExtension(supportedDeviceExtensions, VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
+        context._supportedExtensions.KHR_acceleration_structure = checkExtension(supportedDeviceExtensions, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+        context._supportedExtensions.KHR_ray_tracing_pipeline = checkExtension(supportedDeviceExtensions, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+        context._supportedExtensions.KHR_ray_query = checkExtension(supportedDeviceExtensions, VK_KHR_RAY_QUERY_EXTENSION_NAME);
+        context._supportedExtensions.KHR_pipeline_library = checkExtension(supportedDeviceExtensions, VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
+        context._supportedExtensions.KHR_deferred_host_operations = checkExtension(supportedDeviceExtensions, VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
 
-    u32 queuCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queuCount, nullptr);
-    std::vector<VkQueueFamilyProperties> familyProperties(queuCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queuCount, familyProperties.data());
+        context._supportedExtensions.EXT_debug_report = checkExtension(supportedDeviceExtensions, VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+        context._supportedExtensions.EXT_debug_marker = context._supportedExtensions.EXT_debug_report && checkExtension(supportedDeviceExtensions, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+        context._supportedExtensions.EXT_memory_budget = checkExtension(supportedDeviceExtensions, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
+        context._supportedExtensions.EXT_mesh_shader = checkExtension(supportedDeviceExtensions, VK_EXT_MESH_SHADER_EXTENSION_NAME);
+        context._supportedExtensions.EXT_load_store_op_none = checkExtension(supportedDeviceExtensions, VK_EXT_LOAD_STORE_OP_NONE_EXTENSION_NAME);
+
+        context._supportedExtensions.AMD_buffer_marker = checkExtension(supportedDeviceExtensions, VK_AMD_BUFFER_MARKER_EXTENSION_NAME);
+        context._supportedExtensions.AMD_device_coherent_memory = checkExtension(supportedDeviceExtensions, VK_AMD_DEVICE_COHERENT_MEMORY_EXTENSION_NAME);
+    }
+
+//    _supportedExtensions.AMD_buffer_marker = false;
+
+    deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    if (context._supportedExtensions.EXT_memory_budget)
+        deviceExtensions.push_back(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
+#ifndef NDEBUG
+    if (context._supportedExtensions.EXT_debug_marker)
+        deviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+    if (context._supportedExtensions.AMD_buffer_marker)
+        deviceExtensions.push_back(VK_AMD_BUFFER_MARKER_EXTENSION_NAME);
+    if (context._supportedExtensions.AMD_device_coherent_memory)
+        deviceExtensions.push_back(VK_AMD_DEVICE_COHERENT_MEMORY_EXTENSION_NAME);
+#endif
+
+
+    u32 queueCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(context._physicalDevice, &queueCount, nullptr);
+    std::vector<VkQueueFamilyProperties> familyProperties(queueCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(context._physicalDevice, &queueCount, familyProperties.data());
 
     u32 priCount = std::max_element(familyProperties.begin(), familyProperties.end(), [](const auto& a, const auto& b) {
         return a.queueCount < b.queueCount;
@@ -173,139 +314,30 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
-    VkPhysicalDeviceProperties2 deviceProperties2{};
-    VkPhysicalDeviceDescriptorIndexingProperties indexingProperties{};
-    indexingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES;
 
-    deviceProperties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-    deviceProperties2.pNext = &indexingProperties;
+    // enable features
+    VkPhysicalDeviceFeatures2 deviceFeatures2 = {};
+    deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+//    deviceFeatures2.features.geometryShader = VK_TRUE;
+//    deviceFeatures2.features.multiDrawIndirect = VK_TRUE;
+//    deviceFeatures2.features.samplerAnisotropy = VK_TRUE;
+//    deviceFeatures2.features.depthClamp = VK_TRUE;
+//    deviceFeatures2.features.depthBiasClamp = VK_TRUE;
+//    deviceFeatures2.features.depthBounds = VK_TRUE;
+//    deviceFeatures2.features.pipelineStatisticsQuery = VK_TRUE;
+//    deviceFeatures2.features.shaderUniformBufferArrayDynamicIndexing = VK_TRUE;
+//    deviceFeatures2.features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+//    deviceFeatures2.features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
+//    deviceFeatures2.features.shaderStorageImageArrayDynamicIndexing = VK_TRUE;
+//    deviceFeatures2.features.shaderInt64 = VK_TRUE;
+//    deviceFeatures2.features.shaderResourceMinLod = VK_TRUE;
 
-    vkGetPhysicalDeviceProperties2(_physicalDevice, &deviceProperties2);
+    vkGetPhysicalDeviceFeatures2(context._physicalDevice, &deviceFeatures2);
 
-    VkPhysicalDeviceProperties deviceProperties = deviceProperties2.properties;
-
-    _apiVersion = deviceProperties.apiVersion;
-    _driverVersion = deviceProperties.driverVersion;
-    switch (deviceProperties.vendorID) {
-        case 0x1002:
-            _vendor = "AMD";
-            break;
-        case 0x1010:
-            _vendor = "ImgTec";
-            break;
-        case 0x10DE:
-            _vendor = "NVIDIA";
-            break;
-        case 0x13B5:
-            _vendor = "ARM";
-            break;
-        case 0x5143:
-            _vendor = "Qualcomm";
-            break;
-        case 0x8086:
-            _vendor = "INTEL";
-            break;
-    }
-    _deviceType = static_cast<PhysicalDeviceType>(deviceProperties.deviceType);
-    _deviceName = deviceProperties.deviceName;
-
-    _limits.maxImageDimensions1D = deviceProperties.limits.maxImageDimension1D;
-    _limits.maxImageDimensions2D = deviceProperties.limits.maxImageDimension2D;
-    _limits.maxImageDimensions3D = deviceProperties.limits.maxImageDimension3D;
-    _limits.maxImageDimensionsCube = deviceProperties.limits.maxImageDimensionCube;
-
-    _limits.maxDescriptorSetSamplers = deviceProperties.limits.maxDescriptorSetSamplers;
-    _limits.maxDescriptorSetUniformBuffers = deviceProperties.limits.maxDescriptorSetUniformBuffers;
-    _limits.maxDescriptorSetStorageBuffers = deviceProperties.limits.maxDescriptorSetStorageBuffers;
-    _limits.maxDescriptorSetSampledImages = deviceProperties.limits.maxDescriptorSetSampledImages;
-    _limits.maxDescriptorSetStorageImages = deviceProperties.limits.maxDescriptorSetStorageImages;
-
-    u32 maxBindlessCount = 1 << 16;
-
-    // Check against limits for case when driver doesnt report correct correct values (e.g. amdgpu-pro on linux)
-    _limits.maxBindlessSamplers = indexingProperties.maxDescriptorSetUpdateAfterBindSamplers < std::numeric_limits<u32>::max() - 10000 ? std::min(indexingProperties.maxDescriptorSetUpdateAfterBindSamplers - 100, maxBindlessCount) : 10000;
-    _limits.maxBindlessUniformBuffers = indexingProperties.maxDescriptorSetUpdateAfterBindUniformBuffers < std::numeric_limits<u32>::max() - 10000 ? std::min(indexingProperties.maxDescriptorSetUpdateAfterBindUniformBuffers - 100, maxBindlessCount) : 1000;
-    _limits.maxBindlessStorageBuffers = indexingProperties.maxDescriptorSetUpdateAfterBindStorageBuffers < std::numeric_limits<u32>::max() - 10000 ? std::min(indexingProperties.maxDescriptorSetUpdateAfterBindStorageBuffers - 100, maxBindlessCount) : 1000;
-    _limits.maxBindlessSampledImages = indexingProperties.maxDescriptorSetUpdateAfterBindSampledImages < std::numeric_limits<u32>::max() - 10000 ? std::min(indexingProperties.maxDescriptorSetUpdateAfterBindSampledImages - 100, maxBindlessCount) : 1000;
-    _limits.maxBindlessStorageImages = indexingProperties.maxDescriptorSetUpdateAfterBindStorageImages < std::numeric_limits<u32>::max() - 10000 ? std::min(indexingProperties.maxDescriptorSetUpdateAfterBindStorageImages - 100, maxBindlessCount) : 1000;
-
-    _limits.maxSamplerAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
-
-    _limits.timestampPeriod = deviceProperties.limits.timestampPeriod;
-
-
-    u32 supportedDeviceExtensionsCount = 0;
-    vkEnumerateDeviceExtensionProperties(_physicalDevice, nullptr, &supportedDeviceExtensionsCount, nullptr);
-    std::vector<VkExtensionProperties> supportedDeviceExtensions(supportedDeviceExtensionsCount);
-    vkEnumerateDeviceExtensionProperties(_physicalDevice, nullptr, &supportedDeviceExtensionsCount, supportedDeviceExtensions.data());
-
-    auto checkExtensions = [](const std::vector<VkExtensionProperties>& supportedExtensions, const char* name) {
-        for (auto& extension : supportedExtensions) {
-            if (strcmp(extension.extensionName, name) == 0)
-                return true;
-        }
-        return false;
-    };
-
-    {
-        _supportedExtensions.KHR_swapchain = checkExtensions(supportedDeviceExtensions, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-        _supportedExtensions.KHR_shader_draw_parameters = checkExtensions(supportedDeviceExtensions, VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
-        _supportedExtensions.KHR_acceleration_structure = checkExtensions(supportedDeviceExtensions, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
-        _supportedExtensions.KHR_ray_tracing_pipeline = checkExtensions(supportedDeviceExtensions, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
-        _supportedExtensions.KHR_ray_query = checkExtensions(supportedDeviceExtensions, VK_KHR_RAY_QUERY_EXTENSION_NAME);
-        _supportedExtensions.KHR_pipeline_library = checkExtensions(supportedDeviceExtensions, VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
-        _supportedExtensions.KHR_deferred_host_operations = checkExtensions(supportedDeviceExtensions, VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
-
-        _supportedExtensions.EXT_debug_report = checkExtensions(supportedDeviceExtensions, VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-        _supportedExtensions.EXT_debug_marker = _supportedExtensions.EXT_debug_report && checkExtensions(supportedDeviceExtensions, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-        _supportedExtensions.EXT_memory_budget = checkExtensions(supportedDeviceExtensions, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
-        _supportedExtensions.EXT_mesh_shader = checkExtensions(supportedDeviceExtensions, VK_EXT_MESH_SHADER_EXTENSION_NAME);
-        _supportedExtensions.EXT_load_store_op_none = checkExtensions(supportedDeviceExtensions, VK_EXT_LOAD_STORE_OP_NONE_EXTENSION_NAME);
-
-        _supportedExtensions.AMD_buffer_marker = checkExtensions(supportedDeviceExtensions, VK_AMD_BUFFER_MARKER_EXTENSION_NAME);
-        _supportedExtensions.AMD_device_coherent_memory = checkExtensions(supportedDeviceExtensions, VK_AMD_DEVICE_COHERENT_MEMORY_EXTENSION_NAME);
-    }
-
-//    _supportedExtensions.AMD_buffer_marker = false;
-
-
-
-    std::vector<const char*> deviceExtensions;
-    deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-//    deviceExtensions.push(VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
-    if (_supportedExtensions.EXT_memory_budget)
-        deviceExtensions.push_back(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
-//    if (_supportedExtensions.EXT_load_store_op_none)
-//        deviceExtensions.push(VK_EXT_LOAD_STORE_OP_NONE_EXTENSION_NAME);
-#ifndef NDEBUG
-    if (_supportedExtensions.EXT_debug_marker)
-        deviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-    if (_supportedExtensions.AMD_buffer_marker)
-        deviceExtensions.push_back(VK_AMD_BUFFER_MARKER_EXTENSION_NAME);
-    if (_supportedExtensions.AMD_device_coherent_memory)
-        deviceExtensions.push_back(VK_AMD_DEVICE_COHERENT_MEMORY_EXTENSION_NAME);
-#endif
-
-    VkDeviceCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    createInfo.pQueueCreateInfos = queueCreateInfos.data();
-    createInfo.queueCreateInfoCount = queueCreateInfos.size();
-
-    createInfo.pEnabledFeatures = &deviceFeatures;
-
-    createInfo.enabledExtensionCount = deviceExtensions.size();
-    createInfo.ppEnabledExtensionNames = deviceExtensions.data();
-    createInfo.enabledLayerCount = 0;
-    createInfo.ppEnabledLayerNames = nullptr;
-#ifndef NDEBUG
-//    createInfo.enabledLayerCount = 1;
-//    createInfo.ppEnabledLayerNames = validationLayers;
-#endif
-
-    VkPhysicalDeviceVulkan11Features vulkan11Features{};
+    VkPhysicalDeviceVulkan11Features vulkan11Features = {};
     vulkan11Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
-
     vulkan11Features.shaderDrawParameters = VK_TRUE;
+    appendFeatureChain(&deviceFeatures2, &vulkan11Features);
 
     VkPhysicalDeviceVulkan12Features vulkan12Features{};
     vulkan12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
@@ -322,28 +354,46 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     vulkan12Features.timelineSemaphore = VK_TRUE;
     vulkan12Features.bufferDeviceAddress = VK_TRUE;
     vulkan12Features.scalarBlockLayout = VK_TRUE;
+    appendFeatureChain(&deviceFeatures2, &vulkan12Features);
 
     VkPhysicalDeviceVulkan13Features vulkan13Features{};
     vulkan13Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
     vulkan13Features.synchronization2 = VK_TRUE;
+    appendFeatureChain(&deviceFeatures2, &vulkan13Features);
 
-    vulkan11Features.pNext = &vulkan12Features;
-    vulkan12Features.pNext = &vulkan13Features;
-    createInfo.pNext = &vulkan11Features;
-    VK_TRY(vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_logicalDevice));
+    //TODO: mesh shader and raytracing features
 
-    volkLoadDevice(_logicalDevice);
+    // create device
+    VkDeviceCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    createInfo.pQueueCreateInfos = queueCreateInfos.data();
+    createInfo.queueCreateInfoCount = queueCreateInfos.size();
 
-    _enabledFeatures.meshShading = false;
-    _enabledFeatures.deviceAddress = vulkan12Features.bufferDeviceAddress;
-    _enabledFeatures.sync2 = vulkan13Features.synchronization2;
+    createInfo.pEnabledFeatures = nullptr;
+    createInfo.pNext = &deviceFeatures2;
 
+    createInfo.enabledExtensionCount = deviceExtensions.size();
+    createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+    createInfo.enabledLayerCount = 0;
+    createInfo.ppEnabledLayerNames = nullptr;
+#ifndef NDEBUG
+//    createInfo.enabledLayerCount = 1;
+//    createInfo.ppEnabledLayerNames = validationLayers;
+#endif
+    VK_TRY(vkCreateDevice(context._physicalDevice, &createInfo, nullptr, &context._logicalDevice));
 
+    volkLoadDevice(context._logicalDevice);
+
+    context._enabledFeatures.meshShading = false;
+    context._enabledFeatures.deviceAddress = vulkan12Features.bufferDeviceAddress;
+    context._enabledFeatures.sync2 = vulkan13Features.synchronization2;
+
+    // init VMA
     VmaAllocatorCreateInfo allocatorCreateInfo{};
     allocatorCreateInfo.vulkanApiVersion = appInfo.apiVersion;
-    allocatorCreateInfo.physicalDevice = _physicalDevice;
-    allocatorCreateInfo.device = _logicalDevice;
-    allocatorCreateInfo.instance = _instance;
+    allocatorCreateInfo.physicalDevice = context._physicalDevice;
+    allocatorCreateInfo.device = context._logicalDevice;
+    allocatorCreateInfo.instance = context._instance;
 
     VmaVulkanFunctions vulkanFunctions{};
     vulkanFunctions.vkGetInstanceProcAddr               = vkGetInstanceProcAddr;
@@ -374,57 +424,56 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
     vulkanFunctions.vkGetDeviceImageMemoryRequirements  = vkGetDeviceImageMemoryRequirements;
 
     allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
-    if (_supportedExtensions.EXT_memory_budget)
+    if (context._supportedExtensions.EXT_memory_budget)
         allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
 #ifndef NDEBUG
-    if (_supportedExtensions.AMD_device_coherent_memory)
+    if (context._supportedExtensions.AMD_device_coherent_memory)
         allocatorCreateInfo.flags |= VMA_ALLOCATOR_CREATE_AMD_DEVICE_COHERENT_MEMORY_BIT;
 #endif
-    if (_enabledFeatures.deviceAddress)
+    if (vulkan12Features.bufferDeviceAddress)
         allocatorCreateInfo.flags |= VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
 
-    vmaCreateAllocator(&allocatorCreateInfo, &_allocator);
+    vmaCreateAllocator(&allocatorCreateInfo, &context._allocator);
 
     //get depth format supported for swapchain
     for (VkFormat format : {VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT}) {
         VkFormatProperties depthProperties;
-        vkGetPhysicalDeviceFormatProperties(_physicalDevice, format, &depthProperties);
+        vkGetPhysicalDeviceFormatProperties(context._physicalDevice, format, &depthProperties);
 
         if ((depthProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-            _depthFormat = static_cast<Format>(format);
+            context._depthFormat = static_cast<Format>(format);
             break;
         }
     }
 
     //cache queues for later use
     u32 queueIndices[4] = {};
-    if (queueIndex(queueIndices[0], QueueType::GRAPHICS))
-        vkGetDeviceQueue(_logicalDevice, queueIndices[0], 0, &_graphicsQueue);
+    if (context.queueIndex(queueIndices[0], QueueType::GRAPHICS))
+        vkGetDeviceQueue(context._logicalDevice, queueIndices[0], 0, &context._graphicsQueue);
 
-    if (queueIndex(queueIndices[1], QueueType::COMPUTE, QueueType::GRAPHICS | QueueType::TRANSFER) ||
-            queueIndex(queueIndices[1], QueueType::COMPUTE, QueueType::GRAPHICS))
-        vkGetDeviceQueue(_logicalDevice, queueIndices[1], 0, &_computeQueue);
+    if (context.queueIndex(queueIndices[1], QueueType::COMPUTE, QueueType::GRAPHICS | QueueType::TRANSFER) ||
+        context.queueIndex(queueIndices[1], QueueType::COMPUTE, QueueType::GRAPHICS))
+        vkGetDeviceQueue(context._logicalDevice, queueIndices[1], 0, &context._computeQueue);
 
-    if (queueIndex(queueIndices[2], QueueType::TRANSFER, QueueType::GRAPHICS | QueueType::COMPUTE) ||
-            queueIndex(queueIndices[2], QueueType::TRANSFER, QueueType::GRAPHICS))
-        vkGetDeviceQueue(_logicalDevice, queueIndices[2], 0, &_transferQueue);
+    if (context.queueIndex(queueIndices[2], QueueType::TRANSFER, QueueType::GRAPHICS | QueueType::COMPUTE) ||
+        context.queueIndex(queueIndices[2], QueueType::TRANSFER, QueueType::GRAPHICS))
+        vkGetDeviceQueue(context._logicalDevice, queueIndices[2], 0, &context._transferQueue);
 
-    if (queueIndex(queueIndices[3], QueueType::PRESENT))
-        vkGetDeviceQueue(_logicalDevice, queueIndices[3], 0, &_presentQueue);
+    if (context.queueIndex(queueIndices[3], QueueType::PRESENT))
+        vkGetDeviceQueue(context._logicalDevice, queueIndices[3], 0, &context._presentQueue);
 
-    setDebugName(VK_OBJECT_TYPE_QUEUE, (u64)_graphicsQueue, "GraphicsQueue");
-    if (_graphicsQueue != _computeQueue && _computeQueue != VK_NULL_HANDLE)
-        setDebugName(VK_OBJECT_TYPE_QUEUE, (u64)_computeQueue, "ComputeQueue");
-    if (_graphicsQueue != _computeQueue && _computeQueue != _transferQueue && _transferQueue != VK_NULL_HANDLE)
-        setDebugName(VK_OBJECT_TYPE_QUEUE, (u64)_transferQueue, "TransferQueue");
+    context.setDebugName(VK_OBJECT_TYPE_QUEUE, (u64)context._graphicsQueue, "GraphicsQueue");
+    if (context._graphicsQueue != context._computeQueue && context._computeQueue != VK_NULL_HANDLE)
+        context.setDebugName(VK_OBJECT_TYPE_QUEUE, (u64)context._computeQueue, "ComputeQueue");
+    if (context._graphicsQueue != context._computeQueue && context._computeQueue != context._transferQueue && context._transferQueue != VK_NULL_HANDLE)
+        context.setDebugName(VK_OBJECT_TYPE_QUEUE, (u64)context._transferQueue, "TransferQueue");
 
     VkQueryPoolCreateInfo queryPoolCreateInfo{};
     queryPoolCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
     queryPoolCreateInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
     queryPoolCreateInfo.queryCount = 50 * 2;
-    _timestampQueryPool = VK_NULL_HANDLE;
-    VK_TRY(vkCreateQueryPool(_logicalDevice, &queryPoolCreateInfo, nullptr, &_timestampQueryPool));
-
+    context._timestampQueryPool = VK_NULL_HANDLE;
+    VK_TRY(vkCreateQueryPool(context._logicalDevice, &queryPoolCreateInfo, nullptr, &context._timestampQueryPool));
 
     const char* pipelineStatNames[] = {
             "Input Assembly vertex count",
@@ -446,12 +495,16 @@ cala::backend::vulkan::Context::Context(cala::backend::vulkan::Device* device, c
             VK_QUERY_PIPELINE_STATISTIC_CLIPPING_PRIMITIVES_BIT |
             VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT;
     pipelineStatisticsCreate.queryCount = 6;
-    VK_TRY(vkCreateQueryPool(_logicalDevice, &pipelineStatisticsCreate, nullptr, &_pipelineStatistics));
-    vkResetQueryPool(_logicalDevice, _pipelineStatistics, 0, pipelineStatisticsCreate.queryCount);
-    vkResetQueryPool(_logicalDevice, _timestampQueryPool, 0, queryPoolCreateInfo.queryCount);
+    VK_TRY(vkCreateQueryPool(context._logicalDevice, &pipelineStatisticsCreate, nullptr, &context._pipelineStatistics));
+    vkResetQueryPool(context._logicalDevice, context._pipelineStatistics, 0, pipelineStatisticsCreate.queryCount);
+    vkResetQueryPool(context._logicalDevice, context._timestampQueryPool, 0, queryPoolCreateInfo.queryCount);
+
+    return context;
 }
 
 cala::backend::vulkan::Context::~Context() {
+    if (!_logicalDevice)
+        return;
     vkDestroyQueryPool(_logicalDevice, _pipelineStatistics, nullptr);
     vkDestroyQueryPool(_logicalDevice, _timestampQueryPool, nullptr);
     vmaDestroyAllocator(_allocator);
@@ -464,6 +517,47 @@ cala::backend::vulkan::Context::~Context() {
 
     vkDestroyInstance(_instance, nullptr);
 }
+
+cala::backend::vulkan::Context::Context(cala::backend::vulkan::Context &&rhs) noexcept {
+    std::swap(_device, rhs._device);
+    std::swap(_instance, rhs._instance);
+    std::swap(_physicalDevice, rhs._physicalDevice);
+    std::swap(_logicalDevice, rhs._logicalDevice);
+    std::swap(_debugMessenger, rhs._debugMessenger);
+    std::swap(_allocator, rhs._allocator);
+    std::swap(_depthFormat, rhs._depthFormat);
+    std::swap(_graphicsQueue, rhs._graphicsQueue);
+    std::swap(_computeQueue, rhs._computeQueue);
+    std::swap(_transferQueue, rhs._transferQueue);
+    std::swap(_presentQueue, rhs._presentQueue);
+    std::swap(_timestampQueryPool, rhs._timestampQueryPool);
+    std::swap(_pipelineStatistics, rhs._pipelineStatistics);
+    std::swap(_deviceProperties, rhs._deviceProperties);
+    std::swap(_supportedExtensions, rhs._supportedExtensions);
+    std::swap(_enabledFeatures, rhs._enabledFeatures);
+}
+
+cala::backend::vulkan::Context &cala::backend::vulkan::Context::operator=(cala::backend::vulkan::Context &&rhs) noexcept {
+    std::swap(_device, rhs._device);
+    std::swap(_instance, rhs._instance);
+    std::swap(_physicalDevice, rhs._physicalDevice);
+    std::swap(_logicalDevice, rhs._logicalDevice);
+    std::swap(_debugMessenger, rhs._debugMessenger);
+    std::swap(_allocator, rhs._allocator);
+    std::swap(_depthFormat, rhs._depthFormat);
+    std::swap(_graphicsQueue, rhs._graphicsQueue);
+    std::swap(_computeQueue, rhs._computeQueue);
+    std::swap(_transferQueue, rhs._transferQueue);
+    std::swap(_presentQueue, rhs._presentQueue);
+    std::swap(_timestampQueryPool, rhs._timestampQueryPool);
+    std::swap(_pipelineStatistics, rhs._pipelineStatistics);
+    std::swap(_deviceProperties, rhs._deviceProperties);
+    std::swap(_supportedExtensions, rhs._supportedExtensions);
+    std::swap(_enabledFeatures, rhs._enabledFeatures);
+    return *this;
+}
+
+
 
 void cala::backend::vulkan::Context::beginDebugLabel(VkCommandBuffer buffer, std::string_view label, std::array<f32, 4> colour) const {
 #ifndef NDEBUG
@@ -564,7 +658,7 @@ u32 cala::backend::vulkan::Context::memoryIndex(u32 filter, VkMemoryPropertyFlag
 
 
 const char *cala::backend::vulkan::Context::deviceTypeString() const {
-    switch (_deviceType) {
+    switch (_deviceProperties.deviceType) {
         case PhysicalDeviceType::OTHER:
             return "OTHER";
         case PhysicalDeviceType::INTEGRATED_GPU:

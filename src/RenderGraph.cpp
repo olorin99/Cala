@@ -431,18 +431,6 @@ bool cala::RenderGraph::execute(backend::vulkan::CommandHandle cmd) {
         cmd->pipelineBarrier({ imageBarriers, imageBarrierCount });
         cmd->pipelineBarrier({ bufferBarriers, bufferBarrierCount });
 
-//        for (auto& barrier : pass->_barriers) {
-//            if (barrier.dstLayout != backend::ImageLayout::UNDEFINED) {
-//                auto image = getImage(barrier.label);
-//                auto b = image->barrier(barrier.srcStage, barrier.dstStage, barrier.srcAccess, barrier.dstAccess, barrier.srcLayout, barrier.dstLayout);
-//                cmd->pipelineBarrier({ &b, 1 });
-//            } else {
-//                auto buffer = getBuffer(barrier.label);
-//                auto b = buffer->barrier(barrier.srcStage, barrier.dstStage, barrier.srcAccess, barrier.dstAccess);
-//                cmd->pipelineBarrier({ &b, 1 });
-//            }
-//        }
-
         if (pass->_type == RenderPass::Type::GRAPHICS && pass->_framebuffer)
             cmd->begin(*pass->_framebuffer);
         if (pass->_function)

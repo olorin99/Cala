@@ -7,7 +7,10 @@
 
 cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog::logger& logger, CreateInfo createInfo)
     : _logger(logger),
-      _context(this, platform),
+      _context(Context::create(this, Context::ContextInfo{
+              .applicationName = "CalaExample",
+              .instanceExtensions = platform.requiredExtensions()
+      }).value()),
       _commandPools{
               {CommandPool(this, QueueType::GRAPHICS), CommandPool(this, QueueType::COMPUTE), CommandPool(this, QueueType::TRANSFER)},
               {CommandPool(this, QueueType::GRAPHICS), CommandPool(this, QueueType::COMPUTE), CommandPool(this, QueueType::TRANSFER)}

@@ -74,7 +74,6 @@ MeshData loadModel(const std::filesystem::path& path) {
 
 int main() {
     SDLPlatform platform("hello_triangle", 1920, 1080);
-    OfflinePlatform offlinePlatform(1920, 1080);
 
     Engine engine(platform);
     backend::vulkan::Swapchain swapchain(engine.device(), platform);
