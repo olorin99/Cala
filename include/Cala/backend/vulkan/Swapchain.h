@@ -30,9 +30,9 @@ namespace cala::backend::vulkan {
             SemaphorePair semaphores = {{nullptr}, {nullptr}};
         };
 
-        std::expected<Frame, i32> nextImage();
+        std::expected<Frame, Error> nextImage();
 
-        bool present(Frame frame);
+        std::expected<bool, Error> present(Frame frame);
 
         bool resize(u32 width, u32 height);
 

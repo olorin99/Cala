@@ -93,7 +93,7 @@ cala::backend::vulkan::Swapchain::~Swapchain() {
 }
 
 
-std::expected<cala::backend::vulkan::Swapchain::Frame, i32> cala::backend::vulkan::Swapchain::nextImage() {
+std::expected<cala::backend::vulkan::Swapchain::Frame, cala::backend::Error> cala::backend::vulkan::Swapchain::nextImage() {
     auto semaphorePair = std::move(_semaphores.back());
     _semaphores.pop_back();
     u32 index = 0;
@@ -102,14 +102,14 @@ std::expected<cala::backend::vulkan::Swapchain::Frame, i32> cala::backend::vulka
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
             resize(_extent.width, _extent.height);
         } else if (result == VK_ERROR_DEVICE_LOST)
-            return std::unexpected((i32)VK_ERROR_DEVICE_LOST);
+            return std::unexpected(static_cast<Error>(VK_ERROR_DEVICE_LOST));
     } else {
         index = (index + 1) % 2;
     }
     return Frame{ _frame++, index, std::move(semaphorePair) };
 }
 
-bool cala::backend::vulkan::Swapchain::present(Frame frame) {
+std::expected<bool, cala::backend::Error> cala::backend::vulkan::Swapchain::present(Frame frame) {
     auto presentSemaphore = frame.semaphores.present.semaphore();
     _semaphores.push_back(std::move(frame.semaphores));
     std::rotate(_semaphores.begin(), _semaphores.end() - 1, _semaphores.end());
@@ -128,14 +128,12 @@ bool cala::backend::vulkan::Swapchain::present(Frame frame) {
         presentInfo.pResults = nullptr;
 
         auto res = vkQueuePresentKHR(_driver.context().getQueue(QueueType::PRESENT), &presentInfo);
-        if (res == VK_ERROR_DEVICE_LOST) {
-            _driver.logger().error("Device lost on queue submit");
-            _driver.printMarkers();
-            throw std::runtime_error("Device lost on queue submit");
+        if (res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR) {
+            return std::unexpected(static_cast<Error>(res));
         }
         return res == VK_SUCCESS;
     }
-    return false;
+    return std::unexpected(Error::INVALID_SURFACE);
 }
 
 bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {

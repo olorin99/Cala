@@ -271,9 +271,9 @@ void cala::backend::vulkan::CommandBuffer::bindBlendState(BlendState state) {
 
 void cala::backend::vulkan::CommandBuffer::bindPipeline() {
     //TODO: add dirty check so dont have to search to check if bound
-    if (auto pipeline = _device->getPipeline(_pipelineKey); pipeline != _currentPipeline && pipeline != VK_NULL_HANDLE) {
-        vkCmdBindPipeline(_buffer, _pipelineKey.compute ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-        _currentPipeline = pipeline;
+    if (auto pipeline = _device->getPipeline(_pipelineKey); pipeline.has_value() && *pipeline != _currentPipeline && *pipeline != VK_NULL_HANDLE) {
+        vkCmdBindPipeline(_buffer, _pipelineKey.compute ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);
+        _currentPipeline = *pipeline;
     }
     _pipelineDirty = false;
 }
@@ -543,7 +543,7 @@ void cala::backend::vulkan::CommandBuffer::stopPipelineStatistics() {
 
 
 
-bool cala::backend::vulkan::CommandBuffer::submit(std::span<SemaphoreSubmit> waitSemaphores, std::span<SemaphoreSubmit> signalSemaphores, VkFence fence) {
+std::expected<bool, cala::backend::Error> cala::backend::vulkan::CommandBuffer::submit(std::span<SemaphoreSubmit> waitSemaphores, std::span<SemaphoreSubmit> signalSemaphores, VkFence fence) {
     PROFILE_NAMED("CommandBuffer::Submit");
     end();
 
@@ -585,10 +585,8 @@ bool cala::backend::vulkan::CommandBuffer::submit(std::span<SemaphoreSubmit> wai
     submitInfo.pCommandBufferInfos = &commandSubmitInfo;
 
     auto res = vkQueueSubmit2(_queue, 1, &submitInfo, fence);
-    if (res == VK_ERROR_DEVICE_LOST) {
-        _device->logger().error("Device lost on queue submit");
-        _device->printMarkers();
-        throw std::runtime_error("Device lost on queue submit");
+    if (res != VK_SUCCESS) {
+        return std::unexpected(static_cast<Error>(res));
     }
     return res == VK_SUCCESS;
 }

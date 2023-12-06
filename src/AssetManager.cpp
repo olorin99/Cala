@@ -214,14 +214,16 @@ cala::backend::vulkan::ShaderModuleHandle cala::AssetManager::loadShaderModule(c
     }
 
     std::filesystem::path searchPaths[] = {
-            "/home/christian/Documents/Projects/Cala/res/shaders"
+            _rootAssetPath / "shaders",
+            _rootAssetPath / "../include/Cala"
     };
 
     auto& moduleMetadata = _shaderModules[metadata.index];
 
-    auto expectedSpirV = util::compileGLSLToSpirv(&_engine->device(), path.string(), source, stage, macros, searchPaths);
+    auto expectedSpirV = util::compileGLSLToSpirv(path.string(), source, stage, macros, searchPaths);
     if (!expectedSpirV.has_value()) {
         _engine->logger().warn("unable to load shader: {}", path.string());
+        _engine->logger().error(expectedSpirV.error());
         return moduleMetadata.moduleHandle;
     }
 
@@ -232,11 +234,9 @@ cala::backend::vulkan::ShaderModuleHandle cala::AssetManager::loadShaderModule(c
     moduleMetadata.macros.clear();
     for (auto& macro : macros)
         moduleMetadata.macros.push_back(macro);
-//    moduleMetadata.macros.insert(moduleMetadata.macros.begin(), macros.begin(), macros.end());
     moduleMetadata.includes.clear();
     for (auto& include : includes)
         moduleMetadata.includes.push_back(include);
-//    moduleMetadata.includes.insert(moduleMetadata.includes.begin(), includes.begin(), includes.end());
     moduleMetadata.stage = stage;
     moduleMetadata.path = path;
     moduleMetadata.name = name;

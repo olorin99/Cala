@@ -158,7 +158,7 @@ namespace cala::backend::vulkan {
             Semaphore* semaphore = nullptr;
             u64 value = 0;
         };
-        bool submit(std::span<SemaphoreSubmit> waitSemaphores, std::span<SemaphoreSubmit> signalSemaphores, VkFence fence = VK_NULL_HANDLE);
+        std::expected<bool, Error> submit(std::span<SemaphoreSubmit> waitSemaphores, std::span<SemaphoreSubmit> signalSemaphores, VkFence fence = VK_NULL_HANDLE);
 
         bool active() const { return _active; }
 

@@ -51,34 +51,30 @@ cala::backend::vulkan::Semaphore &cala::backend::vulkan::Semaphore::operator=(ca
     return *this;
 }
 
-bool cala::backend::vulkan::Semaphore::wait(u64 value, u64 timeout) {
+std::expected<void, cala::backend::Error> cala::backend::vulkan::Semaphore::wait(u64 value, u64 timeout) {
     VkSemaphoreWaitInfo waitInfo{};
     waitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
     waitInfo.semaphoreCount = 1;
     waitInfo.pSemaphores = &_semaphore;
     waitInfo.pValues = &value;
     auto result = vkWaitSemaphores(_device->context().device(), &waitInfo, timeout);
-    if (result == VK_ERROR_DEVICE_LOST) {
-        _device->logger().error("Device Lost - Semaphore wait value: {}", _value);
-        _device->printMarkers();
-        throw std::runtime_error("Device Lost");
+    if (result != VK_SUCCESS && result != VK_TIMEOUT) {
+        return std::unexpected(static_cast<Error>(result));
     }
-    return VK_SUCCESS == result;
+    return {};
 }
 
-bool cala::backend::vulkan::Semaphore::signal(u64 value) {
+std::expected<void, cala::backend::Error> cala::backend::vulkan::Semaphore::signal(u64 value) {
     VkSemaphoreSignalInfo signalInfo{};
     signalInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO;
     signalInfo.semaphore = _semaphore;
     signalInfo.value = value;
     auto result = vkSignalSemaphore(_device->context().device(), &signalInfo);
-    if (result == VK_ERROR_DEVICE_LOST) {
-        _device->logger().error("Device Lost - Semaphore signal value: {}", _value);
-        _device->printMarkers();
-        throw std::runtime_error("Device Lost");
+    if (result != VK_SUCCESS && result != VK_TIMEOUT) {
+        return std::unexpected(static_cast<Error>(result));
     }
     _value = value;
-    return VK_SUCCESS == result;
+    return {};
 }
 
 u64 cala::backend::vulkan::Semaphore::queryGPUValue() {

@@ -111,7 +111,7 @@ std::string macroize(std::string_view str) {
     return result;
 }
 
-std::expected<std::vector<u32>, u32> cala::util::compileGLSLToSpirv(backend::vulkan::Device *device, std::string_view name, std::string_view glsl, backend::ShaderStage stage, const std::vector<Macro>& macros, std::span<const std::filesystem::path> searchPaths) {
+std::expected<std::vector<u32>, std::string> cala::util::compileGLSLToSpirv(std::string_view name, std::string_view glsl, backend::ShaderStage stage, const std::vector<Macro>& macros, std::span<const std::filesystem::path> searchPaths) {
 
     shaderc_shader_kind kind{};
     switch (stage) {
@@ -134,15 +134,13 @@ std::expected<std::vector<u32>, u32> cala::util::compileGLSLToSpirv(backend::vul
             kind = shaderc_shader_kind::shaderc_compute_shader;
             break;
         default:
-            device->logger().error("invalid shader stage used for compilation");
-            return std::unexpected(3);
+            return std::unexpected("invalid shader stage used for compilation");
     }
 
     shaderc::Compiler compiler;
     shaderc::CompileOptions options;
 
     FileFinder finder;
-    finder.addSearchPath("../../include/Cala");
     for (auto& path : searchPaths)
         finder.addSearchPath(path);
     options.SetIncluder(std::make_unique<FileIncluder>(&finder));
@@ -152,15 +150,13 @@ std::expected<std::vector<u32>, u32> cala::util::compileGLSLToSpirv(backend::vul
 
     shaderc::PreprocessedSourceCompilationResult  preprocessedResult = compiler.PreprocessGlsl(glsl.data(), kind, name.data(), options);
     if (preprocessedResult.GetCompilationStatus() != shaderc_compilation_status_success) {
-        device->logger().error("Failed to preprocess shader {}:\n\tErrors: {}\n\tWarnings: {}\n\tMessage: {}\n{}", name, preprocessedResult.GetNumErrors(), preprocessedResult.GetNumErrors(), preprocessedResult.GetErrorMessage(), glsl);
-        return std::unexpected(2);
+        return std::unexpected(std::format("Failed to preprocess shader {}:\n\tErrors: {}\n\tWarnings: {}\n\tMessage: {}\n{}", name, preprocessedResult.GetNumErrors(), preprocessedResult.GetNumErrors(), preprocessedResult.GetErrorMessage(), glsl));
     }
 
     shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(glsl.data(), kind, name.data(), options);
     if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
         std::string preprocessed = { preprocessedResult.begin(), preprocessedResult.end() };
-        device->logger().error("Failed to compile shader {}:\n\tErrors: {}\n\tWarnings: {}\n\tMessage: {}\n{}", name, result.GetNumErrors(), result.GetNumWarnings(), result.GetErrorMessage(), preprocessed);
-        return std::unexpected(1);
+        return std::unexpected(std::format("Failed to compile shader {}:\n\tErrors: {}\n\tWarnings: {}\n\tMessage: {}\n{}", name, result.GetNumErrors(), result.GetNumWarnings(), result.GetErrorMessage(), preprocessed));
     }
 
     return std::vector<u32>(result.cbegin(), result.cend());

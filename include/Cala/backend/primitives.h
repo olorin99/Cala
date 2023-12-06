@@ -14,6 +14,15 @@ namespace cala::backend {
 
     constexpr u32 MAX_VERTEX_INPUT_ATTRIBUTES = 10;
 
+    enum class Error {
+        HOST_MEMORY = -1,
+        DEVICE_MEMORY = -2,
+        DEVICE_LOST = -4,
+
+        INVALID_COMMAND_BUFFER = -9,
+        INVALID_SURFACE = -10
+    };
+
     enum class PhysicalDeviceType {
         OTHER = 0,
         INTEGRATED_GPU = 1,

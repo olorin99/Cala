@@ -117,11 +117,11 @@ int main() {
 
     scene.addLight(light, lightTransform);
 
-    auto background = engine.assetManager()->loadImage("background", "textures/TropicalRuins_3k.hdr", backend::Format::RGBA32_SFLOAT);
+//    auto background = engine.assetManager()->loadImage("background", "textures/TropicalRuins_3k.hdr", backend::Format::RGBA32_SFLOAT);
 //    auto background = engine.assetManager()->loadImage("background", "textures/Tropical_Beach_3k.hdr", backend::Format::RGBA32_SFLOAT);
-    scene.addSkyLightMap(background, true);
+//    scene.addSkyLightMap(background, true);
 
-    Mesh cube = cala::shapes::cube().mesh(&engine);
+//    Mesh cube = cala::shapes::cube().mesh(&engine);
 
     auto sphere = engine.assetManager()->loadModel("sphere", "models/sphere.glb", material1);
     auto sponzaAsset = engine.assetManager()->loadModel("sponza", "models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf", material1);

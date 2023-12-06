@@ -36,7 +36,7 @@ namespace cala::backend::vulkan {
             VkFence fence = VK_NULL_HANDLE;
         };
 
-        FrameInfo beginFrame();
+        std::expected<FrameInfo, Error> beginFrame();
 
         ende::time::Duration endFrame();
 
@@ -46,7 +46,7 @@ namespace cala::backend::vulkan {
 
         u32 nextFrameIndex() const { return (_frameCount + 1) % FRAMES_IN_FLIGHT; }
 
-        bool waitFrame(u64 frame, u64 timeout = 1000000000);
+        std::expected<void, Error> waitFrame(u64 frame, u64 timeout = 1000000000);
 
         bool wait(u64 timeout = 1000000000); // waits for all frames
 
@@ -63,13 +63,23 @@ namespace cala::backend::vulkan {
 
         CommandHandle beginSingleTimeCommands(QueueType queueType = QueueType::GRAPHICS);
 
-        void endSingleTimeCommands(CommandHandle buffer);
+        std::expected<void, Error> endSingleTimeCommands(CommandHandle buffer);
 
         template <typename F>
         void immediate(F func, QueueType queueType = QueueType::GRAPHICS) {
             auto cmd = beginSingleTimeCommands(queueType);
             func(cmd);
-            endSingleTimeCommands(cmd);
+            endSingleTimeCommands(cmd).transform_error([&] (auto error) {
+                switch (error) {
+                    case Error::INVALID_COMMAND_BUFFER:
+                        _logger.error("Error submitting immediate command buffer");
+                        break;
+                    default:
+                        _logger.error("Device lost on immediate command submit");
+                        break;
+                }
+                return error;
+            });
         }
 
         template<typename F>
@@ -138,7 +148,7 @@ namespace cala::backend::vulkan {
 
         VkDescriptorSet getDescriptorSet(CommandBuffer::DescriptorKey key);
 
-        VkPipeline getPipeline(CommandBuffer::PipelineKey key);
+        std::expected<VkPipeline, Error> getPipeline(CommandBuffer::PipelineKey key);
 
 
         const Context& context() const { return _context; }

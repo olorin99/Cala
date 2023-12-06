@@ -34,7 +34,7 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
 bool cala::Renderer::beginFrame(cala::backend::vulkan::Swapchain* swapchain) {
     _swapchain = swapchain;
     assert(_swapchain);
-    _frameInfo = _engine->device().beginFrame();
+    auto beginResult = _engine->device().beginFrame();
 
     if (_renderSettings.boundedFrameTime) {
         f64 frameTime = _engine->device().milliseconds();
@@ -43,15 +43,14 @@ bool cala::Renderer::beginFrame(cala::backend::vulkan::Swapchain* swapchain) {
             ende::thread::sleep(ende::time::Duration::fromMilliseconds(-frameTimeDiff));
     }
 
-    if (!_frameInfo.cmd)
-        return false;
-
     auto result = _swapchain->nextImage();
-    if (!result) {
+    if (!beginResult || !result) {
+        //TODO deal with actual error, don't just assume device lost
         _engine->logger().error("Device Lost - Frame: {}", _frameInfo.frame);
         _engine->device().printMarkers();
-        throw std::runtime_error("Device Lost");
+        return false;
     }
+    _frameInfo = beginResult.value();
     _swapchainFrame = std::move(result.value());
     _frameInfo.cmd->begin();
     _globalData.time = _engine->getRunningTime().milliseconds();
@@ -66,24 +65,28 @@ f64 cala::Renderer::endFrame() {
         u64 signalValue = _engine->device().getTimelineSemaphore().increment();
         std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 2> wait({ { &_engine->device().getTimelineSemaphore(), waitValue }, { &_swapchainFrame.semaphores.acquire, 0 } });
         std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 2> signal({ { &_engine->device().getTimelineSemaphore(), signalValue }, { &_swapchainFrame.semaphores.present, 0 } });
-        if (!_frameInfo.cmd->submit(wait, signal)) {
+        _frameInfo.cmd->submit(wait, signal).transform_error([&] (auto error) {
             _engine->logger().error("Error submitting command buffer");
             _engine->device().printMarkers();
-            throw std::runtime_error("Error submitting command buffer");
-        }
+            return false;
+        });
         _engine->device().setFrameValue(_engine->device().frameIndex(), signalValue);
     } else {
         std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 1> wait({{ &_swapchainFrame.semaphores.acquire, 0 }});
         std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 1> signal({{ &_swapchainFrame.semaphores.present, 0 }});
-        if (!_frameInfo.cmd->submit(wait, signal, _frameInfo.fence)) {
+        _frameInfo.cmd->submit(wait, signal, _frameInfo.fence).transform_error([&] (auto error) {
             _engine->logger().error("Error submitting command buffer");
             _engine->device().printMarkers();
-            throw std::runtime_error("Error submitting command buffer");
-        }
+            return false;
+        });
     }
 
     assert(_swapchain);
-    _swapchain->present(std::move(_swapchainFrame));
+    _swapchain->present(std::move(_swapchainFrame)).transform_error([&] (auto error) {
+        _engine->logger().error("Device lost on queue submit");
+        _engine->device().printMarkers();
+        return false;
+    });
     _engine->device().endFrame();
 
     _stats.drawCallCount = _frameInfo.cmd->drawCalls();

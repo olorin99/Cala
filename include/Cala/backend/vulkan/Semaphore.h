@@ -3,6 +3,8 @@
 
 #include <Ende/platform.h>
 #include <volk.h>
+#include <expected>
+#include <Cala/backend/primitives.h>
 
 namespace cala::backend::vulkan {
 
@@ -29,9 +31,9 @@ namespace cala::backend::vulkan {
 
         VkSemaphore semaphore() const { return _semaphore; }
 
-        bool wait(u64 value, u64 timeout = 1000000000);
+        std::expected<void, Error> wait(u64 value, u64 timeout = 1000000000);
 
-        bool signal(u64 value);
+        std::expected<void, Error> signal(u64 value);
 
         u64 queryGPUValue();
 

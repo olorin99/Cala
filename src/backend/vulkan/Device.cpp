@@ -219,20 +219,12 @@ cala::backend::vulkan::Device::~Device() {
 }
 
 
-cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFrame() {
+std::expected<cala::backend::vulkan::Device::FrameInfo, cala::backend::Error> cala::backend::vulkan::Device::beginFrame() {
     _frameCount++;
     _bytesAllocatedPerFrame = 0;
     _bytesUploadedToGPUPerFrame = 0;
 
-    if (!waitFrame(frameIndex())) {
-        printMarkers();
-        _logger.error("Error waiting for frame ({}), index ({})", _frameCount, frameIndex());
-        return {
-            _frameCount,
-            {},
-            _frameFences[frameIndex()]
-        };
-    }
+    auto waitResult = waitFrame(frameIndex());
 
 #ifndef NDEBUG
     if (_markerBuffer[frameIndex()]) {
@@ -248,11 +240,14 @@ cala::backend::vulkan::Device::FrameInfo cala::backend::vulkan::Device::beginFra
     for (auto& pool : _commandPools[frameIndex()])
         pool.reset();
 
-    return {
-        _frameCount,
-        getCommandBuffer(frameIndex()),
-        _frameFences[frameIndex()]
-    };
+    if (waitResult) {
+        return FrameInfo{
+                _frameCount,
+                getCommandBuffer(frameIndex()),
+                _frameFences[frameIndex()]
+        };
+    }
+    return std::unexpected(waitResult.error());
 }
 
 ende::time::Duration cala::backend::vulkan::Device::endFrame() {
@@ -260,7 +255,7 @@ ende::time::Duration cala::backend::vulkan::Device::endFrame() {
     return _lastFrameTime;
 }
 
-bool cala::backend::vulkan::Device::waitFrame(u64 frame, u64 timeout) {
+std::expected<void, cala::backend::Error> cala::backend::vulkan::Device::waitFrame(u64 frame, u64 timeout) {
     PROFILE_NAMED("Device::waitFrame");
     if (usingTimeline()) {
         u64 waitValue = _frameValues[frame];
@@ -269,13 +264,11 @@ bool cala::backend::vulkan::Device::waitFrame(u64 frame, u64 timeout) {
         VkFence fence = _frameFences[frame];
         auto res = vkWaitForFences(_context.device(), 1, &fence, true, timeout);
         if (res == VK_ERROR_DEVICE_LOST) {
-            _logger.error("Device lost on wait for fence");
-            printMarkers();
-            throw std::runtime_error("Device lost on wait for fence");
+            return std::unexpected(static_cast<Error>(res));
         }
         vkResetFences(_context.device(), 1, &fence);
-        return true;
     }
+    return {};
 }
 
 bool cala::backend::vulkan::Device::wait(u64 timeout) {
@@ -294,36 +287,32 @@ cala::backend::vulkan::CommandHandle cala::backend::vulkan::Device::beginSingleT
     return buffer;
 }
 
-void cala::backend::vulkan::Device::endSingleTimeCommands(CommandHandle buffer) {
+std::expected<void, cala::backend::Error> cala::backend::vulkan::Device::endSingleTimeCommands(CommandHandle buffer) {
     if (_immediateSemaphore.isTimeline()) {
         u64 waitValue = _immediateSemaphore.value();
         u64 signalValue = _immediateSemaphore.increment();
         std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 1> wait({ { &_immediateSemaphore, waitValue } });
         std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 1> signal({ { &_immediateSemaphore, signalValue } });
-        if (!buffer->submit(wait, signal)) {
-            _logger.error("Error submitting command buffer");
-            printMarkers();
-            throw std::runtime_error("Error submitting immediate command buffer");
-        }
-        _immediateSemaphore.wait(signalValue);
+        return buffer->submit(wait, signal).and_then([&] (auto result) {
+            return _immediateSemaphore.wait(signalValue);
+        });
     } else {
         VkFence fence; //TODO: dont create/destroy fence each time
         VkFenceCreateInfo fenceCreateInfo{};
         fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fenceCreateInfo.pNext = nullptr;
         VK_TRY(vkCreateFence(context().device(), &fenceCreateInfo, nullptr, &fence));
-        if (!buffer->submit({}, {}, fence)) {
-            _logger.error("Error submitting command buffer");
-            printMarkers();
-            throw std::runtime_error("Error submitting immediate command buffer");
-        }
-
-        auto res = vkWaitForFences(context().device(), 1, &fence, true, 1000000000) == VK_SUCCESS;
-        if (res)
-            vkResetFences(context().device(), 1, &fence);
-        else
-            _logger.error("Failed waiting for immediate fence");
-        vkDestroyFence(context().device(), fence, nullptr);
+        return buffer->submit({}, {}, fence).and_then([&] (auto result) -> std::expected<void, Error> {
+            auto res = vkWaitForFences(context().device(), 1, &fence, true, 1000000000);
+            if (res == VK_SUCCESS)
+                vkResetFences(context().device(), 1, &fence);
+            else
+                _logger.error("Failed waiting for immediate fence");
+            vkDestroyFence(context().device(), fence, nullptr);
+            if (res != VK_SUCCESS)
+                return std::unexpected(static_cast<Error>(res));
+            return {};
+        });
     }
 }
 
@@ -595,7 +584,7 @@ cala::backend::vulkan::ShaderModuleHandle cala::backend::vulkan::Device::createS
     createInfo.pCode = spirv.data();
 
     if (vkCreateShaderModule(context().device(), &createInfo, nullptr, &module) != VK_SUCCESS)
-        throw std::runtime_error("Unable to create shader module");
+        return {};
 
     ShaderModuleInterface interface(spirv, stage);
 
@@ -618,7 +607,7 @@ cala::backend::vulkan::ShaderModuleHandle cala::backend::vulkan::Device::recreat
     createInfo.pCode = spirv.data();
 
     if (vkCreateShaderModule(context().device(), &createInfo, nullptr, &module) != VK_SUCCESS)
-        throw std::runtime_error("Unable to create shader module");
+        return {};
 
     ShaderModuleInterface interface(spirv, stage);
 
@@ -877,7 +866,7 @@ VkDescriptorSet cala::backend::vulkan::Device::getDescriptorSet(CommandBuffer::D
     return descriptorSet;
 }
 
-VkPipeline cala::backend::vulkan::Device::getPipeline(CommandBuffer::PipelineKey key) {
+std::expected<VkPipeline, cala::backend::Error> cala::backend::vulkan::Device::getPipeline(CommandBuffer::PipelineKey key) {
     PROFILE_NAMED("Device::getPipeline");
     // check if exists in cache
     auto it = _pipelines.find(key);
@@ -1031,8 +1020,10 @@ VkPipeline cala::backend::vulkan::Device::getPipeline(CommandBuffer::PipelineKey
         pipelineInfo.basePipelineIndex = -1;
 
 //        VkPipeline pipeline;
-        if (vkCreateGraphicsPipelines(context().device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS)
-            throw std::runtime_error("Error creating pipeline");
+
+        auto res = vkCreateGraphicsPipelines(context().device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+        if (res != VK_SUCCESS)
+            return std::unexpected(static_cast<Error>(res));
     } else {
         VkComputePipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
@@ -1041,8 +1032,9 @@ VkPipeline cala::backend::vulkan::Device::getPipeline(CommandBuffer::PipelineKey
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex = -1;
 
-        if (vkCreateComputePipelines(context().device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS)
-            throw std::runtime_error("Error creating compute pipeline");
+        auto res = vkCreateComputePipelines(context().device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+        if (res != VK_SUCCESS)
+            return std::unexpected(static_cast<Error>(res));
     }
 
     _pipelines.emplace(std::make_pair(key, pipeline));

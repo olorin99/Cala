@@ -122,7 +122,7 @@ namespace cala {
         backend::vulkan::Framebuffer* _framebuffer;
 
         struct Barrier {
-            const char* label;
+            const char* label = nullptr;
             i32 index = -1;
             backend::PipelineStage srcStage = backend::PipelineStage::TOP;
             backend::PipelineStage dstStage = backend::PipelineStage::BOTTOM;
