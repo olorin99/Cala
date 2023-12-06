@@ -760,12 +760,12 @@ cala::backend::vulkan::RenderPass* cala::backend::vulkan::Device::getRenderPass(
 //    u64 hash = ende::util::murmur3(reinterpret_cast<u32*>(attachments.data()), attachments.size() * sizeof(RenderPass::Attachment), attachments.size());
     u64 hash = 0;
     for (auto& attachment : attachments) {
-        hash |= (((u64)attachment.format) * 0x100000001b3ull);
-        hash |= ((u64)attachment.internalLayout << 40);
-        hash |= ((u64)attachment.loadOp << 35);
-        hash |= ((u64)attachment.storeOp << 30);
-        hash |= ((u64)attachment.finalLayout << 20);
-        hash |= ((u64)attachment.initialLayout << 10);
+        hash = ende::util::combineHash(hash, (u64)attachment.format * 0x100000001b3ull);
+        hash = ende::util::combineHash(hash, (u64)attachment.internalLayout << 40);
+        hash = ende::util::combineHash(hash, (u64)attachment.loadOp << 35);
+        hash = ende::util::combineHash(hash, (u64)attachment.storeOp << 30);
+        hash = ende::util::combineHash(hash, (u64)attachment.finalLayout << 20);
+        hash = ende::util::combineHash(hash, (u64)attachment.initialLayout << 10);
     }
 
     auto it = _renderPasses.find(hash);
@@ -779,7 +779,7 @@ cala::backend::vulkan::RenderPass* cala::backend::vulkan::Device::getRenderPass(
 cala::backend::vulkan::Framebuffer *cala::backend::vulkan::Device::getFramebuffer(RenderPass *renderPass, std::span<VkImageView> attachmentImages, std::span<u32> hashes, u32 width, u32 height) {
     u64 hash = ((u64)renderPass->id() << 32);
     for (auto& attachment : hashes)
-        hash |= attachment;
+        hash = ende::util::combineHash(hash, attachment);
 
     auto it = _framebuffers.find(hash);
     if (it != _framebuffers.end()) {

@@ -151,18 +151,13 @@ i32 cala::AssetManager::registerModel(const std::string &name, const std::filesy
     return index;
 }
 
-
-inline u32 combineHash(u32 first, u32 second) {
-    return first ^= second + 0x9e3779b9 + (first<<6) + (first>>2);
-}
-
 cala::backend::vulkan::ShaderModuleHandle cala::AssetManager::loadShaderModule(const std::string& name, const std::filesystem::path &path, backend::ShaderStage stage, const std::vector<util::Macro>& macros, std::span<const std::string> includes) {
     u32 hash = std::hash<std::filesystem::path>()(path);
 
     std::hash<std::string_view> hasher;
     for (auto& macro : macros) {
         u32 h = hasher(macro.value);
-        hash = combineHash(hash, h);
+        hash = ende::util::combineHash(hash, h);
     }
 
 
