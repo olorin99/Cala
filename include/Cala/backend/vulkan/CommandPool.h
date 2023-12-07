@@ -9,6 +9,8 @@ namespace cala::backend::vulkan {
     class CommandPool {
     public:
 
+        CommandPool() = default;
+
         CommandPool(Device* device, QueueType queueType);
 
         ~CommandPool();
@@ -16,6 +18,10 @@ namespace cala::backend::vulkan {
         CommandPool(const CommandPool&) = delete;
 
         CommandPool& operator=(const CommandPool&)  = delete;
+
+        CommandPool(CommandPool&& rhs) noexcept;
+
+        CommandPool& operator=(CommandPool&& rhs) noexcept;
 
         void reset();
 
@@ -26,11 +32,11 @@ namespace cala::backend::vulkan {
     private:
         friend CommandHandle;
 
-        Device* _device;
-        VkCommandPool _pool;
-        std::vector<CommandBuffer> _buffers;
-        QueueType _queueType;
-        u32 _index;
+        Device* _device = nullptr;
+        VkCommandPool _pool = VK_NULL_HANDLE;
+        std::vector<CommandBuffer> _buffers = {};
+        QueueType _queueType = QueueType::NONE;
+        u32 _index = 0;
 
     };
 

@@ -5,40 +5,47 @@
 #include <Cala/backend/vulkan/ShaderModule.h>
 #include "Cala/shaderBridge.h"
 
-cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog::logger& logger, CreateInfo createInfo)
-    : _logger(logger),
-      _context(Context::create(this, Context::ContextInfo{
-              .applicationName = "CalaExample",
-              .instanceExtensions = platform.requiredExtensions()
-      }).value()),
-      _commandPools{
-              {CommandPool(this, QueueType::GRAPHICS), CommandPool(this, QueueType::COMPUTE), CommandPool(this, QueueType::TRANSFER)},
-              {CommandPool(this, QueueType::GRAPHICS), CommandPool(this, QueueType::COMPUTE), CommandPool(this, QueueType::TRANSFER)}
-        },
-      _frameCount(0),
-      _bindlessIndex(-1),
-      _timelineSemaphore(this, createInfo.useTimeline ? 10 : -1),
-      _immediateSemaphore(this, createInfo.useTimeline ? 1 : -1),
-      _bytesAllocatedPerFrame(0),
-      _bytesUploadedToGPUPerFrame(0)
-{
-    if (createInfo.useTimeline) {
-        for (auto& value : _frameValues)
+std::expected<std::unique_ptr<cala::backend::vulkan::Device>, cala::backend::Error> cala::backend::vulkan::Device::create(cala::backend::vulkan::Device::CreateInfo info) {
+    auto device = std::make_unique<Device>();
+    if (info.logger)
+        device->_logger = info.logger;
+
+    std::vector<const char*> requiredExtensions;
+    if (info.platform)
+        requiredExtensions = info.platform->requiredExtensions();
+
+    auto contextResult = Context::create(device.get(), {
+        .applicationName = "CalaExample",
+        .instanceExtensions = requiredExtensions
+    });
+    if (!contextResult)
+        return std::unexpected(contextResult.error());
+    device->_context = std::move(contextResult.value());
+
+    for (auto& frameCommandPool : device->_commandPools) {
+        frameCommandPool = { CommandPool(device.get(), QueueType::GRAPHICS), CommandPool(device.get(), QueueType::COMPUTE), CommandPool(device.get(), QueueType::TRANSFER) };
+    }
+
+    device->_timelineSemaphore = Semaphore(device.get(), info.useTimeline ? 10 : -1);
+    device->_immediateSemaphore = Semaphore(device.get(), info.useTimeline ? 1 : -1);
+
+    if (info.useTimeline) {
+        for (auto& value : device->_frameValues)
             value = 10;
     } else {
-        for (auto& fence : _frameFences) {
+        for (auto& fence : device->_frameFences) {
             VkFenceCreateInfo fenceCreateInfo{};
             fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
             fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-            vkCreateFence(_context.device(), &fenceCreateInfo, nullptr, &fence);
+            vkCreateFence(device->context().device(), &fenceCreateInfo, nullptr, &fence);
         }
     }
 
     VkDescriptorPoolSize poolSizes[] = {
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, _context.getLimits().maxBindlessSampledImages },
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _context.getLimits().maxBindlessStorageBuffers },
-            { VK_DESCRIPTOR_TYPE_SAMPLER, _context.getLimits().maxBindlessSamplers },
-            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, _context.getLimits().maxBindlessStorageImages }
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, device->context().getLimits().maxBindlessSampledImages },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, device->context().getLimits().maxBindlessStorageBuffers },
+            { VK_DESCRIPTOR_TYPE_SAMPLER, device->context().getLimits().maxBindlessSamplers },
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, device->context().getLimits().maxBindlessStorageImages }
     };
 
     VkDescriptorPoolCreateInfo poolCreateInfo{};
@@ -47,35 +54,35 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
     poolCreateInfo.maxSets = 1;
     poolCreateInfo.poolSizeCount = 4;
     poolCreateInfo.pPoolSizes = poolSizes;
-    VK_TRY(vkCreateDescriptorPool(_context.device(), &poolCreateInfo, nullptr, &_bindlessPool));
-    _context.setDebugName(VK_OBJECT_TYPE_DESCRIPTOR_POOL, (u64)_bindlessPool, "BindlessPool");
+    VK_TRY(vkCreateDescriptorPool(device->context().device(), &poolCreateInfo, nullptr, &device->_bindlessPool));
+    device->_context.setDebugName(VK_OBJECT_TYPE_DESCRIPTOR_POOL, (u64)device->_bindlessPool, "BindlessPool");
 
     VkDescriptorSetLayoutBinding bindlessLayoutBinding[4] = {};
 
     // images
     bindlessLayoutBinding[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-    bindlessLayoutBinding[0].descriptorCount = _context.getLimits().maxBindlessSampledImages;
+    bindlessLayoutBinding[0].descriptorCount = device->_context.getLimits().maxBindlessSampledImages;
     bindlessLayoutBinding[0].binding = CALA_BINDLESS_SAMPLED_IMAGE;
     bindlessLayoutBinding[0].stageFlags = VK_SHADER_STAGE_ALL;
     bindlessLayoutBinding[0].pImmutableSamplers = nullptr;
 
     // buffers
     bindlessLayoutBinding[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    bindlessLayoutBinding[1].descriptorCount = _context.getLimits().maxBindlessStorageBuffers;
+    bindlessLayoutBinding[1].descriptorCount = device->_context.getLimits().maxBindlessStorageBuffers;
     bindlessLayoutBinding[1].binding = CALA_BINDLESS_BUFFERS;
     bindlessLayoutBinding[1].stageFlags = VK_SHADER_STAGE_ALL;
     bindlessLayoutBinding[1].pImmutableSamplers = nullptr;
 
     // samplers
     bindlessLayoutBinding[2].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-    bindlessLayoutBinding[2].descriptorCount = _context.getLimits().maxBindlessSamplers;
+    bindlessLayoutBinding[2].descriptorCount = device->_context.getLimits().maxBindlessSamplers;
     bindlessLayoutBinding[2].binding = CALA_BINDLESS_SAMPLERS;
     bindlessLayoutBinding[2].stageFlags = VK_SHADER_STAGE_ALL;
     bindlessLayoutBinding[2].pImmutableSamplers = nullptr;
 
     // storage images
     bindlessLayoutBinding[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    bindlessLayoutBinding[3].descriptorCount = _context.getLimits().maxBindlessStorageImages;
+    bindlessLayoutBinding[3].descriptorCount = device->_context.getLimits().maxBindlessStorageImages;
     bindlessLayoutBinding[3].binding = CALA_BINDLESS_STORAGE_IMAGE;
     bindlessLayoutBinding[3].stageFlags = VK_SHADER_STAGE_ALL;
     bindlessLayoutBinding[3].pImmutableSamplers = nullptr;
@@ -101,17 +108,17 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
     extendedInfo.pBindingFlags = bindingFlags;
     bindlessLayoutCreateInfo.pNext = &extendedInfo;
 
-    VK_TRY(vkCreateDescriptorSetLayout(_context.device(), &bindlessLayoutCreateInfo, nullptr, &_bindlessLayout));
-    _context.setDebugName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (u64)_bindlessLayout, "BindlessLayout");
+    VK_TRY(vkCreateDescriptorSetLayout(device->context().device(), &bindlessLayoutCreateInfo, nullptr, &device->_bindlessLayout));
+    device->context().setDebugName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (u64)device->_bindlessLayout, "BindlessLayout");
 
     VkDescriptorSetAllocateInfo bindlessAllocate{};
     bindlessAllocate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     bindlessAllocate.descriptorSetCount = 1;
-    bindlessAllocate.pSetLayouts = &_bindlessLayout;
-    bindlessAllocate.descriptorPool = _bindlessPool;
+    bindlessAllocate.pSetLayouts = &device->_bindlessLayout;
+    bindlessAllocate.descriptorPool = device->_bindlessPool;
 
-    VK_TRY(vkAllocateDescriptorSets(_context.device(), &bindlessAllocate, &_bindlessSet));
-    _context.setDebugName(VK_OBJECT_TYPE_DESCRIPTOR_SET, (u64)_bindlessSet, "BindlessSet");
+    VK_TRY(vkAllocateDescriptorSets(device->context().device(), &bindlessAllocate, &device->_bindlessSet));
+    device->context().setDebugName(VK_OBJECT_TYPE_DESCRIPTOR_SET, (u64)device->_bindlessSet, "BindlessSet");
 
     VkDescriptorPoolSize poolSizes2[] = {
             {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10000},
@@ -126,31 +133,37 @@ cala::backend::vulkan::Device::Device(cala::backend::Platform& platform, spdlog:
     descriptorPoolCreateInfo.poolSizeCount = 4;
     descriptorPoolCreateInfo.pPoolSizes = poolSizes2;
     descriptorPoolCreateInfo.maxSets = 10000;
-    VK_TRY(vkCreateDescriptorPool(context().device(), &descriptorPoolCreateInfo, nullptr, &_descriptorPool));
+    VK_TRY(vkCreateDescriptorPool(device->context().device(), &descriptorPoolCreateInfo, nullptr, &device->_descriptorPool));
 
 #ifndef NDEBUG
-    if (_context.getSupportedExtensions().AMD_buffer_marker && _context.getSupportedExtensions().AMD_device_coherent_memory) {
+    if (device->context().getSupportedExtensions().AMD_buffer_marker && device->context().getSupportedExtensions().AMD_device_coherent_memory) {
         u32 i = 0;
-        for (auto& buffer : _markerBuffer) {
-            buffer = createBuffer(sizeof(u32) * 1000, BufferUsage::TRANSFER_DST, MemoryProperties::READBACK, true, {
+        for (auto& buffer : device->_markerBuffer) {
+            buffer = device->createBuffer(sizeof(u32) * 1000, BufferUsage::TRANSFER_DST, MemoryProperties::READBACK, true, {
                     .requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                     .preferredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT
             });
             std::string debugLabel = "MarkerBuffer: " + std::to_string(i++);
-            _context.setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)buffer->buffer(), debugLabel);
+            device->context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)buffer->buffer(), debugLabel);
         }
     }
 #endif
 
-    _defaultSampler = getSampler({});
-    _defaultShadowSampler = getSampler({
+    device->_defaultSampler = device->getSampler({});
+    device->_defaultShadowSampler = device->getSampler({
         .filter = VK_FILTER_NEAREST,
         .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
         .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
     });
+
+    return device;
 }
 
 cala::backend::vulkan::Device::~Device() {
+    if (_context.device() == VK_NULL_HANDLE) //TODO: fill out with entire early return set
+        return;
+
+
     if (usingTimeline())
         _timelineSemaphore.signal(std::numeric_limits<u64>::max());
     VK_TRY(vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS))); //ensures last frame finished before destroying stuff
@@ -221,6 +234,84 @@ cala::backend::vulkan::Device::~Device() {
         vkDestroyDescriptorSetLayout(_context.device(), setLayout.second, nullptr);
 }
 
+cala::backend::vulkan::Device::Device(cala::backend::vulkan::Device &&rhs) noexcept {
+    std::swap(_logger, rhs._logger);
+    std::swap(_context, rhs._context);
+    std::swap(_commandPools, rhs._commandPools);
+    std::swap(_timelineSemaphore, rhs._timelineSemaphore);
+    std::swap(_immediateSemaphore, rhs._immediateSemaphore);
+    std::swap(_frameValues, rhs._frameValues);
+    std::swap(_frameFences, rhs._frameFences);
+    std::swap(_frameCount, rhs._frameCount);
+    std::swap(_frameClock, rhs._frameClock);
+    std::swap(_lastFrameTime, rhs._lastFrameTime);
+    std::swap(_deferredCommands, rhs._deferredCommands);
+    std::swap(_renderPasses, rhs._renderPasses);
+    std::swap(_framebuffers, rhs._framebuffers);
+    std::swap(_setLayouts, rhs._setLayouts);
+    std::swap(_bindlessLayout, rhs._bindlessLayout);
+    std::swap(_bindlessSet, rhs._bindlessSet);
+    std::swap(_bindlessPool, rhs._bindlessPool);
+    std::swap(_bindlessIndex, rhs._bindlessIndex);
+    std::swap(_bufferList, rhs._bufferList);
+    std::swap(_imageList, rhs._imageList);
+    std::swap(_shaderModulesList, rhs._shaderModulesList);
+    std::swap(_pipelineLayoutList, rhs._pipelineLayoutList);
+    std::swap(_defaultSampler, rhs._defaultSampler);
+    std::swap(_defaultShadowSampler, rhs._defaultShadowSampler);
+    std::swap(_samplers, rhs._samplers);
+    std::swap(_descriptorPool, rhs._descriptorPool);
+    std::swap(_descriptorSets, rhs._descriptorSets);
+    std::swap(_pipelines, rhs._pipelines);
+    std::swap(_markerBuffer, rhs._markerBuffer);
+    std::swap(_offset, rhs._offset);
+    std::swap(_marker, rhs._marker);
+    std::swap(_markedCmds, rhs._markedCmds);
+    std::swap(_bytesAllocatedPerFrame, rhs._bytesAllocatedPerFrame);
+    std::swap(_bytesUploadedToGPUPerFrame, rhs._bytesUploadedToGPUPerFrame);
+    std::swap(_totalAllocated, rhs._totalAllocated);
+    std::swap(_totalDeallocated, rhs._totalDeallocated);
+}
+
+cala::backend::vulkan::Device &cala::backend::vulkan::Device::operator==(cala::backend::vulkan::Device &&rhs) noexcept {
+    std::swap(_logger, rhs._logger);
+    std::swap(_context, rhs._context);
+    std::swap(_commandPools, rhs._commandPools);
+    std::swap(_timelineSemaphore, rhs._timelineSemaphore);
+    std::swap(_immediateSemaphore, rhs._immediateSemaphore);
+    std::swap(_frameValues, rhs._frameValues);
+    std::swap(_frameFences, rhs._frameFences);
+    std::swap(_frameCount, rhs._frameCount);
+    std::swap(_frameClock, rhs._frameClock);
+    std::swap(_lastFrameTime, rhs._lastFrameTime);
+    std::swap(_deferredCommands, rhs._deferredCommands);
+    std::swap(_renderPasses, rhs._renderPasses);
+    std::swap(_framebuffers, rhs._framebuffers);
+    std::swap(_setLayouts, rhs._setLayouts);
+    std::swap(_bindlessLayout, rhs._bindlessLayout);
+    std::swap(_bindlessSet, rhs._bindlessSet);
+    std::swap(_bindlessPool, rhs._bindlessPool);
+    std::swap(_bindlessIndex, rhs._bindlessIndex);
+    std::swap(_bufferList, rhs._bufferList);
+    std::swap(_imageList, rhs._imageList);
+    std::swap(_shaderModulesList, rhs._shaderModulesList);
+    std::swap(_pipelineLayoutList, rhs._pipelineLayoutList);
+    std::swap(_defaultSampler, rhs._defaultSampler);
+    std::swap(_defaultShadowSampler, rhs._defaultShadowSampler);
+    std::swap(_samplers, rhs._samplers);
+    std::swap(_descriptorPool, rhs._descriptorPool);
+    std::swap(_descriptorSets, rhs._descriptorSets);
+    std::swap(_pipelines, rhs._pipelines);
+    std::swap(_markerBuffer, rhs._markerBuffer);
+    std::swap(_offset, rhs._offset);
+    std::swap(_marker, rhs._marker);
+    std::swap(_markedCmds, rhs._markedCmds);
+    std::swap(_bytesAllocatedPerFrame, rhs._bytesAllocatedPerFrame);
+    std::swap(_bytesUploadedToGPUPerFrame, rhs._bytesUploadedToGPUPerFrame);
+    std::swap(_totalAllocated, rhs._totalAllocated);
+    std::swap(_totalDeallocated, rhs._totalDeallocated);
+    return *this;
+}
 
 std::expected<cala::backend::vulkan::Device::FrameInfo, cala::backend::Error> cala::backend::vulkan::Device::beginFrame() {
     _frameCount++;
@@ -310,7 +401,7 @@ std::expected<void, cala::backend::Error> cala::backend::vulkan::Device::endSing
             if (res == VK_SUCCESS)
                 vkResetFences(context().device(), 1, &fence);
             else
-                _logger.error("Failed waiting for immediate fence");
+                _logger->error("Failed waiting for immediate fence");
             vkDestroyFence(context().device(), fence, nullptr);
             if (res != VK_SUCCESS)
                 return std::unexpected(static_cast<Error>(res));
@@ -357,11 +448,11 @@ bool cala::backend::vulkan::Device::gc() {
         if (allocation)
             vmaDestroyBuffer(context().allocator(), buf, allocation);
         else
-            _logger.warn("attempted to destroy buffer ({}) which has invalid allocation", index);
+            _logger->warn("attempted to destroy buffer ({}) which has invalid allocation", index);
         buffer._allocation = nullptr;
         _totalDeallocated += buffer.size();
         buffer = Buffer(this);
-        _logger.info("destroyed buffer ({})", index);
+        _logger->info("destroyed buffer ({})", index);
     });
 
     _imageList.clearDestroyQueue([this](i32 index, Image& image) {
@@ -371,7 +462,7 @@ bool cala::backend::vulkan::Device::gc() {
         if (image.image() != VK_NULL_HANDLE)
             vmaDestroyImage(context().allocator(), image.image(), allocation);
         else
-            _logger.warn("attempted to destroy image ({}) which is invalid", index);
+            _logger->warn("attempted to destroy image ({}) which is invalid", index);
         _totalDeallocated += image.width() * image.height() * image.depth() * formatToSize(image.format());
         image._image = VK_NULL_HANDLE;
         image._allocation = nullptr;
@@ -381,18 +472,18 @@ bool cala::backend::vulkan::Device::gc() {
         image._layers = 0;
         image._mips = 0;
         image._format = Format::UNDEFINED;
-        _logger.info("destroyed image ({})", index);
+        _logger->info("destroyed image ({})", index);
     });
 
     _shaderModulesList.clearDestroyQueue([this](i32 index, ShaderModule& module) {
         vkDestroyShaderModule(context().device(), module.module(), nullptr);
         module._module = VK_NULL_HANDLE;
-        _logger.info("destroyed shader module ({})", index);
+        _logger->info("destroyed shader module ({})", index);
     });
 
     _pipelineLayoutList.clearDestroyQueue([this](i32 index, PipelineLayout& layout) {
         layout = PipelineLayout(nullptr);
-        _logger.info("destroyed pipeline layout ({})", index);
+        _logger->info("destroyed pipeline layout ({})", index);
     });
 
     for (auto it = _descriptorSets.begin(); it != _descriptorSets.end(); it++) {
@@ -1085,7 +1176,7 @@ void cala::backend::vulkan::Device::printMarkers() {
             u32 marker = markers[i];
             auto cmd = marker < _markedCmds[frame].size() ? _markedCmds[i][frame] : std::make_pair( "NullCmd", 0 );
 //            file.write(std::format("Command: {}\nMarker[{}]: {}\n", cmd.first, i, marker));
-            _logger.warn("Command: {}\nMarker[{}]: {}", cmd.first, i, marker);
+            _logger->warn("Command: {}\nMarker[{}]: {}", cmd.first, i, marker);
             if (marker == 0)
                 break;
         }

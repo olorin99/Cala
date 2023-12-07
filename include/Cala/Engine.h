@@ -29,7 +29,7 @@ namespace cala {
 
         ~Engine();
 
-        backend::vulkan::Device& device() { return _device; }
+        backend::vulkan::Device& device() { return *_device; }
 
         AssetManager* assetManager() { return &_assetManager; }
 
@@ -163,7 +163,7 @@ namespace cala {
 
         spdlog::logger _logger;
 
-        backend::vulkan::Device _device;
+        std::unique_ptr<backend::vulkan::Device> _device;
 
         AssetManager _assetManager;
 

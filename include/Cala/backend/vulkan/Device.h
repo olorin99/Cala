@@ -24,11 +24,21 @@ namespace cala::backend::vulkan {
 
         struct CreateInfo {
             bool useTimeline = true;
+            Platform* platform = nullptr;
+            spdlog::logger* logger = nullptr;
         };
 
-        Device(Platform& platform, spdlog::logger& logger, CreateInfo createInfo = { true });
+//        Device(Platform& platform, spdlog::logger& logger, CreateInfo createInfo = { true });
+
+        static std::expected<std::unique_ptr<Device>, Error> create(CreateInfo info);
+
+        Device() = default;
 
         ~Device();
+
+        Device(Device&& rhs) noexcept;
+
+        Device& operator==(Device&& rhs) noexcept;
 
         struct FrameInfo {
             u64 frame = 0;
@@ -72,10 +82,10 @@ namespace cala::backend::vulkan {
             endSingleTimeCommands(cmd).transform_error([&] (auto error) {
                 switch (error) {
                     case Error::INVALID_COMMAND_BUFFER:
-                        _logger.error("Error submitting immediate command buffer");
+                        _logger->error("Error submitting immediate command buffer");
                         break;
                     default:
-                        _logger.error("Device lost on immediate command submit");
+                        _logger->error("Device lost on immediate command submit");
                         break;
                 }
                 return error;
@@ -180,7 +190,7 @@ namespace cala::backend::vulkan {
 
         Stats stats() const;
 
-        spdlog::logger& logger() { return _logger; }
+        spdlog::logger& logger() { return *_logger; }
 
         void printMarkers();
 
@@ -196,21 +206,21 @@ namespace cala::backend::vulkan {
         friend ui::ResourceViewer;
         friend CommandBuffer;
 
-        spdlog::logger& _logger;
-        Context _context;
-        CommandPool _commandPools[FRAMES_IN_FLIGHT][3]; // 0 = graphics, 1 = compute, 2 = transfer
-        Semaphore _timelineSemaphore;
-        Semaphore _immediateSemaphore;
-        u64 _frameValues[FRAMES_IN_FLIGHT];
-        VkFence _frameFences[FRAMES_IN_FLIGHT];
-        u64 _frameCount;
-        ende::time::StopWatch _frameClock;
-        ende::time::Duration _lastFrameTime;
+        spdlog::logger* _logger = nullptr;
+        Context _context = {};
+        std::array<std::array<CommandPool, 3>, FRAMES_IN_FLIGHT> _commandPools = {}; // 0 = graphics, 1 = compute, 2 = transfer
+        Semaphore _timelineSemaphore = {};
+        Semaphore _immediateSemaphore = {};
+        u64 _frameValues[FRAMES_IN_FLIGHT] = {};
+        VkFence _frameFences[FRAMES_IN_FLIGHT] = {};
+        u64 _frameCount = 0;
+        ende::time::StopWatch _frameClock = {};
+        ende::time::Duration _lastFrameTime = 0;
 
-        std::vector<std::function<void(CommandHandle)>> _deferredCommands;
+        std::vector<std::function<void(CommandHandle)>> _deferredCommands = {};
 
-        tsl::robin_map<u64, RenderPass*> _renderPasses;
-        tsl::robin_map<u64, std::pair<i32, Framebuffer*>> _framebuffers;
+        tsl::robin_map<u64, RenderPass*> _renderPasses = {};
+        tsl::robin_map<u64, std::pair<i32, Framebuffer*>> _framebuffers = {};
 
         struct SetLayoutKey {
             VkDescriptorSetLayoutBinding bindings[8];
@@ -218,18 +228,18 @@ namespace cala::backend::vulkan {
                 return memcmp(this, &rhs, sizeof(SetLayoutKey)) == 0;
             }
         };
-        std::unordered_map<SetLayoutKey, VkDescriptorSetLayout, ende::util::MurmurHash<SetLayoutKey>> _setLayouts;
+        std::unordered_map<SetLayoutKey, VkDescriptorSetLayout, ende::util::MurmurHash<SetLayoutKey>> _setLayouts = {};
 
-        VkDescriptorSetLayout _bindlessLayout;
-        VkDescriptorSet _bindlessSet;
-        VkDescriptorPool _bindlessPool;
-        i32 _bindlessIndex;
+        VkDescriptorSetLayout _bindlessLayout = VK_NULL_HANDLE;
+        VkDescriptorSet _bindlessSet = VK_NULL_HANDLE;
+        VkDescriptorPool _bindlessPool = VK_NULL_HANDLE;
+        i32 _bindlessIndex = -1;
 
         template <typename T, typename H>
         struct ResourceList {
-            std::vector<std::pair<std::unique_ptr<T>, std::unique_ptr<typename H::Data>>> _resources;
-            std::vector<u32> _freeResources;
-            std::vector<std::pair<i32, i32>> _destroyQueue;
+            std::vector<std::pair<std::unique_ptr<T>, std::unique_ptr<typename H::Data>>> _resources = {};
+            std::vector<u32> _freeResources = {};
+            std::vector<std::pair<i32, i32>> _destroyQueue = {};
 
             u32 used() const { return allocated() - free(); }
 
@@ -288,36 +298,31 @@ namespace cala::backend::vulkan {
             }
         };
 
-        ResourceList<Buffer, BufferHandle> _bufferList;
+        ResourceList<Buffer, BufferHandle> _bufferList = {};
+        ResourceList<Image, ImageHandle> _imageList = {};
+        ResourceList<ShaderModule, ShaderModuleHandle> _shaderModulesList = {};
+        ResourceList<PipelineLayout, PipelineLayoutHandle> _pipelineLayoutList = {};
 
-        ResourceList<Image, ImageHandle> _imageList;
+        SamplerHandle _defaultSampler = {};
+        SamplerHandle _defaultShadowSampler = {};
 
-        SamplerHandle _defaultSampler;
-        SamplerHandle _defaultShadowSampler;
+        std::vector<std::pair<Sampler::CreateInfo, std::unique_ptr<Sampler>>> _samplers = {};
 
-        ResourceList<ShaderModule, ShaderModuleHandle> _shaderModulesList;
+        VkDescriptorPool _descriptorPool = VK_NULL_HANDLE;
+        tsl::robin_map<CommandBuffer::DescriptorKey, std::pair<VkDescriptorSet, i32>, ende::util::MurmurHash<CommandBuffer::DescriptorKey>> _descriptorSets = {};
 
-        ResourceList<PipelineLayout, PipelineLayoutHandle> _pipelineLayoutList;
+        tsl::robin_map<CommandBuffer::PipelineKey, VkPipeline, ende::util::MurmurHash<CommandBuffer::PipelineKey>, CommandBuffer::PipelineEqual> _pipelines = {};
 
-
-        std::vector<std::pair<Sampler::CreateInfo, std::unique_ptr<Sampler>>> _samplers;
-
-        tsl::robin_map<CommandBuffer::DescriptorKey, std::pair<VkDescriptorSet, i32>, ende::util::MurmurHash<CommandBuffer::DescriptorKey>> _descriptorSets;
-        VkDescriptorPool _descriptorPool;
-
-        tsl::robin_map<CommandBuffer::PipelineKey, VkPipeline, ende::util::MurmurHash<CommandBuffer::PipelineKey>, CommandBuffer::PipelineEqual> _pipelines;
-
-        BufferHandle _markerBuffer[FRAMES_IN_FLIGHT];
+        BufferHandle _markerBuffer[FRAMES_IN_FLIGHT] = {};
         u32 _offset = 0;
         u32 _marker = 1;
-        std::vector<std::pair<std::string_view, u32>> _markedCmds[FRAMES_IN_FLIGHT];
+        std::vector<std::pair<std::string_view, u32>> _markedCmds[FRAMES_IN_FLIGHT] = {};
 
+        u32 _bytesAllocatedPerFrame = 0;
+        u32 _bytesUploadedToGPUPerFrame = 0;
 
-        u32 _bytesAllocatedPerFrame;
-        u32 _bytesUploadedToGPUPerFrame;
-
-        u32 _totalAllocated;
-        u32 _totalDeallocated;
+        u32 _totalAllocated = 0;
+        u32 _totalDeallocated = 0;
 
     };
 

@@ -24,6 +24,23 @@ cala::backend::vulkan::CommandPool::~CommandPool() {
 //    vkDestroyCommandPool(_device->context().device(), _pool, nullptr);
 }
 
+cala::backend::vulkan::CommandPool::CommandPool(cala::backend::vulkan::CommandPool &&rhs) noexcept {
+    std::swap(_device, rhs._device);
+    std::swap(_pool, rhs._pool);
+    std::swap(_buffers, rhs._buffers);
+    std::swap(_queueType, rhs._queueType);
+    std::swap(_index, rhs._index);
+}
+
+cala::backend::vulkan::CommandPool &cala::backend::vulkan::CommandPool::operator=(cala::backend::vulkan::CommandPool &&rhs) noexcept {
+    std::swap(_device, rhs._device);
+    std::swap(_pool, rhs._pool);
+    std::swap(_buffers, rhs._buffers);
+    std::swap(_queueType, rhs._queueType);
+    std::swap(_index, rhs._index);
+    return *this;
+}
+
 void cala::backend::vulkan::CommandPool::reset() {
     VK_TRY(vkResetCommandPool(_device->context().device(), _pool, 0));
     _index = 0;

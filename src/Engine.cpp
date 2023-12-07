@@ -28,14 +28,18 @@ cala::Engine::Engine(backend::Platform &platform)
         std::make_shared<spdlog::sinks::ansicolor_stdout_sink_mt>(),
         std::make_shared<spdlog::sinks::basic_file_sink_mt>("debug.log", true)
       }),
-      _device(platform, _logger, { true }),
+      _device(backend::vulkan::Device::create({
+          .useTimeline = true,
+          .platform = &platform,
+          .logger = &_logger
+      }).value()),
       _assetManager(this),
       _startTime(ende::time::SystemTime::now()),
-      _shadowPass(_device, {&shadowPassAttachment, 1 }),
-      _lodSampler(_device.getSampler({
+      _shadowPass(*_device, {&shadowPassAttachment, 1 }),
+      _lodSampler(_device->getSampler({
           .maxLod = 10
       })),
-      _irradianceSampler(_device.getSampler({
+      _irradianceSampler(_device->getSampler({
           .filter = VK_FILTER_LINEAR,
           .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
           .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
@@ -44,11 +48,11 @@ cala::Engine::Engine(backend::Platform &platform)
       _indexOffset(0),
       _stagingSize(1 << 24), // 16mb
       _stagingOffset(0),
-      _stagingBuffer(_device.createBuffer(_stagingSize, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING, true)),
+      _stagingBuffer(_device->createBuffer(_stagingSize, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING, true)),
       _shadowMapSize(0)
 {
     spdlog::flush_every(std::chrono::seconds(5));
-    _device.setBindlessSetIndex(0);
+    _device->setBindlessSetIndex(0);
     _assetManager.setAssetPath("../../res");
     {
         _pointShadowProgram = loadProgram("pointShadowProgram", {
@@ -171,11 +175,11 @@ cala::Engine::Engine(backend::Platform &platform)
 //        });
     }
 
-    _brdfImage = _device.createImage({ 512, 512, 1, backend::Format::RG16_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE });
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)_brdfImage->image(), "brdf");
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_brdfImage->defaultView().view, "brdf_View");
+    _brdfImage = _device->createImage({ 512, 512, 1, backend::Format::RG16_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE });
+    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)_brdfImage->image(), "brdf");
+    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_brdfImage->defaultView().view, "brdf_View");
 
-    _device.immediate([&](backend::vulkan::CommandHandle cmd) {
+    _device->immediate([&](backend::vulkan::CommandHandle cmd) {
         auto brdfBarrier = _brdfImage->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_WRITE | backend::Access::SHADER_READ, backend::ImageLayout::GENERAL);
         cmd->pipelineBarrier({ &brdfBarrier, 1 });
 
@@ -190,11 +194,11 @@ cala::Engine::Engine(backend::Platform &platform)
 
     });
 
-    _globalVertexBuffer = _device.createBuffer(1000000, backend::BufferUsage::VERTEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE);
-    _globalIndexBuffer = _device.createBuffer(1000000, backend::BufferUsage::INDEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE);
+    _globalVertexBuffer = _device->createBuffer(1000000, backend::BufferUsage::VERTEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE);
+    _globalIndexBuffer = _device->createBuffer(1000000, backend::BufferUsage::INDEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE);
 
-    _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalVertexBuffer->buffer(), "globalVertexBuffer");
-    _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalIndexBuffer->buffer(), "globalIndexBuffer");
+    _device->context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalVertexBuffer->buffer(), "globalVertexBuffer");
+    _device->context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalIndexBuffer->buffer(), "globalIndexBuffer");
 
     _cube = new Mesh(shapes::cube().mesh(this));
 
@@ -246,21 +250,21 @@ bool cala::Engine::gc() {
     PROFILE_NAMED("Engine::gc");
     flushStagedData();
 
-    return _device.gc();
+    return _device->gc();
 }
 
 cala::backend::vulkan::ImageHandle cala::Engine::convertToCubeMap(backend::vulkan::ImageHandle equirectangular) {
-    auto cubeMap = _device.createImage({
+    auto cubeMap = _device->createImage({
         512, 512, 1,
         backend::Format::RGBA32_SFLOAT,
         10, 6,
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST
     });
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)cubeMap->image(), "cubeMap");
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)cubeMap->defaultView().view, "cubeMap_View");
+    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)cubeMap->image(), "cubeMap");
+    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)cubeMap->defaultView().view, "cubeMap_View");
     auto equirectangularView = equirectangular->newView();
     auto cubeView = cubeMap->newView(0, 10);
-    _device.immediate([&](backend::vulkan::CommandHandle cmd) {
+    _device->immediate([&](backend::vulkan::CommandHandle cmd) {
         auto envBarrier = cubeMap->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
         cmd->pipelineBarrier({ &envBarrier, 1 });
 //        auto hdrBarrier = equirectangular->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY, backend::ImageLayout::SHADER_READ_ONLY);
@@ -287,15 +291,15 @@ cala::backend::vulkan::ImageHandle cala::Engine::convertToCubeMap(backend::vulka
 }
 
 cala::backend::vulkan::ImageHandle cala::Engine::generateIrradianceMap(backend::vulkan::ImageHandle cubeMap) {
-    auto irradianceMap = _device.createImage({
+    auto irradianceMap = _device->createImage({
         64, 64, 1,
         backend::Format::RGBA32_SFLOAT,
         1, 6,
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
     });
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)irradianceMap->image(), "irradianceMap");
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)irradianceMap->defaultView().view, "irradianceMap_View");
-    _device.immediate([&](backend::vulkan::CommandHandle cmd) {
+    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)irradianceMap->image(), "irradianceMap");
+    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)irradianceMap->defaultView().view, "irradianceMap_View");
+    _device->immediate([&](backend::vulkan::CommandHandle cmd) {
         auto irradianceBarrier = irradianceMap->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
         cmd->pipelineBarrier({ &irradianceBarrier, 1 });
         auto cubeBarrier = cubeMap->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::GENERAL);
@@ -317,14 +321,14 @@ cala::backend::vulkan::ImageHandle cala::Engine::generateIrradianceMap(backend::
 }
 
 cala::backend::vulkan::ImageHandle cala::Engine::generatePrefilteredIrradiance(backend::vulkan::ImageHandle cubeMap) {
-    backend::vulkan::ImageHandle prefilteredMap = _device.createImage({
+    backend::vulkan::ImageHandle prefilteredMap = _device->createImage({
         512, 512, 1,
         backend::Format::RGBA32_SFLOAT,
         10, 6,
         backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
     });
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)prefilteredMap->image(), "prefilterMap");
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)prefilteredMap->defaultView().view, "prefilterMap_View");
+    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)prefilteredMap->image(), "prefilterMap");
+    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)prefilteredMap->defaultView().view, "prefilterMap_View");
     backend::vulkan::Image::View mipViews[10] = {
             prefilteredMap->newView(0),
             prefilteredMap->newView(1),
@@ -339,7 +343,7 @@ cala::backend::vulkan::ImageHandle cala::Engine::generatePrefilteredIrradiance(b
     };
 
 
-    _device.immediate([&](backend::vulkan::CommandHandle cmd) {
+    _device->immediate([&](backend::vulkan::CommandHandle cmd) {
         auto prefilterBarrier = prefilteredMap->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
         cmd->pipelineBarrier({ &prefilterBarrier, 1 });
 
@@ -370,20 +374,20 @@ cala::backend::vulkan::ImageHandle cala::Engine::getShadowMap(u32 index, bool po
             return _shadowMaps[index];
     }
 
-    auto map = _device.createImage({
+    auto map = _device->createImage({
         _shadowMapSize, _shadowMapSize, 1,
         backend::Format::D32_SFLOAT,
         1, point ? (u32)6 : (u32)1,
         backend::ImageUsage::SAMPLED | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT | backend::ImageUsage::TRANSFER_DST
     });
     std::string debugLabel = "ShadowMap: " + std::to_string(index);
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)map->image(), debugLabel);
-    _device.context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)map->defaultView().view, "shadowMap_View");
+    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)map->image(), debugLabel);
+    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)map->defaultView().view, "shadowMap_View");
     if (index < _shadowMaps.size())
         _shadowMaps[index] = map;
     else
         _shadowMaps.push_back(map);
-    _device.immediate([&](backend::vulkan::CommandHandle cmd) {
+    _device->immediate([&](backend::vulkan::CommandHandle cmd) {
         auto cubeBarrier = map->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::SHADER_READ_ONLY);
         cmd->pipelineBarrier({ &cubeBarrier, 1 });
     });
@@ -450,8 +454,8 @@ u32 cala::Engine::uploadVertexData(std::span<f32> data) {
     u32 currentOffset = _vertexOffset;
     if (currentOffset + data.size() * sizeof(f32) >= _globalVertexBuffer->size()) {
         flushStagedData();
-        _globalVertexBuffer = _device.resizeBuffer(_globalVertexBuffer, currentOffset + data.size() * sizeof(f32), true);
-        _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalVertexBuffer->buffer(), "vertexStagingBuffer");
+        _globalVertexBuffer = _device->resizeBuffer(_globalVertexBuffer, currentOffset + data.size() * sizeof(f32), true);
+        _device->context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalVertexBuffer->buffer(), "vertexStagingBuffer");
     }
 
     stageData(_globalVertexBuffer, std::span<const u8>(reinterpret_cast<const u8*>(data.data()), data.size() * sizeof(f32)), currentOffset);
@@ -464,8 +468,8 @@ u32 cala::Engine::uploadIndexData(std::span<u32> data) {
     u32 currentOffset = _indexOffset;
     if (currentOffset + data.size() * sizeof(u32) >= _globalIndexBuffer->size()) {
         flushStagedData();
-        _globalIndexBuffer = _device.resizeBuffer(_globalIndexBuffer, currentOffset + data.size() * sizeof(u32), true);
-        _device.context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalIndexBuffer->buffer(), "indexStagingBuffer");
+        _globalIndexBuffer = _device->resizeBuffer(_globalIndexBuffer, currentOffset + data.size() * sizeof(u32), true);
+        _device->context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalIndexBuffer->buffer(), "indexStagingBuffer");
     }
     stageData(_globalIndexBuffer, std::span<const u8>(reinterpret_cast<const u8*>(data.data()), data.size() * sizeof(f32)), currentOffset);
 
@@ -574,7 +578,7 @@ u32 cala::Engine::flushStagedData() {
     PROFILE_NAMED("Engine::flushStagedData");
     u32 bytesUploaded = 0;
     if (!_pendingStagedBuffer.empty() || !_pendingStagedImage.empty()) {
-        _device.immediate([&](backend::vulkan::CommandHandle cmd) {
+        _device->immediate([&](backend::vulkan::CommandHandle cmd) {
             for (auto& staged : _pendingStagedBuffer) {
                 VkBufferCopy  bufferCopy{};
                 bufferCopy.dstOffset = staged.dstOffset;
@@ -615,7 +619,7 @@ u32 cala::Engine::flushStagedData() {
         _pendingStagedImage.clear();
         _stagingOffset = 0;
     }
-    _device.increaseDataUploadCount(bytesUploaded);
+    _device->increaseDataUploadCount(bytesUploaded);
     return bytesUploaded;
 }
 
@@ -918,7 +922,7 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
 
         return material;
     } catch (std::exception& e) {
-        _device.logger().error("Error with material: {}, {}", path.string(), e.what());
+        _device->logger().error("Error with material: {}, {}", path.string(), e.what());
         return nullptr;
     }
 }
@@ -930,7 +934,7 @@ cala::backend::vulkan::ShaderProgram cala::Engine::loadProgram(const std::string
         modules.push_back(_assetManager.loadShaderModule(name, info.path, info.stage, info.macros, info.includes));
     }
 
-    return { &_device, modules };
+    return { _device.get(), modules };
 }
 
 cala::Material *cala::Engine::getMaterial(u32 index) {
@@ -986,8 +990,8 @@ u32 cala::Engine::materialCount() const {
 }
 
 void cala::Engine::saveImageToDisk(const std::filesystem::path& path, backend::vulkan::ImageHandle handle) {
-    auto buffer = _device.createBuffer(handle->size(), backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::READBACK, true);
-    _device.immediate([path, handle, buffer](backend::vulkan::CommandHandle cmd) {
+    auto buffer = _device->createBuffer(handle->size(), backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::READBACK, true);
+    _device->immediate([path, handle, buffer](backend::vulkan::CommandHandle cmd) {
         auto b = handle->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_READ, backend::ImageLayout::TRANSFER_SRC);
         cmd->pipelineBarrier({ &b, 1 });
 

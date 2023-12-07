@@ -13,6 +13,8 @@ namespace cala::backend::vulkan {
     class Semaphore {
     public:
 
+        Semaphore() = default;
+
         Semaphore(Device* device, i64 initialValue = -1);
 
         ~Semaphore();
@@ -39,10 +41,10 @@ namespace cala::backend::vulkan {
 
     private:
 
-        Device* _device;
-        VkSemaphore _semaphore;
-        u64 _value;
-        bool _isTimeline;
+        Device* _device = nullptr;
+        VkSemaphore _semaphore = VK_NULL_HANDLE;
+        u64 _value = 0;
+        bool _isTimeline = false;
 
     };
 
