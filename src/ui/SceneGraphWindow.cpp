@@ -68,28 +68,28 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                     ImGui::Text("Material Info");
                     for (auto& parameter : parameters) {
                         switch (parameter.type) {
-                            case cala::backend::vulkan::ShaderModuleInterface::MemberType::INT:
+                            case cala::vk::ShaderModuleInterface::MemberType::INT:
                             {
                                 auto value = materialInstance->getParameter<i32>(parameter.name);
                                 if (ImGui::DragInt(parameter.name.c_str(), &value))
                                     materialInstance->setParameter(parameter.name, value);
                             }
                                 break;
-                            case cala::backend::vulkan::ShaderModuleInterface::MemberType::FLOAT:
+                            case cala::vk::ShaderModuleInterface::MemberType::FLOAT:
                             {
                                 auto value = materialInstance->getParameter<f32>(parameter.name);
                                 if (ImGui::DragFloat(parameter.name.c_str(), &value))
                                     materialInstance->setParameter(parameter.name, value);
                             }
                                 break;
-                            case cala::backend::vulkan::ShaderModuleInterface::MemberType::VEC3F:
+                            case cala::vk::ShaderModuleInterface::MemberType::VEC3F:
                             {
                                 auto value = materialInstance->getParameter<ende::math::Vec3f>(parameter.name);
                                 if (ImGui::DragFloat3(parameter.name.c_str(), &value[0]))
                                     materialInstance->setParameter(parameter.name, value);
                             }
                                 break;
-                            case cala::backend::vulkan::ShaderModuleInterface::MemberType::VEC4F:
+                            case cala::vk::ShaderModuleInterface::MemberType::VEC4F:
                             {
                                 auto value = materialInstance->getParameter<ende::math::Vec4f>(parameter.name);
                                 if (ImGui::DragFloat4(parameter.name.c_str(), &value[0]))

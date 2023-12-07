@@ -1,8 +1,8 @@
 #ifndef CALA_SCENE_H
 #define CALA_SCENE_H
 
-#include <Cala/backend/vulkan/Buffer.h>
-#include <Cala/backend/vulkan/CommandBuffer.h>
+#include <Cala/vulkan/Buffer.h>
+#include <Cala/vulkan/CommandBuffer.h>
 #include <Cala/Transform.h>
 #include <Cala/MaterialInstance.h>
 #include <Cala/Mesh.h>
@@ -18,7 +18,7 @@ namespace cala {
 
         Scene(Engine* engine, u32 count, u32 lightCount = 10);
 
-        void addSkyLightMap(backend::vulkan::ImageHandle skyLightMap, bool equirectangular = false, bool hdr = true);
+        void addSkyLightMap(vk::ImageHandle skyLightMap, bool equirectangular = false, bool hdr = true);
 
         void prepare(Camera& camera);
 
@@ -34,15 +34,15 @@ namespace cala {
 
         i32 _lightsDirtyFrame;
 
-        backend::vulkan::BufferHandle _meshDataBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
-        backend::vulkan::BufferHandle _meshTransformsBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
-        backend::vulkan::BufferHandle _lightBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
-        backend::vulkan::BufferHandle _lightCountBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
-        backend::vulkan::BufferHandle _materialCountBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
-        backend::vulkan::ImageHandle _skyLightMap;
-        backend::vulkan::Image::View _skyLightMapView;
-        backend::vulkan::ImageHandle _skyLightIrradiance;
-        backend::vulkan::ImageHandle _skyLightPrefilter;
+        vk::BufferHandle _meshDataBuffer[vk::FRAMES_IN_FLIGHT];
+        vk::BufferHandle _meshTransformsBuffer[vk::FRAMES_IN_FLIGHT];
+        vk::BufferHandle _lightBuffer[vk::FRAMES_IN_FLIGHT];
+        vk::BufferHandle _lightCountBuffer[vk::FRAMES_IN_FLIGHT];
+        vk::BufferHandle _materialCountBuffer[vk::FRAMES_IN_FLIGHT];
+        vk::ImageHandle _skyLightMap;
+        vk::Image::View _skyLightMapView;
+        vk::ImageHandle _skyLightIrradiance;
+        vk::ImageHandle _skyLightPrefilter;
         bool _hdrSkyLight;
         u32 _skyLight;
 

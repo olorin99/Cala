@@ -2,7 +2,7 @@
 #define CALA_BACKBUFFERWINDOW_H
 
 #include "Window.h"
-#include "Cala/backend/vulkan/Device.h"
+#include <Cala/vulkan/Device.h>
 #include "ImageView.h"
 
 namespace cala::ui {
@@ -10,19 +10,19 @@ namespace cala::ui {
     class BackbufferWindow : public Window {
     public:
 
-        BackbufferWindow(ImGuiContext* context, backend::vulkan::Device* device);
+        BackbufferWindow(ImGuiContext* context, vk::Device* device);
 
         ~BackbufferWindow();
 
         void render() override;
 
-        void setBackbufferHandle(backend::vulkan::ImageHandle handle) {
+        void setBackbufferHandle(vk::ImageHandle handle) {
             _imageView.setImageHandle(handle);
         }
 
     private:
 
-        backend::vulkan::Device* _device;
+        vk::Device* _device;
         ImageView _imageView;
 
     };

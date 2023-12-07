@@ -1,9 +1,9 @@
 #ifndef CALA_MATERIAL_H
 #define CALA_MATERIAL_H
 
-#include <Cala/backend/vulkan/Device.h>
-#include <Cala/backend/vulkan/ShaderProgram.h>
-#include <Cala/backend/vulkan/CommandBuffer.h>
+#include <Cala/vulkan/Device.h>
+#include <Cala/vulkan/ShaderProgram.h>
+#include <Cala/vulkan/CommandBuffer.h>
 #include <tsl/robin_map.h>
 #include <Cala/MaterialInstance.h>
 #include <Cala/Engine.h>
@@ -30,25 +30,25 @@ namespace cala {
 
         MaterialInstance instance();
 
-        //backend::vulkan::ProgramHandle getProgram() const { return _program; };
+        //vk::ProgramHandle getProgram() const { return _program; };
 
-        void setRasterState(backend::vulkan::CommandBuffer::RasterState state) { _rasterState = state; }
+        void setRasterState(vk::CommandBuffer::RasterState state) { _rasterState = state; }
 
-        backend::vulkan::CommandBuffer::RasterState getRasterState() const { return _rasterState; }
+        vk::CommandBuffer::RasterState getRasterState() const { return _rasterState; }
 
-        void setDepthState(backend::vulkan::CommandBuffer::DepthState state) { _depthState = state; }
+        void setDepthState(vk::CommandBuffer::DepthState state) { _depthState = state; }
 
-        backend::vulkan::CommandBuffer::DepthState getDepthState() const { return _depthState; }
+        vk::CommandBuffer::DepthState getDepthState() const { return _depthState; }
 
-        void setBlendState(backend::vulkan::CommandBuffer::BlendState state) { _blendState = state; }
+        void setBlendState(vk::CommandBuffer::BlendState state) { _blendState = state; }
 
-        backend::vulkan::CommandBuffer::BlendState getBlendState() const { return _blendState; }
+        vk::CommandBuffer::BlendState getBlendState() const { return _blendState; }
 
         u32 size() const { return _setSize; }
 
         u32 id() const { return _id; }
 
-        backend::vulkan::BufferHandle buffer() const { return _materialBuffer; }
+        vk::BufferHandle buffer() const { return _materialBuffer; }
 
         void upload();
 
@@ -62,9 +62,9 @@ namespace cala {
             MAX
         };
 
-        void setVariant(Variant variant, backend::vulkan::ShaderProgram program);
+        void setVariant(Variant variant, vk::ShaderProgram program);
 
-        const backend::vulkan::ShaderProgram& getVariant(Variant variant);
+        const vk::ShaderProgram& getVariant(Variant variant);
 
         bool variantPresent(Variant variant);
 
@@ -75,15 +75,15 @@ namespace cala {
 
         Engine* _engine;
 
-        std::array<backend::vulkan::ShaderProgram, static_cast<u8>(Variant::MAX)> _programs;
+        std::array<vk::ShaderProgram, static_cast<u8>(Variant::MAX)> _programs;
 
-        backend::vulkan::CommandBuffer::RasterState _rasterState;
-        backend::vulkan::CommandBuffer::DepthState _depthState;
-        backend::vulkan::CommandBuffer::BlendState _blendState;
+        vk::CommandBuffer::RasterState _rasterState;
+        vk::CommandBuffer::DepthState _depthState;
+        vk::CommandBuffer::BlendState _blendState;
 
         bool _dirty;
         std::vector<u8> _data;
-        backend::vulkan::BufferHandle _materialBuffer;
+        vk::BufferHandle _materialBuffer;
 
         u32 _setSize;
 

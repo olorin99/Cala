@@ -95,7 +95,7 @@ void cala::Light::setShadowBias(f32 bias) {
     _dirty = true;
 }
 
-void cala::Light::setShadowMap(backend::vulkan::ImageHandle shadowMap) {
+void cala::Light::setShadowMap(vk::ImageHandle shadowMap) {
     _shadowMap = shadowMap;
     _dirty = true;
 }

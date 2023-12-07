@@ -1,6 +1,6 @@
 #include "Cala/AssetManager.h"
 #include <Ende/filesystem/File.h>
-#include <Cala/backend/primitives.h>
+#include <Cala/vulkan/primitives.h>
 #include <Cala/util.h>
 #include <Cala/Engine.h>
 #include <stb_image.h>
@@ -14,28 +14,28 @@
 #include <stack>
 
 template <>
-cala::backend::vulkan::Handle<cala::backend::vulkan::ShaderModule, cala::backend::vulkan::Device>& cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle>::operator*() noexcept {
+cala::vk::Handle<cala::vk::ShaderModule, cala::vk::Device>& cala::AssetManager::Asset<cala::vk::ShaderModuleHandle>::operator*() noexcept {
     auto& metadata = _manager->_metadata[_index];
     auto& shaderModuleMetadata = _manager->_shaderModules[metadata.index];
     return shaderModuleMetadata.moduleHandle;
 }
 
 template <>
-cala::backend::vulkan::Handle<cala::backend::vulkan::ShaderModule, cala::backend::vulkan::Device>& cala::AssetManager::Asset<cala::backend::vulkan::ShaderModuleHandle>::operator*() const noexcept {
+cala::vk::Handle<cala::vk::ShaderModule, cala::vk::Device>& cala::AssetManager::Asset<cala::vk::ShaderModuleHandle>::operator*() const noexcept {
     auto& metadata = _manager->_metadata[_index];
     auto& shaderModuleMetadata = _manager->_shaderModules[metadata.index];
     return shaderModuleMetadata.moduleHandle;
 }
 
 template <>
-cala::backend::vulkan::ImageHandle& cala::AssetManager::Asset<cala::backend::vulkan::ImageHandle>::operator*() noexcept {
+cala::vk::ImageHandle& cala::AssetManager::Asset<cala::vk::ImageHandle>::operator*() noexcept {
     auto& metadata = _manager->_metadata[_index];
     auto& imageMetadata = _manager->_images[metadata.index];
     return imageMetadata.imageHandle;
 }
 
 template <>
-cala::backend::vulkan::ImageHandle& cala::AssetManager::Asset<cala::backend::vulkan::ImageHandle>::operator*() const noexcept {
+cala::vk::ImageHandle& cala::AssetManager::Asset<cala::vk::ImageHandle>::operator*() const noexcept {
     auto& metadata = _manager->_metadata[_index];
     auto& imageMetadata = _manager->_images[metadata.index];
     return imageMetadata.imageHandle;
@@ -151,7 +151,7 @@ i32 cala::AssetManager::registerModel(const std::string &name, const std::filesy
     return index;
 }
 
-cala::backend::vulkan::ShaderModuleHandle cala::AssetManager::loadShaderModule(const std::string& name, const std::filesystem::path &path, backend::ShaderStage stage, const std::vector<util::Macro>& macros, std::span<const std::string> includes) {
+cala::vk::ShaderModuleHandle cala::AssetManager::loadShaderModule(const std::string& name, const std::filesystem::path &path, vk::ShaderStage stage, const std::vector<util::Macro>& macros, std::span<const std::string> includes) {
     u32 hash = std::hash<std::filesystem::path>()(path);
 
     std::hash<std::string_view> hasher;
@@ -172,16 +172,16 @@ cala::backend::vulkan::ShaderModuleHandle cala::AssetManager::loadShaderModule(c
     }
 
     // if not defined use file extension to find stage
-    if (stage == backend::ShaderStage::NONE) {
+    if (stage == vk::ShaderStage::NONE) {
         auto extension = path.extension();
         if (extension == ".vert")
-            stage = backend::ShaderStage::VERTEX;
+            stage = vk::ShaderStage::VERTEX;
         else if (extension == ".frag")
-            stage = backend::ShaderStage::FRAGMENT;
+            stage = vk::ShaderStage::FRAGMENT;
         else if (extension == ".geom")
-            stage = backend::ShaderStage::GEOMETRY;
+            stage = vk::ShaderStage::GEOMETRY;
         else if (extension == ".comp")
-            stage = backend::ShaderStage::COMPUTE;
+            stage = vk::ShaderStage::COMPUTE;
     }
 
     ende::fs::File file;
@@ -242,7 +242,7 @@ cala::backend::vulkan::ShaderModuleHandle cala::AssetManager::loadShaderModule(c
     return module;
 }
 
-cala::backend::vulkan::ShaderModuleHandle cala::AssetManager::reloadShaderModule(u32 hash) {
+cala::vk::ShaderModuleHandle cala::AssetManager::reloadShaderModule(u32 hash) {
     i32 index = getAssetIndex(hash);
     if (index < 0)
         return { nullptr, -1, nullptr };
@@ -266,7 +266,7 @@ cala::backend::vulkan::ShaderModuleHandle cala::AssetManager::reloadShaderModule
     return module;
 }
 
-cala::backend::vulkan::ImageHandle cala::AssetManager::loadImage(const std::string &name, const std::filesystem::path &path, backend::Format format) {
+cala::vk::ImageHandle cala::AssetManager::loadImage(const std::string &name, const std::filesystem::path &path, vk::Format format) {
     u32 hash = std::hash<std::filesystem::path>()(path);
 
     i32 index = getAssetIndex(hash);
@@ -284,7 +284,7 @@ cala::backend::vulkan::ImageHandle cala::AssetManager::loadImage(const std::stri
     i32 width, height, channels;
     u8* data = nullptr;
     u32 length = 0;
-    if (backend::formatToSize(format) > 4) {
+    if (vk::formatToSize(format) > 4) {
         stbi_set_flip_vertically_on_load(true);
         f32* hdrData = stbi_loadf(filePath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
         data = reinterpret_cast<u8*>(hdrData);
@@ -296,7 +296,7 @@ cala::backend::vulkan::ImageHandle cala::AssetManager::loadImage(const std::stri
         return { nullptr, -1, nullptr };
     };
 
-    length = width * height * backend::formatToSize(format);
+    length = width * height * vk::formatToSize(format);
 
     u32 mips = std::floor(std::log2(std::max(width, height))) + 1;
     auto handle = _engine->device().createImage({
@@ -306,9 +306,9 @@ cala::backend::vulkan::ImageHandle cala::AssetManager::loadImage(const std::stri
         format,
         mips,
         1,
-        backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST | backend::ImageUsage::TRANSFER_SRC});
+        vk::ImageUsage::SAMPLED | vk::ImageUsage::TRANSFER_DST | vk::ImageUsage::TRANSFER_SRC});
 
-    _engine->device().deferred([handle](backend::vulkan::CommandHandle cmd) {
+    _engine->device().deferred([handle](vk::CommandHandle cmd) {
         handle->generateMips(cmd);
     });
 
@@ -317,7 +317,7 @@ cala::backend::vulkan::ImageHandle cala::AssetManager::loadImage(const std::stri
         static_cast<u32>(width),
         static_cast<u32>(height),
         1,
-        backend::formatToSize(format)
+        vk::formatToSize(format)
     });
 
     stbi_image_free(data);
@@ -334,7 +334,7 @@ cala::backend::vulkan::ImageHandle cala::AssetManager::loadImage(const std::stri
     return imageMetadata.imageHandle;
 }
 
-cala::backend::vulkan::ImageHandle cala::AssetManager::reloadImage(u32 hash) {
+cala::vk::ImageHandle cala::AssetManager::reloadImage(u32 hash) {
     i32 index = getAssetIndex(hash);
     if (index < 0)
         return { nullptr, -1, nullptr };
@@ -391,7 +391,7 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
     }
 
     // load images
-    std::vector<backend::vulkan::ImageHandle> images;
+    std::vector<vk::ImageHandle> images;
 
     // load materials
     std::vector<MaterialInstance> materials;
@@ -403,7 +403,7 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             i32 imageIndex = asset->textures[textureIndex].imageIndex.value();
             auto& image = asset->images[imageIndex];
             if (const auto* filePath = std::get_if<fastgltf::sources::URI>(&image.data); filePath) {
-                images.push_back(loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), backend::Format::RGBA8_SRGB));
+                images.push_back(loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), vk::Format::RGBA8_SRGB));
             }
             if (!materialInstance.setParameter("albedoIndex", images.back().index()))
                 _engine->logger().warn("tried to load \"albedoIndex\" but supplied material does not have appropriate parameter");
@@ -416,7 +416,7 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             i32 imageIndex = asset->textures[textureIndex].imageIndex.value();
             auto& image = asset->images[imageIndex];
             if (const auto* filePath = std::get_if<fastgltf::sources::URI>(&image.data); filePath) {
-                images.push_back(loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), backend::Format::RGBA8_UNORM));
+                images.push_back(loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), vk::Format::RGBA8_UNORM));
             }
             if (!materialInstance.setParameter("normalIndex", images.back().index()))
                 _engine->logger().warn("tried to load \"normalIndex\" but supplied material does not have appropriate parameter");
@@ -429,7 +429,7 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             i32 imageIndex = asset->textures[textureIndex].imageIndex.value();
             auto& image = asset->images[imageIndex];
             if (const auto* filePath = std::get_if<fastgltf::sources::URI>(&image.data); filePath) {
-                images.push_back(loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), backend::Format::RGBA8_UNORM));
+                images.push_back(loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), vk::Format::RGBA8_UNORM));
             }
             if (!materialInstance.setParameter("metallicRoughnessIndex", images.back().index()))
                 _engine->logger().warn("tried to load \"metallicRoughnessIndex\" but supplied material does not have appropriate parameter");
@@ -441,7 +441,7 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             i32 imageIndex = asset->textures[textureIndex].imageIndex.value();
             auto& image = asset->images[imageIndex];
             if (const auto* filePath = std::get_if<fastgltf::sources::URI>(&image.data); filePath) {
-                images.push_back(loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), backend::Format::RGBA8_UNORM));
+                images.push_back(loadImage(image.name.c_str(), path.parent_path() / filePath->uri.path(), vk::Format::RGBA8_UNORM));
             }
             if (!materialInstance.setParameter("emissiveIndex", images.back().index()))
                 _engine->logger().warn("tried to load \"emissiveIndex\" but supplied material does not have appropriate parameter");
@@ -611,11 +611,11 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
     binding.stride = 12 * sizeof(f32);
     binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    std::array<backend::Attribute, 4> attributes = {
-            backend::Attribute{0, 0, backend::AttribType::Vec3f},
-            backend::Attribute{1, 0, backend::AttribType::Vec3f},
-            backend::Attribute{2, 0, backend::AttribType::Vec2f},
-            backend::Attribute{3, 0, backend::AttribType::Vec4f}
+    std::array<vk::Attribute, 4> attributes = {
+            vk::Attribute{0, 0, vk::AttribType::Vec3f},
+            vk::Attribute{1, 0, vk::AttribType::Vec3f},
+            vk::Attribute{2, 0, vk::AttribType::Vec2f},
+            vk::Attribute{3, 0, vk::AttribType::Vec4f}
     };
 
     std::span<f32> vs(reinterpret_cast<f32*>(vertices.data()), vertices.size() * sizeof(Vertex) / sizeof(f32));

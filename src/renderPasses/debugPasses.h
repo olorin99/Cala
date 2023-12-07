@@ -5,7 +5,7 @@
 #include <Cala/Scene.h>
 #include <Cala/Renderer.h>
 
-void debugClusters(cala::RenderGraph& graph, cala::Engine& engine, cala::backend::vulkan::Swapchain& swapchain);
+void debugClusters(cala::RenderGraph& graph, cala::Engine& engine, cala::vk::Swapchain& swapchain);
 
 void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene);
 

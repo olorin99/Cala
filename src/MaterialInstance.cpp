@@ -1,6 +1,6 @@
-#include "Cala/MaterialInstance.h"
+#include <Cala/MaterialInstance.h>
 #include <Cala/Material.h>
-#include <Cala/backend/vulkan/CommandBuffer.h>
+#include <Cala/vulkan/CommandBuffer.h>
 #include "Cala/shaderBridge.h"
 
 cala::MaterialInstance::MaterialInstance(Material *material, u32 offset)
@@ -47,7 +47,7 @@ u32 cala::MaterialInstance::getIndex() const {
     return getOffset() / material()->size();
 }
 
-void cala::MaterialInstance::bind(backend::vulkan::CommandBuffer &cmd, u32 set, u32 first) {
+void cala::MaterialInstance::bind(vk::CommandBuffer &cmd, u32 set, u32 first) {
     if (_material->_setSize > 0)
         cmd.bindBuffer(2, 0, _material->_materialBuffer, _offset, _material->_setSize, false);
 }

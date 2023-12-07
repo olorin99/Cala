@@ -3,8 +3,8 @@
 
 #include <Cala/Engine.h>
 #include <Cala/Camera.h>
-#include <Cala/backend/vulkan/Buffer.h>
-#include <Cala/backend/vulkan/Timer.h>
+#include <Cala/vulkan/Buffer.h>
+#include <Cala/vulkan/Timer.h>
 #include <Cala/RenderGraph.h>
 
 #include "shaderBridge.h"
@@ -15,7 +15,7 @@ namespace cala {
 
     class Scene;
 
-    namespace backend::vulkan {
+    namespace vk {
         class Device;
     }
 
@@ -54,13 +54,13 @@ namespace cala {
 
         Renderer(Engine* engine, Settings settings);
 
-        bool beginFrame(backend::vulkan::Swapchain* swapchain);
+        bool beginFrame(vk::Swapchain* swapchain);
 
         f64 endFrame();
 
         void render(Scene& scene, Camera& camera, ImGuiContext* imGui = nullptr);
 
-        std::span<std::pair<const char*, backend::vulkan::Timer>> timers() { return _graph.getTimers(); }
+        std::span<std::pair<const char*, vk::Timer>> timers() { return _graph.getTimers(); }
 
         struct Stats {
             u32 drawCallCount = 0;
@@ -77,18 +77,18 @@ namespace cala {
     private:
 
         Engine* _engine;
-        backend::vulkan::Swapchain* _swapchain;
+        vk::Swapchain* _swapchain;
 
-        backend::vulkan::BufferHandle _cameraBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
-        backend::vulkan::BufferHandle _globalDataBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
-        backend::vulkan::BufferHandle _frustumBuffer[backend::vulkan::FRAMES_IN_FLIGHT];
+        vk::BufferHandle _cameraBuffer[vk::FRAMES_IN_FLIGHT];
+        vk::BufferHandle _globalDataBuffer[vk::FRAMES_IN_FLIGHT];
+        vk::BufferHandle _frustumBuffer[vk::FRAMES_IN_FLIGHT];
 
     public:
         RenderGraph _graph;
 
     private:
-        backend::vulkan::Device::FrameInfo _frameInfo;
-        backend::vulkan::Swapchain::Frame _swapchainFrame;
+        vk::Device::FrameInfo _frameInfo;
+        vk::Swapchain::Frame _swapchainFrame;
 
         Stats _stats;
 

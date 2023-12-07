@@ -14,29 +14,29 @@ find_package(assimp)
 add_subdirectory(third_party)
 add_subdirectory(examples)
 
-add_library(Cala src/backend/vulkan/Context.cpp include/Cala/backend/vulkan/Context.h src/backend/vulkan/Swapchain.cpp include/Cala/backend/vulkan/Swapchain.h src/backend/vulkan/Device.cpp include/Cala/backend/vulkan/Device.h src/backend/vulkan/ShaderProgram.cpp include/Cala/backend/vulkan/ShaderProgram.h src/backend/vulkan/CommandBuffer.cpp include/Cala/backend/vulkan/CommandBuffer.h src/backend/vulkan/RenderPass.cpp include/Cala/backend/vulkan/RenderPass.h src/ImGuiContext.cpp include/Cala/ImGuiContext.h src/backend/vulkan/Image.cpp include/Cala/backend/vulkan/Image.h src/backend/vulkan/Framebuffer.cpp include/Cala/backend/vulkan/Framebuffer.h src/backend/vulkan/Buffer.cpp include/Cala/backend/vulkan/Buffer.h src/Camera.cpp include/Cala/Camera.h src/Transform.cpp include/Cala/Transform.h src/MeshData.cpp include/Cala/MeshData.h src/shapes.cpp include/Cala/shapes.h src/backend/vulkan/SDLPlatform.cpp include/Cala/backend/vulkan/SDLPlatform.h include/Cala/backend/vulkan/Platform.h src/Light.cpp include/Cala/Light.h src/Scene.cpp include/Cala/Scene.h src/Material.cpp include/Cala/Material.h src/MaterialInstance.cpp include/Cala/MaterialInstance.h src/backend/ShaderInterface.cpp include/Cala/backend/ShaderInterface.h src/backend/vulkan/Sampler.cpp include/Cala/backend/vulkan/Sampler.h include/Cala/backend/primitives.h include/Cala/backend/vulkan/primitives.h src/backend/vulkan/SamplerArray.cpp include/Cala/backend/vulkan/SamplerArray.h src/backend/vulkan/Timer.cpp include/Cala/backend/vulkan/Timer.h src/Mesh.cpp include/Cala/Mesh.h src/Engine.cpp include/Cala/Engine.h src/Renderer.cpp include/Cala/Renderer.h src/Probe.cpp include/Cala/Probe.h src/RenderGraph.cpp include/Cala/RenderGraph.h src/Model.cpp include/Cala/Model.h include/Cala/ui/Window.h src/ui/ProfileWindow.cpp include/Cala/ui/ProfileWindow.h src/ui/StatisticsWindow.cpp include/Cala/ui/StatisticsWindow.h src/ui/RendererSettings.cpp include/Cala/ui/RendererSettingsWindow.h src/ui/LightWindow.cpp include/Cala/ui/LightWindow.h src/backend/vulkan/CommandPool.cpp include/Cala/backend/vulkan/CommandPool.h src/ui/ResourceViewer.cpp include/Cala/ui/ResourceViewer.h src/backend/vulkan/OfflinePlatform.cpp include/Cala/backend/vulkan/OfflinePlatform.h src/backend/vulkan/Handle.cpp include/Cala/backend/vulkan/Handle.h
+add_library(Cala src/vulkan/Context.cpp include/Cala/vulkan/Context.h src/vulkan/Swapchain.cpp include/Cala/vulkan/Swapchain.h src/vulkan/Device.cpp include/Cala/vulkan/Device.h src/vulkan/ShaderProgram.cpp include/Cala/vulkan/ShaderProgram.h src/vulkan/CommandBuffer.cpp include/Cala/vulkan/CommandBuffer.h src/vulkan/RenderPass.cpp include/Cala/vulkan/RenderPass.h src/ImGuiContext.cpp include/Cala/ImGuiContext.h src/vulkan/Image.cpp include/Cala/vulkan/Image.h src/vulkan/Framebuffer.cpp include/Cala/vulkan/Framebuffer.h src/vulkan/Buffer.cpp include/Cala/vulkan/Buffer.h src/Camera.cpp include/Cala/Camera.h src/Transform.cpp include/Cala/Transform.h src/MeshData.cpp include/Cala/MeshData.h src/shapes.cpp include/Cala/shapes.h src/vulkan/SDLPlatform.cpp include/Cala/vulkan/SDLPlatform.h include/Cala/vulkan/Platform.h src/Light.cpp include/Cala/Light.h src/Scene.cpp include/Cala/Scene.h src/Material.cpp include/Cala/Material.h src/MaterialInstance.cpp include/Cala/MaterialInstance.h src/vulkan/ShaderInterface.cpp include/Cala/vulkan/ShaderInterface.h src/vulkan/Sampler.cpp include/Cala/vulkan/Sampler.h include/Cala/vulkan/primitives.h src/vulkan/Timer.cpp include/Cala/vulkan/Timer.h src/Mesh.cpp include/Cala/Mesh.h src/Engine.cpp include/Cala/Engine.h src/Renderer.cpp include/Cala/Renderer.h src/Probe.cpp include/Cala/Probe.h src/RenderGraph.cpp include/Cala/RenderGraph.h src/Model.cpp include/Cala/Model.h include/Cala/ui/Window.h src/ui/ProfileWindow.cpp include/Cala/ui/ProfileWindow.h src/ui/StatisticsWindow.cpp include/Cala/ui/StatisticsWindow.h src/ui/RendererSettings.cpp include/Cala/ui/RendererSettingsWindow.h src/ui/LightWindow.cpp include/Cala/ui/LightWindow.h src/vulkan/CommandPool.cpp include/Cala/vulkan/CommandPool.h src/ui/ResourceViewer.cpp include/Cala/ui/ResourceViewer.h src/vulkan/OfflinePlatform.cpp include/Cala/vulkan/OfflinePlatform.h src/vulkan/Handle.cpp include/Cala/vulkan/Handle.h
         src/renderPasses/debugPasses.cpp
         src/renderPasses/debugPasses.h
         src/ui/RenderGraphViewer.cpp
         include/Cala/ui/RenderGraphViewer.h
-        src/backend/vulkan/Semaphore.cpp
-        include/Cala/backend/vulkan/Semaphore.h
+        src/vulkan/Semaphore.cpp
+        include/Cala/vulkan/Semaphore.h
         src/ui/ImageView.cpp
         include/Cala/ui/ImageView.h
         src/ui/GuiWindow.cpp
         include/Cala/ui/GuiWindow.h
         src/AssetManager.cpp
         include/Cala/AssetManager.h
-        src/backend/vulkan/ShaderModule.cpp
-        include/Cala/backend/vulkan/ShaderModule.h
+        src/vulkan/ShaderModule.cpp
+        include/Cala/vulkan/ShaderModule.h
         src/util.cpp
         include/Cala/util.h
-        src/backend/vulkan/ShaderModuleInterface.cpp
-        include/Cala/backend/vulkan/ShaderModuleInterface.h
+        src/vulkan/ShaderModuleInterface.cpp
+        include/Cala/vulkan/ShaderModuleInterface.h
         src/ui/AssetManagerWindow.cpp
         include/Cala/ui/AssetManagerWindow.h
-        src/backend/vulkan/PipelineLayout.cpp
-        include/Cala/backend/vulkan/PipelineLayout.h
+        src/vulkan/PipelineLayout.cpp
+        include/Cala/vulkan/PipelineLayout.h
         src/renderPasses/shadowPasses.cpp
         src/renderPasses/shadowPasses.h
         src/ui/RenderGraphWindow.cpp

@@ -1,7 +1,7 @@
 #include "Cala/ui/GuiWindow.h"
 #include <Cala/Renderer.h>
 
-cala::ui::GuiWindow::GuiWindow(cala::Engine &engine, cala::Renderer& renderer, cala::Scene& scene, backend::vulkan::Swapchain &swapchain, SDL_Window* window)
+cala::ui::GuiWindow::GuiWindow(cala::Engine &engine, cala::Renderer& renderer, cala::Scene& scene, vk::Swapchain &swapchain, SDL_Window* window)
     : _engine(&engine),
       _renderer(&renderer),
       _context(engine.device(), &swapchain, window),

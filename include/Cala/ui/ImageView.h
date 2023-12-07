@@ -2,14 +2,14 @@
 #define CALA_IMAGEVIEW_H
 
 #include <Cala/ui/Window.h>
-#include <Cala/backend/vulkan/Device.h>
+#include <Cala/vulkan/Device.h>
 
 namespace cala::ui {
 
     class ImageView : public Window {
     public:
 
-        ImageView(ImGuiContext* context, backend::vulkan::Device* device);
+        ImageView(ImGuiContext* context, vk::Device* device);
 
         ~ImageView() noexcept override;
 
@@ -17,7 +17,7 @@ namespace cala::ui {
 
         void render() override;
 
-        void setImageHandle(backend::vulkan::ImageHandle handle) {
+        void setImageHandle(vk::ImageHandle handle) {
             if (_image != handle) {
                 _dirty = true;
                 _image = handle;
@@ -39,8 +39,8 @@ namespace cala::ui {
 
     private:
 
-        backend::vulkan::Device* _device;
-        backend::vulkan::ImageHandle _image;
+        vk::Device* _device;
+        vk::ImageHandle _image;
         bool _dirty;
         VkDescriptorSet _imageSet;
         std::string _name;

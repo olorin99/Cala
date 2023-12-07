@@ -2,7 +2,7 @@
 #define CALA_GUIWINDOW_H
 
 #include <Cala/Engine.h>
-#include <Cala/backend/vulkan/Swapchain.h>
+#include <Cala/vulkan/Swapchain.h>
 #include "Cala/ImGuiContext.h"
 
 #include <Cala/ui/RenderGraphViewer.h>
@@ -21,7 +21,7 @@ namespace cala::ui {
     class GuiWindow {
     public:
 
-        GuiWindow(Engine& engine, Renderer& renderer, Scene& scene, backend::vulkan::Swapchain& swapchain, SDL_Window* window);
+        GuiWindow(Engine& engine, Renderer& renderer, Scene& scene, vk::Swapchain& swapchain, SDL_Window* window);
 
         void render();
 

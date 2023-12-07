@@ -1,7 +1,7 @@
 #ifndef CALA_MESH_H
 #define CALA_MESH_H
 
-#include <Cala/backend/vulkan/Buffer.h>
+#include <Cala/vulkan/Buffer.h>
 #include <Cala/Engine.h>
 #include <optional>
 
@@ -15,7 +15,7 @@ namespace cala {
         ende::math::Vec4f max = { 1, 1, 1 };
 
         VkVertexInputBindingDescription _binding = {};
-        std::array<backend::Attribute, 4> _attributes = {};
+        std::array<vk::Attribute, 4> _attributes = {};
 
     };
 

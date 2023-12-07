@@ -8,8 +8,8 @@ cala::Material::Material(cala::Engine* engine, u32 id, u32 size)
       _dirty(true),
       _materialBuffer(engine->device().createBuffer({
           .size = 256,
-          .usage = backend::BufferUsage::STORAGE | backend::BufferUsage::UNIFORM,
-          .memoryType = backend::MemoryProperties::DEVICE,
+          .usage = vk::BufferUsage::STORAGE | vk::BufferUsage::UNIFORM,
+          .memoryType = vk::MemoryProperties::DEVICE,
           .name = "Material: " + std::to_string(_id)
       }))
 {}
@@ -58,16 +58,16 @@ cala::MaterialInstance cala::Material::instance() {
     auto mat = MaterialInstance(this, offset);
     for (auto& parameter : _programs[0].interface().getBindingMemberList(CALA_MATERIAL_SET, CALA_MATERIAL_BINDING)) {
         switch (parameter.type) {
-            case backend::vulkan::ShaderModuleInterface::MemberType::INT:
+            case vk::ShaderModuleInterface::MemberType::INT:
                 mat.setParameter(parameter.name, -1);
                 break;
-            case backend::vulkan::ShaderModuleInterface::MemberType::FLOAT:
+            case vk::ShaderModuleInterface::MemberType::FLOAT:
                 mat.setParameter(parameter.name, 0);
                 break;
-            case backend::vulkan::ShaderModuleInterface::MemberType::VEC3F:
+            case vk::ShaderModuleInterface::MemberType::VEC3F:
                 mat.setParameter(parameter.name, ende::math::Vec3f{0, 0, 0});
                 break;
-            case backend::vulkan::ShaderModuleInterface::MemberType::VEC4F:
+            case vk::ShaderModuleInterface::MemberType::VEC4F:
                 mat.setParameter(parameter.name, ende::math::Vec4f{0, 0, 0});
                 break;
         }
@@ -87,12 +87,12 @@ void cala::Material::upload() {
     }
 }
 
-void cala::Material::setVariant(cala::Material::Variant variant, backend::vulkan::ShaderProgram program) {
+void cala::Material::setVariant(cala::Material::Variant variant, vk::ShaderProgram program) {
     assert(static_cast<u8>(variant) < static_cast<u8>(Variant::MAX));
     _programs[static_cast<u8>(variant)] = std::move(program);
 }
 
-const cala::backend::vulkan::ShaderProgram& cala::Material::getVariant(cala::Material::Variant variant) {
+const cala::vk::ShaderProgram& cala::Material::getVariant(cala::Material::Variant variant) {
     assert(static_cast<u8>(variant) < static_cast<u8>(Variant::MAX));
     return _programs[static_cast<u8>(variant)];
 }

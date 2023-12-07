@@ -1,6 +1,6 @@
-#include "Cala/Probe.h"
-#include <Cala/backend/vulkan/CommandBuffer.h>
-#include <Cala/backend/vulkan/Device.h>
+#include <Cala/Probe.h>
+#include <Cala/vulkan/CommandBuffer.h>
+#include <Cala/vulkan/Device.h>
 
 cala::Probe::Probe(cala::Engine* engine, ProbeInfo info) {
     //TODO: ownership belongs to engine object
@@ -13,7 +13,7 @@ cala::Probe::Probe(cala::Engine* engine, ProbeInfo info) {
         info.targetFormat,
         info.mipLevels,
         1,
-        info.targetUsage | backend::ImageUsage::TRANSFER_SRC
+        info.targetUsage | vk::ImageUsage::TRANSFER_SRC
     });
 
     _cubeMap = engine->device().createImage({
@@ -23,12 +23,12 @@ cala::Probe::Probe(cala::Engine* engine, ProbeInfo info) {
         info.targetFormat,
         info.mipLevels,
         6,
-        info.targetUsage | backend::ImageUsage::TRANSFER_DST
+        info.targetUsage | vk::ImageUsage::TRANSFER_DST
     });
 
-    engine->device().immediate([&](backend::vulkan::CommandHandle cmd) {
-        auto targetBarrier = _renderTarget->barrier(backend::PipelineStage::TOP, backend::PipelineStage::EARLY_FRAGMENT, backend::Access::NONE, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::UNDEFINED, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
-        auto cubeBarrier = _cubeMap->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::UNDEFINED, backend::ImageLayout::SHADER_READ_ONLY);
+    engine->device().immediate([&](vk::CommandHandle cmd) {
+        auto targetBarrier = _renderTarget->barrier(vk::PipelineStage::TOP, vk::PipelineStage::EARLY_FRAGMENT, vk::Access::NONE, vk::Access::DEPTH_STENCIL_WRITE | vk::Access::DEPTH_STENCIL_READ, vk::ImageLayout::UNDEFINED, vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+        auto cubeBarrier = _cubeMap->barrier(vk::PipelineStage::TOP, vk::PipelineStage::TRANSFER, vk::Access::NONE, vk::Access::TRANSFER_WRITE, vk::ImageLayout::UNDEFINED, vk::ImageLayout::SHADER_READ_ONLY);
 
         cmd->pipelineBarrier({ &targetBarrier, 1 });
         cmd->pipelineBarrier({ &cubeBarrier, 1 });
@@ -36,7 +36,7 @@ cala::Probe::Probe(cala::Engine* engine, ProbeInfo info) {
 
     _view = _renderTarget->newView();
     auto imageView = _view.view;
-    _drawBuffer = new backend::vulkan::Framebuffer(engine->device().context().device(), *info.renderPass, {&imageView, 1 }, info.width, info.height);
+    _drawBuffer = new vk::Framebuffer(engine->device().context().device(), *info.renderPass, {&imageView, 1 }, info.width, info.height);
     _cubeView = _cubeMap->newView(0, info.mipLevels);
 }
 
@@ -55,7 +55,7 @@ cala::Probe::Probe(Probe &&rhs) noexcept
     std::swap(_view, rhs._view);
 }
 
-void cala::Probe::draw(backend::vulkan::CommandHandle cmd, std::function<void(backend::vulkan::CommandHandle, u32)> perFace) {
+void cala::Probe::draw(vk::CommandHandle cmd, std::function<void(vk::CommandHandle, u32)> perFace) {
 
     for (u32 face = 0; face < 6; face++) {
         cmd->begin(*_drawBuffer);
@@ -65,16 +65,16 @@ void cala::Probe::draw(backend::vulkan::CommandHandle cmd, std::function<void(ba
 
         cmd->end(*_drawBuffer);
 
-        auto srcBarrier = _renderTarget->barrier(backend::PipelineStage::LATE_FRAGMENT, backend::PipelineStage::TRANSFER, backend::Access::DEPTH_STENCIL_WRITE, backend::Access::TRANSFER_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT, backend::ImageLayout::TRANSFER_SRC);
-        auto dstBarrier = _cubeMap->barrier(backend::PipelineStage::FRAGMENT_SHADER, backend::PipelineStage::TRANSFER, backend::Access::SHADER_READ, backend::Access::TRANSFER_WRITE, backend::ImageLayout::SHADER_READ_ONLY, backend::ImageLayout::TRANSFER_DST, face);
+        auto srcBarrier = _renderTarget->barrier(vk::PipelineStage::LATE_FRAGMENT, vk::PipelineStage::TRANSFER, vk::Access::DEPTH_STENCIL_WRITE, vk::Access::TRANSFER_READ, vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT, vk::ImageLayout::TRANSFER_SRC);
+        auto dstBarrier = _cubeMap->barrier(vk::PipelineStage::FRAGMENT_SHADER, vk::PipelineStage::TRANSFER, vk::Access::SHADER_READ, vk::Access::TRANSFER_WRITE, vk::ImageLayout::SHADER_READ_ONLY, vk::ImageLayout::TRANSFER_DST, face);
 
         cmd->pipelineBarrier({ &srcBarrier, 1 });
         cmd->pipelineBarrier({ &dstBarrier, 1 });
 
         _renderTarget->copy(cmd, *_cubeMap, 0, face);
 
-        srcBarrier = _renderTarget->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::EARLY_FRAGMENT, backend::Access::TRANSFER_READ, backend::Access::DEPTH_STENCIL_WRITE, backend::ImageLayout::TRANSFER_SRC, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
-        dstBarrier = _cubeMap->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::FRAGMENT_SHADER, backend::Access::TRANSFER_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::TRANSFER_DST, backend::ImageLayout::SHADER_READ_ONLY, face);
+        srcBarrier = _renderTarget->barrier(vk::PipelineStage::TRANSFER, vk::PipelineStage::EARLY_FRAGMENT, vk::Access::TRANSFER_READ, vk::Access::DEPTH_STENCIL_WRITE, vk::ImageLayout::TRANSFER_SRC, vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+        dstBarrier = _cubeMap->barrier(vk::PipelineStage::TRANSFER, vk::PipelineStage::FRAGMENT_SHADER, vk::Access::TRANSFER_WRITE, vk::Access::SHADER_READ, vk::ImageLayout::TRANSFER_DST, vk::ImageLayout::SHADER_READ_ONLY, face);
 
         cmd->pipelineBarrier({ &srcBarrier, 1 });
         cmd->pipelineBarrier({ &dstBarrier, 1 });

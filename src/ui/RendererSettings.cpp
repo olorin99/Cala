@@ -1,7 +1,7 @@
 #include "Cala/ui/RendererSettingsWindow.h"
 #include <imgui.h>
 
-cala::ui::RendererSettingsWindow::RendererSettingsWindow(ImGuiContext* context, Engine* engine, Renderer *renderer, backend::vulkan::Swapchain* swapchain)
+cala::ui::RendererSettingsWindow::RendererSettingsWindow(ImGuiContext* context, Engine* engine, Renderer *renderer, vk::Swapchain* swapchain)
     : Window(context),
     _engine(engine),
     _renderer(renderer),
@@ -55,13 +55,13 @@ void cala::ui::RendererSettingsWindow::render() {
             _engine->device().wait();
             switch (modeIndex) {
                 case 0:
-                    _swapchain->setPresentMode(backend::PresentMode::FIFO);
+                    _swapchain->setPresentMode(vk::PresentMode::FIFO);
                     break;
                 case 1:
-                    _swapchain->setPresentMode(backend::PresentMode::MAILBOX);
+                    _swapchain->setPresentMode(vk::PresentMode::MAILBOX);
                     break;
                 case 2:
-                    _swapchain->setPresentMode(backend::PresentMode::IMMEDIATE);
+                    _swapchain->setPresentMode(vk::PresentMode::IMMEDIATE);
                     break;
             }
         }

@@ -1,6 +1,6 @@
-#include "Cala/Engine.h"
+#include <Cala/Engine.h>
 #include <Ende/filesystem/File.h>
-#include <Cala/backend/vulkan/ShaderProgram.h>
+#include <Cala/vulkan/ShaderProgram.h>
 #include <Cala/shapes.h>
 #include <Cala/Mesh.h>
 #include <Ende/profile/profile.h>
@@ -10,25 +10,25 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <stb_image_write.h>
 
-cala::backend::vulkan::RenderPass::Attachment shadowPassAttachment {
-        cala::backend::Format::D32_SFLOAT,
+cala::vk::RenderPass::Attachment shadowPassAttachment {
+        cala::vk::Format::D32_SFLOAT,
         VK_SAMPLE_COUNT_1_BIT,
-        cala::backend::LoadOp::CLEAR,
-        cala::backend::StoreOp::STORE,
-        cala::backend::LoadOp::CLEAR,
-        cala::backend::StoreOp::DONT_CARE,
-        cala::backend::ImageLayout::UNDEFINED,
-        cala::backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT,
-        cala::backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT
+        cala::vk::LoadOp::CLEAR,
+        cala::vk::StoreOp::STORE,
+        cala::vk::LoadOp::CLEAR,
+        cala::vk::StoreOp::DONT_CARE,
+        cala::vk::ImageLayout::UNDEFINED,
+        cala::vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT,
+        cala::vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT
 };
 
 
-cala::Engine::Engine(backend::Platform &platform)
+cala::Engine::Engine(vk::Platform &platform)
     : _logger("Cala", {
         std::make_shared<spdlog::sinks::ansicolor_stdout_sink_mt>(),
         std::make_shared<spdlog::sinks::basic_file_sink_mt>("debug.log", true)
       }),
-      _device(backend::vulkan::Device::create({
+      _device(vk::Device::create({
           .useTimeline = true,
           .platform = &platform,
           .logger = &_logger
@@ -50,8 +50,8 @@ cala::Engine::Engine(backend::Platform &platform)
       _stagingOffset(0),
       _stagingBuffer(_device->createBuffer({
           .size = _stagingSize,
-          .usage = backend::BufferUsage::TRANSFER_SRC,
-          .memoryType = backend::MemoryProperties::STAGING,
+          .usage = vk::BufferUsage::TRANSFER_SRC,
+          .memoryType = vk::MemoryProperties::STAGING,
           .persistentlyMapped = true,
           .name = "StagingBuffer"
       })),
@@ -62,122 +62,122 @@ cala::Engine::Engine(backend::Platform &platform)
     _assetManager.setAssetPath("../../res");
     {
         _pointShadowProgram = loadProgram("pointShadowProgram", {
-            { "shaders/shadow_point.vert", backend::ShaderStage::VERTEX },
-            { "shaders/shadow_point.frag", backend::ShaderStage::FRAGMENT }
+            { "shaders/shadow_point.vert", vk::ShaderStage::VERTEX },
+            { "shaders/shadow_point.frag", vk::ShaderStage::FRAGMENT }
         });
     }
     {
         _directShadowProgram = loadProgram("directShadowProgram", {
-            { "shaders/shadow.vert", backend::ShaderStage::VERTEX }
+            { "shaders/shadow.vert", vk::ShaderStage::VERTEX }
         });
     }
     {
         _equirectangularToCubeMap = loadProgram("equirectangularToCubeMap", {
-            { "shaders/equirectangularToCubeMap.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/equirectangularToCubeMap.comp", vk::ShaderStage::COMPUTE }
         });
     }
     {
         _irradianceProgram = loadProgram("irradianceProgram", {
-            { "shaders/irradiance.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/irradiance.comp", vk::ShaderStage::COMPUTE }
         });
     }
     {
         _prefilterProgram = loadProgram("prefilterProgram", {
-            { "shaders/prefilter.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/prefilter.comp", vk::ShaderStage::COMPUTE }
         });
     }
     {
         _brdfProgram = loadProgram("brdfProgram", {
-            { "shaders/brdf.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/brdf.comp", vk::ShaderStage::COMPUTE }
         });
     }
     {
         _skyboxProgram = loadProgram("skyboxProgram", {
-            { "shaders/skybox.vert", backend::ShaderStage::VERTEX },
-            { "shaders/skybox.frag", backend::ShaderStage::FRAGMENT }
+            { "shaders/skybox.vert", vk::ShaderStage::VERTEX },
+            { "shaders/skybox.frag", vk::ShaderStage::FRAGMENT }
         });
     }
     {
         _tonemapProgram = loadProgram("tonemapProgram", {
-            { "shaders/hdr.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/hdr.comp", vk::ShaderStage::COMPUTE }
         });
     }
     {
         _cullProgram = loadProgram("cullProgram", {
-            { "shaders/cull.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/cull.comp", vk::ShaderStage::COMPUTE }
         });
     }
     {
         _pointShadowCullProgram = loadProgram("pointShadowCullProgram", {
-            { "shaders/point_shadow_cull.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/point_shadow_cull.comp", vk::ShaderStage::COMPUTE }
         });
     }
     {
         _directShadowCullProgram = loadProgram("directShadowCullProgram", {
-            { "shaders/direct_shadow_cull.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/direct_shadow_cull.comp", vk::ShaderStage::COMPUTE }
         });
     }
     {
         _createClustersProgram = loadProgram("createClustersProgram", {
-            { "shaders/create_clusters.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/create_clusters.comp", vk::ShaderStage::COMPUTE }
         });
     }
     {
         _cullLightsProgram = loadProgram("cullLightsProgram", {
-            { "shaders/cull_lights.comp", backend::ShaderStage::COMPUTE }
+            { "shaders/cull_lights.comp", vk::ShaderStage::COMPUTE }
         });
     }
     {
         _clusterDebugProgram = loadProgram("clusterDebugProgram", {
-            { "shaders/fullscreen.vert", backend::ShaderStage::VERTEX },
-            { "shaders/debug/clusters_debug.frag", backend::ShaderStage::FRAGMENT }
+            { "shaders/fullscreen.vert", vk::ShaderStage::VERTEX },
+            { "shaders/debug/clusters_debug.frag", vk::ShaderStage::FRAGMENT }
         });
     }
     {
         _worldPosDebugProgram = loadProgram("worldPosDebugProgram", {
-            { "shaders/default.vert", backend::ShaderStage::VERTEX },
-            { "shaders/debug/world_pos.frag", backend::ShaderStage::FRAGMENT }
+            { "shaders/default.vert", vk::ShaderStage::VERTEX },
+            { "shaders/debug/world_pos.frag", vk::ShaderStage::FRAGMENT }
         });
     }
     {
         _frustumDebugProgram = loadProgram("frustumDebugProgram", {
-            { "shaders/debug/debug_frustum.vert", backend::ShaderStage::VERTEX },
-            { "shaders/solid_colour.frag", backend::ShaderStage::FRAGMENT }
+            { "shaders/debug/debug_frustum.vert", vk::ShaderStage::VERTEX },
+            { "shaders/solid_colour.frag", vk::ShaderStage::FRAGMENT }
         });
     }
     {
         _solidColourProgram = loadProgram("solidColourProgram", {
-            { "shaders/default.vert", backend::ShaderStage::VERTEX },
-            { "shaders/solid_colour.frag", backend::ShaderStage::FRAGMENT }
+            { "shaders/default.vert", vk::ShaderStage::VERTEX },
+            { "shaders/solid_colour.frag", vk::ShaderStage::FRAGMENT }
         });
     }
     {
         _normalsDebugProgram = loadProgram("normalsDebugProgram", {
-            { "shaders/default.vert", backend::ShaderStage::VERTEX },
-            { "shaders/normals.geom", backend::ShaderStage::GEOMETRY },
-            { "shaders/solid_colour.frag", backend::ShaderStage::FRAGMENT }
+            { "shaders/default.vert", vk::ShaderStage::VERTEX },
+            { "shaders/normals.geom", vk::ShaderStage::GEOMETRY },
+            { "shaders/solid_colour.frag", vk::ShaderStage::FRAGMENT }
         });
     }
     {
         _depthDebugProgram = loadProgram("depthDebugProgram", {
-                { "shaders/fullscreen.vert", backend::ShaderStage::VERTEX },
-                { "shaders/debug/debug_depth.frag", backend::ShaderStage::FRAGMENT }
+                { "shaders/fullscreen.vert", vk::ShaderStage::VERTEX },
+                { "shaders/debug/debug_depth.frag", vk::ShaderStage::FRAGMENT }
         });
     }
     _bloomDownsampleProgram = loadProgram("bloomDownsampleProgram", {
-        { "shaders/bloom_downsample.comp", backend::ShaderStage::COMPUTE }
+        { "shaders/bloom_downsample.comp", vk::ShaderStage::COMPUTE }
     });
     _bloomUpsampleProgram = loadProgram("bloomUpsampleProgram", {
-        { "shaders/bloom_upsample.comp", backend::ShaderStage::COMPUTE }
+        { "shaders/bloom_upsample.comp", vk::ShaderStage::COMPUTE }
     });
     _bloomCompositeProgram = loadProgram("bloomCompositeProgram", {
-        { "shaders/bloom_composite.comp", backend::ShaderStage::COMPUTE }
+        { "shaders/bloom_composite.comp", vk::ShaderStage::COMPUTE }
     });
     {
 //        _voxelVisualisationProgram = loadProgram({
-////            { "shaders/fullscreen.vert", backend::ShaderModule::VERTEX },
-////            { "shaders/voxel/visualise.frag", backend::ShaderModule::FRAGMENT }
-//            { "shaders/voxel/visualise.comp", backend::ShaderModule::COMPUTE }
+////            { "shaders/fullscreen.vert", vk::ShaderModule::VERTEX },
+////            { "shaders/voxel/visualise.frag", vk::ShaderModule::FRAGMENT }
+//            { "shaders/voxel/visualise.comp", vk::ShaderModule::COMPUTE }
 //        });
     }
 
@@ -185,15 +185,15 @@ cala::Engine::Engine(backend::Platform &platform)
         .width = 512,
         .height = 512,
         .depth = 1,
-        .format = backend::Format::RG16_SFLOAT,
+        .format = vk::Format::RG16_SFLOAT,
         .mipLevels = 1,
         .arrayLayers = 1,
-        .usage = backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE,
+        .usage = vk::ImageUsage::SAMPLED | vk::ImageUsage::STORAGE,
         .name = "brdf"
     });
 
-    _device->immediate([&](backend::vulkan::CommandHandle cmd) {
-        auto brdfBarrier = _brdfImage->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_WRITE | backend::Access::SHADER_READ, backend::ImageLayout::GENERAL);
+    _device->immediate([&](vk::CommandHandle cmd) {
+        auto brdfBarrier = _brdfImage->barrier(vk::PipelineStage::TOP, vk::PipelineStage::COMPUTE_SHADER, vk::Access::NONE, vk::Access::SHADER_WRITE | vk::Access::SHADER_READ, vk::ImageLayout::GENERAL);
         cmd->pipelineBarrier({ &brdfBarrier, 1 });
 
         cmd->bindProgram(_brdfProgram);
@@ -202,21 +202,21 @@ cala::Engine::Engine(backend::Platform &platform)
         cmd->bindDescriptors();
         cmd->dispatchCompute(512 / 32, 512 / 32, 1);
 
-        brdfBarrier = _brdfImage->barrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::FRAGMENT_SHADER, backend::Access::SHADER_READ | backend::Access::SHADER_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
+        brdfBarrier = _brdfImage->barrier(vk::PipelineStage::COMPUTE_SHADER, vk::PipelineStage::FRAGMENT_SHADER, vk::Access::SHADER_READ | vk::Access::SHADER_WRITE, vk::Access::SHADER_READ, vk::ImageLayout::SHADER_READ_ONLY);
         cmd->pipelineBarrier({ &brdfBarrier, 1 });
 
     });
 
     _globalVertexBuffer = _device->createBuffer({
         .size = 1000000,
-        .usage = backend::BufferUsage::VERTEX | backend::BufferUsage::TRANSFER_DST,
-        .memoryType = backend::MemoryProperties::DEVICE,
+        .usage = vk::BufferUsage::VERTEX | vk::BufferUsage::TRANSFER_DST,
+        .memoryType = vk::MemoryProperties::DEVICE,
         .name = "globalVertexBuffer"
     });
     _globalIndexBuffer = _device->createBuffer({
         .size = 1000000,
-        .usage = backend::BufferUsage::INDEX | backend::BufferUsage::TRANSFER_DST,
-        .memoryType = backend::MemoryProperties::DEVICE,
+        .usage = vk::BufferUsage::INDEX | vk::BufferUsage::TRANSFER_DST,
+        .memoryType = vk::MemoryProperties::DEVICE,
         .name = "globalIndexBuffer"
     });
 
@@ -273,24 +273,24 @@ bool cala::Engine::gc() {
     return _device->gc();
 }
 
-cala::backend::vulkan::ImageHandle cala::Engine::convertToCubeMap(backend::vulkan::ImageHandle equirectangular) {
+cala::vk::ImageHandle cala::Engine::convertToCubeMap(vk::ImageHandle equirectangular) {
     auto cubeMap = _device->createImage({
         .width = 512,
         .height = 512,
         .depth = 1,
-        .format = backend::Format::RGBA32_SFLOAT,
+        .format = vk::Format::RGBA32_SFLOAT,
         .mipLevels = 10,
         .arrayLayers = 6,
-        .usage = backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST,
+        .usage = vk::ImageUsage::STORAGE | vk::ImageUsage::SAMPLED | vk::ImageUsage::TRANSFER_SRC | vk::ImageUsage::TRANSFER_DST,
         .name = "cubeMap"
     });
     auto equirectangularView = equirectangular->newView();
     auto cubeView = cubeMap->newView(0, 10);
-    _device->immediate([&](backend::vulkan::CommandHandle cmd) {
-        auto envBarrier = cubeMap->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
+    _device->immediate([&](vk::CommandHandle cmd) {
+        auto envBarrier = cubeMap->barrier(vk::PipelineStage::TOP, vk::PipelineStage::COMPUTE_SHADER, vk::Access::NONE, vk::Access::SHADER_WRITE, vk::ImageLayout::GENERAL);
         cmd->pipelineBarrier({ &envBarrier, 1 });
-//        auto hdrBarrier = equirectangular->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY, backend::ImageLayout::SHADER_READ_ONLY);
-//        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &hdrBarrier, 1 });
+//        auto hdrBarrier = equirectangular->barrier(vk::Access::NONE, vk::Access::SHADER_READ, vk::ImageLayout::SHADER_READ_ONLY, vk::ImageLayout::SHADER_READ_ONLY);
+//        cmd.pipelineBarrier(vk::PipelineStage::TOP, vk::PipelineStage::COMPUTE_SHADER, 0, nullptr, { &hdrBarrier, 1 });
 
 
         cmd->bindProgram(_equirectangularToCubeMap);
@@ -303,30 +303,30 @@ cala::backend::vulkan::ImageHandle cala::Engine::convertToCubeMap(backend::vulka
         cmd->dispatchCompute(512 / 32, 512 / 32, 6);
 
 
-        envBarrier = cubeMap->barrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::TRANSFER_DST);
+        envBarrier = cubeMap->barrier(vk::PipelineStage::COMPUTE_SHADER, vk::PipelineStage::BOTTOM, vk::Access::SHADER_WRITE, vk::Access::NONE, vk::ImageLayout::TRANSFER_DST);
         cmd->pipelineBarrier({ &envBarrier, 1 });
         cubeMap->generateMips(cmd);
-//        envBarrier = cubeMap->barrier(backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::TRANSFER_DST, backend::ImageLayout::SHADER_READ_ONLY);
-//        cmd.pipelineBarrier(backend::PipelineStage::TOP, backend::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { &envBarrier, 1 });
+//        envBarrier = cubeMap->barrier(vk::Access::NONE, vk::Access::SHADER_READ, vk::ImageLayout::TRANSFER_DST, vk::ImageLayout::SHADER_READ_ONLY);
+//        cmd.pipelineBarrier(vk::PipelineStage::TOP, vk::PipelineStage::FRAGMENT_SHADER, 0, nullptr, { &envBarrier, 1 });
     });
     return cubeMap;
 }
 
-cala::backend::vulkan::ImageHandle cala::Engine::generateIrradianceMap(backend::vulkan::ImageHandle cubeMap) {
+cala::vk::ImageHandle cala::Engine::generateIrradianceMap(vk::ImageHandle cubeMap) {
     auto irradianceMap = _device->createImage({
         .width = 64,
         .height = 64,
         .depth = 1,
-        .format = backend::Format::RGBA32_SFLOAT,
+        .format = vk::Format::RGBA32_SFLOAT,
         .mipLevels = 1,
         .arrayLayers = 6,
-        .usage = backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST,
+        .usage = vk::ImageUsage::STORAGE | vk::ImageUsage::SAMPLED | vk::ImageUsage::TRANSFER_DST,
         .name = "irradianceMap"
     });
-    _device->immediate([&](backend::vulkan::CommandHandle cmd) {
-        auto irradianceBarrier = irradianceMap->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
+    _device->immediate([&](vk::CommandHandle cmd) {
+        auto irradianceBarrier = irradianceMap->barrier(vk::PipelineStage::TOP, vk::PipelineStage::COMPUTE_SHADER, vk::Access::NONE, vk::Access::SHADER_WRITE, vk::ImageLayout::GENERAL);
         cmd->pipelineBarrier({ &irradianceBarrier, 1 });
-        auto cubeBarrier = cubeMap->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_READ, backend::ImageLayout::GENERAL);
+        auto cubeBarrier = cubeMap->barrier(vk::PipelineStage::TOP, vk::PipelineStage::COMPUTE_SHADER, vk::Access::NONE, vk::Access::SHADER_READ, vk::ImageLayout::GENERAL);
         cmd->pipelineBarrier({ &cubeBarrier, 1 });
 
         cmd->bindProgram(_irradianceProgram);
@@ -336,26 +336,26 @@ cala::backend::vulkan::ImageHandle cala::Engine::generateIrradianceMap(backend::
         cmd->bindDescriptors();
         cmd->dispatchCompute(irradianceMap->width() / 32, irradianceMap->height() / 32, 6);
 
-        irradianceBarrier = irradianceMap->barrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::FRAGMENT_SHADER, backend::Access::SHADER_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
+        irradianceBarrier = irradianceMap->barrier(vk::PipelineStage::COMPUTE_SHADER, vk::PipelineStage::FRAGMENT_SHADER, vk::Access::SHADER_WRITE, vk::Access::SHADER_READ, vk::ImageLayout::SHADER_READ_ONLY);
         cmd->pipelineBarrier({ &irradianceBarrier, 1 });
-        cubeBarrier = cubeMap->barrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::FRAGMENT_SHADER, backend::Access::SHADER_READ, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
+        cubeBarrier = cubeMap->barrier(vk::PipelineStage::COMPUTE_SHADER, vk::PipelineStage::FRAGMENT_SHADER, vk::Access::SHADER_READ, vk::Access::SHADER_READ, vk::ImageLayout::SHADER_READ_ONLY);
         cmd->pipelineBarrier({ &cubeBarrier, 1 });
     });
     return irradianceMap;
 }
 
-cala::backend::vulkan::ImageHandle cala::Engine::generatePrefilteredIrradiance(backend::vulkan::ImageHandle cubeMap) {
-    backend::vulkan::ImageHandle prefilteredMap = _device->createImage({
+cala::vk::ImageHandle cala::Engine::generatePrefilteredIrradiance(vk::ImageHandle cubeMap) {
+    vk::ImageHandle prefilteredMap = _device->createImage({
         .width = 512,
         .height = 512,
         .depth = 1,
-        .format = backend::Format::RGBA32_SFLOAT,
+        .format = vk::Format::RGBA32_SFLOAT,
         .mipLevels = 10,
         .arrayLayers = 6,
-        .usage = backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST,
+        .usage = vk::ImageUsage::STORAGE | vk::ImageUsage::SAMPLED | vk::ImageUsage::TRANSFER_DST,
         .name = "prefilterMap"
     });
-    backend::vulkan::Image::View mipViews[10] = {
+    vk::Image::View mipViews[10] = {
             prefilteredMap->newView(0),
             prefilteredMap->newView(1),
             prefilteredMap->newView(2),
@@ -369,8 +369,8 @@ cala::backend::vulkan::ImageHandle cala::Engine::generatePrefilteredIrradiance(b
     };
 
 
-    _device->immediate([&](backend::vulkan::CommandHandle cmd) {
-        auto prefilterBarrier = prefilteredMap->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
+    _device->immediate([&](vk::CommandHandle cmd) {
+        auto prefilterBarrier = prefilteredMap->barrier(vk::PipelineStage::TOP, vk::PipelineStage::COMPUTE_SHADER, vk::Access::NONE, vk::Access::SHADER_WRITE, vk::ImageLayout::GENERAL);
         cmd->pipelineBarrier({ &prefilterBarrier, 1 });
 
         for (u32 mip = 0; mip < prefilteredMap->mips(); mip++) {
@@ -378,21 +378,21 @@ cala::backend::vulkan::ImageHandle cala::Engine::generatePrefilteredIrradiance(b
             cmd->bindImage(1, 0, cubeMap, _lodSampler);
             cmd->bindImage(1, 1, mipViews[mip]);
             f32 roughness = (f32)mip / (f32)prefilteredMap->mips();
-            cmd->pushConstants(backend::ShaderStage::COMPUTE, roughness);
+            cmd->pushConstants(vk::ShaderStage::COMPUTE, roughness);
             cmd->bindPipeline();
             cmd->bindDescriptors();
             f32 computeDim = 512.f * std::pow(0.5, mip);
             cmd->dispatchCompute(std::ceil(computeDim / 32.f), std::ceil(computeDim / 32.f), 6);
         }
 
-        prefilterBarrier = prefilteredMap->barrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::BOTTOM, backend::Access::SHADER_WRITE, backend::Access::NONE, backend::ImageLayout::SHADER_READ_ONLY);
+        prefilterBarrier = prefilteredMap->barrier(vk::PipelineStage::COMPUTE_SHADER, vk::PipelineStage::BOTTOM, vk::Access::SHADER_WRITE, vk::Access::NONE, vk::ImageLayout::SHADER_READ_ONLY);
         cmd->pipelineBarrier({ &prefilterBarrier, 1 });
     });
     return prefilteredMap;
 }
 
 
-cala::backend::vulkan::ImageHandle cala::Engine::getShadowMap(u32 index, bool point) {
+cala::vk::ImageHandle cala::Engine::getShadowMap(u32 index, bool point) {
     if (index < _shadowMaps.size()) {
         if (!point && _shadowMaps[index]->layers() != 6)
             return _shadowMaps[index];
@@ -404,18 +404,18 @@ cala::backend::vulkan::ImageHandle cala::Engine::getShadowMap(u32 index, bool po
         .width = _shadowMapSize,
         .height = _shadowMapSize,
         .depth = 1,
-        .format = backend::Format::D32_SFLOAT,
+        .format = vk::Format::D32_SFLOAT,
         .mipLevels = 1,
         .arrayLayers = point ? (u32)6 : (u32)1,
-        .usage = backend::ImageUsage::SAMPLED | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT | backend::ImageUsage::TRANSFER_DST,
+        .usage = vk::ImageUsage::SAMPLED | vk::ImageUsage::DEPTH_STENCIL_ATTACHMENT | vk::ImageUsage::TRANSFER_DST,
         .name = "ShadowMap: " + std::to_string(index)
     });
     if (index < _shadowMaps.size())
         _shadowMaps[index] = map;
     else
         _shadowMaps.push_back(map);
-    _device->immediate([&](backend::vulkan::CommandHandle cmd) {
-        auto cubeBarrier = map->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::SHADER_READ_ONLY);
+    _device->immediate([&](vk::CommandHandle cmd) {
+        auto cubeBarrier = map->barrier(vk::PipelineStage::TOP, vk::PipelineStage::TRANSFER, vk::Access::NONE, vk::Access::TRANSFER_WRITE, vk::ImageLayout::SHADER_READ_ONLY);
         cmd->pipelineBarrier({ &cubeBarrier, 1 });
     });
     return map;
@@ -429,41 +429,41 @@ void cala::Engine::setShadowMapSize(u32 size) {
     _shadowMaps.clear();
     _shadowTarget = device().createImage({
         _shadowMapSize, _shadowMapSize, 1,
-        backend::Format::D32_SFLOAT,
+        vk::Format::D32_SFLOAT,
         1, 1,
-        backend::ImageUsage::SAMPLED | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT | backend::ImageUsage::TRANSFER_SRC
+        vk::ImageUsage::SAMPLED | vk::ImageUsage::DEPTH_STENCIL_ATTACHMENT | vk::ImageUsage::TRANSFER_SRC
     });
-    device().immediate([&](backend::vulkan::CommandHandle cmd) {
-        auto targetBarrier = _shadowTarget->barrier(backend::PipelineStage::TOP, backend::PipelineStage::EARLY_FRAGMENT, backend::Access::NONE, backend::Access::DEPTH_STENCIL_WRITE | backend::Access::DEPTH_STENCIL_READ, backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+    device().immediate([&](vk::CommandHandle cmd) {
+        auto targetBarrier = _shadowTarget->barrier(vk::PipelineStage::TOP, vk::PipelineStage::EARLY_FRAGMENT, vk::Access::NONE, vk::Access::DEPTH_STENCIL_WRITE | vk::Access::DEPTH_STENCIL_READ, vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
         cmd->pipelineBarrier({ &targetBarrier, 1 });
     });
-    backend::vulkan::RenderPass::Attachment shadowAttachment = {
-            cala::backend::Format::D32_SFLOAT,
+    vk::RenderPass::Attachment shadowAttachment = {
+            cala::vk::Format::D32_SFLOAT,
             VK_SAMPLE_COUNT_1_BIT,
-            backend::LoadOp::CLEAR,
-            backend::StoreOp::STORE,
-            backend::LoadOp::DONT_CARE,
-            backend::StoreOp::DONT_CARE,
-            backend::ImageLayout::UNDEFINED,
-            backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT,
-            backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT
+            vk::LoadOp::CLEAR,
+            vk::StoreOp::STORE,
+            vk::LoadOp::DONT_CARE,
+            vk::StoreOp::DONT_CARE,
+            vk::ImageLayout::UNDEFINED,
+            vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT,
+            vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT
     };
     auto shadowRenderPass = device().getRenderPass({&shadowAttachment, 1 });
     u32 h = _shadowTarget.index() * _shadowMapSize;
     _shadowFramebuffer = device().getFramebuffer(shadowRenderPass, { &_shadowTarget->defaultView().view, 1 }, { &h, 1 }, _shadowMapSize, _shadowMapSize);
 }
 
-cala::backend::vulkan::Framebuffer *cala::Engine::getShadowFramebuffer() {
-    backend::vulkan::RenderPass::Attachment shadowAttachment = {
-            cala::backend::Format::D32_SFLOAT,
+cala::vk::Framebuffer *cala::Engine::getShadowFramebuffer() {
+    vk::RenderPass::Attachment shadowAttachment = {
+            cala::vk::Format::D32_SFLOAT,
             VK_SAMPLE_COUNT_1_BIT,
-            backend::LoadOp::CLEAR,
-            backend::StoreOp::STORE,
-            backend::LoadOp::DONT_CARE,
-            backend::StoreOp::DONT_CARE,
-            backend::ImageLayout::UNDEFINED,
-            backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT,
-            backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT
+            vk::LoadOp::CLEAR,
+            vk::StoreOp::STORE,
+            vk::LoadOp::DONT_CARE,
+            vk::StoreOp::DONT_CARE,
+            vk::ImageLayout::UNDEFINED,
+            vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT,
+            vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT
     };
     auto shadowRenderPass = device().getRenderPass({&shadowAttachment, 1 });
     u32 h = _shadowTarget.index() * _shadowMapSize;
@@ -502,7 +502,7 @@ u32 cala::Engine::uploadIndexData(std::span<u32> data) {
     return currentOffset;
 }
 
-void cala::Engine::stageData(backend::vulkan::BufferHandle dstHandle, std::span<const u8> data, u32 dstOffset) {
+void cala::Engine::stageData(vk::BufferHandle dstHandle, std::span<const u8> data, u32 dstOffset) {
     u32 uploadOffset = 0;
     u32 uploadSizeRemaining = data.size() - uploadOffset;
 
@@ -531,7 +531,7 @@ void cala::Engine::stageData(backend::vulkan::BufferHandle dstHandle, std::span<
     }
 }
 
-void cala::Engine::stageData(backend::vulkan::ImageHandle dstHandle, std::span<const u8> data, backend::vulkan::Image::DataInfo dataInfo) {
+void cala::Engine::stageData(vk::ImageHandle dstHandle, std::span<const u8> data, vk::Image::DataInfo dataInfo) {
     u32 uploadOffset = 0;
     u32 uploadSizeRemaining = data.size() - uploadOffset;
     ende::math::Vec<3, i32> dstOffset = { 0, 0, 0 };
@@ -603,7 +603,7 @@ u32 cala::Engine::flushStagedData() {
     PROFILE_NAMED("Engine::flushStagedData");
     u32 bytesUploaded = 0;
     if (!_pendingStagedBuffer.empty() || !_pendingStagedImage.empty()) {
-        _device->immediate([&](backend::vulkan::CommandHandle cmd) {
+        _device->immediate([&](vk::CommandHandle cmd) {
             for (auto& staged : _pendingStagedBuffer) {
                 VkBufferCopy  bufferCopy{};
                 bufferCopy.dstOffset = staged.dstOffset;
@@ -614,7 +614,7 @@ u32 cala::Engine::flushStagedData() {
                 bytesUploaded += staged.srcSize;
             }
             for (auto& staged : _pendingStagedImage) {
-                auto barrier = staged.dstImage->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_WRITE, backend::ImageLayout::TRANSFER_DST);
+                auto barrier = staged.dstImage->barrier(vk::PipelineStage::TOP, vk::PipelineStage::TRANSFER, vk::Access::NONE, vk::Access::TRANSFER_WRITE, vk::ImageLayout::TRANSFER_DST);
                 cmd->pipelineBarrier({ &barrier, 1 });
 
                 VkBufferImageCopy imageCopy{};
@@ -622,7 +622,7 @@ u32 cala::Engine::flushStagedData() {
                 imageCopy.bufferRowLength = 0;
                 imageCopy.bufferImageHeight = 0;
 
-                imageCopy.imageSubresource.aspectMask = backend::isDepthFormat(staged.dstImage->format()) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+                imageCopy.imageSubresource.aspectMask = vk::isDepthFormat(staged.dstImage->format()) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
                 imageCopy.imageSubresource.mipLevel = staged.dstMipLevel;
                 imageCopy.imageSubresource.baseArrayLayer = staged.dstLayer;
                 imageCopy.imageSubresource.layerCount = staged.dstLayerCount;
@@ -635,7 +635,7 @@ u32 cala::Engine::flushStagedData() {
 
                 vkCmdCopyBufferToImage(cmd->buffer(), _stagingBuffer->buffer(), staged.dstImage->image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopy);
 
-                barrier = staged.dstImage->barrier(backend::PipelineStage::TRANSFER, backend::PipelineStage::FRAGMENT_SHADER | backend::PipelineStage::COMPUTE_SHADER, backend::Access::TRANSFER_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
+                barrier = staged.dstImage->barrier(vk::PipelineStage::TRANSFER, vk::PipelineStage::FRAGMENT_SHADER | vk::PipelineStage::COMPUTE_SHADER, vk::Access::TRANSFER_WRITE, vk::Access::SHADER_READ, vk::ImageLayout::SHADER_READ_ONLY);
                 cmd->pipelineBarrier({ &barrier, 1 });
                 bytesUploaded += staged.srcSize;
             }
@@ -674,7 +674,7 @@ std::optional<std::pair<std::string, bool>> loadMaterialString(nlohmann::json& j
     return std::make_pair(it.value(), false);
 }
 
-std::optional<cala::backend::vulkan::CommandBuffer::RasterState> loadMaterialRasterState(nlohmann::json& json) {
+std::optional<cala::vk::CommandBuffer::RasterState> loadMaterialRasterState(nlohmann::json& json) {
     auto it = json.find("raster_state");
     if (it == json.end() || !it->is_object())
         return {};
@@ -686,34 +686,34 @@ std::optional<cala::backend::vulkan::CommandBuffer::RasterState> loadMaterialRas
     auto rasterDiscardIt = it->find("rasterDiscard");
     auto depthBiasIt = it->find("depthBias");
 
-    cala::backend::vulkan::CommandBuffer::RasterState state{};
+    cala::vk::CommandBuffer::RasterState state{};
 
     if (cullModeIt != it->end() && cullModeIt->is_string()) {
         std::string mode = cullModeIt->get<std::string>();
         if (mode == "NONE")
-            state.cullMode = cala::backend::CullMode::NONE;
+            state.cullMode = cala::vk::CullMode::NONE;
         else if (mode == "FRONT")
-            state.cullMode = cala::backend::CullMode::FRONT;
+            state.cullMode = cala::vk::CullMode::FRONT;
         else if (mode == "BACK")
-            state.cullMode = cala::backend::CullMode::BACK;
+            state.cullMode = cala::vk::CullMode::BACK;
         else if (mode == "FRONT_BACK")
-            state.cullMode = cala::backend::CullMode::FRONT_BACK;
+            state.cullMode = cala::vk::CullMode::FRONT_BACK;
     }
     if (frontFaceIt != it->end() && frontFaceIt->is_string()) {
         std::string face = frontFaceIt->get<std::string>();
         if (face == "CCW")
-            state.frontFace = cala::backend::FrontFace::CCW;
+            state.frontFace = cala::vk::FrontFace::CCW;
         else if (face == "CW")
-            state.frontFace = cala::backend::FrontFace::CW;
+            state.frontFace = cala::vk::FrontFace::CW;
     }
     if (polygonModeIt != it->end() && polygonModeIt->is_string()) {
         std::string mode = polygonModeIt->get<std::string>();
         if (mode == "FILL")
-            state.polygonMode = cala::backend::PolygonMode::FILL;
+            state.polygonMode = cala::vk::PolygonMode::FILL;
         else if (mode == "LINE")
-            state.polygonMode = cala::backend::PolygonMode::LINE;
+            state.polygonMode = cala::vk::PolygonMode::LINE;
         else if (mode == "POINT")
-            state.polygonMode = cala::backend::PolygonMode::POINT;
+            state.polygonMode = cala::vk::PolygonMode::POINT;
     }
     if (lineWidthIt != it->end() && lineWidthIt->is_number_float())
         state.lineWidth = lineWidthIt->get<f32>();
@@ -727,7 +727,7 @@ std::optional<cala::backend::vulkan::CommandBuffer::RasterState> loadMaterialRas
     return state;
 }
 
-std::optional<cala::backend::vulkan::CommandBuffer::DepthState> loadMaterialDepthState(nlohmann::json& json) {
+std::optional<cala::vk::CommandBuffer::DepthState> loadMaterialDepthState(nlohmann::json& json) {
     auto it = json.find("depth_state");
     if (it == json.end() || !it->is_object())
         return {};
@@ -735,7 +735,7 @@ std::optional<cala::backend::vulkan::CommandBuffer::DepthState> loadMaterialDept
     auto writeIt = it->find("write");
     auto compareOpIt = it->find("compareOp");
 
-    cala::backend::vulkan::CommandBuffer::DepthState state{};
+    cala::vk::CommandBuffer::DepthState state{};
 
     if (testIt != it->end() && testIt->is_boolean())
         state.test = testIt->get<bool>();
@@ -744,26 +744,26 @@ std::optional<cala::backend::vulkan::CommandBuffer::DepthState> loadMaterialDept
     if (compareOpIt != it->end() && compareOpIt->is_string()) {
         std::string comp = compareOpIt->get<std::string>();
         if (comp == "NEVER")
-            state.compareOp = cala::backend::CompareOp::NEVER;
+            state.compareOp = cala::vk::CompareOp::NEVER;
         else if (comp == "LESS")
-            state.compareOp = cala::backend::CompareOp::LESS;
+            state.compareOp = cala::vk::CompareOp::LESS;
         else if (comp == "EQUAL")
-            state.compareOp = cala::backend::CompareOp::EQUAL;
+            state.compareOp = cala::vk::CompareOp::EQUAL;
         else if (comp == "LESS_EQUAL")
-            state.compareOp = cala::backend::CompareOp::LESS_EQUAL;
+            state.compareOp = cala::vk::CompareOp::LESS_EQUAL;
         else if (comp == "GREATER")
-            state.compareOp = cala::backend::CompareOp::GREATER;
+            state.compareOp = cala::vk::CompareOp::GREATER;
         else if (comp == "NOT_EQUAL")
-            state.compareOp = cala::backend::CompareOp::NOT_EQUAL;
+            state.compareOp = cala::vk::CompareOp::NOT_EQUAL;
         else if (comp == "GREATER_EQUAL")
-            state.compareOp = cala::backend::CompareOp::GREATER_EQUAL;
+            state.compareOp = cala::vk::CompareOp::GREATER_EQUAL;
         else if (comp == "ALWAYS")
-            state.compareOp = cala::backend::CompareOp::ALWAYS;
+            state.compareOp = cala::vk::CompareOp::ALWAYS;
     }
     return state;
 }
 
-std::optional<cala::backend::vulkan::CommandBuffer::BlendState> loadMaterialBlendState(nlohmann::json& json) {
+std::optional<cala::vk::CommandBuffer::BlendState> loadMaterialBlendState(nlohmann::json& json) {
     auto it = json.find("blend_state");
     if (it == json.end() || !it->is_object())
         return {};
@@ -771,91 +771,91 @@ std::optional<cala::backend::vulkan::CommandBuffer::BlendState> loadMaterialBlen
     auto srcFactorIt = it->find("srcFactor");
     auto dstFactorIt = it->find("dstFactor");
 
-    cala::backend::vulkan::CommandBuffer::BlendState state;
+    cala::vk::CommandBuffer::BlendState state;
 
     if (blendIt != it->end() && blendIt->is_boolean())
         state.blend = blendIt->get<bool>();
     if (srcFactorIt != it->end() && srcFactorIt->is_string()) {
         std::string factor = srcFactorIt->get<std::string>();
         if (factor == "ZERO")
-            state.srcFactor = cala::backend::BlendFactor::ZERO;
+            state.srcFactor = cala::vk::BlendFactor::ZERO;
         else if (factor == "ONE")
-            state.srcFactor = cala::backend::BlendFactor::ONE;
+            state.srcFactor = cala::vk::BlendFactor::ONE;
         else if (factor == "SRC_COLOUR")
-            state.srcFactor = cala::backend::BlendFactor::SRC_COLOUR;
+            state.srcFactor = cala::vk::BlendFactor::SRC_COLOUR;
         else if (factor == "ONE_MINUS_SRC_COLOUR")
-            state.srcFactor = cala::backend::BlendFactor::ONE_MINUS_SRC_COLOUR;
+            state.srcFactor = cala::vk::BlendFactor::ONE_MINUS_SRC_COLOUR;
         else if (factor == "DST_COLOUR")
-            state.srcFactor = cala::backend::BlendFactor::DST_COLOUR;
+            state.srcFactor = cala::vk::BlendFactor::DST_COLOUR;
         else if (factor == "ONE_MINUS_DST_COLOUR")
-            state.srcFactor = cala::backend::BlendFactor::ONE_MINUS_DST_COLOUR;
+            state.srcFactor = cala::vk::BlendFactor::ONE_MINUS_DST_COLOUR;
         else if (factor == "SRC_ALPHA")
-            state.srcFactor = cala::backend::BlendFactor::SRC_ALPHA;
+            state.srcFactor = cala::vk::BlendFactor::SRC_ALPHA;
         else if (factor == "ONE_MINUS_SRC_ALPHA")
-            state.srcFactor = cala::backend::BlendFactor::ONE_MINUS_SRC_ALPHA;
+            state.srcFactor = cala::vk::BlendFactor::ONE_MINUS_SRC_ALPHA;
         else if (factor == "DST_ALPHA")
-            state.srcFactor = cala::backend::BlendFactor::DST_ALPHA;
+            state.srcFactor = cala::vk::BlendFactor::DST_ALPHA;
         else if (factor == "ONE_MINUS_DST_ALPHA")
-            state.srcFactor = cala::backend::BlendFactor::ONE_MINUS_DST_ALPHA;
+            state.srcFactor = cala::vk::BlendFactor::ONE_MINUS_DST_ALPHA;
         else if (factor == "CONSTANT_COLOUR")
-            state.srcFactor = cala::backend::BlendFactor::CONSTANT_COLOUR;
+            state.srcFactor = cala::vk::BlendFactor::CONSTANT_COLOUR;
         else if (factor == "ONE_MINUS_CONSTANT_COLOUR")
-            state.srcFactor = cala::backend::BlendFactor::ONE_MINUS_CONSTANT_COLOUR;
+            state.srcFactor = cala::vk::BlendFactor::ONE_MINUS_CONSTANT_COLOUR;
         else if (factor == "CONSTANT_ALPHA")
-            state.srcFactor = cala::backend::BlendFactor::CONSTANT_ALPHA;
+            state.srcFactor = cala::vk::BlendFactor::CONSTANT_ALPHA;
         else if (factor == "ONE_MINUS_CONSTANT_ALPHA")
-            state.srcFactor = cala::backend::BlendFactor::ONE_MINUS_CONSTANT_ALPHA;
+            state.srcFactor = cala::vk::BlendFactor::ONE_MINUS_CONSTANT_ALPHA;
         else if (factor == "SRC_ALPHA_SATURATE")
-            state.srcFactor = cala::backend::BlendFactor::SRC_ALPHA_SATURATE;
+            state.srcFactor = cala::vk::BlendFactor::SRC_ALPHA_SATURATE;
         else if (factor == "SRC1_COLOUR")
-            state.srcFactor = cala::backend::BlendFactor::SRC1_COLOUR;
+            state.srcFactor = cala::vk::BlendFactor::SRC1_COLOUR;
         else if (factor == "ONE_MINUS_SRC1_COLOUR")
-            state.srcFactor = cala::backend::BlendFactor::ONE_MINUS_SRC1_COLOUR;
+            state.srcFactor = cala::vk::BlendFactor::ONE_MINUS_SRC1_COLOUR;
         else if (factor == "SRC1_ALPHA")
-            state.srcFactor = cala::backend::BlendFactor::SRC1_ALPHA;
+            state.srcFactor = cala::vk::BlendFactor::SRC1_ALPHA;
         else if (factor == "ONE_MINUS_SRC1_ALPHA")
-            state.srcFactor = cala::backend::BlendFactor::ONE_MINUS_SRC1_ALPHA;
+            state.srcFactor = cala::vk::BlendFactor::ONE_MINUS_SRC1_ALPHA;
     }
     if (dstFactorIt != it->end() && dstFactorIt->is_string()) {
         std::string factor = dstFactorIt->get<std::string>();
         if (factor == "ZERO")
-            state.dstFactor = cala::backend::BlendFactor::ZERO;
+            state.dstFactor = cala::vk::BlendFactor::ZERO;
         else if (factor == "ONE")
-            state.dstFactor = cala::backend::BlendFactor::ONE;
+            state.dstFactor = cala::vk::BlendFactor::ONE;
         else if (factor == "SRC_COLOUR")
-            state.dstFactor = cala::backend::BlendFactor::SRC_COLOUR;
+            state.dstFactor = cala::vk::BlendFactor::SRC_COLOUR;
         else if (factor == "ONE_MINUS_SRC_COLOUR")
-            state.dstFactor = cala::backend::BlendFactor::ONE_MINUS_SRC_COLOUR;
+            state.dstFactor = cala::vk::BlendFactor::ONE_MINUS_SRC_COLOUR;
         else if (factor == "DST_COLOUR")
-            state.dstFactor = cala::backend::BlendFactor::DST_COLOUR;
+            state.dstFactor = cala::vk::BlendFactor::DST_COLOUR;
         else if (factor == "ONE_MINUS_DST_COLOUR")
-            state.dstFactor = cala::backend::BlendFactor::ONE_MINUS_DST_COLOUR;
+            state.dstFactor = cala::vk::BlendFactor::ONE_MINUS_DST_COLOUR;
         else if (factor == "SRC_ALPHA")
-            state.dstFactor = cala::backend::BlendFactor::SRC_ALPHA;
+            state.dstFactor = cala::vk::BlendFactor::SRC_ALPHA;
         else if (factor == "ONE_MINUS_SRC_ALPHA")
-            state.dstFactor = cala::backend::BlendFactor::ONE_MINUS_SRC_ALPHA;
+            state.dstFactor = cala::vk::BlendFactor::ONE_MINUS_SRC_ALPHA;
         else if (factor == "DST_ALPHA")
-            state.dstFactor = cala::backend::BlendFactor::DST_ALPHA;
+            state.dstFactor = cala::vk::BlendFactor::DST_ALPHA;
         else if (factor == "ONE_MINUS_DST_ALPHA")
-            state.dstFactor = cala::backend::BlendFactor::ONE_MINUS_DST_ALPHA;
+            state.dstFactor = cala::vk::BlendFactor::ONE_MINUS_DST_ALPHA;
         else if (factor == "CONSTANT_COLOUR")
-            state.dstFactor = cala::backend::BlendFactor::CONSTANT_COLOUR;
+            state.dstFactor = cala::vk::BlendFactor::CONSTANT_COLOUR;
         else if (factor == "ONE_MINUS_CONSTANT_COLOUR")
-            state.dstFactor = cala::backend::BlendFactor::ONE_MINUS_CONSTANT_COLOUR;
+            state.dstFactor = cala::vk::BlendFactor::ONE_MINUS_CONSTANT_COLOUR;
         else if (factor == "CONSTANT_ALPHA")
-            state.dstFactor = cala::backend::BlendFactor::CONSTANT_ALPHA;
+            state.dstFactor = cala::vk::BlendFactor::CONSTANT_ALPHA;
         else if (factor == "ONE_MINUS_CONSTANT_ALPHA")
-            state.dstFactor = cala::backend::BlendFactor::ONE_MINUS_CONSTANT_ALPHA;
+            state.dstFactor = cala::vk::BlendFactor::ONE_MINUS_CONSTANT_ALPHA;
         else if (factor == "SRC_ALPHA_SATURATE")
-            state.dstFactor = cala::backend::BlendFactor::SRC_ALPHA_SATURATE;
+            state.dstFactor = cala::vk::BlendFactor::SRC_ALPHA_SATURATE;
         else if (factor == "SRC1_COLOUR")
-            state.dstFactor = cala::backend::BlendFactor::SRC1_COLOUR;
+            state.dstFactor = cala::vk::BlendFactor::SRC1_COLOUR;
         else if (factor == "ONE_MINUS_SRC1_COLOUR")
-            state.dstFactor = cala::backend::BlendFactor::ONE_MINUS_SRC1_COLOUR;
+            state.dstFactor = cala::vk::BlendFactor::ONE_MINUS_SRC1_COLOUR;
         else if (factor == "SRC1_ALPHA")
-            state.dstFactor = cala::backend::BlendFactor::SRC1_ALPHA;
+            state.dstFactor = cala::vk::BlendFactor::SRC1_ALPHA;
         else if (factor == "ONE_MINUS_SRC1_ALPHA")
-            state.dstFactor = cala::backend::BlendFactor::ONE_MINUS_SRC1_ALPHA;
+            state.dstFactor = cala::vk::BlendFactor::ONE_MINUS_SRC1_ALPHA;
     }
     return state;
 }
@@ -916,9 +916,9 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
                 includedFiles.push_back(eval.first);
 
 
-            backend::vulkan::ShaderProgram handle = loadProgram(name, {
-                { "shaders/default.vert", backend::ShaderStage::VERTEX },
-                { "shaders/default/default.frag", backend::ShaderStage::FRAGMENT, {
+            vk::ShaderProgram handle = loadProgram(name, {
+                { "shaders/default.vert", vk::ShaderStage::VERTEX },
+                { "shaders/default/default.frag", vk::ShaderStage::FRAGMENT, {
                     { "MATERIAL_DATA", materialData.second ? "" : materialData.first },
                     { "MATERIAL_DEFINITION", materialDefinition.second ? "" : materialDefinition.first },
                     { "MATERIAL_LOAD", materialLoad.second ? "" : materialLoad.first },
@@ -928,19 +928,19 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
             return handle;
         };
 
-        backend::vulkan::ShaderProgram litHandle = addVariant(std::format("{}##lit", path.filename().string()), litEval);
+        vk::ShaderProgram litHandle = addVariant(std::format("{}##lit", path.filename().string()), litEval);
         material->setVariant(Material::Variant::LIT, std::move(litHandle));
 
-        backend::vulkan::ShaderProgram unlitHandle = addVariant(std::format("{}##unlit", path.filename().string()), unlitEval);
+        vk::ShaderProgram unlitHandle = addVariant(std::format("{}##unlit", path.filename().string()), unlitEval);
         material->setVariant(Material::Variant::UNLIT, std::move(unlitHandle));
 
-        backend::vulkan::ShaderProgram normalsHandle = addVariant(std::format("{}##normal", path.filename().string()), normalEval);
+        vk::ShaderProgram normalsHandle = addVariant(std::format("{}##normal", path.filename().string()), normalEval);
         material->setVariant(Material::Variant::NORMAL, std::move(normalsHandle));
 
-        backend::vulkan::ShaderProgram metallicHandle = addVariant(std::format("{}##metallic", path.filename().string()), metallicEval);
+        vk::ShaderProgram metallicHandle = addVariant(std::format("{}##metallic", path.filename().string()), metallicEval);
         material->setVariant(Material::Variant::METALLIC, std::move(metallicHandle));
 
-        backend::vulkan::ShaderProgram roughnessHandle = addVariant(std::format("{}##roughness", path.filename().string()), roughnessEval);
+        vk::ShaderProgram roughnessHandle = addVariant(std::format("{}##roughness", path.filename().string()), roughnessEval);
         material->setVariant(Material::Variant::ROUGHNESS, std::move(roughnessHandle));
 
         material->build();
@@ -952,8 +952,8 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
     }
 }
 
-cala::backend::vulkan::ShaderProgram cala::Engine::loadProgram(const std::string& name, const std::vector<ShaderInfo>& shaderInfo) {
-    std::vector<backend::vulkan::ShaderModuleHandle> modules;
+cala::vk::ShaderProgram cala::Engine::loadProgram(const std::string& name, const std::vector<ShaderInfo>& shaderInfo) {
+    std::vector<vk::ShaderModuleHandle> modules;
 
     for (auto& info : shaderInfo) {
         modules.push_back(_assetManager.loadShaderModule(name, info.path, info.stage, info.macros, info.includes));
@@ -966,7 +966,7 @@ cala::Material *cala::Engine::getMaterial(u32 index) {
     return &_materials[index];
 }
 
-const cala::backend::vulkan::ShaderProgram& cala::Engine::getProgram(cala::Engine::ProgramType type) {
+const cala::vk::ShaderProgram& cala::Engine::getProgram(cala::Engine::ProgramType type) {
     switch (type) {
         case ProgramType::SHADOW_POINT:
             return _pointShadowProgram;
@@ -1014,15 +1014,15 @@ u32 cala::Engine::materialCount() const {
     return _materials.size();
 }
 
-void cala::Engine::saveImageToDisk(const std::filesystem::path& path, backend::vulkan::ImageHandle handle) {
+void cala::Engine::saveImageToDisk(const std::filesystem::path& path, vk::ImageHandle handle) {
     auto buffer = _device->createBuffer({
         .size = handle->size(),
-        .usage = backend::BufferUsage::TRANSFER_DST,
-        .memoryType = backend::MemoryProperties::READBACK,
+        .usage = vk::BufferUsage::TRANSFER_DST,
+        .memoryType = vk::MemoryProperties::READBACK,
         .persistentlyMapped = true
     });
-    _device->immediate([path, handle, buffer](backend::vulkan::CommandHandle cmd) {
-        auto b = handle->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_READ, backend::ImageLayout::TRANSFER_SRC);
+    _device->immediate([path, handle, buffer](vk::CommandHandle cmd) {
+        auto b = handle->barrier(vk::PipelineStage::TOP, vk::PipelineStage::TRANSFER, vk::Access::NONE, vk::Access::TRANSFER_READ, vk::ImageLayout::TRANSFER_SRC);
         cmd->pipelineBarrier({ &b, 1 });
 
         handle->copy(cmd, *buffer, 0);

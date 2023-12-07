@@ -1,4 +1,4 @@
-#include <Cala/backend/vulkan/SDLPlatform.h>
+#include <Cala/vulkan/SDLPlatform.h>
 #include <Cala/shapes.h>
 #include <Cala/Camera.h>
 #include <Cala/Light.h>
@@ -7,9 +7,7 @@
 #include <Cala/Material.h>
 #include <Cala/MaterialInstance.h>
 #include <Cala/Scene.h>
-#include <stb_image.h>
 #include "Ende/math/random.h"
-#include <Cala/Mesh.h>
 #include <Cala/Engine.h>
 #include <Cala/Renderer.h>
 #include <assimp/Importer.hpp>
@@ -17,14 +15,10 @@
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
 #include <Ende/profile/ProfileManager.h>
-#include <Cala/backend/vulkan/OfflinePlatform.h>
-#include <Cala/Model.h>
-#include <Ende/thread/thread.h>
 #include <Cala/ui/GuiWindow.h>
 
 using namespace cala;
-using namespace cala::backend;
-using namespace cala::backend::vulkan;
+using namespace cala::vk;
 
 MeshData loadModel(const std::filesystem::path& path) {
     MeshData data;
@@ -83,7 +77,7 @@ int main() {
         return -10;
     auto swapchain = std::move(swapchainResult.value());
     Renderer renderer(&engine, {});
-    swapchain.setPresentMode(backend::PresentMode::FIFO);
+    swapchain.setPresentMode(vk::PresentMode::FIFO);
 
     u32 objectCount = 20;
     Scene scene(&engine, objectCount);

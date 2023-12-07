@@ -1,10 +1,10 @@
 #include "Cala/ui/ResourceViewer.h"
-#include <Cala/backend/vulkan/primitives.h>
+#include <Cala/vulkan/primitives.h>
 #include <imgui.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
-#include <Cala/backend/vulkan/CommandBuffer.h>
+#include <Cala/vulkan/CommandBuffer.h>
 
-cala::ui::ResourceViewer::ResourceViewer(ImGuiContext* context, backend::vulkan::Device *device)
+cala::ui::ResourceViewer::ResourceViewer(ImGuiContext* context, vk::Device *device)
     : Window(context),
     _device(device),
     _bufferIndex(0),
@@ -19,7 +19,7 @@ cala::ui::ResourceViewer::~ResourceViewer() {
     while (!_destroyQueue.empty()) {
         auto set = std::move(_destroyQueue.back());
         _destroyQueue.pop_back();
-        set.second.second = backend::vulkan::Image::View();
+        set.second.second = vk::Image::View();
         ImGui_ImplVulkan_RemoveTexture(set.second.first);
     }
 }
@@ -29,7 +29,7 @@ void cala::ui::ResourceViewer::render() {
         auto& frame = it->first;
         auto& handle = it->second;
         if (frame <= 0) {
-            handle.second = backend::vulkan::Image::View();
+            handle.second = vk::Image::View();
             ImGui_ImplVulkan_RemoveTexture(handle.first);
             _destroyQueue.erase(it--);
         } else
@@ -74,9 +74,9 @@ void cala::ui::ResourceViewer::render() {
                 _destroyQueue.push_back({ 5, std::make_pair( _imageSet, std::move(_imageView)) });
             }
             _imageHandle = _device->getImageHandle(_imageIndex);
-            if (_imageHandle && _imageHandle->type() == backend::ImageType::IMAGE2D) {
-                _imageView = _imageHandle->newView(_mipIndex, 1, _layerIndex, 1, backend::ImageViewType::VIEW2D);
-                _imageSet = ImGui_ImplVulkan_AddTexture(_device->defaultSampler()->sampler(), _imageView.view, backend::vulkan::getImageLayout(_imageHandle->layout()));
+            if (_imageHandle && _imageHandle->type() == vk::ImageType::IMAGE2D) {
+                _imageView = _imageHandle->newView(_mipIndex, 1, _layerIndex, 1, vk::ImageViewType::VIEW2D);
+                _imageSet = ImGui_ImplVulkan_AddTexture(_device->defaultSampler()->sampler(), _imageView.view, vk::getImageLayout(_imageHandle->layout()));
             }
             _imageDirty = false;
         }
@@ -85,7 +85,7 @@ void cala::ui::ResourceViewer::render() {
             u32 size = _imageHandle->height() * _imageHandle->width() * _imageHandle->depth();
             ImGui::Text("\tSize: %d", size);
             ImGui::Text("\tDimensions: { %d, %d }", _imageHandle->width(), _imageHandle->height());
-            ImGui::Text("\tFormat: %s", backend::formatToString(_imageHandle->format()));
+            ImGui::Text("\tFormat: %s", vk::formatToString(_imageHandle->format()));
 
             auto availSize = ImGui::GetContentRegionAvail();
 

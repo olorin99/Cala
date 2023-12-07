@@ -1,6 +1,6 @@
-#include "Cala/Renderer.h"
+#include <Cala/Renderer.h>
 #include <Cala/Scene.h>
-#include <Cala/backend/vulkan/Device.h>
+#include <Cala/vulkan/Device.h>
 #include <Cala/Probe.h>
 #include <Cala/Material.h>
 #include <Cala/ImGuiContext.h>
@@ -9,7 +9,7 @@
 
 #include "renderPasses/debugPasses.h"
 #include "renderPasses/shadowPasses.h"
-#include "Cala/backend/vulkan/primitives.h"
+#include <Cala/vulkan/primitives.h>
 
 cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings)
     : _engine(engine),
@@ -23,28 +23,28 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
     for (auto& buffer : _cameraBuffer) {
         buffer = engine->device().createBuffer({
             .size = sizeof(Camera::Data) * 10,
-            .usage = backend::BufferUsage::UNIFORM,
-            .memoryType = backend::MemoryProperties::DEVICE,
+            .usage = vk::BufferUsage::UNIFORM,
+            .memoryType = vk::MemoryProperties::DEVICE,
             .name = "CameraBuffer: " + std::to_string(_engine->device().frameIndex())
         });
     }
     for (auto& buffer : _globalDataBuffer) {
         buffer = engine->device().createBuffer({
             .size = sizeof(RendererGlobal),
-            .usage = backend::BufferUsage::UNIFORM,
-            .memoryType = backend::MemoryProperties::DEVICE
+            .usage = vk::BufferUsage::UNIFORM,
+            .memoryType = vk::MemoryProperties::DEVICE
         });
     }
     for (auto& buffer : _frustumBuffer) {
         buffer = engine->device().createBuffer({
             .size = sizeof(ende::math::Vec4f) * 8,
-            .usage = backend::BufferUsage::UNIFORM,
-            .memoryType = backend::MemoryProperties::DEVICE
+            .usage = vk::BufferUsage::UNIFORM,
+            .memoryType = vk::MemoryProperties::DEVICE
         });
     }
 }
 
-bool cala::Renderer::beginFrame(cala::backend::vulkan::Swapchain* swapchain) {
+bool cala::Renderer::beginFrame(cala::vk::Swapchain* swapchain) {
     _swapchain = swapchain;
     assert(_swapchain);
     auto beginResult = _engine->device().beginFrame();
@@ -76,8 +76,8 @@ f64 cala::Renderer::endFrame() {
     if (_engine->device().usingTimeline()) {
         u64 waitValue = _engine->device().getFrameValue(_engine->device().prevFrameIndex());
         u64 signalValue = _engine->device().getTimelineSemaphore().increment();
-        std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 2> wait({ { &_engine->device().getTimelineSemaphore(), waitValue }, { &_swapchainFrame.semaphores.acquire, 0 } });
-        std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 2> signal({ { &_engine->device().getTimelineSemaphore(), signalValue }, { &_swapchainFrame.semaphores.present, 0 } });
+        std::array<vk::CommandBuffer::SemaphoreSubmit, 2> wait({ { &_engine->device().getTimelineSemaphore(), waitValue }, { &_swapchainFrame.semaphores.acquire, 0 } });
+        std::array<vk::CommandBuffer::SemaphoreSubmit, 2> signal({ { &_engine->device().getTimelineSemaphore(), signalValue }, { &_swapchainFrame.semaphores.present, 0 } });
         _frameInfo.cmd->submit(wait, signal).transform_error([&] (auto error) {
             _engine->logger().error("Error submitting command buffer");
             _engine->device().printMarkers();
@@ -85,8 +85,8 @@ f64 cala::Renderer::endFrame() {
         });
         _engine->device().setFrameValue(_engine->device().frameIndex(), signalValue);
     } else {
-        std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 1> wait({{ &_swapchainFrame.semaphores.acquire, 0 }});
-        std::array<backend::vulkan::CommandBuffer::SemaphoreSubmit, 1> signal({{ &_swapchainFrame.semaphores.present, 0 }});
+        std::array<vk::CommandBuffer::SemaphoreSubmit, 1> wait({{ &_swapchainFrame.semaphores.acquire, 0 }});
+        std::array<vk::CommandBuffer::SemaphoreSubmit, 1> signal({{ &_swapchainFrame.semaphores.present, 0 }});
         _frameInfo.cmd->submit(wait, signal, _frameInfo.fence).transform_error([&] (auto error) {
             _engine->logger().error("Error submitting command buffer");
             _engine->device().printMarkers();
@@ -135,7 +135,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     bool fullscreenDebug = _renderSettings.debugNormals || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugMetallic || _renderSettings.debugRoughness;
     bool debugViewEnabled = overlayDebug || fullscreenDebug;
 
-    backend::vulkan::CommandHandle cmd = _frameInfo.cmd;
+    vk::CommandHandle cmd = _frameInfo.cmd;
 
     cmd->clearDescriptors();
 
@@ -145,18 +145,18 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         // Register resources used by graph
         {
             ImageResource colourAttachment;
-            colourAttachment.format = backend::Format::RGBA32_SFLOAT;
+            colourAttachment.format = vk::Format::RGBA32_SFLOAT;
             _graph.addImageResource("hdr", colourAttachment);
         }
         {
             ImageResource backbufferAttachment;
-            backbufferAttachment.format = backend::Format::RGBA8_UNORM;
+            backbufferAttachment.format = vk::Format::RGBA8_UNORM;
             _graph.addImageResource("backbuffer", backbufferAttachment);
             _graph.addAlias("backbuffer", "backbuffer-debug");
         }
         {
             ImageResource depthAttachment;
-            depthAttachment.format = backend::Format::D32_SFLOAT;
+            depthAttachment.format = vk::Format::D32_SFLOAT;
             _graph.addImageResource("depth", depthAttachment);
         }
         {
@@ -167,7 +167,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         {
             BufferResource drawCommandsResource;
             drawCommandsResource.size = scene.meshCount() * sizeof(VkDrawIndexedIndirectCommand);
-            drawCommandsResource.usage = backend::BufferUsage::INDIRECT;
+            drawCommandsResource.usage = vk::BufferUsage::INDIRECT;
             _graph.addBufferResource("drawCommands", drawCommandsResource);
 
             _graph.addBufferResource("shadowDrawCommands", drawCommandsResource);
@@ -175,7 +175,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         {
             BufferResource drawCountResource;
             drawCountResource.size = sizeof(u32);
-            drawCountResource.usage = backend::BufferUsage::INDIRECT | backend::BufferUsage::STORAGE;
+            drawCountResource.usage = vk::BufferUsage::INDIRECT | vk::BufferUsage::STORAGE;
             _graph.addBufferResource("drawCount", drawCountResource);
         }
 
@@ -184,7 +184,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
 
 //    ImageResource directDepth;
-//    pointDepth.format = backend::Format::D32_SFLOAT;
+//    pointDepth.format = vk::Format::D32_SFLOAT;
 //    pointDepth.matchSwapchain = false;
 //    pointDepth.transient = false;
 //    pointDepth.width = 10;
@@ -249,10 +249,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     if (camera.isDirty()) {
         auto& createClusters = _graph.addPass("create_clusters", RenderPass::Type::COMPUTE);
 
-        createClusters.addStorageBufferWrite("clusters", backend::PipelineStage::COMPUTE_SHADER);
-        createClusters.addStorageBufferRead("camera", backend::PipelineStage::COMPUTE_SHADER);
+        createClusters.addStorageBufferWrite("clusters", vk::PipelineStage::COMPUTE_SHADER);
+        createClusters.addStorageBufferRead("camera", vk::PipelineStage::COMPUTE_SHADER);
 
-        createClusters.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+        createClusters.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
             auto clusters = graph.getBuffer("clusters");
             cmd->clearDescriptors();
             cmd->bindProgram(_engine->getProgram(Engine::ProgramType::CREATE_CLUSTERS));
@@ -271,7 +271,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             push.near = camera.near();
             push.far = camera.far();
 
-            cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
+            cmd->pushConstants(vk::ShaderStage::COMPUTE, push);
             cmd->bindBuffer(1, 0, clusters, true);
             cmd->bindPipeline();
             cmd->bindDescriptors();
@@ -296,15 +296,15 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     auto& cullLights = _graph.addPass("cull_lights", RenderPass::Type::COMPUTE);
 
-    cullLights.addUniformBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
-    cullLights.addStorageBufferRead("clusters", backend::PipelineStage::COMPUTE_SHADER);
-    cullLights.addStorageBufferWrite("lightGrid", backend::PipelineStage::COMPUTE_SHADER);
-    cullLights.addStorageBufferWrite("lightIndices", backend::PipelineStage::COMPUTE_SHADER);
-    cullLights.addStorageBufferRead("lights", backend::PipelineStage::COMPUTE_SHADER);
-    cullLights.addStorageBufferWrite("lightGlobalResource", backend::PipelineStage::COMPUTE_SHADER);
-    cullLights.addStorageBufferRead("camera", backend::PipelineStage::COMPUTE_SHADER);
+    cullLights.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
+    cullLights.addStorageBufferRead("clusters", vk::PipelineStage::COMPUTE_SHADER);
+    cullLights.addStorageBufferWrite("lightGrid", vk::PipelineStage::COMPUTE_SHADER);
+    cullLights.addStorageBufferWrite("lightIndices", vk::PipelineStage::COMPUTE_SHADER);
+    cullLights.addStorageBufferRead("lights", vk::PipelineStage::COMPUTE_SHADER);
+    cullLights.addStorageBufferWrite("lightGlobalResource", vk::PipelineStage::COMPUTE_SHADER);
+    cullLights.addStorageBufferRead("camera", vk::PipelineStage::COMPUTE_SHADER);
 
-    cullLights.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+    cullLights.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
         auto global = graph.getBuffer("global");
         auto clusters = graph.getBuffer("clusters");
         auto lightGrid = graph.getBuffer("lightGrid");
@@ -327,7 +327,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         push.lightGridBuffer = lightGrid->address();
         push.lightIndicesBuffer = lightIndices->address();
 
-        cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
+        cmd->pushConstants(vk::ShaderStage::COMPUTE, push);
         cmd->bindBuffer(1, 0, global);
         cmd->bindBuffer(1, 1, clusters, true);
         cmd->bindBuffer(1, 2, lightGlobalIndex, true);
@@ -384,16 +384,16 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     auto& cullPass = _graph.addPass("cull", RenderPass::Type::COMPUTE);
 
-    cullPass.addUniformBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
-    cullPass.addStorageBufferRead("transforms", backend::PipelineStage::COMPUTE_SHADER);
-    cullPass.addStorageBufferRead("meshData", backend::PipelineStage::COMPUTE_SHADER);
-    cullPass.addStorageBufferWrite("materialCounts", backend::PipelineStage::COMPUTE_SHADER);
-    cullPass.addStorageBufferWrite("drawCommands", backend::PipelineStage::COMPUTE_SHADER);
-    cullPass.addStorageBufferRead("camera", backend::PipelineStage::COMPUTE_SHADER);
+    cullPass.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
+    cullPass.addStorageBufferRead("transforms", vk::PipelineStage::COMPUTE_SHADER);
+    cullPass.addStorageBufferRead("meshData", vk::PipelineStage::COMPUTE_SHADER);
+    cullPass.addStorageBufferWrite("materialCounts", vk::PipelineStage::COMPUTE_SHADER);
+    cullPass.addStorageBufferWrite("drawCommands", vk::PipelineStage::COMPUTE_SHADER);
+    cullPass.addStorageBufferRead("camera", vk::PipelineStage::COMPUTE_SHADER);
 
     cullPass.setDebugColour({0.3, 0.3, 1, 1});
 
-    cullPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+    cullPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
         auto global = graph.getBuffer("global");
         auto materialCounts = graph.getBuffer("materialCounts");
         auto drawCommands = graph.getBuffer("drawCommands");
@@ -401,7 +401,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd->bindProgram(_engine->getProgram(Engine::ProgramType::CULL));
         cmd->bindBindings({});
         cmd->bindAttributes({});
-        cmd->pushConstants(backend::ShaderStage::COMPUTE, _cullingFrustum);
+        cmd->pushConstants(vk::ShaderStage::COMPUTE, _cullingFrustum);
         cmd->bindBuffer(1, 0, global);
         cmd->bindBuffer(2, 0, drawCommands, true);
         cmd->bindBuffer(2, 1, materialCounts, true);
@@ -416,14 +416,14 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
         depthPrePass.addDepthWrite("depth");
 
-        depthPrePass.addUniformBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+        depthPrePass.addUniformBufferRead("global", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
         depthPrePass.addIndirectRead("drawCommands");
         depthPrePass.addIndirectRead("materialCounts");
         depthPrePass.addVertexRead("vertexBuffer");
         depthPrePass.addIndexRead("indexBuffer");
-        depthPrePass.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+        depthPrePass.addStorageBufferRead("camera", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
 
-        depthPrePass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+        depthPrePass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
             auto global = graph.getBuffer("global");
             auto drawCommands = graph.getBuffer("drawCommands");
             auto materialCounts = graph.getBuffer("materialCounts");
@@ -436,7 +436,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd->bindAttributes(attributes);
 
             cmd->bindProgram(_engine->getProgram(Engine::ProgramType::SHADOW_DIRECT));
-            cmd->bindDepthState({ true, true, backend::CompareOp::LESS });
+            cmd->bindDepthState({ true, true, vk::CompareOp::LESS });
             cmd->bindPipeline();
             cmd->bindDescriptors();
             cmd->bindVertexBuffer(0, _engine->_globalVertexBuffer);
@@ -460,21 +460,21 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         else
             forwardPass.addDepthWrite("depth");
 
-        forwardPass.addUniformBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
-        forwardPass.addSampledImageRead("pointDepth", backend::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addUniformBufferRead("global", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addSampledImageRead("pointDepth", vk::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addIndirectRead("drawCommands");
-        forwardPass.addStorageBufferRead("lightIndices", backend::PipelineStage::FRAGMENT_SHADER);
-        forwardPass.addStorageBufferRead("lightGrid", backend::PipelineStage::FRAGMENT_SHADER);
-        forwardPass.addStorageBufferRead("lights", backend::PipelineStage::FRAGMENT_SHADER);
-        forwardPass.addStorageBufferRead("meshData", backend::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addStorageBufferRead("lightIndices", vk::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addStorageBufferRead("lightGrid", vk::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addStorageBufferRead("lights", vk::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addStorageBufferRead("meshData", vk::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addIndirectRead("materialCounts");
         forwardPass.addVertexRead("vertexBuffer");
         forwardPass.addIndexRead("indexBuffer");
-        forwardPass.addStorageBufferRead("camera", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addStorageBufferRead("camera", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
 
         forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
 
-        forwardPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+        forwardPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
             auto global = graph.getBuffer("global");
             auto drawCommands = graph.getBuffer("drawCommands");
             auto lightGrid = graph.getBuffer("lightGrid");
@@ -507,7 +507,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 push.lightGridBuffer = lightGrid->address();
                 push.lightIndicesBuffer = lightIndices->address();
 
-                cmd->pushConstants(backend::ShaderStage::FRAGMENT, push);
+                cmd->pushConstants(vk::ShaderStage::FRAGMENT, push);
 
                 cmd->bindPipeline();
                 cmd->bindDescriptors();
@@ -531,7 +531,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             */
             ImageResource bloomDownsampleImage;
             bloomDownsampleImage.matchSwapchain = false;
-            bloomDownsampleImage.format = backend::Format::RGBA32_SFLOAT;
+            bloomDownsampleImage.format = vk::Format::RGBA32_SFLOAT;
             bloomDownsampleImage.width = _swapchain->extent().width / 2;
             bloomDownsampleImage.height = _swapchain->extent().height / 2;
             _graph.addImageResource("bloomDownsample-0", bloomDownsampleImage);
@@ -552,7 +552,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
             ImageResource bloomUpsampleImage;
             bloomUpsampleImage.matchSwapchain = false;
-            bloomUpsampleImage.format = backend::Format::RGBA32_SFLOAT;
+            bloomUpsampleImage.format = vk::Format::RGBA32_SFLOAT;
             bloomUpsampleImage.width = _swapchain->extent().width;
             bloomUpsampleImage.height = _swapchain->extent().height;
             _graph.addImageResource("bloomUpsample-0", bloomUpsampleImage);
@@ -570,7 +570,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             _graph.addImageResource("bloomUpsample-4", bloomUpsampleImage); // downsample-4 -> upsample-4
 
             ImageResource bloomFinalImage;
-            bloomFinalImage.format = backend::Format::RGBA32_SFLOAT;
+            bloomFinalImage.format = vk::Format::RGBA32_SFLOAT;
             _graph.addImageResource("bloomFinal", bloomFinalImage);
         }
 
@@ -578,18 +578,18 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         {
             auto &bloomDownsamplePass = _graph.addPass("bloom-downsample", RenderPass::Type::COMPUTE);
 
-            bloomDownsamplePass.addUniformBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
-            bloomDownsamplePass.addSampledImageRead("hdr", backend::PipelineStage::COMPUTE_SHADER);
-            bloomDownsamplePass.addStorageImageWrite("bloomDownsample-0", backend::PipelineStage::COMPUTE_SHADER);
-            bloomDownsamplePass.addStorageImageWrite("bloomDownsample-1", backend::PipelineStage::COMPUTE_SHADER);
-            bloomDownsamplePass.addStorageImageWrite("bloomDownsample-2", backend::PipelineStage::COMPUTE_SHADER);
-            bloomDownsamplePass.addStorageImageWrite("bloomDownsample-3", backend::PipelineStage::COMPUTE_SHADER);
-            bloomDownsamplePass.addStorageImageWrite("bloomDownsample-4", backend::PipelineStage::COMPUTE_SHADER);
+            bloomDownsamplePass.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
+            bloomDownsamplePass.addSampledImageRead("hdr", vk::PipelineStage::COMPUTE_SHADER);
+            bloomDownsamplePass.addStorageImageWrite("bloomDownsample-0", vk::PipelineStage::COMPUTE_SHADER);
+            bloomDownsamplePass.addStorageImageWrite("bloomDownsample-1", vk::PipelineStage::COMPUTE_SHADER);
+            bloomDownsamplePass.addStorageImageWrite("bloomDownsample-2", vk::PipelineStage::COMPUTE_SHADER);
+            bloomDownsamplePass.addStorageImageWrite("bloomDownsample-3", vk::PipelineStage::COMPUTE_SHADER);
+            bloomDownsamplePass.addStorageImageWrite("bloomDownsample-4", vk::PipelineStage::COMPUTE_SHADER);
 
-            bloomDownsamplePass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph &graph) {
+            bloomDownsamplePass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph &graph) {
                 auto global = graph.getBuffer("global");
                 auto hdrImage = graph.getImage("hdr");
-                backend::vulkan::ImageHandle downsample[5] = {
+                vk::ImageHandle downsample[5] = {
                         graph.getImage("bloomDownsample-0"),
                         graph.getImage("bloomDownsample-1"),
                         graph.getImage("bloomDownsample-2"),
@@ -604,12 +604,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
 
                 for (i32 mip = 0; mip < 5; mip++) {
-                    backend::vulkan::ImageHandle inputImage;
+                    vk::ImageHandle inputImage;
                     if (mip == 0)
                         inputImage = hdrImage;
                     else
                         inputImage = downsample[mip - 1];
-                    backend::vulkan::ImageHandle outputImage = downsample[mip];
+                    vk::ImageHandle outputImage = downsample[mip];
 
                     struct Push {
                         i32 inputIndex;
@@ -624,14 +624,14 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
                     }).index();
                     push.mipLevel = mip;
-                    cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
+                    cmd->pushConstants(vk::ShaderStage::COMPUTE, push);
 
                     cmd->bindPipeline();
                     cmd->bindDescriptors();
                     cmd->dispatchCompute(std::ceil(inputImage->width() / 32.f), std::ceil(inputImage->height() / 32.f), 1);
 
                     if (mip != 4) {
-                        auto outputBarrier = outputImage->barrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::COMPUTE_SHADER, backend::Access::SHADER_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
+                        auto outputBarrier = outputImage->barrier(vk::PipelineStage::COMPUTE_SHADER, vk::PipelineStage::COMPUTE_SHADER, vk::Access::SHADER_WRITE, vk::Access::SHADER_READ, vk::ImageLayout::SHADER_READ_ONLY);
                         cmd->pipelineBarrier({ &outputBarrier, 1 });
                     }
                 }
@@ -641,26 +641,26 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         {
             auto& bloomUpsamplePass = _graph.addPass("bloom-upsample", RenderPass::Type::COMPUTE);
 
-            bloomUpsamplePass.addUniformBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
+            bloomUpsamplePass.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
 
-            bloomUpsamplePass.addSampledImageRead("bloomDownsample-4", backend::PipelineStage::COMPUTE_SHADER);
+            bloomUpsamplePass.addSampledImageRead("bloomDownsample-4", vk::PipelineStage::COMPUTE_SHADER);
 
-            bloomUpsamplePass.addStorageImageWrite("bloomUpsample-0", backend::PipelineStage::COMPUTE_SHADER);
-            bloomUpsamplePass.addStorageImageWrite("bloomUpsample-1", backend::PipelineStage::COMPUTE_SHADER);
-            bloomUpsamplePass.addStorageImageWrite("bloomUpsample-2", backend::PipelineStage::COMPUTE_SHADER);
-            bloomUpsamplePass.addStorageImageWrite("bloomUpsample-3", backend::PipelineStage::COMPUTE_SHADER);
-            bloomUpsamplePass.addStorageImageWrite("bloomUpsample-4", backend::PipelineStage::COMPUTE_SHADER);
+            bloomUpsamplePass.addStorageImageWrite("bloomUpsample-0", vk::PipelineStage::COMPUTE_SHADER);
+            bloomUpsamplePass.addStorageImageWrite("bloomUpsample-1", vk::PipelineStage::COMPUTE_SHADER);
+            bloomUpsamplePass.addStorageImageWrite("bloomUpsample-2", vk::PipelineStage::COMPUTE_SHADER);
+            bloomUpsamplePass.addStorageImageWrite("bloomUpsample-3", vk::PipelineStage::COMPUTE_SHADER);
+            bloomUpsamplePass.addStorageImageWrite("bloomUpsample-4", vk::PipelineStage::COMPUTE_SHADER);
 
-            bloomUpsamplePass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+            bloomUpsamplePass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
                 auto global = graph.getBuffer("global");
-                backend::vulkan::ImageHandle downsample[5] = {
+                vk::ImageHandle downsample[5] = {
                         graph.getImage("bloomDownsample-0"),
                         graph.getImage("bloomDownsample-1"),
                         graph.getImage("bloomDownsample-2"),
                         graph.getImage("bloomDownsample-3"),
                         graph.getImage("bloomDownsample-4")
                 };
-                backend::vulkan::ImageHandle upsample[5] = {
+                vk::ImageHandle upsample[5] = {
                         graph.getImage("bloomUpsample-0"),
                         graph.getImage("bloomUpsample-1"),
                         graph.getImage("bloomUpsample-2"),
@@ -674,8 +674,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 cmd->bindBuffer(1, 0, global);
 
                 for (i32 mip = 4; mip > -1; mip--) {
-                    backend::vulkan::ImageHandle inputImage;
-                    backend::vulkan::ImageHandle sumImage;
+                    vk::ImageHandle inputImage;
+                    vk::ImageHandle sumImage;
                     if (mip == 4) {
                         inputImage = downsample[4];
                         sumImage = {};
@@ -683,7 +683,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         inputImage = upsample[mip + 1];
                         sumImage = downsample[mip];
                     }
-                    backend::vulkan::ImageHandle outputImage = upsample[mip];
+                    vk::ImageHandle outputImage = upsample[mip];
 
                     struct Push {
                         i32 inputIndex;
@@ -698,14 +698,14 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                         .filter = VK_FILTER_LINEAR,
                         .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
                     }).index();
-                    cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
+                    cmd->pushConstants(vk::ShaderStage::COMPUTE, push);
 
                     cmd->bindPipeline();
                     cmd->bindDescriptors();
                     cmd->dispatchCompute(std::ceil(outputImage->width() / 32.f), std::ceil(outputImage->height() / 32.f), 1);
 
                     if (mip != 0) {
-                        auto outputBarrier = outputImage->barrier(backend::PipelineStage::COMPUTE_SHADER, backend::PipelineStage::COMPUTE_SHADER, backend::Access::SHADER_WRITE, backend::Access::SHADER_READ, backend::ImageLayout::SHADER_READ_ONLY);
+                        auto outputBarrier = outputImage->barrier(vk::PipelineStage::COMPUTE_SHADER, vk::PipelineStage::COMPUTE_SHADER, vk::Access::SHADER_WRITE, vk::Access::SHADER_READ, vk::ImageLayout::SHADER_READ_ONLY);
                         cmd->pipelineBarrier({ &outputBarrier, 1 });
                     }
                 }
@@ -715,13 +715,13 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         {
             auto& bloomCompositePass = _graph.addPass("bloom-composite", RenderPass::Type::COMPUTE);
 
-            bloomCompositePass.addUniformBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
+            bloomCompositePass.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
 
-            bloomCompositePass.addStorageImageRead("hdr", backend::PipelineStage::COMPUTE_SHADER);
-            bloomCompositePass.addStorageImageRead("bloomUpsample-0", backend::PipelineStage::COMPUTE_SHADER);
-            bloomCompositePass.addStorageImageWrite("bloomFinal", backend::PipelineStage::COMPUTE_SHADER);
+            bloomCompositePass.addStorageImageRead("hdr", vk::PipelineStage::COMPUTE_SHADER);
+            bloomCompositePass.addStorageImageRead("bloomUpsample-0", vk::PipelineStage::COMPUTE_SHADER);
+            bloomCompositePass.addStorageImageWrite("bloomFinal", vk::PipelineStage::COMPUTE_SHADER);
 
-            bloomCompositePass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+            bloomCompositePass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
                 auto global = graph.getBuffer("global");
                 auto upsample = graph.getImage("bloomUpsample-0");
                 auto hdr = graph.getImage("hdr");
@@ -740,7 +740,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 push.upsampleIndex = upsample.index();
                 push.hdrIndex = hdr.index();
                 push.finalIndex = final.index();
-                cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
+                cmd->pushConstants(vk::ShaderStage::COMPUTE, push);
 
                 cmd->bindPipeline();
                 cmd->bindDescriptors();
@@ -752,24 +752,24 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     if (_renderSettings.tonemap && !fullscreenDebug) {
         auto& tonemapPass = _graph.addPass("tonemap", RenderPass::Type::COMPUTE);
 
-        tonemapPass.addUniformBufferRead("global", backend::PipelineStage::COMPUTE_SHADER);
+        tonemapPass.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
         if (overlayDebug)
-            tonemapPass.addStorageImageWrite("backbuffer-debug", backend::PipelineStage::COMPUTE_SHADER);
+            tonemapPass.addStorageImageWrite("backbuffer-debug", vk::PipelineStage::COMPUTE_SHADER);
         else
-            tonemapPass.addStorageImageWrite("backbuffer", backend::PipelineStage::COMPUTE_SHADER);
+            tonemapPass.addStorageImageWrite("backbuffer", vk::PipelineStage::COMPUTE_SHADER);
 
         if (_renderSettings.bloom)
-            tonemapPass.addStorageImageRead("bloomFinal", backend::PipelineStage::COMPUTE_SHADER);
+            tonemapPass.addStorageImageRead("bloomFinal", vk::PipelineStage::COMPUTE_SHADER);
         else
-            tonemapPass.addStorageImageRead("hdr", backend::PipelineStage::COMPUTE_SHADER);
+            tonemapPass.addStorageImageRead("hdr", vk::PipelineStage::COMPUTE_SHADER);
 
 
-        tonemapPass.addStorageImageRead("bloomUpsample-0", backend::PipelineStage::COMPUTE_SHADER);
+        tonemapPass.addStorageImageRead("bloomUpsample-0", vk::PipelineStage::COMPUTE_SHADER);
 
         tonemapPass.setDebugColour({0.1, 0.4, 0.7, 1});
-        tonemapPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+        tonemapPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
             auto global = graph.getBuffer("global");
-            backend::vulkan::ImageHandle hdrImage;
+            vk::ImageHandle hdrImage;
             if (_renderSettings.bloom)
                 hdrImage = graph.getImage("bloomFinal");
             else
@@ -787,7 +787,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 i32 type;
             } push;
             push.type = _renderSettings.tonemapType;
-            cmd->pushConstants(backend::ShaderStage::COMPUTE, push);
+            cmd->pushConstants(vk::ShaderStage::COMPUTE, push);
 
             cmd->bindPipeline();
             cmd->bindDescriptors();
@@ -804,19 +804,19 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         skyboxPass.addDepthRead("depth");
         skyboxPass.setDebugColour({0, 0.7, 0.1, 1});
 
-        skyboxPass.addUniformBufferRead("global", backend::PipelineStage::VERTEX_SHADER | backend::PipelineStage::FRAGMENT_SHADER);
+        skyboxPass.addUniformBufferRead("global", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
 
-        skyboxPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+        skyboxPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
             auto global = graph.getBuffer("global");
             cmd->clearDescriptors();
             cmd->bindProgram(_engine->getProgram(Engine::ProgramType::SKYBOX));
-            cmd->bindRasterState({ backend::CullMode::NONE });
-            cmd->bindDepthState({ true, false, backend::CompareOp::LESS_EQUAL });
+            cmd->bindRasterState({ vk::CullMode::NONE });
+            cmd->bindDepthState({ true, false, vk::CompareOp::LESS_EQUAL });
             cmd->bindBindings({ &_engine->_cube->_binding, 1 });
             cmd->bindAttributes(_engine->_cube->_attributes);
             cmd->bindBuffer(1, 0, global);
             i32 skyMapIndex = scene._skyLightMap.index();
-            cmd->pushConstants(backend::ShaderStage::FRAGMENT, skyMapIndex);
+            cmd->pushConstants(vk::ShaderStage::FRAGMENT, skyMapIndex);
 
             cmd->bindPipeline();
             cmd->bindDescriptors();
@@ -828,15 +828,15 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
     if (imGui) {
         ImageResource backbufferAttachment;
-        backbufferAttachment.format = backend::Format::RGBA8_UNORM;
+        backbufferAttachment.format = vk::Format::RGBA8_UNORM;
         _graph.addImageResource("ui-backbuffer", backbufferAttachment);
 
         auto& uiPass = _graph.addPass("ui");
-        uiPass.addSampledImageRead("backbuffer", backend::PipelineStage::FRAGMENT_SHADER);
+        uiPass.addSampledImageRead("backbuffer", vk::PipelineStage::FRAGMENT_SHADER);
         uiPass.addColourWrite("ui-backbuffer");
         uiPass.setDebugColour({0.7, 0.1, 0.4, 1});
 
-        uiPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+        uiPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
             imGui->render(cmd);
         });
     }
@@ -847,7 +847,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _graph.setBackbuffer("final-swapchain");
     {
         ImageResource backbufferAttachment;
-        backbufferAttachment.format = backend::Format::RGBA8_UNORM;
+        backbufferAttachment.format = vk::Format::RGBA8_UNORM;
         backbufferAttachment.matchSwapchain = false;
         _graph.addImageResource("final-swapchain", backbufferAttachment);
 
@@ -856,7 +856,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         blitPass.addBlitRead("ui-backbuffer");
         blitPass.addBlitWrite("final-swapchain");
 
-        blitPass.setExecuteFunction([&](backend::vulkan::CommandHandle cmd, RenderGraph& graph) {
+        blitPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
             auto backbuffer = graph.getImage("ui-backbuffer");
             _swapchain->blitImageToFrame(_swapchainFrame.index, cmd, *backbuffer);
         });

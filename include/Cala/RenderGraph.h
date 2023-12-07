@@ -4,7 +4,7 @@
 #include <Cala/Engine.h>
 #include <functional>
 #include <tsl/robin_map.h>
-#include <Cala/backend/vulkan/Timer.h>
+#include <Cala/vulkan/Timer.h>
 #include <Ende/math/Vec.h>
 
 namespace cala {
@@ -22,13 +22,13 @@ namespace cala {
         u32 height = 1;
         u32 depth = 1;
         u32 mipLevels = 1;
-        backend::Format format = backend::Format::RGBA8_UNORM;
-        backend::ImageUsage usage = backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC;
+        vk::Format format = vk::Format::RGBA8_UNORM;
+        vk::ImageUsage usage = vk::ImageUsage::SAMPLED | vk::ImageUsage::TRANSFER_SRC;
     };
 
     struct BufferResource : public Resource {
         u32 size = 0;
-        backend::BufferUsage usage = backend::BufferUsage::STORAGE;
+        vk::BufferUsage usage = vk::BufferUsage::STORAGE;
     };
 
     class RenderGraph;
@@ -43,7 +43,7 @@ namespace cala {
 
         RenderPass(RenderGraph* graph, const char* label);
 
-        void setExecuteFunction(std::function<void(backend::vulkan::CommandHandle, RenderGraph&)> func);
+        void setExecuteFunction(std::function<void(vk::CommandHandle, RenderGraph&)> func);
 
         void setDebugColour(const std::array<f32, 4>& colour);
 
@@ -64,17 +64,17 @@ namespace cala {
 
         void addIndexRead(const char* label);
 
-        void addStorageImageWrite(const char* label, backend::PipelineStage stage);
+        void addStorageImageWrite(const char* label, vk::PipelineStage stage);
 
-        void addStorageImageRead(const char* label, backend::PipelineStage stage);
+        void addStorageImageRead(const char* label, vk::PipelineStage stage);
 
-        void addStorageBufferWrite(const char* label, backend::PipelineStage stage);
+        void addStorageBufferWrite(const char* label, vk::PipelineStage stage);
 
-        void addStorageBufferRead(const char* label, backend::PipelineStage stage);
+        void addStorageBufferRead(const char* label, vk::PipelineStage stage);
 
-        void addUniformBufferRead(const char* label, backend::PipelineStage stage);
+        void addUniformBufferRead(const char* label, vk::PipelineStage stage);
 
-        void addSampledImageRead(const char* label, backend::PipelineStage stage);
+        void addSampledImageRead(const char* label, vk::PipelineStage stage);
 
         void addBlitWrite(const char* label);
 
@@ -86,9 +86,9 @@ namespace cala {
 
 //    private:
 
-        Resource* reads(const char* label, backend::Access access, backend::PipelineStage stage, backend::ImageLayout layout);
+        Resource* reads(const char* label, vk::Access access, vk::PipelineStage stage, vk::ImageLayout layout);
 
-        Resource* writes(const char* label, backend::Access access, backend::PipelineStage stage, backend::ImageLayout layout);
+        Resource* writes(const char* label, vk::Access access, vk::PipelineStage stage, vk::ImageLayout layout);
 
 
         friend RenderGraph;
@@ -97,7 +97,7 @@ namespace cala {
 
         const char* _label;
 
-        std::function<void(backend::vulkan::CommandHandle, RenderGraph&)> _function;
+        std::function<void(vk::CommandHandle, RenderGraph&)> _function;
 
         Type _type;
 
@@ -106,9 +106,9 @@ namespace cala {
         struct ResourceAccess {
             const char* label;
             i32 index;
-            backend::Access access;
-            backend::PipelineStage stage;
-            backend::ImageLayout layout;
+            vk::Access access;
+            vk::PipelineStage stage;
+            vk::ImageLayout layout;
         };
 
         std::vector<ResourceAccess> _inputs;
@@ -119,17 +119,17 @@ namespace cala {
         u32 _width;
         u32 _height;
 
-        backend::vulkan::Framebuffer* _framebuffer;
+        vk::Framebuffer* _framebuffer;
 
         struct Barrier {
             const char* label = nullptr;
             i32 index = -1;
-            backend::PipelineStage srcStage = backend::PipelineStage::TOP;
-            backend::PipelineStage dstStage = backend::PipelineStage::BOTTOM;
-            backend::Access srcAccess = backend::Access::NONE;
-            backend::Access dstAccess = backend::Access::NONE;
-            backend::ImageLayout srcLayout = backend::ImageLayout::UNDEFINED;
-            backend::ImageLayout dstLayout = backend::ImageLayout::UNDEFINED;
+            vk::PipelineStage srcStage = vk::PipelineStage::TOP;
+            vk::PipelineStage dstStage = vk::PipelineStage::BOTTOM;
+            vk::Access srcAccess = vk::Access::NONE;
+            vk::Access dstAccess = vk::Access::NONE;
+            vk::ImageLayout srcLayout = vk::ImageLayout::UNDEFINED;
+            vk::ImageLayout dstLayout = vk::ImageLayout::UNDEFINED;
         };
         std::vector<Barrier> _barriers;
 
@@ -146,14 +146,14 @@ namespace cala {
 
         void setBackbufferDimensions(u32 width, u32 height);
 
-        backend::vulkan::ImageHandle getBackbuffer() { return getImage(_backbuffer); }
+        vk::ImageHandle getBackbuffer() { return getImage(_backbuffer); }
 
         ende::math::Vec<2, u32> getBackbufferDimensions() { return { _backbufferWidth, _backbufferHeight }; }
 
 
-        u32 addImageResource(const char* label, ImageResource resource, backend::vulkan::ImageHandle handle = {});
+        u32 addImageResource(const char* label, ImageResource resource, vk::ImageHandle handle = {});
 
-        u32 addBufferResource(const char* label, BufferResource resource, backend::vulkan::BufferHandle handle = {});
+        u32 addBufferResource(const char* label, BufferResource resource, vk::BufferHandle handle = {});
 
         u32 addAlias(const char* label, const char* alias);
         u32 addAlias(u32 resourceIndex, const char* alias);
@@ -165,20 +165,20 @@ namespace cala {
         BufferResource* getBufferResource(const char* label);
         BufferResource* getBufferResource(u32 resourceIndex);
 
-        backend::vulkan::ImageHandle getImage(const char* label);
-        backend::vulkan::ImageHandle getImage(u32 resourceIndex);
+        vk::ImageHandle getImage(const char* label);
+        vk::ImageHandle getImage(u32 resourceIndex);
 
-        backend::vulkan::BufferHandle getBuffer(const char* label);
-        backend::vulkan::BufferHandle getBuffer(u32 resourceIndex);
+        vk::BufferHandle getBuffer(const char* label);
+        vk::BufferHandle getBuffer(u32 resourceIndex);
 
 
         bool compile();
 
-        bool execute(backend::vulkan::CommandHandle  cmd);
+        bool execute(vk::CommandHandle  cmd);
 
         void reset();
 
-        std::span<std::pair<const char*, backend::vulkan::Timer>> getTimers() {
+        std::span<std::pair<const char*, vk::Timer>> getTimers() {
             u32 frameIndex = _engine->device().frameIndex();
             assert(_orderedPasses.size() <= _timers[frameIndex].size());
             return { _timers[frameIndex].data(), static_cast<u32>(_orderedPasses.size()) };
@@ -208,10 +208,10 @@ namespace cala {
 
         std::vector<std::unique_ptr<Resource>> _resources;
         std::vector<std::vector<const char*>> _aliases;
-        std::vector<backend::vulkan::ImageHandle> _images;
-        std::vector<backend::vulkan::BufferHandle> _buffers;
+        std::vector<vk::ImageHandle> _images;
+        std::vector<vk::BufferHandle> _buffers;
 
-        std::vector<std::pair<const char*, backend::vulkan::Timer>> _timers[backend::vulkan::FRAMES_IN_FLIGHT];
+        std::vector<std::pair<const char*, vk::Timer>> _timers[vk::FRAMES_IN_FLIGHT];
 
         std::vector<RenderPass*> _orderedPasses;
 

@@ -3,7 +3,7 @@
 void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
     {
         cala::ImageResource pointDepth;
-        pointDepth.format = cala::backend::Format::RGBA8_UNORM;
+        pointDepth.format = cala::vk::Format::RGBA8_UNORM;
         pointDepth.matchSwapchain = false;
         pointDepth.width = 10;
         pointDepth.height = 10;
@@ -12,15 +12,15 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
 
     auto& pointShadows = graph.addPass("point_shadows", cala::RenderPass::Type::COMPUTE);
 
-    pointShadows.addUniformBufferRead("global", cala::backend::PipelineStage::VERTEX_SHADER | cala::backend::PipelineStage::FRAGMENT_SHADER);
-    pointShadows.addStorageImageWrite("pointDepth", cala::backend::PipelineStage::FRAGMENT_SHADER);
-    pointShadows.addStorageBufferRead("transforms", cala::backend::PipelineStage::VERTEX_SHADER);
-//    pointShadows.addStorageBufferRead("meshData", backend::PipelineStage::VERTEX_SHADER);
+    pointShadows.addUniformBufferRead("global", cala::vk::PipelineStage::VERTEX_SHADER | cala::vk::PipelineStage::FRAGMENT_SHADER);
+    pointShadows.addStorageImageWrite("pointDepth", cala::vk::PipelineStage::FRAGMENT_SHADER);
+    pointShadows.addStorageBufferRead("transforms", cala::vk::PipelineStage::VERTEX_SHADER);
+//    pointShadows.addStorageBufferRead("meshData", vk::PipelineStage::VERTEX_SHADER);
     pointShadows.addVertexRead("vertexBuffer");
     pointShadows.addIndexRead("indexBuffer");
     pointShadows.addIndirectRead("shadowDrawCommands");
 
-    pointShadows.setExecuteFunction([&engine, &scene](cala::backend::vulkan::CommandHandle cmd, cala::RenderGraph& graph) {
+    pointShadows.setExecuteFunction([&engine, &scene](cala::vk::CommandHandle cmd, cala::RenderGraph& graph) {
         auto global = graph.getBuffer("global");
         auto drawCommands = graph.getBuffer("shadowDrawCommands");
         auto drawCount = graph.getBuffer("drawCount");
@@ -46,7 +46,7 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                         cmd->bindProgram(engine.getProgram(cala::Engine::ProgramType::CULL_POINT));
                         cmd->bindBindings({});
                         cmd->bindAttributes({});
-                        cmd->pushConstants(cala::backend::ShaderStage::COMPUTE, frustum);
+                        cmd->pushConstants(cala::vk::ShaderStage::COMPUTE, frustum);
                         cmd->bindBuffer(1, 0, global);
                         cmd->bindBuffer(2, 0, drawCommands, true);
                         cmd->bindBuffer(2, 1, drawCount, true);
@@ -58,11 +58,11 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
 
                         cmd->clearDescriptors();
                         cmd->bindRasterState({
-                            cala::backend::CullMode::FRONT
+                            cala::vk::CullMode::FRONT
                         });
                         cmd->bindDepthState({
                             true, true,
-                            cala::backend::CompareOp::LESS_EQUAL
+                            cala::vk::CompareOp::LESS_EQUAL
                         });
 
                         cmd->bindProgram(engine.getProgram(cala::Engine::ProgramType::SHADOW_DIRECT));
@@ -79,7 +79,7 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                                 camera.near(),
                                 camera.far()
                         };
-                        cmd->pushConstants(cala::backend::ShaderStage::VERTEX, shadowData);
+                        cmd->pushConstants(cala::vk::ShaderStage::VERTEX, shadowData);
 
                         auto binding = engine.globalBinding();
                         auto attributes = engine.globalVertexAttributes();
@@ -96,30 +96,30 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
 
                         cmd->end(*engine.getShadowFramebuffer());
 
-                        auto srcBarrier = engine.getShadowTarget()->barrier(cala::backend::PipelineStage::LATE_FRAGMENT,
-                                                          cala::backend::PipelineStage::TRANSFER,
-                                                          cala::backend::Access::DEPTH_STENCIL_WRITE,
-                                                          cala::backend::Access::TRANSFER_READ,
-                                                          cala::backend::ImageLayout::TRANSFER_SRC);
-                        auto dstBarrier = directionalShadowMap->barrier(cala::backend::PipelineStage::FRAGMENT_SHADER,
-                                                             cala::backend::PipelineStage::TRANSFER,
-                                                             cala::backend::Access::SHADER_READ,
-                                                             cala::backend::Access::TRANSFER_WRITE,
-                                                             cala::backend::ImageLayout::TRANSFER_DST);
+                        auto srcBarrier = engine.getShadowTarget()->barrier(cala::vk::PipelineStage::LATE_FRAGMENT,
+                                                          cala::vk::PipelineStage::TRANSFER,
+                                                          cala::vk::Access::DEPTH_STENCIL_WRITE,
+                                                          cala::vk::Access::TRANSFER_READ,
+                                                          cala::vk::ImageLayout::TRANSFER_SRC);
+                        auto dstBarrier = directionalShadowMap->barrier(cala::vk::PipelineStage::FRAGMENT_SHADER,
+                                                             cala::vk::PipelineStage::TRANSFER,
+                                                             cala::vk::Access::SHADER_READ,
+                                                             cala::vk::Access::TRANSFER_WRITE,
+                                                             cala::vk::ImageLayout::TRANSFER_DST);
                         cmd->pipelineBarrier({&srcBarrier, 1});
                         cmd->pipelineBarrier({&dstBarrier, 1});
 
                         engine.getShadowTarget()->copy(cmd, *directionalShadowMap, 0);
-                        srcBarrier = engine.getShadowTarget()->barrier(cala::backend::PipelineStage::TRANSFER,
-                                                     cala::backend::PipelineStage::EARLY_FRAGMENT,
-                                                     cala::backend::Access::TRANSFER_READ,
-                                                     cala::backend::Access::DEPTH_STENCIL_WRITE,
-                                                     cala::backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
-                        dstBarrier = directionalShadowMap->barrier(cala::backend::PipelineStage::TRANSFER,
-                                                        cala::backend::PipelineStage::FRAGMENT_SHADER,
-                                                        cala::backend::Access::TRANSFER_WRITE,
-                                                        cala::backend::Access::SHADER_READ,
-                                                        cala::backend::ImageLayout::SHADER_READ_ONLY);
+                        srcBarrier = engine.getShadowTarget()->barrier(cala::vk::PipelineStage::TRANSFER,
+                                                     cala::vk::PipelineStage::EARLY_FRAGMENT,
+                                                     cala::vk::Access::TRANSFER_READ,
+                                                     cala::vk::Access::DEPTH_STENCIL_WRITE,
+                                                     cala::vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+                        dstBarrier = directionalShadowMap->barrier(cala::vk::PipelineStage::TRANSFER,
+                                                        cala::vk::PipelineStage::FRAGMENT_SHADER,
+                                                        cala::vk::Access::TRANSFER_WRITE,
+                                                        cala::vk::Access::SHADER_READ,
+                                                        cala::vk::ImageLayout::SHADER_READ_ONLY);
                         cmd->pipelineBarrier({&srcBarrier, 1});
                         cmd->pipelineBarrier({&dstBarrier, 1});
                     }
@@ -160,7 +160,7 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                             cmd->bindProgram(engine.getProgram(cala::Engine::ProgramType::CULL_POINT));
                             cmd->bindBindings({});
                             cmd->bindAttributes({});
-                            cmd->pushConstants(cala::backend::ShaderStage::COMPUTE, shadowFrustum);
+                            cmd->pushConstants(cala::vk::ShaderStage::COMPUTE, shadowFrustum);
                             cmd->bindBuffer(1, 0, global);
                             cmd->bindBuffer(2, 0, drawCommands, true);
                             cmd->bindBuffer(2, 1, drawCount, true);
@@ -173,11 +173,11 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
 
                             cmd->clearDescriptors();
                             cmd->bindRasterState({
-                                                         cala::backend::CullMode::FRONT
+                                                         cala::vk::CullMode::FRONT
                                                  });
                             cmd->bindDepthState({
                                                         true, true,
-                                                        cala::backend::CompareOp::LESS_EQUAL
+                                                        cala::vk::CompareOp::LESS_EQUAL
                                                 });
 
                             cmd->bindProgram(engine.getProgram(cala::Engine::ProgramType::SHADOW_POINT));
@@ -198,7 +198,7 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                                     shadowCam.far()
                             };
                             cmd->pushConstants(
-                                    cala::backend::ShaderStage::VERTEX | cala::backend::ShaderStage::FRAGMENT,
+                                    cala::vk::ShaderStage::VERTEX | cala::vk::ShaderStage::FRAGMENT,
                                     shadowData);
 
                             auto binding = engine.globalBinding();
@@ -216,30 +216,30 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
 
                             cmd->end(*engine.getShadowFramebuffer());
 
-                            auto srcBarrier = engine.getShadowTarget()->barrier(cala::backend::PipelineStage::LATE_FRAGMENT,
-                                                              cala::backend::PipelineStage::TRANSFER,
-                                                              cala::backend::Access::DEPTH_STENCIL_WRITE,
-                                                              cala::backend::Access::TRANSFER_READ,
-                                                              cala::backend::ImageLayout::TRANSFER_SRC);
-                            auto dstBarrier = shadowMap->barrier(cala::backend::PipelineStage::FRAGMENT_SHADER,
-                                                                 cala::backend::PipelineStage::TRANSFER,
-                                                                 cala::backend::Access::SHADER_READ,
-                                                                 cala::backend::Access::TRANSFER_WRITE,
-                                                                 cala::backend::ImageLayout::TRANSFER_DST, face);
+                            auto srcBarrier = engine.getShadowTarget()->barrier(cala::vk::PipelineStage::LATE_FRAGMENT,
+                                                              cala::vk::PipelineStage::TRANSFER,
+                                                              cala::vk::Access::DEPTH_STENCIL_WRITE,
+                                                              cala::vk::Access::TRANSFER_READ,
+                                                              cala::vk::ImageLayout::TRANSFER_SRC);
+                            auto dstBarrier = shadowMap->barrier(cala::vk::PipelineStage::FRAGMENT_SHADER,
+                                                                 cala::vk::PipelineStage::TRANSFER,
+                                                                 cala::vk::Access::SHADER_READ,
+                                                                 cala::vk::Access::TRANSFER_WRITE,
+                                                                 cala::vk::ImageLayout::TRANSFER_DST, face);
                             cmd->pipelineBarrier({&srcBarrier, 1});
                             cmd->pipelineBarrier({&dstBarrier, 1});
 
                             engine.getShadowTarget()->copy(cmd, *shadowMap, 0, face);
-                            srcBarrier = engine.getShadowTarget()->barrier(cala::backend::PipelineStage::TRANSFER,
-                                                         cala::backend::PipelineStage::EARLY_FRAGMENT,
-                                                         cala::backend::Access::TRANSFER_READ,
-                                                         cala::backend::Access::DEPTH_STENCIL_WRITE,
-                                                         cala::backend::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
-                            dstBarrier = shadowMap->barrier(cala::backend::PipelineStage::TRANSFER,
-                                                            cala::backend::PipelineStage::FRAGMENT_SHADER,
-                                                            cala::backend::Access::TRANSFER_WRITE,
-                                                            cala::backend::Access::SHADER_READ,
-                                                            cala::backend::ImageLayout::SHADER_READ_ONLY, face);
+                            srcBarrier = engine.getShadowTarget()->barrier(cala::vk::PipelineStage::TRANSFER,
+                                                         cala::vk::PipelineStage::EARLY_FRAGMENT,
+                                                         cala::vk::Access::TRANSFER_READ,
+                                                         cala::vk::Access::DEPTH_STENCIL_WRITE,
+                                                         cala::vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT);
+                            dstBarrier = shadowMap->barrier(cala::vk::PipelineStage::TRANSFER,
+                                                            cala::vk::PipelineStage::FRAGMENT_SHADER,
+                                                            cala::vk::Access::TRANSFER_WRITE,
+                                                            cala::vk::Access::SHADER_READ,
+                                                            cala::vk::ImageLayout::SHADER_READ_ONLY, face);
                             cmd->pipelineBarrier({&srcBarrier, 1});
                             cmd->pipelineBarrier({&dstBarrier, 1});
                         }

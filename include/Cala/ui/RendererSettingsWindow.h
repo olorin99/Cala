@@ -9,7 +9,7 @@ namespace cala::ui {
     class RendererSettingsWindow : public Window {
     public:
 
-        RendererSettingsWindow(ImGuiContext* context, Engine* engine, Renderer* renderer, backend::vulkan::Swapchain* swapchain);
+        RendererSettingsWindow(ImGuiContext* context, Engine* engine, Renderer* renderer, vk::Swapchain* swapchain);
 
         void render() override;
 
@@ -17,7 +17,7 @@ namespace cala::ui {
 
         Engine* _engine;
         Renderer* _renderer;
-        backend::vulkan::Swapchain* _swapchain;
+        vk::Swapchain* _swapchain;
         i32 _targetFPS;
 
     };

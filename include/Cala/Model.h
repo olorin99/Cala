@@ -2,7 +2,7 @@
 #define CALA_MODEL_H
 
 #include <Ende/math/Vec.h>
-#include <Cala/backend/vulkan/Handle.h>
+#include <Cala/vulkan/Handle.h>
 #include <Cala/MaterialInstance.h>
 #include <Cala/Transform.h>
 #include <string>
@@ -38,10 +38,10 @@ namespace cala {
         std::vector<Primitive> primitives;
         std::vector<MaterialInstance> materials;
 
-        std::vector<backend::vulkan::ImageHandle> images;
+        std::vector<vk::ImageHandle> images;
 
         VkVertexInputBindingDescription _binding = {};
-        std::array<backend::Attribute, 4> _attributes = {};
+        std::array<vk::Attribute, 4> _attributes = {};
 
     };
 

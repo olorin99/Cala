@@ -1,6 +1,6 @@
 #include "Cala/ImGuiContext.h"
 #include <volk.h>
-#include <Cala/backend/primitives.h>
+#include <Cala/vulkan/primitives.h>
 #include <imgui.h>
 #include <backends/imgui_impl_vulkan.h>
 #include <implot/implot.h>
@@ -38,24 +38,24 @@ void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkDevice device, VkQue
 }
 
 
-ImGuiContext::ImGuiContext(cala::backend::vulkan::Device &driver, cala::backend::vulkan::Swapchain* swapchain, SDL_Window* window)
+ImGuiContext::ImGuiContext(cala::vk::Device &driver, cala::vk::Swapchain* swapchain, SDL_Window* window)
     : _device(driver.context().device()),
     _window(window),
     _renderPass(nullptr),
     _descriptorPool(VK_NULL_HANDLE),
     _commandPool(VK_NULL_HANDLE)
 {
-    std::array<cala::backend::vulkan::RenderPass::Attachment, 1> attachments = {
-            cala::backend::vulkan::RenderPass::Attachment{
-                    cala::backend::Format::RGBA8_UNORM,
+    std::array<cala::vk::RenderPass::Attachment, 1> attachments = {
+            cala::vk::RenderPass::Attachment{
+                    cala::vk::Format::RGBA8_UNORM,
                     VK_SAMPLE_COUNT_1_BIT,
-                    cala::backend::LoadOp::CLEAR,
-                    cala::backend::StoreOp::STORE,
-                    cala::backend::LoadOp::DONT_CARE,
-                    cala::backend::StoreOp::DONT_CARE,
-                    cala::backend::ImageLayout::UNDEFINED,
-                    cala::backend::ImageLayout::PRESENT,
-                    cala::backend::ImageLayout::COLOUR_ATTACHMENT
+                    cala::vk::LoadOp::CLEAR,
+                    cala::vk::StoreOp::STORE,
+                    cala::vk::LoadOp::DONT_CARE,
+                    cala::vk::StoreOp::DONT_CARE,
+                    cala::vk::ImageLayout::UNDEFINED,
+                    cala::vk::ImageLayout::PRESENT,
+                    cala::vk::ImageLayout::COLOUR_ATTACHMENT
             }
 //            cala::backend::vulkan::RenderPass::Attachment{
 //                    device.context().depthFormat(),
@@ -96,7 +96,7 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Device &driver, cala::backend:
     vkCreateDescriptorPool(driver.context().device(), &poolInfo, nullptr, &_descriptorPool);
 
     u32 graphicsIndex = 0;
-    driver.context().queueIndex(graphicsIndex, cala::backend::QueueType::GRAPHICS);
+    driver.context().queueIndex(graphicsIndex, cala::vk::QueueType::GRAPHICS);
 
     VkCommandPoolCreateInfo commandPoolInfo{};
     commandPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -129,7 +129,7 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Device &driver, cala::backend:
     initInfo.PhysicalDevice = driver.context().physicalDevice();
     initInfo.Device = driver.context().device();
     initInfo.QueueFamily = graphicsIndex;
-    initInfo.Queue = driver.context().getQueue(cala::backend::QueueType::GRAPHICS);
+    initInfo.Queue = driver.context().getQueue(cala::vk::QueueType::GRAPHICS);
     initInfo.PipelineCache = VK_NULL_HANDLE;
     initInfo.DescriptorPool = _descriptorPool;
     initInfo.Allocator = nullptr;
@@ -140,7 +140,7 @@ ImGuiContext::ImGuiContext(cala::backend::vulkan::Device &driver, cala::backend:
 
     VkCommandBuffer a = beginSingleTimeCommands(driver.context().device(), _commandPool);
     ImGui_ImplVulkan_CreateFontsTexture(a);
-    endSingleTimeCommands(a, driver.context().device(), driver.context().getQueue(cala::backend::QueueType::GRAPHICS), _commandPool);
+    endSingleTimeCommands(a, driver.context().device(), driver.context().getQueue(cala::vk::QueueType::GRAPHICS), _commandPool);
 }
 
 ImGuiContext::~ImGuiContext() {
@@ -171,7 +171,7 @@ void ImGuiContext::processEvent(void *event) {
         ImGui_ImplSDL2_ProcessEvent((SDL_Event*)event);
 }
 
-void ImGuiContext::render(cala::backend::vulkan::CommandHandle buffer) {
+void ImGuiContext::render(cala::vk::CommandHandle buffer) {
     if (_window) {
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer->buffer());
 

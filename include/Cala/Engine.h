@@ -2,11 +2,11 @@
 #define CALA_ENGINE_H
 
 #include <Ende/Shared.h>
-#include <Cala/backend/vulkan/Buffer.h>
-#include <Cala/backend/vulkan/Image.h>
+#include <Cala/vulkan/Buffer.h>
+#include <Cala/vulkan/Image.h>
 
-#include <Cala/backend/vulkan/Platform.h>
-#include <Cala/backend/vulkan/Device.h>
+#include <Cala/vulkan/Platform.h>
+#include <Cala/vulkan/Device.h>
 
 #include <filesystem>
 #include <spdlog/spdlog.h>
@@ -25,11 +25,11 @@ namespace cala {
     class Engine {
     public:
 
-        Engine(backend::Platform& platform);
+        Engine(vk::Platform& platform);
 
         ~Engine();
 
-        backend::vulkan::Device& device() { return *_device; }
+        vk::Device& device() { return *_device; }
 
         AssetManager* assetManager() { return &_assetManager; }
 
@@ -37,39 +37,39 @@ namespace cala {
 
         bool gc();
 
-        backend::vulkan::ImageHandle convertToCubeMap(backend::vulkan::ImageHandle equirectangular);
+        vk::ImageHandle convertToCubeMap(vk::ImageHandle equirectangular);
 
-        backend::vulkan::ImageHandle generateIrradianceMap(backend::vulkan::ImageHandle cubeMap);
+        vk::ImageHandle generateIrradianceMap(vk::ImageHandle cubeMap);
 
-        backend::vulkan::ImageHandle generatePrefilteredIrradiance(backend::vulkan::ImageHandle cubeMap);
+        vk::ImageHandle generatePrefilteredIrradiance(vk::ImageHandle cubeMap);
 
         u32 uploadVertexData(std::span<f32> data);
 
         u32 uploadIndexData(std::span<u32> data);
 
         template <typename T>
-        void stageData(backend::vulkan::BufferHandle dstHandle, const T& data, u32 dstOffset = 0) {
+        void stageData(vk::BufferHandle dstHandle, const T& data, u32 dstOffset = 0) {
             stageData(dstHandle, std::span<const u8>(reinterpret_cast<const u8*>(&data), sizeof(data)), dstOffset);
         }
 
-        void stageData(backend::vulkan::BufferHandle dstHandle, std::span<const u8> data, u32 dstOffset = 0);
+        void stageData(vk::BufferHandle dstHandle, std::span<const u8> data, u32 dstOffset = 0);
 
         template <typename T>
-        void stageData(backend::vulkan::ImageHandle dstHandle, std::span<T> data, backend::vulkan::Image::DataInfo dataInfo) {
+        void stageData(vk::ImageHandle dstHandle, std::span<T> data, vk::Image::DataInfo dataInfo) {
             stageData(dstHandle, std::span<const u8>(reinterpret_cast<const u8*>(data.data()), data.size() * sizeof(T)), dataInfo);
         }
 
-        void stageData(backend::vulkan::ImageHandle dstHandle, std::span<const u8> data, backend::vulkan::Image::DataInfo dataInfo);
+        void stageData(vk::ImageHandle dstHandle, std::span<const u8> data, vk::Image::DataInfo dataInfo);
 
         u32 flushStagedData();
 
         struct ShaderInfo {
             std::filesystem::path path;
-            backend::ShaderStage stage;
+            vk::ShaderStage stage;
             std::vector<util::Macro> macros = {};
             std::vector<std::string> includes = {};
         };
-        backend::vulkan::ShaderProgram loadProgram(const std::string& name, const std::vector<ShaderInfo>& shaderInfo);
+        vk::ShaderProgram loadProgram(const std::string& name, const std::vector<ShaderInfo>& shaderInfo);
 
         Material* createMaterial(u32 size);
 
@@ -92,9 +92,9 @@ namespace cala {
 
         spdlog::logger& logger() { return _logger; }
 
-        backend::vulkan::BufferHandle vertexBuffer() const { return _globalVertexBuffer; }
+        vk::BufferHandle vertexBuffer() const { return _globalVertexBuffer; }
 
-        backend::vulkan::BufferHandle indexBuffer() const { return _globalIndexBuffer; }
+        vk::BufferHandle indexBuffer() const { return _globalIndexBuffer; }
 
         VkVertexInputBindingDescription globalBinding() const {
             VkVertexInputBindingDescription binding{};
@@ -104,12 +104,12 @@ namespace cala {
             return binding;
         }
 
-        std::array<backend::Attribute, 4> globalVertexAttributes() const {
-            std::array<backend::Attribute, 4> attributes = {
-                    backend::Attribute{0, 0, backend::AttribType::Vec3f},
-                    backend::Attribute{1, 0, backend::AttribType::Vec3f},
-                    backend::Attribute{2, 0, backend::AttribType::Vec2f},
-                    backend::Attribute{3, 0, backend::AttribType::Vec4f}
+        std::array<vk::Attribute, 4> globalVertexAttributes() const {
+            std::array<vk::Attribute, 4> attributes = {
+                    vk::Attribute{0, 0, vk::AttribType::Vec3f},
+                    vk::Attribute{1, 0, vk::AttribType::Vec3f},
+                    vk::Attribute{2, 0, vk::AttribType::Vec2f},
+                    vk::Attribute{3, 0, vk::AttribType::Vec4f}
             };
             return attributes;
         }
@@ -140,20 +140,20 @@ namespace cala {
         };
 
 
-        const backend::vulkan::ShaderProgram& getProgram(ProgramType type);
+        const vk::ShaderProgram& getProgram(ProgramType type);
 
-        backend::vulkan::ImageHandle getShadowMap(u32 index, bool point);
+        vk::ImageHandle getShadowMap(u32 index, bool point);
 
         void setShadowMapSize(u32 size);
 
         u32 getShadowMapSize() const { return _shadowMapSize; }
 
-        backend::vulkan::ImageHandle getShadowTarget() const { return _shadowTarget; }
+        vk::ImageHandle getShadowTarget() const { return _shadowTarget; }
 
-        backend::vulkan::Framebuffer* getShadowFramebuffer();
+        vk::Framebuffer* getShadowFramebuffer();
 
 
-        void saveImageToDisk(const std::filesystem::path& path, backend::vulkan::ImageHandle handle);
+        void saveImageToDisk(const std::filesystem::path& path, vk::ImageHandle handle);
 
     private:
         friend Renderer;
@@ -163,53 +163,53 @@ namespace cala {
 
         spdlog::logger _logger;
 
-        std::unique_ptr<backend::vulkan::Device> _device;
+        std::unique_ptr<vk::Device> _device;
 
         AssetManager _assetManager;
 
         ende::time::SystemTime _startTime;
 
-        backend::vulkan::SamplerHandle _lodSampler;
-        backend::vulkan::SamplerHandle _irradianceSampler;
+        vk::SamplerHandle _lodSampler;
+        vk::SamplerHandle _irradianceSampler;
 
-        backend::vulkan::RenderPass _shadowPass;
+        vk::RenderPass _shadowPass;
 
-        backend::vulkan::ShaderProgram _pointShadowProgram;
-        backend::vulkan::ShaderProgram _directShadowProgram;
+        vk::ShaderProgram _pointShadowProgram;
+        vk::ShaderProgram _directShadowProgram;
 
-        backend::vulkan::ShaderProgram _equirectangularToCubeMap;
-        backend::vulkan::ShaderProgram _irradianceProgram;
-        backend::vulkan::ShaderProgram _prefilterProgram;
-        backend::vulkan::ShaderProgram _brdfProgram;
-        backend::vulkan::ShaderProgram _skyboxProgram;
-        backend::vulkan::ShaderProgram _tonemapProgram;
-        backend::vulkan::ShaderProgram _cullProgram;
-        backend::vulkan::ShaderProgram _pointShadowCullProgram;
-        backend::vulkan::ShaderProgram _directShadowCullProgram;
-        backend::vulkan::ShaderProgram _createClustersProgram;
-        backend::vulkan::ShaderProgram _cullLightsProgram;
+        vk::ShaderProgram _equirectangularToCubeMap;
+        vk::ShaderProgram _irradianceProgram;
+        vk::ShaderProgram _prefilterProgram;
+        vk::ShaderProgram _brdfProgram;
+        vk::ShaderProgram _skyboxProgram;
+        vk::ShaderProgram _tonemapProgram;
+        vk::ShaderProgram _cullProgram;
+        vk::ShaderProgram _pointShadowCullProgram;
+        vk::ShaderProgram _directShadowCullProgram;
+        vk::ShaderProgram _createClustersProgram;
+        vk::ShaderProgram _cullLightsProgram;
 
-        backend::vulkan::ShaderProgram _bloomDownsampleProgram;
-        backend::vulkan::ShaderProgram _bloomUpsampleProgram;
-        backend::vulkan::ShaderProgram _bloomCompositeProgram;
+        vk::ShaderProgram _bloomDownsampleProgram;
+        vk::ShaderProgram _bloomUpsampleProgram;
+        vk::ShaderProgram _bloomCompositeProgram;
 
-        backend::vulkan::ShaderProgram _clusterDebugProgram;
-        backend::vulkan::ShaderProgram _normalsDebugProgram;
-        backend::vulkan::ShaderProgram _worldPosDebugProgram;
-        backend::vulkan::ShaderProgram _solidColourProgram;
-        backend::vulkan::ShaderProgram _frustumDebugProgram;
-        backend::vulkan::ShaderProgram _depthDebugProgram;
-        backend::vulkan::ShaderProgram _voxelVisualisationProgram;
+        vk::ShaderProgram _clusterDebugProgram;
+        vk::ShaderProgram _normalsDebugProgram;
+        vk::ShaderProgram _worldPosDebugProgram;
+        vk::ShaderProgram _solidColourProgram;
+        vk::ShaderProgram _frustumDebugProgram;
+        vk::ShaderProgram _depthDebugProgram;
+        vk::ShaderProgram _voxelVisualisationProgram;
 
-        backend::vulkan::ImageHandle _brdfImage;
+        vk::ImageHandle _brdfImage;
 
-        backend::vulkan::BufferHandle _globalVertexBuffer;
-        backend::vulkan::BufferHandle _globalIndexBuffer;
+        vk::BufferHandle _globalVertexBuffer;
+        vk::BufferHandle _globalIndexBuffer;
         u32 _vertexOffset;
         u32 _indexOffset;
 
         struct StagedBufferInfo {
-            backend::vulkan::BufferHandle dstBuffer;
+            vk::BufferHandle dstBuffer;
             u32 dstOffset;
             u32 srcSize;
             u32 srcOffset;
@@ -217,7 +217,7 @@ namespace cala {
         std::vector<StagedBufferInfo> _pendingStagedBuffer;
 
         struct StagedImageInfo {
-            backend::vulkan::ImageHandle dstImage;
+            vk::ImageHandle dstImage;
             ende::math::Vec<3, u32> dstDimensions;
             ende::math::Vec<3, i32> dstOffset;
             u32 dstMipLevel;
@@ -230,14 +230,14 @@ namespace cala {
 
         u32 _stagingSize;
         u32 _stagingOffset;
-        backend::vulkan::BufferHandle _stagingBuffer;
+        vk::BufferHandle _stagingBuffer;
 
         Mesh* _cube;
 
-        std::vector<backend::vulkan::ImageHandle> _shadowMaps;
+        std::vector<vk::ImageHandle> _shadowMaps;
         u32 _shadowMapSize;
-        backend::vulkan::ImageHandle _shadowTarget;
-        backend::vulkan::Framebuffer* _shadowFramebuffer;
+        vk::ImageHandle _shadowTarget;
+        vk::Framebuffer* _shadowFramebuffer;
 
         std::vector<Material> _materials;
 

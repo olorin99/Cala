@@ -2,8 +2,8 @@
 #define CALA_PROBE_H
 
 #include <Cala/Engine.h>
-#include <Cala/backend/vulkan/Framebuffer.h>
-#include <Cala/backend/vulkan/Image.h>
+#include <Cala/vulkan/Framebuffer.h>
+#include <Cala/vulkan/Image.h>
 #include <functional>
 
 namespace cala {
@@ -14,9 +14,9 @@ namespace cala {
         struct ProbeInfo {
             u32 width;
             u32 height;
-            backend::Format targetFormat;
-            backend::ImageUsage targetUsage;
-            backend::vulkan::RenderPass* renderPass;
+            vk::Format targetFormat;
+            vk::ImageUsage targetUsage;
+            vk::RenderPass* renderPass;
             u32 mipLevels = 1;
         };
 
@@ -30,19 +30,19 @@ namespace cala {
 
         Probe& operator=(const Probe&) = delete;
 
-        void draw(backend::vulkan::CommandHandle cmd, std::function<void(backend::vulkan::CommandHandle cmd, u32 face)> perFace);
+        void draw(vk::CommandHandle cmd, std::function<void(vk::CommandHandle cmd, u32 face)> perFace);
 
-        backend::vulkan::ImageHandle map() const { return _cubeMap; }
+        vk::ImageHandle map() const { return _cubeMap; }
 
-        backend::vulkan::Image::View& view() { return _cubeView; }
+        vk::Image::View& view() { return _cubeView; }
 
     private:
 
-        backend::vulkan::Framebuffer* _drawBuffer;
-        backend::vulkan::ImageHandle _renderTarget;
-        backend::vulkan::Image::View _view;
-        backend::vulkan::ImageHandle _cubeMap;
-        backend::vulkan::Image::View _cubeView;
+        vk::Framebuffer* _drawBuffer;
+        vk::ImageHandle _renderTarget;
+        vk::Image::View _view;
+        vk::ImageHandle _cubeMap;
+        vk::Image::View _cubeView;
 
 
     };

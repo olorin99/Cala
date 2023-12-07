@@ -1,13 +1,12 @@
 #ifndef CALA_MATERIALINSTANCE_H
 #define CALA_MATERIALINSTANCE_H
 
-#include <Cala/backend/vulkan/Image.h>
-#include <Cala/backend/vulkan/SamplerArray.h>
+#include <Cala/vulkan/Image.h>
 #include <string_view>
 
 namespace cala {
 
-    namespace backend::vulkan {
+    namespace vk {
         class CommandBuffer;
     }
 
@@ -50,7 +49,7 @@ namespace cala {
 
         u32 getIndex() const;
 
-        void bind(backend::vulkan::CommandBuffer& cmd, u32 set = 2, u32 first = 0);
+        void bind(vk::CommandBuffer& cmd, u32 set = 2, u32 first = 0);
 
 
     private:

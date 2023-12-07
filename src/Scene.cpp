@@ -9,43 +9,43 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     _directionalLightCount(0),
     _lightsDirtyFrame(2)
 {
-    for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
+    for (u32 i = 0; i < vk::FRAMES_IN_FLIGHT; i++) {
         _meshDataBuffer[i] = engine->device().createBuffer({
             .size = (u32)(count * sizeof(MeshData)),
-            .usage = backend::BufferUsage::STORAGE,
-            .memoryType = backend::MemoryProperties::DEVICE,
+            .usage = vk::BufferUsage::STORAGE,
+            .memoryType = vk::MemoryProperties::DEVICE,
             .name = "MeshDataBuffer: " + std::to_string(i)
         });
     }
-    for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
+    for (u32 i = 0; i < vk::FRAMES_IN_FLIGHT; i++) {
         _meshTransformsBuffer[i] = engine->device().createBuffer({
             .size = (u32)(count * sizeof(ende::math::Mat4f)),
-            .usage = backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE,
-            .memoryType = backend::MemoryProperties::DEVICE,
+            .usage = vk::BufferUsage::UNIFORM | vk::BufferUsage::STORAGE,
+            .memoryType = vk::MemoryProperties::DEVICE,
             .name = "ModelBuffer: " + std::to_string(i)
         });
     }
-    for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
+    for (u32 i = 0; i < vk::FRAMES_IN_FLIGHT; i++) {
         _lightBuffer[i] = engine->device().createBuffer({
             .size = (u32)(lightCount * sizeof(Light::Data)),
-            .usage = backend::BufferUsage::STORAGE,
-            .memoryType = backend::MemoryProperties::DEVICE,
+            .usage = vk::BufferUsage::STORAGE,
+            .memoryType = vk::MemoryProperties::DEVICE,
             .name = "LightBuffer: " + std::to_string(i)
         });
     }
-    for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
+    for (u32 i = 0; i < vk::FRAMES_IN_FLIGHT; i++) {
         _lightCountBuffer[i] = engine->device().createBuffer({
             .size = (u32)(sizeof(u32) * 2),
-            .usage = backend::BufferUsage::STORAGE,
-            .memoryType = backend::MemoryProperties::DEVICE,
+            .usage = vk::BufferUsage::STORAGE,
+            .memoryType = vk::MemoryProperties::DEVICE,
             .name = "LightCountBuffer: " + std::to_string(i)
         });
     }
-    for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
+    for (u32 i = 0; i < vk::FRAMES_IN_FLIGHT; i++) {
         _materialCountBuffer[i] = engine->device().createBuffer({
             .size = (u32)(sizeof(MaterialCount) * 1),
-            .usage = backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT,
-            .memoryType = backend::MemoryProperties::DEVICE,
+            .usage = vk::BufferUsage::UNIFORM | vk::BufferUsage::STORAGE | vk::BufferUsage::INDIRECT,
+            .memoryType = vk::MemoryProperties::DEVICE,
             .name = "MaterialCountBuffer: " + std::to_string(i)
         });
     }
@@ -53,7 +53,7 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     _root = std::make_unique<SceneNode>();
 }
 
-void cala::Scene::addSkyLightMap(backend::vulkan::ImageHandle skyLightMap, bool equirectangular, bool hdr) {
+void cala::Scene::addSkyLightMap(vk::ImageHandle skyLightMap, bool equirectangular, bool hdr) {
     if (equirectangular) {
         _skyLightMap = _engine->convertToCubeMap(skyLightMap);
     } else

@@ -4,8 +4,8 @@
 #include <Ende/platform.h>
 #include <filesystem>
 #include <tsl/robin_map.h>
-#include <Cala/backend/vulkan/Handle.h>
-#include <Cala/backend/primitives.h>
+#include <Cala/vulkan/Handle.h>
+#include <Cala/vulkan/primitives.h>
 #include <span>
 #include <Cala/util.h>
 #include <Cala/Model.h>
@@ -77,14 +77,14 @@ namespace cala {
 
         };
 
-        backend::vulkan::ShaderModuleHandle loadShaderModule(const std::string& name, const std::filesystem::path& path, backend::ShaderStage stage = backend::ShaderStage::NONE, const std::vector<util::Macro>& macros = {}, std::span<const std::string> includes = {});
+        vk::ShaderModuleHandle loadShaderModule(const std::string& name, const std::filesystem::path& path, vk::ShaderStage stage = vk::ShaderStage::NONE, const std::vector<util::Macro>& macros = {}, std::span<const std::string> includes = {});
 
-        backend::vulkan::ShaderModuleHandle reloadShaderModule(u32 hash);
+        vk::ShaderModuleHandle reloadShaderModule(u32 hash);
 
 
-        backend::vulkan::ImageHandle loadImage(const std::string& name, const std::filesystem::path& path, backend::Format format = backend::Format::RGBA8_UNORM);
+        vk::ImageHandle loadImage(const std::string& name, const std::filesystem::path& path, vk::Format format = vk::Format::RGBA8_UNORM);
 
-        backend::vulkan::ImageHandle reloadImage(u32 hash);
+        vk::ImageHandle reloadImage(u32 hash);
 
 
         Asset<Model> loadModel(const std::string& name, const std::filesystem::path& path, Material* material);
@@ -120,10 +120,10 @@ namespace cala {
             u32 hash;
             std::string name;
             std::filesystem::path path;
-            backend::ShaderStage stage;
+            vk::ShaderStage stage;
             std::vector<util::Macro> macros;
             std::vector<std::string> includes;
-            backend::vulkan::ShaderModuleHandle moduleHandle;
+            vk::ShaderModuleHandle moduleHandle;
         };
         std::vector<ShaderModuleMetadata> _shaderModules;
 
@@ -131,8 +131,8 @@ namespace cala {
             u32 hash;
             std::string name;
             std::filesystem::path path;
-            backend::Format format;
-            backend::vulkan::ImageHandle imageHandle;
+            vk::Format format;
+            vk::ImageHandle imageHandle;
         };
         std::vector<ImageMetadata> _images;
 

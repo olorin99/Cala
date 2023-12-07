@@ -1,9 +1,9 @@
-#include "Cala/ui/BackbufferWindow.h"
-#include "Cala/backend/vulkan/primitives.h"
+#include <Cala/ui/BackbufferWindow.h>
+#include <Cala/vulkan/primitives.h>
 #include <imgui.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
 
-cala::ui::BackbufferWindow::BackbufferWindow(ImGuiContext* context, backend::vulkan::Device *device)
+cala::ui::BackbufferWindow::BackbufferWindow(ImGuiContext* context, vk::Device *device)
         : Window(context),
           _imageView(context, device),
           _device(device)

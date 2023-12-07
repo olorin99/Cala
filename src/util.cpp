@@ -111,26 +111,26 @@ std::string macroize(std::string_view str) {
     return result;
 }
 
-std::expected<std::vector<u32>, std::string> cala::util::compileGLSLToSpirv(std::string_view name, std::string_view glsl, backend::ShaderStage stage, const std::vector<Macro>& macros, std::span<const std::filesystem::path> searchPaths) {
+std::expected<std::vector<u32>, std::string> cala::util::compileGLSLToSpirv(std::string_view name, std::string_view glsl, vk::ShaderStage stage, const std::vector<Macro>& macros, std::span<const std::filesystem::path> searchPaths) {
 
     shaderc_shader_kind kind{};
     switch (stage) {
-        case backend::ShaderStage::VERTEX:
+        case vk::ShaderStage::VERTEX:
             kind = shaderc_shader_kind::shaderc_vertex_shader;
             break;
-        case backend::ShaderStage::TESS_CONTROL:
+        case vk::ShaderStage::TESS_CONTROL:
             kind = shaderc_shader_kind::shaderc_tess_control_shader;
             break;
-        case backend::ShaderStage::TESS_EVAL:
+        case vk::ShaderStage::TESS_EVAL:
             kind = shaderc_shader_kind::shaderc_tess_evaluation_shader;
             break;
-        case backend::ShaderStage::GEOMETRY:
+        case vk::ShaderStage::GEOMETRY:
             kind = shaderc_shader_kind::shaderc_geometry_shader;
             break;
-        case backend::ShaderStage::FRAGMENT:
+        case vk::ShaderStage::FRAGMENT:
             kind = shaderc_shader_kind::shaderc_fragment_shader;
             break;
-        case backend::ShaderStage::COMPUTE:
+        case vk::ShaderStage::COMPUTE:
             kind = shaderc_shader_kind::shaderc_compute_shader;
             break;
         default:

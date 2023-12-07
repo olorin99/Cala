@@ -3,7 +3,7 @@
 
 #include <Ende/platform.h>
 #include <array>
-#include <Cala/backend/vulkan/Buffer.h>
+#include <Cala/vulkan/Buffer.h>
 #include <Cala/Mesh.h>
 #include <Cala/Engine.h>
 
@@ -37,9 +37,9 @@ namespace cala {
 
         u32 indexCount() const { return _indices.size(); }
 
-        backend::vulkan::BufferHandle vertexBuffer(backend::vulkan::Device& driver) const;
+        vk::BufferHandle vertexBuffer(vk::Device& driver) const;
 
-        backend::vulkan::BufferHandle indexBuffer(backend::vulkan::Device& driver) const;
+        vk::BufferHandle indexBuffer(vk::Device& driver) const;
 
         Mesh mesh(Engine* engine);
 

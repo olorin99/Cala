@@ -3,7 +3,7 @@
 
 #include <Ende/platform.h>
 #include <vector>
-#include <Cala/backend/vulkan/Device.h>
+#include <Cala/vulkan/Device.h>
 
 namespace cala::util {
 
@@ -12,7 +12,7 @@ namespace cala::util {
         std::string value;
     };
 
-    std::expected<std::vector<u32>, std::string> compileGLSLToSpirv(std::string_view name, std::string_view glsl, backend::ShaderStage stage, const std::vector<Macro>& macros = {}, std::span<const std::filesystem::path> searchPaths = {});
+    std::expected<std::vector<u32>, std::string> compileGLSLToSpirv(std::string_view name, std::string_view glsl, vk::ShaderStage stage, const std::vector<Macro>& macros = {}, std::span<const std::filesystem::path> searchPaths = {});
 
 }
 

@@ -2,14 +2,14 @@
 #define CALA_RESOURCEVIEWER_H
 
 #include <Cala/ui/Window.h>
-#include <Cala/backend/vulkan/Device.h>
+#include <Cala/vulkan/Device.h>
 
 namespace cala::ui {
 
     class ResourceViewer : public Window {
     public:
 
-        ResourceViewer(ImGuiContext* context, backend::vulkan::Device* device);
+        ResourceViewer(ImGuiContext* context, vk::Device* device);
 
         ~ResourceViewer();
 
@@ -17,7 +17,7 @@ namespace cala::ui {
 
     private:
 
-        backend::vulkan::Device* _device;
+        vk::Device* _device;
 
         i32 _bufferIndex;
         i32 _imageIndex;
@@ -27,11 +27,11 @@ namespace cala::ui {
         i32 _mipIndex;
         i32 _layerIndex;
 
-        backend::vulkan::ImageHandle _imageHandle;
-        backend::vulkan::Image::View _imageView;
-        backend::vulkan::Image::View _deleteView;
+        vk::ImageHandle _imageHandle;
+        vk::Image::View _imageView;
+        vk::Image::View _deleteView;
 
-        std::vector<std::pair<i32, std::pair<VkDescriptorSet, backend::vulkan::Image::View>>> _destroyQueue;
+        std::vector<std::pair<i32, std::pair<VkDescriptorSet, vk::Image::View>>> _destroyQueue;
 
     };
 
