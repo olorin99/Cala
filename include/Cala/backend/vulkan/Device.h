@@ -68,8 +68,6 @@ namespace cala::backend::vulkan {
 
         u64 getFrameValue(u64 frame) { return _frameValues[frame]; }
 
-        BufferHandle stagingBuffer(u32 size);
-
 
         CommandHandle beginSingleTimeCommands(QueueType queueType = QueueType::GRAPHICS);
 
@@ -101,19 +99,20 @@ namespace cala::backend::vulkan {
 
         bool gc();
 
-        struct ExtraInfo {
+        struct BufferInfo {
+            u32 size = 0;
+            BufferUsage usage = BufferUsage::TRANSFER_SRC;
+            MemoryProperties memoryType = MemoryProperties::DEVICE;
+            bool persistentlyMapped = false;
             u32 requiredFlags = 0;
             u32 preferredFlags = 0;
+            std::string name = {};
         };
-        BufferHandle createBuffer(u32 size, BufferUsage usage, backend::MemoryProperties flags = backend::MemoryProperties::DEVICE, bool persistentlyMapped = false, ExtraInfo extraInfo = { 0, 0 });
-
-
-
+        BufferHandle createBuffer(BufferInfo info);
         BufferHandle resizeBuffer(BufferHandle handle, u32 size, bool transfer = false);
 
+
         ImageHandle createImage(Image::CreateInfo info);
-
-
 
         ImageHandle getImageHandle(u32 index);
 

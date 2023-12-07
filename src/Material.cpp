@@ -6,11 +6,13 @@ cala::Material::Material(cala::Engine* engine, u32 id, u32 size)
       _setSize(size),
       _id(id),
       _dirty(true),
-      _materialBuffer(engine->device().createBuffer(256, backend::BufferUsage::STORAGE | backend::BufferUsage::UNIFORM, backend::MemoryProperties::DEVICE))
-{
-    std::string debugLabel = "Material: " + std::to_string(_id);
-    _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_materialBuffer->buffer(), debugLabel);
-}
+      _materialBuffer(engine->device().createBuffer({
+          .size = 256,
+          .usage = backend::BufferUsage::STORAGE | backend::BufferUsage::UNIFORM,
+          .memoryType = backend::MemoryProperties::DEVICE,
+          .name = "Material: " + std::to_string(_id)
+      }))
+{}
 
 cala::Material::Material(cala::Material &&rhs) noexcept
     : _engine(nullptr),
@@ -78,8 +80,6 @@ void cala::Material::upload() {
         if (_data.size() > _materialBuffer->size()) {
             _engine->flushStagedData();
             _materialBuffer = _engine->device().resizeBuffer(_materialBuffer, _data.size(), true);
-            std::string debugLabel = "Material: " + std::to_string(_id);
-            _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_materialBuffer->buffer(), debugLabel);
         }
         std::span<const u8> ms = _data;
         _engine->stageData(_materialBuffer, ms);

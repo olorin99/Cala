@@ -4,6 +4,7 @@
 #include <Cala/backend/primitives.h>
 #include <span>
 #include <volk.h>
+#include <string>
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
 #include "../../third_party/vk_mem_alloc.h"
@@ -120,6 +121,8 @@ namespace cala::backend::vulkan {
 
         void* persistentMapping() { return _mapped.address; }
 
+        const std::string& debugName() const { return _debugName; }
+
     private:
         friend Device;
 
@@ -132,6 +135,7 @@ namespace cala::backend::vulkan {
         MemoryProperties _flags;
         Mapped _mapped;
         bool _invalidated;
+        std::string _debugName;
 
     };
 

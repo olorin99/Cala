@@ -21,13 +21,26 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
     _engine->device().setBindlessSetIndex(0);
 
     for (auto& buffer : _cameraBuffer) {
-        buffer = engine->device().createBuffer(sizeof(Camera::Data) * 10, backend::BufferUsage::UNIFORM, backend::MemoryProperties::DEVICE);
+        buffer = engine->device().createBuffer({
+            .size = sizeof(Camera::Data) * 10,
+            .usage = backend::BufferUsage::UNIFORM,
+            .memoryType = backend::MemoryProperties::DEVICE,
+            .name = "CameraBuffer: " + std::to_string(_engine->device().frameIndex())
+        });
     }
     for (auto& buffer : _globalDataBuffer) {
-        buffer = engine->device().createBuffer(sizeof(RendererGlobal), backend::BufferUsage::UNIFORM, backend::MemoryProperties::DEVICE);
+        buffer = engine->device().createBuffer({
+            .size = sizeof(RendererGlobal),
+            .usage = backend::BufferUsage::UNIFORM,
+            .memoryType = backend::MemoryProperties::DEVICE
+        });
     }
     for (auto& buffer : _frustumBuffer) {
-        buffer = engine->device().createBuffer(sizeof(ende::math::Vec4f) * 8, backend::BufferUsage::UNIFORM, backend::MemoryProperties::DEVICE);
+        buffer = engine->device().createBuffer({
+            .size = sizeof(ende::math::Vec4f) * 8,
+            .usage = backend::BufferUsage::UNIFORM,
+            .memoryType = backend::MemoryProperties::DEVICE
+        });
     }
 }
 
@@ -102,8 +115,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     }
     if ((scene._lights.size() + 1) * sizeof(Camera::Data) > _cameraBuffer[_engine->device().frameIndex()]->size()) {
         _cameraBuffer[_engine->device().frameIndex()] = _engine->device().resizeBuffer(_cameraBuffer[_engine->device().frameIndex()], (scene._lights.size() + 1) * sizeof(Camera::Data));
-        std::string debugLabel = "CameraBuffer: " + std::to_string(_engine->device().frameIndex());
-        _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_cameraBuffer[_engine->device().frameIndex()]->buffer(), debugLabel);
     }
 
 

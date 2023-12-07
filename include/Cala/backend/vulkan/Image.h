@@ -4,6 +4,7 @@
 #include <volk.h>
 #include <Ende/platform.h>
 #include <span>
+#include <string>
 #include <Cala/backend/vulkan/Handle.h>
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
@@ -28,6 +29,7 @@ namespace cala::backend::vulkan {
             ImageUsage usage = ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST;
             ImageType type = ImageType::AUTO;
             Format aliasFormat = Format::UNDEFINED;
+            std::string name = {};
         };
 
         struct DataInfo {

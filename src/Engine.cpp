@@ -48,7 +48,13 @@ cala::Engine::Engine(backend::Platform &platform)
       _indexOffset(0),
       _stagingSize(1 << 24), // 16mb
       _stagingOffset(0),
-      _stagingBuffer(_device->createBuffer(_stagingSize, backend::BufferUsage::TRANSFER_SRC, backend::MemoryProperties::STAGING, true)),
+      _stagingBuffer(_device->createBuffer({
+          .size = _stagingSize,
+          .usage = backend::BufferUsage::TRANSFER_SRC,
+          .memoryType = backend::MemoryProperties::STAGING,
+          .persistentlyMapped = true,
+          .name = "StagingBuffer"
+      })),
       _shadowMapSize(0)
 {
     spdlog::flush_every(std::chrono::seconds(5));
@@ -175,9 +181,16 @@ cala::Engine::Engine(backend::Platform &platform)
 //        });
     }
 
-    _brdfImage = _device->createImage({ 512, 512, 1, backend::Format::RG16_SFLOAT, 1, 1, backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE });
-    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)_brdfImage->image(), "brdf");
-    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_brdfImage->defaultView().view, "brdf_View");
+    _brdfImage = _device->createImage({
+        .width = 512,
+        .height = 512,
+        .depth = 1,
+        .format = backend::Format::RG16_SFLOAT,
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .usage = backend::ImageUsage::SAMPLED | backend::ImageUsage::STORAGE,
+        .name = "brdf"
+    });
 
     _device->immediate([&](backend::vulkan::CommandHandle cmd) {
         auto brdfBarrier = _brdfImage->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_WRITE | backend::Access::SHADER_READ, backend::ImageLayout::GENERAL);
@@ -194,11 +207,18 @@ cala::Engine::Engine(backend::Platform &platform)
 
     });
 
-    _globalVertexBuffer = _device->createBuffer(1000000, backend::BufferUsage::VERTEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE);
-    _globalIndexBuffer = _device->createBuffer(1000000, backend::BufferUsage::INDEX | backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::DEVICE);
-
-    _device->context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalVertexBuffer->buffer(), "globalVertexBuffer");
-    _device->context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalIndexBuffer->buffer(), "globalIndexBuffer");
+    _globalVertexBuffer = _device->createBuffer({
+        .size = 1000000,
+        .usage = backend::BufferUsage::VERTEX | backend::BufferUsage::TRANSFER_DST,
+        .memoryType = backend::MemoryProperties::DEVICE,
+        .name = "globalVertexBuffer"
+    });
+    _globalIndexBuffer = _device->createBuffer({
+        .size = 1000000,
+        .usage = backend::BufferUsage::INDEX | backend::BufferUsage::TRANSFER_DST,
+        .memoryType = backend::MemoryProperties::DEVICE,
+        .name = "globalIndexBuffer"
+    });
 
     _cube = new Mesh(shapes::cube().mesh(this));
 
@@ -255,13 +275,15 @@ bool cala::Engine::gc() {
 
 cala::backend::vulkan::ImageHandle cala::Engine::convertToCubeMap(backend::vulkan::ImageHandle equirectangular) {
     auto cubeMap = _device->createImage({
-        512, 512, 1,
-        backend::Format::RGBA32_SFLOAT,
-        10, 6,
-        backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST
+        .width = 512,
+        .height = 512,
+        .depth = 1,
+        .format = backend::Format::RGBA32_SFLOAT,
+        .mipLevels = 10,
+        .arrayLayers = 6,
+        .usage = backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_SRC | backend::ImageUsage::TRANSFER_DST,
+        .name = "cubeMap"
     });
-    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)cubeMap->image(), "cubeMap");
-    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)cubeMap->defaultView().view, "cubeMap_View");
     auto equirectangularView = equirectangular->newView();
     auto cubeView = cubeMap->newView(0, 10);
     _device->immediate([&](backend::vulkan::CommandHandle cmd) {
@@ -292,13 +314,15 @@ cala::backend::vulkan::ImageHandle cala::Engine::convertToCubeMap(backend::vulka
 
 cala::backend::vulkan::ImageHandle cala::Engine::generateIrradianceMap(backend::vulkan::ImageHandle cubeMap) {
     auto irradianceMap = _device->createImage({
-        64, 64, 1,
-        backend::Format::RGBA32_SFLOAT,
-        1, 6,
-        backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
+        .width = 64,
+        .height = 64,
+        .depth = 1,
+        .format = backend::Format::RGBA32_SFLOAT,
+        .mipLevels = 1,
+        .arrayLayers = 6,
+        .usage = backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST,
+        .name = "irradianceMap"
     });
-    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)irradianceMap->image(), "irradianceMap");
-    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)irradianceMap->defaultView().view, "irradianceMap_View");
     _device->immediate([&](backend::vulkan::CommandHandle cmd) {
         auto irradianceBarrier = irradianceMap->barrier(backend::PipelineStage::TOP, backend::PipelineStage::COMPUTE_SHADER, backend::Access::NONE, backend::Access::SHADER_WRITE, backend::ImageLayout::GENERAL);
         cmd->pipelineBarrier({ &irradianceBarrier, 1 });
@@ -322,13 +346,15 @@ cala::backend::vulkan::ImageHandle cala::Engine::generateIrradianceMap(backend::
 
 cala::backend::vulkan::ImageHandle cala::Engine::generatePrefilteredIrradiance(backend::vulkan::ImageHandle cubeMap) {
     backend::vulkan::ImageHandle prefilteredMap = _device->createImage({
-        512, 512, 1,
-        backend::Format::RGBA32_SFLOAT,
-        10, 6,
-        backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST
+        .width = 512,
+        .height = 512,
+        .depth = 1,
+        .format = backend::Format::RGBA32_SFLOAT,
+        .mipLevels = 10,
+        .arrayLayers = 6,
+        .usage = backend::ImageUsage::STORAGE | backend::ImageUsage::SAMPLED | backend::ImageUsage::TRANSFER_DST,
+        .name = "prefilterMap"
     });
-    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)prefilteredMap->image(), "prefilterMap");
-    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)prefilteredMap->defaultView().view, "prefilterMap_View");
     backend::vulkan::Image::View mipViews[10] = {
             prefilteredMap->newView(0),
             prefilteredMap->newView(1),
@@ -375,14 +401,15 @@ cala::backend::vulkan::ImageHandle cala::Engine::getShadowMap(u32 index, bool po
     }
 
     auto map = _device->createImage({
-        _shadowMapSize, _shadowMapSize, 1,
-        backend::Format::D32_SFLOAT,
-        1, point ? (u32)6 : (u32)1,
-        backend::ImageUsage::SAMPLED | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT | backend::ImageUsage::TRANSFER_DST
+        .width = _shadowMapSize,
+        .height = _shadowMapSize,
+        .depth = 1,
+        .format = backend::Format::D32_SFLOAT,
+        .mipLevels = 1,
+        .arrayLayers = point ? (u32)6 : (u32)1,
+        .usage = backend::ImageUsage::SAMPLED | backend::ImageUsage::DEPTH_STENCIL_ATTACHMENT | backend::ImageUsage::TRANSFER_DST,
+        .name = "ShadowMap: " + std::to_string(index)
     });
-    std::string debugLabel = "ShadowMap: " + std::to_string(index);
-    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)map->image(), debugLabel);
-    _device->context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)map->defaultView().view, "shadowMap_View");
     if (index < _shadowMaps.size())
         _shadowMaps[index] = map;
     else
@@ -455,7 +482,6 @@ u32 cala::Engine::uploadVertexData(std::span<f32> data) {
     if (currentOffset + data.size() * sizeof(f32) >= _globalVertexBuffer->size()) {
         flushStagedData();
         _globalVertexBuffer = _device->resizeBuffer(_globalVertexBuffer, currentOffset + data.size() * sizeof(f32), true);
-        _device->context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalVertexBuffer->buffer(), "vertexStagingBuffer");
     }
 
     stageData(_globalVertexBuffer, std::span<const u8>(reinterpret_cast<const u8*>(data.data()), data.size() * sizeof(f32)), currentOffset);
@@ -469,7 +495,6 @@ u32 cala::Engine::uploadIndexData(std::span<u32> data) {
     if (currentOffset + data.size() * sizeof(u32) >= _globalIndexBuffer->size()) {
         flushStagedData();
         _globalIndexBuffer = _device->resizeBuffer(_globalIndexBuffer, currentOffset + data.size() * sizeof(u32), true);
-        _device->context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_globalIndexBuffer->buffer(), "indexStagingBuffer");
     }
     stageData(_globalIndexBuffer, std::span<const u8>(reinterpret_cast<const u8*>(data.data()), data.size() * sizeof(f32)), currentOffset);
 
@@ -990,7 +1015,12 @@ u32 cala::Engine::materialCount() const {
 }
 
 void cala::Engine::saveImageToDisk(const std::filesystem::path& path, backend::vulkan::ImageHandle handle) {
-    auto buffer = _device->createBuffer(handle->size(), backend::BufferUsage::TRANSFER_DST, backend::MemoryProperties::READBACK, true);
+    auto buffer = _device->createBuffer({
+        .size = handle->size(),
+        .usage = backend::BufferUsage::TRANSFER_DST,
+        .memoryType = backend::MemoryProperties::READBACK,
+        .persistentlyMapped = true
+    });
     _device->immediate([path, handle, buffer](backend::vulkan::CommandHandle cmd) {
         auto b = handle->barrier(backend::PipelineStage::TOP, backend::PipelineStage::TRANSFER, backend::Access::NONE, backend::Access::TRANSFER_READ, backend::ImageLayout::TRANSFER_SRC);
         cmd->pipelineBarrier({ &b, 1 });

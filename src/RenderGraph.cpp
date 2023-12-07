@@ -474,20 +474,23 @@ void cala::RenderGraph::buildResources() {
                     image->format() != imageResource->format) {
 
                 _images[i] = _engine->device().createImage({
-                    imageResource->width,
-                    imageResource->height,
-                    imageResource->depth,
-                    imageResource->format,
-                    imageResource->mipLevels,
-                    1,
-                    imageResource->usage
+                    .width = imageResource->width,
+                    .height = imageResource->height,
+                    .depth = imageResource->depth,
+                    .format = imageResource->format,
+                    .mipLevels = imageResource->mipLevels,
+                    .arrayLayers = 1,
+                    .usage = imageResource->usage,
+                    .name = imageResource->label
                 });
-                _engine->device().context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)_images[i]->image(), imageResource->label);
             }
         } else if (auto bufferResource = dynamic_cast<BufferResource*>(resource.get()); bufferResource) {
             if (!_buffers[i]) {
-                _buffers[i] = _engine->device().createBuffer(bufferResource->size, bufferResource->usage);
-                _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_buffers[i]->buffer(), bufferResource->label);
+                _buffers[i] = _engine->device().createBuffer({
+                    .size = bufferResource->size,
+                    .usage = bufferResource->usage,
+                    .name = bufferResource->label
+                });
             }
         }
     }

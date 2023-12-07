@@ -10,29 +10,44 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     _lightsDirtyFrame(2)
 {
     for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
-        _meshDataBuffer[i] = engine->device().createBuffer(count * sizeof(MeshData), backend::BufferUsage::STORAGE, backend::MemoryProperties::DEVICE);
-        std::string debugLabel = "MeshDataBuffer: " + std::to_string(i);
-        engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_meshDataBuffer[i]->buffer(), debugLabel);
+        _meshDataBuffer[i] = engine->device().createBuffer({
+            .size = (u32)(count * sizeof(MeshData)),
+            .usage = backend::BufferUsage::STORAGE,
+            .memoryType = backend::MemoryProperties::DEVICE,
+            .name = "MeshDataBuffer: " + std::to_string(i)
+        });
     }
     for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
-        _meshTransformsBuffer[i] = engine->device().createBuffer(count * sizeof(ende::math::Mat4f), backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE, backend::MemoryProperties::DEVICE);
-        std::string debugLabel = "ModelBuffer: " + std::to_string(i);
-        engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_meshTransformsBuffer[i]->buffer(), debugLabel);
+        _meshTransformsBuffer[i] = engine->device().createBuffer({
+            .size = (u32)(count * sizeof(ende::math::Mat4f)),
+            .usage = backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE,
+            .memoryType = backend::MemoryProperties::DEVICE,
+            .name = "ModelBuffer: " + std::to_string(i)
+        });
     }
     for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
-        _lightBuffer[i] = engine->device().createBuffer(lightCount * sizeof(Light::Data), backend::BufferUsage::STORAGE, backend::MemoryProperties::DEVICE);
-        std::string debugLabel = "LightBuffer: " + std::to_string(i);
-        engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_lightBuffer[i]->buffer(), debugLabel);
+        _lightBuffer[i] = engine->device().createBuffer({
+            .size = (u32)(lightCount * sizeof(Light::Data)),
+            .usage = backend::BufferUsage::STORAGE,
+            .memoryType = backend::MemoryProperties::DEVICE,
+            .name = "LightBuffer: " + std::to_string(i)
+        });
     }
     for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
-        _lightCountBuffer[i] = engine->device().createBuffer(sizeof(u32) * 2, backend::BufferUsage::STORAGE, backend::MemoryProperties::DEVICE);
-        std::string debugLabel = "LightCountBuffer: " + std::to_string(i);
-        engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_lightCountBuffer[i]->buffer(), debugLabel);
+        _lightCountBuffer[i] = engine->device().createBuffer({
+            .size = (u32)(sizeof(u32) * 2),
+            .usage = backend::BufferUsage::STORAGE,
+            .memoryType = backend::MemoryProperties::DEVICE,
+            .name = "LightCountBuffer: " + std::to_string(i)
+        });
     }
     for (u32 i = 0; i < backend::vulkan::FRAMES_IN_FLIGHT; i++) {
-        _materialCountBuffer[i] = engine->device().createBuffer(sizeof(MaterialCount) * 1, backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT, backend::MemoryProperties::DEVICE);
-        std::string debugLabel = "MaterialCountBuffer: " + std::to_string(i);
-        engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_materialCountBuffer[i]->buffer(), debugLabel);
+        _materialCountBuffer[i] = engine->device().createBuffer({
+            .size = (u32)(sizeof(MaterialCount) * 1),
+            .usage = backend::BufferUsage::UNIFORM | backend::BufferUsage::STORAGE | backend::BufferUsage::INDIRECT,
+            .memoryType = backend::MemoryProperties::DEVICE,
+            .name = "MaterialCountBuffer: " + std::to_string(i)
+        });
     }
 
     _root = std::make_unique<SceneNode>();
@@ -86,23 +101,15 @@ void cala::Scene::prepare(cala::Camera& camera) {
     // resize buffers to fit and update persistent mappings
     if (meshCount * sizeof(MeshData) >= _meshDataBuffer[frame]->size()) {
         _meshDataBuffer[frame] = _engine->device().resizeBuffer(_meshDataBuffer[frame], meshCount * sizeof(MeshData) * 2);
-        std::string debugLabel = "MeshDataBuffer: " + std::to_string(frame);
-        _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_meshDataBuffer[frame]->buffer(), debugLabel);
     }
     if (meshCount * sizeof(ende::math::Mat4f) >= _meshTransformsBuffer[frame]->size()) {
         _meshTransformsBuffer[frame] = _engine->device().resizeBuffer(_meshTransformsBuffer[frame], meshCount * sizeof(ende::math::Mat4f) * 2);
-        std::string debugLabel = "ModelBuffer: " + std::to_string(frame);
-        _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_meshTransformsBuffer[frame]->buffer(), debugLabel);
     }
     if (_materialCounts.size() * sizeof(MaterialCount) > _materialCountBuffer[frame]->size()) {
         _materialCountBuffer[frame] = _engine->device().resizeBuffer(_materialCountBuffer[frame], _materialCounts.size() * sizeof(MaterialCount));
-        std::string debugLabel = "MaterialCountBuffer: " + std::to_string(frame);
-        _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_materialCountBuffer[frame]->buffer(), debugLabel);
     }
     if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame]->size()) {
         _lightBuffer[frame] = _engine->device().resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(Light::Data) * 2);
-        std::string debugLabel = "LightBuffer: " + std::to_string(frame);
-        _engine->device().context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)_lightBuffer[frame]->buffer(), debugLabel);
     }
 
     // update transforms

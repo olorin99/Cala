@@ -76,7 +76,11 @@ cala::backend::vulkan::Image::View &cala::backend::vulkan::Image::View::operator
 
 void cala::backend::vulkan::Image::_data(cala::backend::vulkan::Device& driver, DataInfo info, std::span<u8> data) {
 
-    auto staging = driver.stagingBuffer(info.width * info.height * info.depth * info.format);
+    auto staging = driver.createBuffer({
+        .size = info.width * info.height * info.depth * info.format,
+        .usage = BufferUsage::TRANSFER_SRC,
+        .memoryType = MemoryProperties::STAGING
+    });
     staging->data(data);
     driver.immediate([&](CommandHandle buffer) {
         VkImageSubresourceRange range;

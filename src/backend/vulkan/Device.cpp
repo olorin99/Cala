@@ -139,12 +139,15 @@ std::expected<std::unique_ptr<cala::backend::vulkan::Device>, cala::backend::Err
     if (device->context().getSupportedExtensions().AMD_buffer_marker && device->context().getSupportedExtensions().AMD_device_coherent_memory) {
         u32 i = 0;
         for (auto& buffer : device->_markerBuffer) {
-            buffer = device->createBuffer(sizeof(u32) * 1000, BufferUsage::TRANSFER_DST, MemoryProperties::READBACK, true, {
-                    .requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-                    .preferredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT
+            buffer = device->createBuffer({
+                .size = sizeof(u32) * 1000,
+                .usage = BufferUsage::TRANSFER_DST,
+                .memoryType = MemoryProperties::READBACK,
+                .persistentlyMapped = true,
+                .requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                .preferredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+                .name = "MarkerBuffer: " + std::to_string(i++)
             });
-            std::string debugLabel = "MarkerBuffer: " + std::to_string(i++);
-            device->context().setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)buffer->buffer(), debugLabel);
         }
     }
 #endif
@@ -369,11 +372,6 @@ bool cala::backend::vulkan::Device::wait(u64 timeout) {
     return VK_SUCCESS == vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS));
 }
 
-cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::stagingBuffer(u32 size) {
-    return createBuffer(size, BufferUsage::TRANSFER_SRC, MemoryProperties::STAGING);
-}
-
-
 cala::backend::vulkan::CommandHandle cala::backend::vulkan::Device::beginSingleTimeCommands(QueueType queueType) {
 
     auto buffer = getCommandBuffer(frameIndex(), queueType);
@@ -506,38 +504,38 @@ bool cala::backend::vulkan::Device::gc() {
     return true;
 }
 
-cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(u32 size, BufferUsage usage, backend::MemoryProperties flags, bool persistentlyMapped, ExtraInfo extraInfo) {
+cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(cala::backend::vulkan::Device::BufferInfo info) {
 //    u32 index = 0;
-    usage = usage | BufferUsage::TRANSFER_DST | BufferUsage::TRANSFER_SRC | BufferUsage::STORAGE | BufferUsage::DEVICE_ADDRESS;
+    info.usage = info.usage | BufferUsage::TRANSFER_DST | BufferUsage::TRANSFER_SRC | BufferUsage::STORAGE | BufferUsage::DEVICE_ADDRESS;
 
     VkBuffer buffer;
     VmaAllocation allocation;
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = getBufferUsage(usage);
+    bufferInfo.size = info.size;
+    bufferInfo.usage = getBufferUsage(info.usage);
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VmaAllocationCreateInfo allocInfo{};
     allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 //    allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-    allocInfo.requiredFlags = extraInfo.requiredFlags;
-    allocInfo.preferredFlags = extraInfo.preferredFlags;
+    allocInfo.requiredFlags = info.requiredFlags;
+    allocInfo.preferredFlags = info.preferredFlags;
 
-    if ((flags & MemoryProperties::DEVICE) == MemoryProperties::DEVICE) {
+    if ((info.memoryType & MemoryProperties::DEVICE) == MemoryProperties::DEVICE) {
 //        allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-        persistentlyMapped = false;
+        info.persistentlyMapped = false;
     }
-    if ((flags & MemoryProperties::STAGING) == MemoryProperties::STAGING) {
+    if ((info.memoryType & MemoryProperties::STAGING) == MemoryProperties::STAGING) {
         allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     }
-    if ((flags & MemoryProperties::READBACK) == MemoryProperties::READBACK) {
+    if ((info.memoryType & MemoryProperties::READBACK) == MemoryProperties::READBACK) {
         allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
     }
 
     VK_TRY(vmaCreateBuffer(context().allocator(), &bufferInfo, &allocInfo, &buffer, &allocation, nullptr));
 
-    _totalAllocated += size;
+    _totalAllocated += info.size;
 
     i32 index = _bufferList.insert(this);
 
@@ -549,25 +547,34 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::createBuffer(
         _bufferList.getResource(index)->_address = vkGetBufferDeviceAddress(_context.device(), &deviceAddressInfo);
     }
     _bufferList.getResource(index)->_allocation = allocation;
-    _bufferList.getResource(index)->_size = size;
-    _bufferList.getResource(index)->_usage = usage;
-    _bufferList.getResource(index)->_flags = flags;
-    if (persistentlyMapped)
+    _bufferList.getResource(index)->_size = info.size;
+    _bufferList.getResource(index)->_usage = info.usage;
+    _bufferList.getResource(index)->_flags = info.memoryType;
+    if (info.persistentlyMapped)
         _bufferList.getResource(index)->_mapped = _bufferList.getResource(index)->map();
 
 
-    _bytesAllocatedPerFrame += size;
+    _bytesAllocatedPerFrame += info.size;
 
     updateBindlessBuffer(index);
 
-    _context.setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)buffer, "Buffer: " + std::to_string(index));
+    if (info.name.empty())
+        _context.setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)buffer, "Buffer: " + std::to_string(index));
+    else
+        _context.setDebugName(VK_OBJECT_TYPE_BUFFER, (u64)buffer, info.name);
 
     return _bufferList.getHandle(this, index);
 }
 
 cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::resizeBuffer(BufferHandle handle, u32 size, bool transfer) {
     assert(handle);
-    auto newHandle = createBuffer(size, handle->usage(), handle->flags(), handle->persistentlyMapped());
+    auto newHandle = createBuffer({
+        .size = size,
+        .usage = handle->usage(),
+        .memoryType = handle->flags(),
+        .persistentlyMapped = handle->persistentlyMapped(),
+        .name = handle->debugName()
+    });
     assert(newHandle);
     if (transfer) {
         immediate([&](backend::vulkan::CommandHandle cmd) {
@@ -578,7 +585,6 @@ cala::backend::vulkan::BufferHandle cala::backend::vulkan::Device::resizeBuffer(
             vkCmdCopyBuffer(cmd->buffer(), handle->buffer(), newHandle->buffer(), 1, &bufferCopy);
         });
     }
-//    destroyBuffer(handle);
     return newHandle;
 }
 
@@ -660,7 +666,13 @@ cala::backend::vulkan::ImageHandle cala::backend::vulkan::Device::createImage(Im
 
     _bytesAllocatedPerFrame += (info.width * info.height * info.depth * formatToSize(info.format));
 
-    _context.setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)image, "Image: " + std::to_string(index));
+    if (info.name.empty()) {
+        context().setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)image, "Image: " + std::to_string(index));
+        context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_imageList.getResource(index)->_defaultView.view, "ImageView: " + std::to_string(index));
+    } else {
+        _context.setDebugName(VK_OBJECT_TYPE_IMAGE, (u64)image, info.name);
+        context().setDebugName(VK_OBJECT_TYPE_IMAGE_VIEW, (u64)_imageList.getResource(index)->_defaultView.view, info.name + "_View");
+    }
 
     return _imageList.getHandle(this, index);
 }
