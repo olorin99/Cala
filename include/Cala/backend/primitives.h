@@ -21,7 +21,9 @@ namespace cala::backend {
 
         INVALID_GPU = -8,
         INVALID_COMMAND_BUFFER = -9,
-        INVALID_SURFACE = -10
+        INVALID_SURFACE = -10,
+        INVALID_PLATFORM = -11,
+        INVALID_SWAPCHAIN = -12
     };
 
     enum class PhysicalDeviceType {

@@ -58,38 +58,73 @@ VkExtent2D getExtent(const VkSurfaceCapabilitiesKHR& capabilities, u32 width, u3
     return extent;
 }
 
-cala::backend::vulkan::Swapchain::Swapchain(Device &driver, Platform& platform, bool clear)
-    : _driver(driver),
-    _swapchain(VK_NULL_HANDLE),
-    _frame(0),
-    _mode(PresentMode::MAILBOX)
-{
-    _surface = platform.surface(_driver.context().instance());
-//    VkBool32 supported = VK_FALSE;
-    u32 index = 0;
-    _driver.context().queueIndex(index, QueueType::GRAPHICS);
-//    vkGetPhysicalDeviceSurfaceSupportKHR(_device.context().physicalDevice(), index, _surface, &supported);
-    auto windowSize = platform.windowSize();
-    _extent = { windowSize.first, windowSize.second };
+std::expected<cala::backend::vulkan::Swapchain, cala::backend::Error> cala::backend::vulkan::Swapchain::create(cala::backend::vulkan::Device* device, cala::backend::vulkan::Swapchain::Info info) {
+    Swapchain swapchain = {};
 
-    //TODO: get better error handling
-    if (!createSwapchain()) throw std::runtime_error("Unable to create swapchain");
-    if (!createImageViews()) throw std::runtime_error("Unable to create swapchains image views");
-    if (!createSemaphores()) throw std::runtime_error("Unable to create swapchains semaphores");
+    if (!info.platform || !device)
+        return std::unexpected(Error::INVALID_PLATFORM);
+
+    swapchain._device = device;
+
+    swapchain._surface = info.platform->surface(device->context().instance());
+    auto windowSize = info.platform->windowSize();
+    swapchain._extent = { windowSize.first, windowSize.second };
+
+    auto createSwapchainResult = swapchain.createSwapchain();
+    if (!createSwapchainResult)
+        return std::unexpected(createSwapchainResult.error());
+    auto createImageViewsResult = swapchain.createImageViews();
+    if (!createImageViewsResult)
+        return std::unexpected(Error::INVALID_SWAPCHAIN);
+    if (!swapchain.createSemaphores())
+        return std::unexpected(Error::INVALID_SWAPCHAIN);
+
+    return swapchain;
 }
 
 cala::backend::vulkan::Swapchain::~Swapchain() {
+    if (!_device)
+        return;
 
     for (auto& view : _imageViews)
-        vkDestroyImageView(_driver.context().device(), view, nullptr);
+        vkDestroyImageView(_device->context().device(), view, nullptr);
 
     if (_surface != VK_NULL_HANDLE) {
-        vkDestroySwapchainKHR(_driver.context().device(), _swapchain, nullptr);
-        vkDestroySurfaceKHR(_driver.context().instance(), _surface, nullptr);
+        vkDestroySwapchainKHR(_device->context().device(), _swapchain, nullptr);
+        vkDestroySurfaceKHR(_device->context().instance(), _surface, nullptr);
     } else {
         for (u32 i = 0; i < _images.size(); i++)
-            vmaDestroyImage(_driver.context().allocator(), _images[i], _allocations[i]);
+            vmaDestroyImage(_device->context().allocator(), _images[i], _allocations[i]);
     }
+}
+
+cala::backend::vulkan::Swapchain::Swapchain(cala::backend::vulkan::Swapchain &&rhs) noexcept {
+    std::swap(_device, rhs._device);
+    std::swap(_surface, rhs._surface);
+    std::swap(_swapchain, rhs._swapchain);
+    std::swap(_format, rhs._format);
+    std::swap(_mode, rhs._mode);
+    std::swap(_extent, rhs._extent);
+    std::swap(_frame, rhs._frame);
+    std::swap(_images, rhs._images);
+    std::swap(_imageViews, rhs._imageViews);
+    std::swap(_semaphores, rhs._semaphores);
+    std::swap(_allocations, rhs._allocations);
+}
+
+cala::backend::vulkan::Swapchain &cala::backend::vulkan::Swapchain::operator==(cala::backend::vulkan::Swapchain &&rhs) noexcept {
+    std::swap(_device, rhs._device);
+    std::swap(_surface, rhs._surface);
+    std::swap(_swapchain, rhs._swapchain);
+    std::swap(_format, rhs._format);
+    std::swap(_mode, rhs._mode);
+    std::swap(_extent, rhs._extent);
+    std::swap(_frame, rhs._frame);
+    std::swap(_images, rhs._images);
+    std::swap(_imageViews, rhs._imageViews);
+    std::swap(_semaphores, rhs._semaphores);
+    std::swap(_allocations, rhs._allocations);
+    return *this;
 }
 
 
@@ -98,7 +133,7 @@ std::expected<cala::backend::vulkan::Swapchain::Frame, cala::backend::Error> cal
     _semaphores.pop_back();
     u32 index = 0;
     if (_surface != VK_NULL_HANDLE) {
-        VkResult result = vkAcquireNextImageKHR(_driver.context().device(), _swapchain, std::numeric_limits<u64>::max(), semaphorePair.acquire.semaphore(), VK_NULL_HANDLE, &index);
+        VkResult result = vkAcquireNextImageKHR(_device->context().device(), _swapchain, std::numeric_limits<u64>::max(), semaphorePair.acquire.semaphore(), VK_NULL_HANDLE, &index);
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
             resize(_extent.width, _extent.height);
         } else if (result == VK_ERROR_DEVICE_LOST)
@@ -127,7 +162,7 @@ std::expected<bool, cala::backend::Error> cala::backend::vulkan::Swapchain::pres
         presentInfo.pImageIndices = &frame.index;
         presentInfo.pResults = nullptr;
 
-        auto res = vkQueuePresentKHR(_driver.context().getQueue(QueueType::PRESENT), &presentInfo);
+        auto res = vkQueuePresentKHR(_device->context().getQueue(QueueType::PRESENT), &presentInfo);
         if (res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR) {
             return std::unexpected(static_cast<Error>(res));
         }
@@ -138,7 +173,7 @@ std::expected<bool, cala::backend::Error> cala::backend::vulkan::Swapchain::pres
 
 bool cala::backend::vulkan::Swapchain::resize(u32 width, u32 height) {
     for (auto& view : _imageViews)
-        vkDestroyImageView(_driver.context().device(), view, nullptr);
+        vkDestroyImageView(_device->context().device(), view, nullptr);
 
     _extent = { width, height };
 
@@ -228,12 +263,12 @@ void cala::backend::vulkan::Swapchain::copyImageToFrame(u32 index, CommandHandle
 
     VkImageCopy region{};
 
-    region.dstSubresource.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    region.dstSubresource.aspectMask = _format == _device->context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     region.dstSubresource.mipLevel = 0;
     region.dstSubresource.baseArrayLayer = 0;
     region.dstSubresource.layerCount = 1;
 
-    region.srcSubresource.aspectMask = src.format() == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    region.srcSubresource.aspectMask = src.format() == _device->context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     region.srcSubresource.mipLevel = 0;
     region.srcSubresource.baseArrayLayer = 0;
     region.srcSubresource.layerCount = 1;
@@ -260,12 +295,12 @@ void cala::backend::vulkan::Swapchain::copyFrameToImage(u32 index, cala::backend
 
     VkImageCopy region{};
 
-    region.srcSubresource.aspectMask = _format == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    region.srcSubresource.aspectMask = _format == _device->context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     region.srcSubresource.mipLevel = 0;
     region.srcSubresource.baseArrayLayer = 0;
     region.srcSubresource.layerCount = 1;
 
-    region.dstSubresource.aspectMask = dst.format() == _driver.context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    region.dstSubresource.aspectMask = dst.format() == _device->context().depthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     region.dstSubresource.mipLevel = 0;
     region.dstSubresource.baseArrayLayer = 0;
     region.dstSubresource.layerCount = 1;
@@ -279,7 +314,7 @@ void cala::backend::vulkan::Swapchain::copyFrameToImage(u32 index, cala::backend
 }
 
 void cala::backend::vulkan::Swapchain::copyFrameToImage(u32 index, cala::backend::vulkan::Image &dst) {
-    _driver.immediate([&](CommandHandle cmd) {
+    _device->immediate([&](CommandHandle cmd) {
         copyFrameToImage(index, cmd, dst);
     });
 }
@@ -290,11 +325,11 @@ void cala::backend::vulkan::Swapchain::setPresentMode(cala::backend::PresentMode
 }
 
 
-bool cala::backend::vulkan::Swapchain::createSwapchain() {
+std::expected<void, cala::backend::Error> cala::backend::vulkan::Swapchain::createSwapchain() {
     if (_surface != VK_NULL_HANDLE) {
-        VkSurfaceCapabilitiesKHR capabilities = getCapabilities(_driver.context().physicalDevice(), _surface);
-        VkSurfaceFormatKHR format = getSurfaceFormat(_driver.context().physicalDevice(), _surface);
-        VkPresentModeKHR mode = getValidPresentMode(_driver.context().physicalDevice(), _surface, backend::vulkan::getPresentMode(_mode));
+        VkSurfaceCapabilitiesKHR capabilities = getCapabilities(_device->context().physicalDevice(), _surface);
+        VkSurfaceFormatKHR format = getSurfaceFormat(_device->context().physicalDevice(), _surface);
+        VkPresentModeKHR mode = getValidPresentMode(_device->context().physicalDevice(), _surface, backend::vulkan::getPresentMode(_mode));
         VkExtent2D extent = getExtent(capabilities, _extent.width, _extent.height);
 
         u32 imageCount = capabilities.minImageCount + 1;
@@ -324,18 +359,19 @@ bool cala::backend::vulkan::Swapchain::createSwapchain() {
 
         VkSwapchainKHR oldSwap = _swapchain;
 
-        VkResult result = vkCreateSwapchainKHR(_driver.context().device(), &createInfo, nullptr, &_swapchain);
+        VkResult result = vkCreateSwapchainKHR(_device->context().device(), &createInfo, nullptr, &_swapchain);
+        if (result != VK_SUCCESS)
+            return std::unexpected(static_cast<Error>(result));
 
         u32 count = 0;
-        vkGetSwapchainImagesKHR(_driver.context().device(), _swapchain, &count, nullptr);
+        vkGetSwapchainImagesKHR(_device->context().device(), _swapchain, &count, nullptr);
         _images.resize(count);
-        vkGetSwapchainImagesKHR(_driver.context().device(), _swapchain, &count, _images.data());
+        vkGetSwapchainImagesKHR(_device->context().device(), _swapchain, &count, _images.data());
 
-        vkDestroySwapchainKHR(_driver.context().device(), oldSwap, nullptr);
+        vkDestroySwapchainKHR(_device->context().device(), oldSwap, nullptr);
 
         _extent = extent;
         _format = static_cast<Format>(format.format);
-        return result == VK_SUCCESS;
     } else {
         u32 imageCount = 2;
         _images.resize(imageCount);
@@ -365,16 +401,16 @@ bool cala::backend::vulkan::Swapchain::createSwapchain() {
             allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
             allocInfo.flags = 0;
 
-            res = vmaCreateImage(_driver.context().allocator(), &imageInfo, &allocInfo, &_images[i], &_allocations[i], nullptr);
+            res = vmaCreateImage(_device->context().allocator(), &imageInfo, &allocInfo, &_images[i], &_allocations[i], nullptr);
             if (res != VK_SUCCESS)
-                return false;
+                return std::unexpected(static_cast<Error>(res));
             _format = Format::RGBA8_UNORM;
         }
     }
-    return true;
+    return {};
 }
 
-bool cala::backend::vulkan::Swapchain::createImageViews() {
+std::expected<void, cala::backend::Error> cala::backend::vulkan::Swapchain::createImageViews() {
     _imageViews.resize(_images.size());
     for (u32 i = 0; i < _imageViews.size(); i++) {
         VkImageViewCreateInfo createInfo{};
@@ -395,10 +431,11 @@ bool cala::backend::vulkan::Swapchain::createImageViews() {
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(_driver.context().device(), &createInfo, nullptr, &_imageViews[i]) != VK_SUCCESS)
-            return false;
+        auto result = vkCreateImageView(_device->context().device(), &createInfo, nullptr, &_imageViews[i]);
+        if (result != VK_SUCCESS)
+            return std::unexpected(static_cast<Error>(result));
     }
-    return true;
+    return {};
 }
 
 bool cala::backend::vulkan::Swapchain::createSemaphores() {
@@ -410,7 +447,7 @@ bool cala::backend::vulkan::Swapchain::createSemaphores() {
         createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
         for (u32 i = 0; i < _imageViews.size(); i++) {
-            _semaphores.push_back({{&_driver}, {&_driver}});
+            _semaphores.push_back({{_device}, {_device}});
         }
     } else {
         _semaphores.push_back({{nullptr}, {nullptr}});

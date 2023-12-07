@@ -16,9 +16,20 @@ namespace cala::backend::vulkan {
     class Swapchain {
     public:
 
-        Swapchain(Device& driver, Platform& platform, bool clear = true);
+        struct Info {
+            Platform* platform = nullptr;
+            std::string name = {};
+        };
+
+        static std::expected<Swapchain, Error> create(Device* device, Info info);
+
+        Swapchain() = default;
 
         ~Swapchain();
+
+        Swapchain(Swapchain&& rhs) noexcept;
+
+        Swapchain& operator==(Swapchain&& rhs) noexcept;
 
         struct SemaphorePair {
             Semaphore acquire;
@@ -58,26 +69,26 @@ namespace cala::backend::vulkan {
 
     private:
 
-        bool createSwapchain();
+        std::expected<void, Error> createSwapchain();
 
-        bool createImageViews();
+        std::expected<void, Error> createImageViews();
 
         bool createSemaphores();
 
 
-        Device& _driver;
+        Device* _device = nullptr;
 
-        VkSurfaceKHR _surface;
-        VkSwapchainKHR _swapchain;
-        Format _format;
-        PresentMode _mode;
-        VkExtent2D _extent;
-        u64 _frame;
+        VkSurfaceKHR _surface = VK_NULL_HANDLE;
+        VkSwapchainKHR _swapchain = VK_NULL_HANDLE;
+        Format _format = Format::UNDEFINED;
+        PresentMode _mode = PresentMode::FIFO;
+        VkExtent2D _extent = {};
+        u64 _frame = 0;
 
-        std::vector<VkImage> _images;
-        std::vector<VkImageView> _imageViews;
-        std::vector<SemaphorePair> _semaphores;
-        std::vector<VmaAllocation> _allocations;
+        std::vector<VkImage> _images = {};
+        std::vector<VkImageView> _imageViews = {};
+        std::vector<SemaphorePair> _semaphores = {};
+        std::vector<VmaAllocation> _allocations = {};
 
     };
 

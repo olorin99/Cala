@@ -76,7 +76,12 @@ int main() {
     SDLPlatform platform("hello_triangle", 1920, 1080);
 
     Engine engine(platform);
-    backend::vulkan::Swapchain swapchain(engine.device(), platform);
+    auto swapchainResult = Swapchain::create(&engine.device(), {
+        .platform = &platform
+    });
+    if (!swapchainResult)
+        return -10;
+    auto swapchain = std::move(swapchainResult.value());
     Renderer renderer(&engine, {});
     swapchain.setPresentMode(backend::PresentMode::FIFO);
 
