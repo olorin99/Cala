@@ -3,9 +3,9 @@
 
 #include <vector>
 #include <Cala/vulkan/primitives.h>
-#include "volk/volk.h"
+#include <volk/volk.h>
 #include <string>
-#include "ShaderModuleInterface.h"
+#include <Cala/vulkan/ShaderModuleInterface.h>
 
 namespace cala::vk {
 

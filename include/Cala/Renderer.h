@@ -7,7 +7,7 @@
 #include <Cala/vulkan/Timer.h>
 #include <Cala/RenderGraph.h>
 
-#include "shaderBridge.h"
+#include <Cala/shaderBridge.h>
 
 class ImGuiContext;
 

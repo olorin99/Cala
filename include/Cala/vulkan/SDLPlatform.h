@@ -1,10 +1,10 @@
 #ifndef CALA_SDLPLATFORM_H
 #define CALA_SDLPLATFORM_H
 
-#include "Ende/include/Ende/platform.h"
+#include <Ende/platform.h>
 #include <SDL2/SDL.h>
-#include "volk/volk.h"
-#include "Platform.h"
+#include <volk/volk.h>
+#include <Cala/vulkan/Platform.h>
 
 namespace cala::vk {
 

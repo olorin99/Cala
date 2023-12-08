@@ -1,8 +1,8 @@
 #ifndef CALA_SAMPLER_H
 #define CALA_SAMPLER_H
 
-#include "Ende/include/Ende/platform.h"
-#include "volk/volk.h"
+#include <Ende/platform.h>
+#include <volk/volk.h>
 
 namespace cala::vk {
 

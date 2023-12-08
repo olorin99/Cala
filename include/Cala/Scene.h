@@ -9,6 +9,7 @@
 #include <Cala/Model.h>
 #include <Cala/Light.h>
 #include <Cala/Engine.h>
+#include <Cala/shaderBridge.h>
 
 namespace cala {
 
@@ -46,18 +47,9 @@ namespace cala {
         bool _hdrSkyLight;
         u32 _skyLight;
 
-        struct MeshData {
-            u32 firstIndex;
-            u32 indexCount;
-            u32 materialID;
-            u32 materialOffset;
-            ende::math::Vec4f min;
-            ende::math::Vec4f max;
-        };
-        std::vector<MeshData> _meshData;
+        std::vector<GPUMesh> _meshData;
         std::vector<ende::math::Mat4f> _meshTransforms;
-        std::vector<Light::Data> _lightData;
-
+        std::vector<GPULight> _lightData;
 
         std::vector<Mesh> _meshes;
         std::vector<std::pair<i32, Light>> _lights;

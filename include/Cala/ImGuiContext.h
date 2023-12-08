@@ -2,7 +2,6 @@
 #define CALA_IMGUICONTEXT_H
 
 #include <backends/imgui_impl_sdl2.h>
-
 #include <Cala/vulkan/RenderPass.h>
 #include <Cala/vulkan/Device.h>
 

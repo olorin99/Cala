@@ -111,28 +111,6 @@ void cala::vk::Buffer::_data(u8, std::span<const u8> data, u32 offset) {
     _device->increaseDataUploadCount(data.size());
 }
 
-cala::vk::Buffer::View::View()
-    : _parent(nullptr),
-    _size(0),
-    _offset(0)
-{}
-
-cala::vk::Buffer::View::View(cala::vk::Buffer &buffer)
-    : _parent(&buffer),
-      _size(buffer.size()),
-      _offset(0)
-{}
-
-cala::vk::Buffer::View::View(cala::vk::Buffer &buffer, u32 size, u32 offset)
-    : _parent(&buffer),
-      _size(size),
-      _offset(offset)
-{}
-
-cala::vk::Buffer::Mapped cala::vk::Buffer::View::map(u32 offset, u32 size) {
-    return _parent->map(_offset + offset, _size + size);
-}
-
 cala::vk::Buffer::Barrier cala::vk::Buffer::barrier(PipelineStage srcStage, PipelineStage dstStage, Access dstAccess) {
     Barrier b{};
     b.srcStage = srcStage;

@@ -26,7 +26,7 @@ layout (push_constant) uniform PushData {
 #include "shaderBridge.h"
 
 void genLine(int index) {
-    CameraData camera = globalData.cameraBuffer.camera;
+    GPUCamera camera = globalData.cameraBuffer.camera;
 
     vec3 normal = gsIn[index].TBN[2];
     vec4 N = camera.projection * camera.view * vec4(normal * length, 0.0);

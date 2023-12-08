@@ -17,7 +17,7 @@ layout (set = 1, binding = 1) uniform sampler2D depthMap;
 
 void main() {
 
-    CameraData camera = globalData.cameraBuffer.camera;
+    GPUCamera camera = globalData.cameraBuffer.camera;
 
     const float maxLightCount = 250;
 

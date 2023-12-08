@@ -1,8 +1,8 @@
 #ifndef CALA_PIPELINELAYOUT_H
 #define CALA_PIPELINELAYOUT_H
 
-#include "volk/volk.h"
-#include "ShaderInterface.h"
+#include <volk/volk.h>
+#include <Cala/vulkan/ShaderInterface.h>
 
 namespace cala::vk {
 

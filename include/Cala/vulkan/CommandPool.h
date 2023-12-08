@@ -1,8 +1,8 @@
 #ifndef CALA_COMMANDPOOL_H
 #define CALA_COMMANDPOOL_H
 
-#include "CommandBuffer.h"
-#include "Handle.h"
+#include <Cala/vulkan/CommandBuffer.h>
+#include <Cala/vulkan/Handle.h>
 
 namespace cala::vk {
 

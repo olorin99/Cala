@@ -37,8 +37,8 @@ cala::Light &cala::Light::operator=(const cala::Light &rhs) {
 
 
 
-cala::Light::Data cala::Light::data() const {
-    Data data {
+GPULight cala::Light::data() const {
+    GPULight data {
         {0, 0, 0},
         _type,
         _colour,

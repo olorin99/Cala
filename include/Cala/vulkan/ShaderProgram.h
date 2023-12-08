@@ -1,14 +1,14 @@
 #ifndef CALA_SHADERPROGRAM_H
 #define CALA_SHADERPROGRAM_H
 
-#include "volk/volk.h"
-#include "ShaderInterface.h"
-#include "ShaderModule.h"
+#include <volk/volk.h>
+#include <Cala/vulkan/ShaderInterface.h>
+#include <Cala/vulkan/ShaderModule.h>
 #include <Cala/vulkan/primitives.h>
 #include <vector>
-#include "Handle.h"
+#include <Cala/vulkan/Handle.h>
 #include <filesystem>
-#include "PipelineLayout.h"
+#include <Cala/vulkan/PipelineLayout.h>
 
 namespace cala::vk {
 

@@ -35,7 +35,7 @@ layout (set = CALA_MATERIAL_SET, binding = CALA_MATERIAL_BINDING) readonly buffe
 
 void main() {
     GPUMesh mesh = globalData.meshBuffer.meshData[fsIn.drawID];
-    MaterialData materialData = materials[mesh.materialInstanceIndex];
+    MaterialData materialData = materials[mesh.materialIndex];
     Material material = loadMaterial(materialData);
     FragColour = evalMaterial(material);
 }

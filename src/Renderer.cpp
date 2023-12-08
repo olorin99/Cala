@@ -22,7 +22,7 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
 
     for (auto& buffer : _cameraBuffer) {
         buffer = engine->device().createBuffer({
-            .size = sizeof(Camera::Data) * 10,
+            .size = sizeof(GPUCamera) * 10,
             .usage = vk::BufferUsage::UNIFORM,
             .memoryType = vk::MemoryProperties::DEVICE,
             .name = "CameraBuffer: " + std::to_string(_engine->device().frameIndex())
@@ -113,8 +113,8 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         _cullingFrustum = camera.frustum();
         _frustumCorners = camera.getFrustumCorners();
     }
-    if ((scene._lights.size() + 1) * sizeof(Camera::Data) > _cameraBuffer[_engine->device().frameIndex()]->size()) {
-        _cameraBuffer[_engine->device().frameIndex()] = _engine->device().resizeBuffer(_cameraBuffer[_engine->device().frameIndex()], (scene._lights.size() + 1) * sizeof(Camera::Data));
+    if ((scene._lights.size() + 1) * sizeof(GPUCamera) > _cameraBuffer[_engine->device().frameIndex()]->size()) {
+        _cameraBuffer[_engine->device().frameIndex()] = _engine->device().resizeBuffer(_cameraBuffer[_engine->device().frameIndex()], (scene._lights.size() + 1) * sizeof(GPUCamera));
     }
 
 

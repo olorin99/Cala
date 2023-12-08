@@ -2,12 +2,12 @@
 #define CALA_SWAPCHAIN_H
 
 #include <expected>
-#include "Image.h"
-#include "RenderPass.h"
-#include "Framebuffer.h"
-#include "Platform.h"
-#include "Semaphore.h"
-#include "Handle.h"
+#include <Cala/vulkan/Image.h>
+#include <Cala/vulkan/RenderPass.h>
+#include <Cala/vulkan/Framebuffer.h>
+#include <Cala/vulkan/Platform.h>
+#include <Cala/vulkan/Semaphore.h>
+#include <Cala/vulkan/Handle.h>
 
 namespace cala::vk {
 

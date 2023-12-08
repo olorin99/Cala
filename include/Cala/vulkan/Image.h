@@ -1,14 +1,14 @@
 #ifndef CALA_IMAGE_H
 #define CALA_IMAGE_H
 
-#include "volk/volk.h"
-#include "Ende/include/Ende/platform.h"
+#include <volk/volk.h>
+#include <Ende/platform.h>
 #include <span>
 #include <string>
-#include "Handle.h"
+#include <Cala/vulkan/Handle.h>
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
-#include "vk_mem_alloc.h"
+#include <vk_mem_alloc.h>
 #include <Cala/vulkan/primitives.h>
 
 namespace cala::vk {
@@ -61,13 +61,10 @@ namespace cala::vk {
         void unmap();
 
         void copy(CommandHandle buffer, Buffer& dst, u32 dstOffset, u32 srcLayer = 0, u32 srcMipLevel = 0);
-
         void copy(CommandHandle buffer, Image& dst, u32 srcLayer = 0, u32 dstLayer = 0, u32 srcMipLevel = 0, u32 dstMipLevel = 0);
-
         void blit(CommandHandle buffer, Image& dst, ImageLayout srcLayout, ImageLayout dstLayout, VkFilter filter = VK_FILTER_NEAREST);
 
         void generateMips();
-
         void generateMips(CommandHandle cmd);
 
 
@@ -79,8 +76,6 @@ namespace cala::vk {
 
             View(View&& rhs) noexcept;
             View& operator=(View&& rhs) noexcept;
-//            View(const View&) = delete;
-//            View& operator=(const View&) = delete;
 
             Image* parent() const { return _image; }
         private:
@@ -91,10 +86,7 @@ namespace cala::vk {
         };
 
         View newView(u32 mipLevel = 0, u32 levelCount = 1, u32 arrayLayer = 0, u32 layerCount = 0, ImageViewType viewType = ImageViewType::AUTO, Format format = Format::UNDEFINED);
-
         View& defaultView() { return _defaultView; }
-
-//        VkImageMemoryBarrier barrier(Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer = 0);
 
         struct Barrier {
             Image* image;
@@ -108,7 +100,6 @@ namespace cala::vk {
         };
 
         Barrier barrier(PipelineStage srcStage, PipelineStage dstStage, Access srcAccess, Access dstAccess, ImageLayout dstLayout, u32 layer = 0);
-
         Barrier barrier(PipelineStage srcStage, PipelineStage dstStage, Access srcAccess, Access dstAccess, ImageLayout srcLayout, ImageLayout dstLayout, u32 layer = 0);
 
         void setLayout(VkImageLayout layout);

@@ -1,8 +1,8 @@
 #ifndef CALA_OFFLINEPLATFORM_H
 #define CALA_OFFLINEPLATFORM_H
 
-#include "volk/volk.h"
-#include "Platform.h"
+#include <volk/volk.h>
+#include <Cala/vulkan/Platform.h>
 
 namespace cala::vk {
 

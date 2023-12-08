@@ -1,7 +1,7 @@
 #ifndef CALA_HANDLE_H
 #define CALA_HANDLE_H
 
-#include "Ende/include/Ende/platform.h"
+#include <Ende/platform.h>
 #include <functional>
 
 #include <cstdio>

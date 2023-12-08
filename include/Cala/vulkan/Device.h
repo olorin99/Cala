@@ -1,14 +1,14 @@
 #ifndef CALA_DEVICE_H
 #define CALA_DEVICE_H
 
-#include "Context.h"
-#include "Swapchain.h"
-#include "CommandBuffer.h"
-#include "CommandPool.h"
-#include "Semaphore.h"
-#include "Platform.h"
-#include "Handle.h"
-#include "Ende/include/Ende/time/StopWatch.h"
+#include <Cala/vulkan/Context.h>
+#include <Cala/vulkan/Swapchain.h>
+#include <Cala/vulkan/CommandBuffer.h>
+#include <Cala/vulkan/CommandPool.h>
+#include <Cala/vulkan/Semaphore.h>
+#include <Cala/vulkan/Platform.h>
+#include <Cala/vulkan/Handle.h>
+#include <Ende/time/StopWatch.h>
 #include <spdlog/spdlog.h>
 
 namespace cala::ui {

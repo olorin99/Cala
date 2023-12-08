@@ -1,10 +1,10 @@
 #ifndef CALA_SHADERMODULEINTERFACE_H
 #define CALA_SHADERMODULEINTERFACE_H
 
-#include "Ende/include/Ende/platform.h"
+#include <Ende/platform.h>
 #include <Cala/vulkan/primitives.h>
 #include <span>
-#include "tsl/robin_map.h"
+#include <tsl/robin_map.h>
 
 namespace cala::vk {
 

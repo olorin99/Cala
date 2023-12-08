@@ -17,7 +17,7 @@ using ivec4 = ende::math::Vec<4, i32>;
 
 using vec2 = ende::math::Vec<2, f32>;
 using vec3 = ende::math::Vec<3, f32>;
-using vec4 = ende::math::Vec<3, f32>;
+using vec4 = ende::math::Vec<4, f32>;
 
 using mat2 = ende::math::Mat<2, f32>;
 using mat3 = ende::math::Mat<3, f32>;
@@ -27,8 +27,8 @@ using mat4 = ende::math::Mat<4, f32>;
 struct GPUMesh {
     uint firstIndex;
     uint indexCount;
+    uint materialID;
     uint materialIndex;
-    uint materialInstanceIndex;
     vec4 min;
     vec4 max;
 };
@@ -49,7 +49,7 @@ layout (std430, buffer_reference, buffer_reference_align = 8) readonly buffer Tr
 #define TransformsBuffer u64
 #endif
 
-struct CameraData {
+struct GPUCamera {
     mat4 projection;
     mat4 view;
     vec3 position;
@@ -62,7 +62,7 @@ struct CameraData {
 
 #ifndef __cplusplus
 layout (scalar, buffer_reference, buffer_reference_align = 8) readonly buffer CameraBuffer {
-    CameraData camera;
+    GPUCamera camera;
 };
 #else
 #define CameraBuffer u64

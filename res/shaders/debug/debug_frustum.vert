@@ -38,6 +38,6 @@ void main() {
     uint index = cubeIndices[gl_VertexIndex];
     vec4 vertex = vertex[index];
 
-    CameraData camera = globalData.cameraBuffer.camera;
+    GPUCamera camera = globalData.cameraBuffer.camera;
     gl_Position = camera.projection * camera.view * vertex;
 }

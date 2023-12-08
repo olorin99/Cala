@@ -1,8 +1,8 @@
 #ifndef CALA_FRAMEBUFFER_H
 #define CALA_FRAMEBUFFER_H
 
-#include "volk/volk.h"
-#include "RenderPass.h"
+#include <volk/volk.h>
+#include <Cala/vulkan/RenderPass.h>
 
 namespace cala {
     class MaterialInstance;

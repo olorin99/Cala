@@ -49,7 +49,7 @@ vec3 directionalLight(GPULight light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0
     float shadow = 1.0;
 
     if (light.shadowIndex >= 0) {
-        CameraData shadowCamera = globalData.cameraBuffer[light.cameraIndex].camera;
+        GPUCamera shadowCamera = globalData.cameraBuffer[light.cameraIndex].camera;
 
         vec4 shadowPos = shadowCamera.projection * shadowCamera.view * vec4(fsIn.FragPos, 1.0);
         vec3 shadowCoords = vec3(shadowPos.xy * 0.5 + 0.5, shadowPos.z);

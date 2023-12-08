@@ -1,19 +1,19 @@
 #ifndef CALA_COMMANDBUFFER_H
 #define CALA_COMMANDBUFFER_H
 
-#include "volk/volk.h"
-#include "Handle.h"
-#include "ShaderProgram.h"
-#include "RenderPass.h"
-#include "Framebuffer.h"
-#include "Buffer.h"
-#include "Image.h"
-#include "Sampler.h"
-#include "Semaphore.h"
+#include <volk/volk.h>
+#include <Cala/vulkan/Handle.h>
+#include <Cala/vulkan/ShaderProgram.h>
+#include <Cala/vulkan/RenderPass.h>
+#include <Cala/vulkan/Framebuffer.h>
+#include <Cala/vulkan/Buffer.h>
+#include <Cala/vulkan/Image.h>
+#include <Cala/vulkan/Sampler.h>
+#include <Cala/vulkan/Semaphore.h>
 #include <cstring>
-#include "Ende/include/Ende/util/hash.h"
-#include "tsl/robin_map.h"
-#include "Ende/math/Vec.h"
+#include <Ende/util/hash.h>
+#include <tsl/robin_map.h>
+#include <Ende/math/Vec.h>
 
 namespace cala::vk {
 
@@ -32,11 +32,9 @@ namespace cala::vk {
 
         CommandBuffer& operator=(CommandBuffer&& rhs) noexcept;
 
-
         void setBuffer(VkCommandBuffer buffer) { _buffer = buffer; }
 
         VkCommandBuffer buffer() const { return _buffer; }
-
 
         bool begin();
 
@@ -48,9 +46,6 @@ namespace cala::vk {
         void end(RenderPass& renderPass);
         void end(Framebuffer& framebuffer);
 
-
-
-
         void bindProgram(const ShaderProgram& program);
 
         void bindAttributes(std::span<Attribute> attributes);
@@ -60,7 +55,6 @@ namespace cala::vk {
         void bindAttributeDescriptions(std::span<VkVertexInputAttributeDescription> attributes);
 
         void bindVertexArray(std::span<VkVertexInputBindingDescription> bindings, std::span<VkVertexInputAttributeDescription> attributes);
-
 
         void bindViewPort(const ViewPort& viewport);
 
@@ -89,9 +83,7 @@ namespace cala::vk {
         };
         void bindBlendState(BlendState state);
 
-
         void bindPipeline();
-
 
         void bindBuffer(u32 set, u32 binding, BufferHandle buffer, u32 offset, u32 range, bool storage = false);
         void bindBuffer(u32 set, u32 binding, BufferHandle buffer, bool storage = false);
@@ -112,24 +104,17 @@ namespace cala::vk {
         void bindVertexBuffer(u32 first, BufferHandle buffer, u32 offset = 0);
         void bindVertexBuffers(u32 first, std::span<VkBuffer> buffers, std::span<VkDeviceSize> offsets);
 
-//        void bindVertexBuffer(u32 first, BufferHandle buffer, u32 offset);
-
         void bindIndexBuffer(BufferHandle buffer, u32 offset = 0);
 
-
         void draw(u32 count, u32 instanceCount, u32 first, u32 firstInstance, bool indexed = true);
-
         void drawIndirect(BufferHandle buffer, u32 offset, u32 drawCount, u32 stride = 0);
-
         void drawIndirectCount(BufferHandle buffer, u32 bufferOffset, BufferHandle countBuffer, u32 countOffset, u32 stride = 0);
 
         void dispatchCompute(u32 x, u32 y, u32 z);
 
-
         void clearImage(ImageHandle image, const ende::math::Vec4f& clearValue = { 0.f, 0.f, 0.f, 0.f });
 
         void clearBuffer(BufferHandle buffer, u32 clearValue = 0);
-
 
         void pipelineBarrier(std::span<VkBufferMemoryBarrier2> bufferBarriers, std::span<VkImageMemoryBarrier2> imageBarriers);
 
@@ -161,7 +146,6 @@ namespace cala::vk {
         std::expected<bool, Error> submit(std::span<SemaphoreSubmit> waitSemaphores, std::span<SemaphoreSubmit> signalSemaphores, VkFence fence = VK_NULL_HANDLE);
 
         bool active() const { return _active; }
-
 
         u32 drawCalls() const { return _drawCallCount; }
 

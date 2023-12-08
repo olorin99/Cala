@@ -3,7 +3,7 @@
 
 #include <Cala/vulkan/primitives.h>
 #include <span>
-#include "volk/volk.h"
+#include <volk/volk.h>
 #include <string>
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
@@ -60,34 +60,6 @@ namespace cala::vk {
             _data(0, std::span<const u8>(reinterpret_cast<const u8*>(data.data()), data.size() * sizeof(T)), offset);
         }
 
-
-        class View {
-        public:
-            View();
-
-            View(Buffer& buffer);
-
-            View(Buffer& buffer, u32 size, u32 offset);
-
-            Mapped map(u32 offset = 0, u32 size = 0);
-
-            void data(std::span<const void> data, u32 offset = 0);
-
-            u32 size() const { return _size; }
-
-            u32 offset() const { return _offset; }
-
-            Buffer& buffer() const { return *_parent; }
-
-            explicit operator bool() const { return _parent != nullptr; }
-
-        private:
-            Buffer* _parent;
-            u32 _size;
-            u32 _offset;
-
-        };
-
         struct Barrier {
             Buffer* buffer;
             PipelineStage srcStage;
@@ -95,7 +67,6 @@ namespace cala::vk {
             Access srcAccess;
             Access dstAccess;
         };
-
         Barrier barrier(PipelineStage srcStage, PipelineStage dstStage, Access dstAccess);
 
         Barrier barrier(PipelineStage srcStage, PipelineStage dstStage, Access srcAccess, Access dstAccess);

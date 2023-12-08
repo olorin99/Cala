@@ -1,8 +1,8 @@
 #ifndef CALA_SEMAPHORE_H
 #define CALA_SEMAPHORE_H
 
-#include "Ende/include/Ende/platform.h"
-#include "volk/volk.h"
+#include <Ende/platform.h>
+#include <volk/volk.h>
 #include <expected>
 #include <Cala/vulkan/primitives.h>
 

@@ -5,6 +5,7 @@
 #include <Cala/Transform.h>
 #include <Cala/Camera.h>
 #include <Cala/vulkan/Handle.h>
+#include <Cala/shaderBridge.h>
 
 namespace cala {
 
@@ -21,19 +22,7 @@ namespace cala {
 
         Light& operator=(const Light& rhs);
 
-        struct Data {
-            ende::math::Vec3f position;
-            u32 type;
-            ende::math::Vec3f colour;
-            f32 intensity;
-            f32 range;
-            f32 radius;
-            f32 shadowBias;
-            i32 shadowIndex = -1;
-            i32 cameraIndex = -1;
-        };
-
-        Data data() const;
+        GPULight data() const;
 
         LightType type() const { return _type; }
 

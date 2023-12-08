@@ -1,8 +1,8 @@
 #ifndef CALA_PLATFORM_H
 #define CALA_PLATFORM_H
 
-#include "volk/volk.h"
-#include "Ende/include/Ende/platform.h"
+#include <volk/volk.h>
+#include <Ende/platform.h>
 #include <vector>
 
 namespace cala::vk {

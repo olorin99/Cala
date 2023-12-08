@@ -11,7 +11,7 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
 {
     for (u32 i = 0; i < vk::FRAMES_IN_FLIGHT; i++) {
         _meshDataBuffer[i] = engine->device().createBuffer({
-            .size = (u32)(count * sizeof(MeshData)),
+            .size = (u32)(count * sizeof(GPUMesh)),
             .usage = vk::BufferUsage::STORAGE,
             .memoryType = vk::MemoryProperties::DEVICE,
             .name = "MeshDataBuffer: " + std::to_string(i)
@@ -27,7 +27,7 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     }
     for (u32 i = 0; i < vk::FRAMES_IN_FLIGHT; i++) {
         _lightBuffer[i] = engine->device().createBuffer({
-            .size = (u32)(lightCount * sizeof(Light::Data)),
+            .size = (u32)(lightCount * sizeof(GPULight)),
             .usage = vk::BufferUsage::STORAGE,
             .memoryType = vk::MemoryProperties::DEVICE,
             .name = "LightBuffer: " + std::to_string(i)
@@ -99,8 +99,8 @@ void cala::Scene::prepare(cala::Camera& camera) {
 
     u32 meshCount = _meshData.size();
     // resize buffers to fit and update persistent mappings
-    if (meshCount * sizeof(MeshData) >= _meshDataBuffer[frame]->size()) {
-        _meshDataBuffer[frame] = _engine->device().resizeBuffer(_meshDataBuffer[frame], meshCount * sizeof(MeshData) * 2);
+    if (meshCount * sizeof(GPUMesh) >= _meshDataBuffer[frame]->size()) {
+        _meshDataBuffer[frame] = _engine->device().resizeBuffer(_meshDataBuffer[frame], meshCount * sizeof(GPUMesh) * 2);
     }
     if (meshCount * sizeof(ende::math::Mat4f) >= _meshTransformsBuffer[frame]->size()) {
         _meshTransformsBuffer[frame] = _engine->device().resizeBuffer(_meshTransformsBuffer[frame], meshCount * sizeof(ende::math::Mat4f) * 2);
@@ -108,17 +108,17 @@ void cala::Scene::prepare(cala::Camera& camera) {
     if (_materialCounts.size() * sizeof(MaterialCount) > _materialCountBuffer[frame]->size()) {
         _materialCountBuffer[frame] = _engine->device().resizeBuffer(_materialCountBuffer[frame], _materialCounts.size() * sizeof(MaterialCount));
     }
-    if (_lightData.size() * sizeof(Light::Data) >= _lightBuffer[frame]->size()) {
-        _lightBuffer[frame] = _engine->device().resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(Light::Data) * 2);
+    if (_lightData.size() * sizeof(GPULight) >= _lightBuffer[frame]->size()) {
+        _lightBuffer[frame] = _engine->device().resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(GPULight) * 2);
     }
 
     // update transforms
     traverseNode(_root.get(), _root->transform.local(), _meshTransforms);
 
-    _engine->stageData(_meshDataBuffer[frame], std::span<const u8>(reinterpret_cast<const u8*>(_meshData.data()), _meshData.size() * sizeof(MeshData)));
+    _engine->stageData(_meshDataBuffer[frame], std::span<const u8>(reinterpret_cast<const u8*>(_meshData.data()), _meshData.size() * sizeof(GPUMesh)));
     _engine->stageData(_meshTransformsBuffer[frame], std::span<const u8>(reinterpret_cast<const u8*>(_meshTransforms.data()), _meshTransforms.size() * sizeof(ende::math::Mat4f)));
 
-    std::sort(_lightData.begin(), _lightData.end(), [](const Light::Data& lhs, const Light::Data& rhs) {
+    std::sort(_lightData.begin(), _lightData.end(), [](const GPULight& lhs, const GPULight& rhs) {
         return lhs.type < rhs.type;
     });
     _lightData.clear();
@@ -128,7 +128,7 @@ void cala::Scene::prepare(cala::Camera& camera) {
         data.cameraIndex = lightIndex + 1;
         _lightData.push_back(data);
     }
-    _engine->stageData(_lightBuffer[frame], std::span<const u8>(reinterpret_cast<const u8*>(_lightData.data()), _lightData.size() * sizeof(Light::Data)));
+    _engine->stageData(_lightBuffer[frame], std::span<const u8>(reinterpret_cast<const u8*>(_lightData.data()), _lightData.size() * sizeof(GPULight)));
 
     u32 lightCount[2] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount) };
     std::span<const u8> ls(reinterpret_cast<const u8*>(lightCount), sizeof(u32) * 2);
@@ -189,7 +189,7 @@ cala::Scene::SceneNode *cala::Scene::addModel(cala::Model &model, const cala::Tr
 cala::Scene::SceneNode *cala::Scene::addMesh(const cala::Mesh &mesh, const cala::Transform &transform, cala::MaterialInstance *materialInstance, cala::Scene::SceneNode *parent) {
     MaterialInstance* instance = materialInstance ? materialInstance : mesh.materialInstance;
     i32 index = _meshData.size();
-    _meshData.push_back({
+    _meshData.push_back(GPUMesh{
         mesh.firstIndex,
         mesh.indexCount,
         instance->material()->id(),

@@ -1,7 +1,7 @@
 #ifndef CALA_VK_PRIMITIVES_H
 #define CALA_VK_PRIMITIVES_H
 
-#include "volk/volk.h"
+#include <volk/volk.h>
 
 #include <Ende/platform.h>
 #include <type_traits>

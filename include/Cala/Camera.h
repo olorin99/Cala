@@ -6,6 +6,7 @@
 #include <Ende/math/Frustum.h>
 #include <Ende/math/Vec.h>
 #include <vector>
+#include <Cala/shaderBridge.h>
 
 namespace cala {
 
@@ -38,16 +39,7 @@ namespace cala {
 
         f32 getExposure() const { return _exposure; }
 
-        struct Data {
-            ende::math::Mat4f projection;
-            ende::math::Mat4f view;
-            ende::math::Vec3f position;
-            f32 near;
-            f32 far;
-            f32 exposure;
-        };
-
-        Data data() const;
+        GPUCamera data() const;
 
         f32 near() const { return _near; }
 

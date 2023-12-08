@@ -1,7 +1,7 @@
 #ifndef CALA_TIMER_H
 #define CALA_TIMER_H
 
-#include "CommandBuffer.h"
+#include <Cala/vulkan/CommandBuffer.h>
 
 namespace cala::vk {
 
