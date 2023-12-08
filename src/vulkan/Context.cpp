@@ -9,27 +9,6 @@
 #include <Cala/vulkan/primitives.h>
 #include <Cala/vulkan/Device.h>
 
-class VulkanContextException : public std::exception {
-public:
-
-    explicit VulkanContextException(const char* msg)
-        : _msg("Unable to create Vulkan Device: ")
-    {
-        _msg += msg;
-    }
-
-    virtual ~VulkanContextException() noexcept {}
-
-    virtual const char* what() const noexcept {
-        return _msg.c_str();
-    }
-
-protected:
-
-    std::string _msg;
-
-};
-
 const char* validationLayers[] = {
         "VK_LAYER_KHRONOS_validation"
 };
@@ -42,33 +21,26 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         ) {
     if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
         return VK_FALSE;
-    auto d = reinterpret_cast<cala::vk::Device*>(pUserData);
+    auto logger = reinterpret_cast<spdlog::logger*>(pUserData);
+    if (!logger)
+        return VK_FALSE;
     switch (messageSeverity) {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            d->logger().info("{}", pCallbackData->pMessage);
+            logger->info("{}", pCallbackData->pMessage);
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-            d->logger().info("{}", pCallbackData->pMessage);
+            logger->info("{}", pCallbackData->pMessage);
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            d->logger().warn("{}", pCallbackData->pMessage);
+            logger->warn("{}", pCallbackData->pMessage);
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            d->logger().error("{}", pCallbackData->pMessage);
+            logger->error("{}", pCallbackData->pMessage);
             break;
         default:
             break;
     }
     return VK_FALSE;
-}
-
-bool checkDeviceSuitable(VkPhysicalDevice device, VkPhysicalDeviceFeatures* deviceFeatures) {
-    VkPhysicalDeviceProperties deviceProperties;
-    vkGetPhysicalDeviceProperties(device, &deviceProperties);
-
-//    VkPhysicalDeviceFeatures deviceFeatures;
-    vkGetPhysicalDeviceFeatures(device, deviceFeatures);
-    return deviceFeatures->geometryShader;
 }
 
 cala::vk::DeviceProperties getDeviceProperties(VkPhysicalDevice physicalDevice) {
@@ -145,9 +117,9 @@ void appendFeatureChain(T* start, U* next) {
     next->pNext = oldNext;
 }
 
-std::expected<cala::vk::Context, cala::vk::Error> cala::vk::Context::create(cala::vk::Device* device, cala::vk::Context::ContextInfo info) {
+std::expected<cala::vk::Context, cala::vk::Error> cala::vk::Context::create(cala::vk::Context::ContextInfo info) {
     Context context;
-    context._device = device;
+    context._logger = info.logger;
 
     VK_TRY(volkInitialize());
 
@@ -188,15 +160,17 @@ std::expected<cala::vk::Context, cala::vk::Error> cala::vk::Context::create(cala
 
     //create debug messenger
 #ifndef NDEBUG
-    VkDebugUtilsMessengerCreateInfoEXT debugInfo{};
-    debugInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    debugInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
-    debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
-    debugInfo.pfnUserCallback = debugCallback;
-    debugInfo.pUserData = device;
+    if (context._logger) {
+        VkDebugUtilsMessengerCreateInfoEXT debugInfo{};
+        debugInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+        debugInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
+        debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+        debugInfo.pfnUserCallback = debugCallback;
+        debugInfo.pUserData = context._logger;
 
-    auto createDebugUtils = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(context._instance, "vkCreateDebugUtilsMessengerEXT");
-    VK_TRY(createDebugUtils(context._instance, &debugInfo, nullptr, &context._debugMessenger));
+        auto createDebugUtils = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(context._instance, "vkCreateDebugUtilsMessengerEXT");
+        VK_TRY(createDebugUtils(context._instance, &debugInfo, nullptr, &context._debugMessenger));
+    }
 #endif
 
     //get physical device
@@ -511,15 +485,17 @@ cala::vk::Context::~Context() {
     vkDestroyDevice(_logicalDevice, nullptr);
 
 #ifndef NDEBUG
-    auto destroyDebugUtils = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(_instance, "vkDestroyDebugUtilsMessengerEXT");
-    destroyDebugUtils(_instance, _debugMessenger, nullptr);
+    if (_debugMessenger) {
+        auto destroyDebugUtils = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(_instance, "vkDestroyDebugUtilsMessengerEXT");
+        destroyDebugUtils(_instance, _debugMessenger, nullptr);
+    }
 #endif
 
     vkDestroyInstance(_instance, nullptr);
 }
 
 cala::vk::Context::Context(cala::vk::Context &&rhs) noexcept {
-    std::swap(_device, rhs._device);
+    std::swap(_logger, rhs._logger);
     std::swap(_instance, rhs._instance);
     std::swap(_physicalDevice, rhs._physicalDevice);
     std::swap(_logicalDevice, rhs._logicalDevice);
@@ -538,7 +514,7 @@ cala::vk::Context::Context(cala::vk::Context &&rhs) noexcept {
 }
 
 cala::vk::Context &cala::vk::Context::operator=(cala::vk::Context &&rhs) noexcept {
-    std::swap(_device, rhs._device);
+    std::swap(_logger, rhs._logger);
     std::swap(_instance, rhs._instance);
     std::swap(_physicalDevice, rhs._physicalDevice);
     std::swap(_logicalDevice, rhs._logicalDevice);

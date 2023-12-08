@@ -8,6 +8,7 @@
 #include <expected>
 #include <Cala/vulkan/primitives.h>
 #include "Platform.h"
+#include <spdlog/spdlog.h>
 
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
@@ -92,8 +93,9 @@ namespace cala::vk {
             std::span<const char* const> instanceExtensions = {};
             std::span<const char* const> deviceExtensions = {};
             std::function<u32(const DeviceProperties&)> selector = {};
+            spdlog::logger* logger = nullptr;
         };
-        static std::expected<Context, Error> create(Device* device, ContextInfo info);
+        static std::expected<Context, Error> create(ContextInfo info);
 
         Context() = default;
 
@@ -175,7 +177,7 @@ namespace cala::vk {
 
         u32 memoryIndex(u32 filter, VkMemoryPropertyFlags properties);
 
-        Device* _device = nullptr;
+        spdlog::logger* _logger = nullptr;
         VkInstance _instance = VK_NULL_HANDLE;
         VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
         VkDevice _logicalDevice = VK_NULL_HANDLE;

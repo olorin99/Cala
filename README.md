@@ -51,7 +51,6 @@ Use PROFILE_NAMED() macro to enable profilig of a function. GPU timers are autom
 ### Dependencies
 ##### system library
 - SDL2 - windowing system
-- assimp
 
 ##### git submodules
 - spirv-cross - spirv reflection

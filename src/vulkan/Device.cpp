@@ -14,9 +14,10 @@ std::expected<std::unique_ptr<cala::vk::Device>, cala::vk::Error> cala::vk::Devi
     if (info.platform)
         requiredExtensions = info.platform->requiredExtensions();
 
-    auto contextResult = Context::create(device.get(), {
+    auto contextResult = Context::create({
         .applicationName = "CalaExample",
-        .instanceExtensions = requiredExtensions
+        .instanceExtensions = requiredExtensions,
+        .logger = device->_logger
     });
     if (!contextResult)
         return std::unexpected(contextResult.error());

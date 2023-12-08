@@ -2,7 +2,6 @@
 #include <Cala/shapes.h>
 #include <Cala/Camera.h>
 #include <Cala/Light.h>
-#include <Ende/filesystem/File.h>
 #include <Cala/ImGuiContext.h>
 #include <Cala/Material.h>
 #include <Cala/MaterialInstance.h>
@@ -10,61 +9,11 @@
 #include "Ende/math/random.h"
 #include <Cala/Engine.h>
 #include <Cala/Renderer.h>
-#include <assimp/Importer.hpp>
-#include <assimp/postprocess.h>
-#include <assimp/cimport.h>
-#include <assimp/scene.h>
 #include <Ende/profile/ProfileManager.h>
 #include <Cala/ui/GuiWindow.h>
 
 using namespace cala;
 using namespace cala::vk;
-
-MeshData loadModel(const std::filesystem::path& path) {
-    MeshData data;
-
-    Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
-
-    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
-        return data;
-
-    for (u32 i = 0; i < scene->mNumMeshes; i++) {
-        const aiMesh* mesh = scene->mMeshes[i];
-//        if (mesh->mMaterialIndex >= 0) {
-//            aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-//            aiString name;
-//            material->Get(AI_MATKEY_NAME, name);
-//
-//        }
-
-        for (u32 j = 0; j < mesh->mNumVertices; j++) {
-            const aiVector3D pos = mesh->mVertices[j];
-            const aiVector3D normal = mesh->mNormals[j];
-            const aiVector3D texCoords = mesh->HasTextureCoords(0) ? mesh->mTextureCoords[0][j] : aiVector3D(0, 0, 0);
-
-            Vertex vertex{};
-            vertex.position = { pos.x, pos.y, pos.z };
-            vertex.normal = { normal.x, normal.y, normal.z };
-            vertex.texCoords = { texCoords.x, texCoords.y };
-
-            if (mesh->HasTangentsAndBitangents()) {
-                const aiVector3D tangent = mesh->mTangents[j];
-//                const aiVector3D bitangent = mesh->mBitangents[j];
-                vertex.tangent = { tangent.x, tangent.y, tangent.z, 1 };
-            }
-
-            data.addVertex(vertex);
-        }
-
-        for (u32 j = 0; j < mesh->mNumFaces; j++) {
-            const aiFace& face = mesh->mFaces[j];
-            data.addTriangle(face.mIndices[0], face.mIndices[1], face.mIndices[2]);
-        }
-    }
-
-    return data;
-}
 
 int main() {
     SDLPlatform platform("hello_triangle", 1920, 1080);
