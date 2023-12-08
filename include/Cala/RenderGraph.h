@@ -31,6 +31,10 @@ namespace cala {
         vk::BufferUsage usage = vk::BufferUsage::STORAGE;
     };
 
+
+    enum class ImageIndex : u32 {};
+    enum class BufferIndex : u32 {};
+
     class RenderGraph;
     class RenderPass {
     public:
@@ -51,44 +55,67 @@ namespace cala {
 
 
         void addColourWrite(const char* label);
+        void addColourWrite(ImageIndex index);
 
         void addColourRead(const char* label);
+        void addColourRead(ImageIndex index);
 
         void addDepthWrite(const char* label);
+        void addDepthWrite(ImageIndex index);
 
         void addDepthRead(const char* label);
+        void addDepthRead(ImageIndex index);
 
         void addIndirectRead(const char* label);
+        void addIndirectRead(BufferIndex index);
 
         void addVertexRead(const char* label);
+        void addVertexRead(BufferIndex index);
 
         void addIndexRead(const char* label);
+        void addIndexRead(BufferIndex index);
 
         void addStorageImageWrite(const char* label, vk::PipelineStage stage);
+        void addStorageImageWrite(ImageIndex index, vk::PipelineStage stage);
 
         void addStorageImageRead(const char* label, vk::PipelineStage stage);
+        void addStorageImageRead(ImageIndex index, vk::PipelineStage stage);
 
         void addStorageBufferWrite(const char* label, vk::PipelineStage stage);
+        void addStorageBufferWrite(BufferIndex index, vk::PipelineStage stage);
 
         void addStorageBufferRead(const char* label, vk::PipelineStage stage);
+        void addStorageBufferRead(BufferIndex index, vk::PipelineStage stage);
 
         void addUniformBufferRead(const char* label, vk::PipelineStage stage);
+        void addUniformBufferRead(BufferIndex index, vk::PipelineStage stage);
 
         void addSampledImageRead(const char* label, vk::PipelineStage stage);
+        void addSampledImageRead(ImageIndex index, vk::PipelineStage stage);
 
         void addBlitWrite(const char* label);
+        void addBlitWrite(ImageIndex index);
 
         void addBlitRead(const char* label);
+        void addBlitRead(ImageIndex index);
 
         void addTransferWrite(const char* label);
+        void addTransferWrite(ImageIndex index);
+        void addTransferWrite(BufferIndex index);
 
         void addTransferRead(const char* label);
+        void addTransferRead(ImageIndex index);
+        void addTransferRead(BufferIndex index);
 
 //    private:
 
         Resource* reads(const char* label, vk::Access access, vk::PipelineStage stage, vk::ImageLayout layout);
+        Resource* reads(ImageIndex index, vk::Access access, vk::PipelineStage stage, vk::ImageLayout layout);
+        Resource* reads(BufferIndex index, vk::Access access, vk::PipelineStage stage, vk::ImageLayout layout);
 
         Resource* writes(const char* label, vk::Access access, vk::PipelineStage stage, vk::ImageLayout layout);
+        Resource* writes(ImageIndex index, vk::Access access, vk::PipelineStage stage, vk::ImageLayout layout);
+        Resource* writes(BufferIndex index, vk::Access access, vk::PipelineStage stage, vk::ImageLayout layout);
 
 
         friend RenderGraph;
@@ -150,26 +177,25 @@ namespace cala {
 
         ende::math::Vec<2, u32> getBackbufferDimensions() { return { _backbufferWidth, _backbufferHeight }; }
 
+        ImageIndex addImageResource(const char* label, ImageResource resource, vk::ImageHandle handle = {});
 
-        u32 addImageResource(const char* label, ImageResource resource, vk::ImageHandle handle = {});
-
-        u32 addBufferResource(const char* label, BufferResource resource, vk::BufferHandle handle = {});
+        BufferIndex addBufferResource(const char* label, BufferResource resource, vk::BufferHandle handle = {});
 
         u32 addAlias(const char* label, const char* alias);
         u32 addAlias(u32 resourceIndex, const char* alias);
 
 
         ImageResource* getImageResource(const char* label);
-        ImageResource* getImageResource(u32 resourceIndex);
+        ImageResource* getImageResource(ImageIndex resourceIndex);
 
         BufferResource* getBufferResource(const char* label);
-        BufferResource* getBufferResource(u32 resourceIndex);
+        BufferResource* getBufferResource(BufferIndex resourceIndex);
 
         vk::ImageHandle getImage(const char* label);
-        vk::ImageHandle getImage(u32 resourceIndex);
+        vk::ImageHandle getImage(ImageIndex resourceIndex);
 
         vk::BufferHandle getBuffer(const char* label);
-        vk::BufferHandle getBuffer(u32 resourceIndex);
+        vk::BufferHandle getBuffer(BufferIndex resourceIndex);
 
 
         bool compile();

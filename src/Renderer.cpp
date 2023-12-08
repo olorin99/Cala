@@ -829,11 +829,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     if (imGui) {
         ImageResource backbufferAttachment;
         backbufferAttachment.format = vk::Format::RGBA8_UNORM;
-        _graph.addImageResource("ui-backbuffer", backbufferAttachment);
+        auto uiBackbufferIndex = _graph.addImageResource("ui-backbuffer", backbufferAttachment);
 
         auto& uiPass = _graph.addPass("ui");
         uiPass.addSampledImageRead("backbuffer", vk::PipelineStage::FRAGMENT_SHADER);
-        uiPass.addColourWrite("ui-backbuffer");
+        uiPass.addColourWrite(uiBackbufferIndex);
         uiPass.setDebugColour({0.7, 0.1, 0.4, 1});
 
         uiPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
@@ -849,12 +849,12 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         ImageResource backbufferAttachment;
         backbufferAttachment.format = vk::Format::RGBA8_UNORM;
         backbufferAttachment.matchSwapchain = false;
-        _graph.addImageResource("final-swapchain", backbufferAttachment);
+        auto finalSwapchainIndex = _graph.addImageResource("final-swapchain", backbufferAttachment);
 
         auto& blitPass = _graph.addPass("blit", RenderPass::Type::TRANSFER);
 //        blitPass.addBlitRead("backbuffer");
         blitPass.addBlitRead("ui-backbuffer");
-        blitPass.addBlitWrite("final-swapchain");
+        blitPass.addBlitWrite(finalSwapchainIndex);
 
         blitPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
             auto backbuffer = graph.getImage("ui-backbuffer");

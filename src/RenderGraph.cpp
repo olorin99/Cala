@@ -39,6 +39,16 @@ void cala::RenderPass::addColourWrite(const char *label) {
     }
 }
 
+void cala::RenderPass::addColourWrite(cala::ImageIndex index) {
+    if (auto resource = writes(index, vk::Access::COLOUR_ATTACHMENT_READ | vk::Access::COLOUR_ATTACHMENT_WRITE,
+                               vk::PipelineStage::COLOUR_ATTACHMENT_OUTPUT,
+                               vk::ImageLayout::COLOUR_ATTACHMENT); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | vk::ImageUsage::COLOUR_ATTACHMENT;
+        _colourAttachments.push_back(imageResource->index);
+    }
+}
+
 void cala::RenderPass::addColourRead(const char *label) {
     if (auto resource = reads(label, vk::Access::COLOUR_ATTACHMENT_READ | vk::Access::COLOUR_ATTACHMENT_WRITE,
                                vk::PipelineStage::COLOUR_ATTACHMENT_OUTPUT,
@@ -48,8 +58,27 @@ void cala::RenderPass::addColourRead(const char *label) {
     }
 }
 
+void cala::RenderPass::addColourRead(cala::ImageIndex index) {
+    if (auto resource = reads(index, vk::Access::COLOUR_ATTACHMENT_READ | vk::Access::COLOUR_ATTACHMENT_WRITE,
+                              vk::PipelineStage::COLOUR_ATTACHMENT_OUTPUT,
+                              vk::ImageLayout::COLOUR_ATTACHMENT); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | vk::ImageUsage::COLOUR_ATTACHMENT;
+    }
+}
+
 void cala::RenderPass::addDepthWrite(const char *label) {
     if (auto resource = writes(label, vk::Access::DEPTH_STENCIL_READ | vk::Access::DEPTH_STENCIL_WRITE,
+                               vk::PipelineStage::EARLY_FRAGMENT | vk::PipelineStage::LATE_FRAGMENT,
+                               vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | vk::ImageUsage::DEPTH_STENCIL_ATTACHMENT;
+        _depthResource = imageResource->index;
+    }
+}
+
+void cala::RenderPass::addDepthWrite(cala::ImageIndex index) {
+    if (auto resource = writes(index, vk::Access::DEPTH_STENCIL_READ | vk::Access::DEPTH_STENCIL_WRITE,
                                vk::PipelineStage::EARLY_FRAGMENT | vk::PipelineStage::LATE_FRAGMENT,
                                vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT); resource) {
         auto imageResource = dynamic_cast<ImageResource*>(resource);
@@ -68,8 +97,27 @@ void cala::RenderPass::addDepthRead(const char *label) {
     }
 }
 
+void cala::RenderPass::addDepthRead(cala::ImageIndex index) {
+    if (auto resource = reads(index, vk::Access::DEPTH_STENCIL_READ | vk::Access::DEPTH_STENCIL_WRITE,
+                              vk::PipelineStage::EARLY_FRAGMENT | vk::PipelineStage::LATE_FRAGMENT,
+                              vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | vk::ImageUsage::DEPTH_STENCIL_ATTACHMENT;
+        _depthResource = imageResource->index;
+    }
+}
+
 void cala::RenderPass::addIndirectRead(const char *label) {
     if (auto resource = reads(label, vk::Access::INDIRECT_READ,
+                              vk::PipelineStage::DRAW_INDIRECT | vk::PipelineStage::VERTEX_INPUT | vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::INDEX_INPUT,
+                              vk::ImageLayout::UNDEFINED); resource) {
+        auto bufferResource = dynamic_cast<BufferResource*>(resource);
+        bufferResource->usage = bufferResource->usage | vk::BufferUsage::INDIRECT;
+    }
+}
+
+void cala::RenderPass::addIndirectRead(cala::BufferIndex index) {
+    if (auto resource = reads(index, vk::Access::INDIRECT_READ,
                               vk::PipelineStage::DRAW_INDIRECT | vk::PipelineStage::VERTEX_INPUT | vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::INDEX_INPUT,
                               vk::ImageLayout::UNDEFINED); resource) {
         auto bufferResource = dynamic_cast<BufferResource*>(resource);
@@ -86,8 +134,26 @@ void cala::RenderPass::addVertexRead(const char *label) {
     }
 }
 
+void cala::RenderPass::addVertexRead(cala::BufferIndex index) {
+    if (auto resource = reads(index, vk::Access::VERTEX_READ,
+                              vk::PipelineStage::VERTEX_INPUT | vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::INDEX_INPUT,
+                              vk::ImageLayout::UNDEFINED); resource) {
+        auto bufferResource = dynamic_cast<BufferResource*>(resource);
+        bufferResource->usage = bufferResource->usage | vk::BufferUsage::VERTEX;
+    }
+}
+
 void cala::RenderPass::addIndexRead(const char *label) {
     if (auto resource = reads(label, vk::Access::INDEX_READ,
+                              vk::PipelineStage::VERTEX_INPUT | vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::INDEX_INPUT,
+                              vk::ImageLayout::UNDEFINED); resource) {
+        auto bufferResource = dynamic_cast<BufferResource*>(resource);
+        bufferResource->usage = bufferResource->usage | vk::BufferUsage::INDEX;
+    }
+}
+
+void cala::RenderPass::addIndexRead(cala::BufferIndex index) {
+    if (auto resource = reads(index, vk::Access::INDEX_READ,
                               vk::PipelineStage::VERTEX_INPUT | vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::INDEX_INPUT,
                               vk::ImageLayout::UNDEFINED); resource) {
         auto bufferResource = dynamic_cast<BufferResource*>(resource);
@@ -104,10 +170,28 @@ void cala::RenderPass::addStorageImageWrite(const char *label, vk::PipelineStage
     }
 }
 
+void cala::RenderPass::addStorageImageWrite(cala::ImageIndex index, vk::PipelineStage stage) {
+    if (auto resource = writes(index, vk::Access::STORAGE_READ | vk::Access::STORAGE_WRITE,
+                               stage,
+                               vk::ImageLayout::GENERAL); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | vk::ImageUsage::STORAGE;
+    }
+}
+
 void cala::RenderPass::addStorageImageRead(const char *label, vk::PipelineStage stage) {
     if (auto resource = reads(label, vk::Access::STORAGE_READ | vk::Access::STORAGE_WRITE,
                                stage,
                                vk::ImageLayout::GENERAL); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | vk::ImageUsage::STORAGE;
+    }
+}
+
+void cala::RenderPass::addStorageImageRead(cala::ImageIndex index, vk::PipelineStage stage) {
+    if (auto resource = reads(index, vk::Access::STORAGE_READ | vk::Access::STORAGE_WRITE,
+                              stage,
+                              vk::ImageLayout::GENERAL); resource) {
         auto imageResource = dynamic_cast<ImageResource*>(resource);
         imageResource->usage = imageResource->usage | vk::ImageUsage::STORAGE;
     }
@@ -122,8 +206,26 @@ void cala::RenderPass::addStorageBufferWrite(const char *label, vk::PipelineStag
     }
 }
 
+void cala::RenderPass::addStorageBufferWrite(cala::BufferIndex index, vk::PipelineStage stage) {
+    if (auto resource = writes(index, vk::Access::STORAGE_READ | vk::Access::STORAGE_WRITE,
+                               stage,
+                               vk::ImageLayout::UNDEFINED); resource) {
+        auto bufferResource = dynamic_cast<BufferResource*>(resource);
+        bufferResource->usage = bufferResource->usage | vk::BufferUsage::STORAGE;
+    }
+}
+
 void cala::RenderPass::addStorageBufferRead(const char *label, vk::PipelineStage stage) {
     if (auto resource = reads(label, vk::Access::STORAGE_READ,
+                              stage,
+                              vk::ImageLayout::UNDEFINED); resource) {
+        auto bufferResource = dynamic_cast<BufferResource*>(resource);
+        bufferResource->usage = bufferResource->usage | vk::BufferUsage::STORAGE;
+    }
+}
+
+void cala::RenderPass::addStorageBufferRead(cala::BufferIndex index, vk::PipelineStage stage) {
+    if (auto resource = reads(index, vk::Access::STORAGE_READ,
                               stage,
                               vk::ImageLayout::UNDEFINED); resource) {
         auto bufferResource = dynamic_cast<BufferResource*>(resource);
@@ -140,6 +242,15 @@ void cala::RenderPass::addUniformBufferRead(const char *label, vk::PipelineStage
     }
 }
 
+void cala::RenderPass::addUniformBufferRead(cala::BufferIndex index, vk::PipelineStage stage) {
+    if (auto resource = reads(index, vk::Access::UNIFORM_READ,
+                              stage,
+                              vk::ImageLayout::UNDEFINED); resource) {
+        auto bufferResource = dynamic_cast<BufferResource*>(resource);
+        bufferResource->usage = bufferResource->usage | vk::BufferUsage::UNIFORM;
+    }
+}
+
 void cala::RenderPass::addSampledImageRead(const char *label, vk::PipelineStage stage) {
     if (auto resource = reads(label, vk::Access::SAMPLED_READ,
                                stage,
@@ -149,8 +260,26 @@ void cala::RenderPass::addSampledImageRead(const char *label, vk::PipelineStage 
     }
 }
 
+void cala::RenderPass::addSampledImageRead(cala::ImageIndex index, vk::PipelineStage stage) {
+    if (auto resource = reads(index, vk::Access::SAMPLED_READ,
+                              stage,
+                              vk::ImageLayout::SHADER_READ_ONLY); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | vk::ImageUsage::SAMPLED;
+    }
+}
+
 void cala::RenderPass::addBlitWrite(const char *label) {
     if (auto resource = writes(label, vk::Access::TRANSFER_WRITE,
+                               vk::PipelineStage::BLIT,
+                               vk::ImageLayout::TRANSFER_DST); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | vk::ImageUsage::TRANSFER_DST;
+    }
+}
+
+void cala::RenderPass::addBlitWrite(cala::ImageIndex index) {
+    if (auto resource = writes(index, vk::Access::TRANSFER_WRITE,
                                vk::PipelineStage::BLIT,
                                vk::ImageLayout::TRANSFER_DST); resource) {
         auto imageResource = dynamic_cast<ImageResource*>(resource);
@@ -167,6 +296,15 @@ void cala::RenderPass::addBlitRead(const char *label) {
     }
 }
 
+void cala::RenderPass::addBlitRead(cala::ImageIndex index) {
+    if (auto resource = reads(index, vk::Access::TRANSFER_READ,
+                              vk::PipelineStage::BLIT,
+                              vk::ImageLayout::TRANSFER_SRC); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | vk::ImageUsage::TRANSFER_SRC;
+    }
+}
+
 void cala::RenderPass::addTransferWrite(const char *label) {
     if (auto resource = writes(label, vk::Access::TRANSFER_WRITE,
                                vk::PipelineStage::TRANSFER,
@@ -176,8 +314,44 @@ void cala::RenderPass::addTransferWrite(const char *label) {
     }
 }
 
+void cala::RenderPass::addTransferWrite(cala::ImageIndex index) {
+    if (auto resource = writes(index, vk::Access::TRANSFER_WRITE,
+                               vk::PipelineStage::TRANSFER,
+                               vk::ImageLayout::TRANSFER_DST); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | vk::ImageUsage::TRANSFER_DST;
+    }
+}
+
+void cala::RenderPass::addTransferWrite(cala::BufferIndex index) {
+    if (auto resource = writes(index, vk::Access::TRANSFER_WRITE,
+                               vk::PipelineStage::TRANSFER,
+                               vk::ImageLayout::TRANSFER_DST); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | vk::ImageUsage::TRANSFER_DST;
+    }
+}
+
 void cala::RenderPass::addTransferRead(const char *label) {
     if (auto resource = reads(label, vk::Access::TRANSFER_READ,
+                              vk::PipelineStage::TRANSFER,
+                              vk::ImageLayout::TRANSFER_SRC); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | vk::ImageUsage::TRANSFER_SRC;
+    }
+}
+
+void cala::RenderPass::addTransferRead(cala::ImageIndex index) {
+    if (auto resource = reads(index, vk::Access::TRANSFER_READ,
+                              vk::PipelineStage::TRANSFER,
+                              vk::ImageLayout::TRANSFER_SRC); resource) {
+        auto imageResource = dynamic_cast<ImageResource*>(resource);
+        imageResource->usage = imageResource->usage | vk::ImageUsage::TRANSFER_SRC;
+    }
+}
+
+void cala::RenderPass::addTransferRead(cala::BufferIndex index) {
+    if (auto resource = reads(index, vk::Access::TRANSFER_READ,
                               vk::PipelineStage::TRANSFER,
                               vk::ImageLayout::TRANSFER_SRC); resource) {
         auto imageResource = dynamic_cast<ImageResource*>(resource);
@@ -195,6 +369,20 @@ cala::Resource *cala::RenderPass::reads(const char *label, vk::Access access, vk
     return nullptr;
 }
 
+cala::Resource *cala::RenderPass::reads(cala::ImageIndex index, vk::Access access, vk::PipelineStage stage, vk::ImageLayout layout) {
+    assert(static_cast<u32>(index) <= _graph->_resources.size());
+    auto resource = _graph->_resources[static_cast<u32>(index)].get();
+    _inputs.emplace_back(resource->label, resource->index, access, stage, layout);
+    return resource;
+}
+
+cala::Resource *cala::RenderPass::reads(cala::BufferIndex index, vk::Access access, vk::PipelineStage stage, vk::ImageLayout layout) {
+    assert(static_cast<u32>(index) <= _graph->_resources.size());
+    auto resource = _graph->_resources[static_cast<u32>(index)].get();
+    _inputs.emplace_back(resource->label, resource->index, access, stage, layout);
+    return resource;
+}
+
 cala::Resource *cala::RenderPass::writes(const char *label, vk::Access access, vk::PipelineStage stage, vk::ImageLayout layout) {
     auto it = _graph->_labelToIndex.find(label);
     if (it != _graph->_labelToIndex.end()) {
@@ -203,6 +391,20 @@ cala::Resource *cala::RenderPass::writes(const char *label, vk::Access access, v
         return _graph->_resources[it->second].get();
     }
     return nullptr;
+}
+
+cala::Resource *cala::RenderPass::writes(cala::ImageIndex index, vk::Access access, vk::PipelineStage stage, vk::ImageLayout layout) {
+    assert(static_cast<u32>(index) <= _graph->_resources.size());
+    auto resource = _graph->_resources[static_cast<u32>(index)].get();
+    _outputs.emplace_back(resource->label, resource->index, access, stage, layout);
+    return resource;
+}
+
+cala::Resource *cala::RenderPass::writes(cala::BufferIndex index, vk::Access access, vk::PipelineStage stage, vk::ImageLayout layout) {
+    assert(static_cast<u32>(index) <= _graph->_resources.size());
+    auto resource = _graph->_resources[static_cast<u32>(index)].get();
+    _outputs.emplace_back(resource->label, resource->index, access, stage, layout);
+    return resource;
 }
 
 
@@ -232,7 +434,7 @@ void cala::RenderGraph::setBackbufferDimensions(u32 width, u32 height) {
 }
 
 
-u32 cala::RenderGraph::addImageResource(const char *label, cala::ImageResource resource, cala::vk::ImageHandle handle) {
+cala::ImageIndex cala::RenderGraph::addImageResource(const char *label, cala::ImageResource resource, cala::vk::ImageHandle handle) {
     u32 index = 0;
     resource.label = label;
     auto it = _labelToIndex.find(label);
@@ -241,6 +443,7 @@ u32 cala::RenderGraph::addImageResource(const char *label, cala::ImageResource r
         if (_resources.size() <= index)
             _resources.resize(index + 1);
         _resources[index] = std::make_unique<ImageResource>(std::move(resource));
+        _resources[index]->index = index;
         if (_images.size() <= index + 1)
             _images.resize(index + 1);
         if (handle)
@@ -250,15 +453,16 @@ u32 cala::RenderGraph::addImageResource(const char *label, cala::ImageResource r
         if (_images.size() < _resources.size())
             _images.resize(_resources.size());
         index = _resources.size() - 1;
+        _resources[index]->index = index;
         if (handle)
             _images[index] = handle;
         assert(_resources.size() == _images.size());
         _labelToIndex[label] = index;
     }
-    return index;
+    return static_cast<ImageIndex>(index);
 }
 
-u32 cala::RenderGraph::addBufferResource(const char *label, cala::BufferResource resource, cala::vk::BufferHandle handle) {
+cala::BufferIndex cala::RenderGraph::addBufferResource(const char *label, cala::BufferResource resource, cala::vk::BufferHandle handle) {
     u32 index = 0;
     resource.label = label;
     auto it = _labelToIndex.find(label);
@@ -267,6 +471,7 @@ u32 cala::RenderGraph::addBufferResource(const char *label, cala::BufferResource
         if (_resources.size() <= index)
             _resources.resize(index + 1);
         _resources[index] = std::make_unique<BufferResource>(std::move(resource));
+        _resources[index]->index = index;
         if (_buffers.size() <= index)
             _buffers.resize(index + 1);
         if (handle)
@@ -276,12 +481,13 @@ u32 cala::RenderGraph::addBufferResource(const char *label, cala::BufferResource
         if (_buffers.size() < _resources.size())
             _buffers.resize(_resources.size());
         index = _resources.size() - 1;
+        _resources[index]->index = index;
         if (handle)
             _buffers[index] = handle;
         assert(_resources.size() == _buffers.size());
         _labelToIndex[label] = index;
     }
-    return index;
+    return static_cast<BufferIndex>(index);
 }
 
 u32 cala::RenderGraph::addAlias(const char *label, const char *alias) {
@@ -304,53 +510,53 @@ u32 cala::RenderGraph::addAlias(u32 resourceIndex, const char *alias) {
 cala::ImageResource *cala::RenderGraph::getImageResource(const char *label) {
     auto it = _labelToIndex.find(label);
     if (it != _labelToIndex.end()) {
-        return getImageResource(it->second);
+        return getImageResource(static_cast<ImageIndex>(it->second));
     }
     return nullptr;
 }
 
-cala::ImageResource *cala::RenderGraph::getImageResource(u32 resourceIndex) {
-    assert(resourceIndex <= _resources.size());
-    return dynamic_cast<ImageResource*>(_resources[resourceIndex].get());
+cala::ImageResource *cala::RenderGraph::getImageResource(cala::ImageIndex resourceIndex) {
+    assert(static_cast<u32>(resourceIndex) <= _resources.size());
+    return dynamic_cast<ImageResource*>(_resources[static_cast<u32>(resourceIndex)].get());
 }
 
 cala::BufferResource *cala::RenderGraph::getBufferResource(const char *label) {
     auto it = _labelToIndex.find(label);
     if (it != _labelToIndex.end()) {
-        return getBufferResource(it->second);
+        return getBufferResource(static_cast<BufferIndex>(it->second));
     }
     return nullptr;
 }
 
-cala::BufferResource *cala::RenderGraph::getBufferResource(u32 resourceIndex) {
-    assert(resourceIndex <= _resources.size());
-    return dynamic_cast<BufferResource*>(_resources[resourceIndex].get());
+cala::BufferResource *cala::RenderGraph::getBufferResource(cala::BufferIndex resourceIndex) {
+    assert(static_cast<u32>(resourceIndex) <= _resources.size());
+    return dynamic_cast<BufferResource*>(_resources[static_cast<u32>(resourceIndex)].get());
 }
 
 cala::vk::ImageHandle cala::RenderGraph::getImage(const char *label) {
     auto it = _labelToIndex.find(label);
     if (it != _labelToIndex.end()) {
-        return getImage(it->second);
+        return getImage(static_cast<ImageIndex>(it->second));
     }
     return {};
 }
 
-cala::vk::ImageHandle cala::RenderGraph::getImage(u32 resourceIndex) {
-    assert(resourceIndex <= _resources.size());
-    return _images[resourceIndex];
+cala::vk::ImageHandle cala::RenderGraph::getImage(cala::ImageIndex resourceIndex) {
+    assert(static_cast<u32>(resourceIndex) <= _resources.size());
+    return _images[static_cast<u32>(resourceIndex)];
 }
 
 cala::vk::BufferHandle cala::RenderGraph::getBuffer(const char *label) {
     auto it = _labelToIndex.find(label);
     if (it != _labelToIndex.end()) {
-        return getBuffer(it->second);
+        return getBuffer(static_cast<BufferIndex>(it->second));
     }
     return {};
 }
 
-cala::vk::BufferHandle cala::RenderGraph::getBuffer(u32 resourceIndex) {
-    assert(resourceIndex <= _resources.size());
-    return _buffers[resourceIndex];
+cala::vk::BufferHandle cala::RenderGraph::getBuffer(cala::BufferIndex resourceIndex) {
+    assert(static_cast<u32>(resourceIndex) <= _resources.size());
+    return _buffers[static_cast<u32>(resourceIndex)];
 }
 
 bool cala::RenderGraph::compile() {
