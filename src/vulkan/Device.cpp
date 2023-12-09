@@ -699,6 +699,7 @@ cala::vk::ShaderModuleHandle cala::vk::Device::createShaderModule(std::span<u32>
     _shaderModulesList.getResource(index)->_module = module;
     _shaderModulesList.getResource(index)->_stage = stage;
     _shaderModulesList.getResource(index)->_main = "main";
+    _shaderModulesList.getResource(index)->_localSize = interface._localSize;
     _shaderModulesList.getResource(index)->_interface = std::move(interface);
     return _shaderModulesList.getHandle(this, index);
 }
@@ -730,6 +731,7 @@ cala::vk::ShaderModuleHandle cala::vk::Device::recreateShaderModule(ShaderModule
     _shaderModulesList.getResource(index)->_module = module;
     _shaderModulesList.getResource(index)->_stage = stage;
     _shaderModulesList.getResource(index)->_main = "main";
+    _shaderModulesList.getResource(index)->_localSize = interface._localSize;
     _shaderModulesList.getResource(index)->_interface = std::move(interface);
     return _shaderModulesList.getHandle(this, index);
 }
@@ -738,6 +740,23 @@ cala::vk::PipelineLayoutHandle cala::vk::Device::createPipelineLayout(const cala
     PipelineLayout layout(this, interface);
 
     i32 index = _pipelineLayoutList.insert(this);
+    *_pipelineLayoutList._resources[index].first = std::move(layout);
+    return _pipelineLayoutList.getHandle(this, index);
+}
+
+cala::vk::PipelineLayoutHandle cala::vk::Device::recreatePipelineLayout(cala::vk::PipelineLayoutHandle handle, const cala::vk::ShaderInterface &interface) {
+    if (!handle)
+        return createPipelineLayout(interface);
+    i32 handleIndex = handle.index();
+    PipelineLayout layout(this, interface);
+
+    i32 index = _pipelineLayoutList.insert(this);
+    _pipelineLayoutList._resources[index].second.swap(_pipelineLayoutList._resources[handleIndex].second);
+    _pipelineLayoutList._resources[index].second->index = index;
+    _pipelineLayoutList._resources[handleIndex].second->index = handleIndex;
+    _pipelineLayoutList._resources[handleIndex].second->count = handleIndex;
+    _pipelineLayoutList._resources[handleIndex].second->deleter(handleIndex);
+
     *_pipelineLayoutList._resources[index].first = std::move(layout);
     return _pipelineLayoutList.getHandle(this, index);
 }

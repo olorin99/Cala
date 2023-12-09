@@ -275,7 +275,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd->bindBuffer(1, 0, clusters, true);
             cmd->bindPipeline();
             cmd->bindDescriptors();
-            cmd->dispatchCompute(16, 9, 24);
+            cmd->dispatchWorkgroups(16, 9, 24);
         });
         camera.setDirty(false);
     }
@@ -334,7 +334,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 //        cmd->bindBuffer(1, 3, scene._lightCountBuffer[_engine->device().frameIndex()], true);
         cmd->bindPipeline();
         cmd->bindDescriptors();
-        cmd->dispatchCompute(1, 1, 6);
+        cmd->dispatchWorkgroups(1, 1, 6);
     });
 
     if (_renderSettings.debugClusters) {
@@ -407,7 +407,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd->bindBuffer(2, 1, materialCounts, true);
         cmd->bindPipeline();
         cmd->bindDescriptors();
-        cmd->dispatchCompute(std::ceil(scene.meshCount() / 16.f), 1, 1);
+        cmd->dispatch(scene.meshCount(), 1, 1);
     });
 
 
@@ -628,7 +628,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                     cmd->bindPipeline();
                     cmd->bindDescriptors();
-                    cmd->dispatchCompute(std::ceil(inputImage->width() / 32.f), std::ceil(inputImage->height() / 32.f), 1);
+                    cmd->dispatch(inputImage->width(), inputImage->height(), 1);
 
                     if (mip != 4) {
                         auto outputBarrier = outputImage->barrier(vk::PipelineStage::COMPUTE_SHADER, vk::PipelineStage::COMPUTE_SHADER, vk::Access::SHADER_WRITE, vk::Access::SHADER_READ, vk::ImageLayout::SHADER_READ_ONLY);
@@ -702,7 +702,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                     cmd->bindPipeline();
                     cmd->bindDescriptors();
-                    cmd->dispatchCompute(std::ceil(outputImage->width() / 32.f), std::ceil(outputImage->height() / 32.f), 1);
+                    cmd->dispatch(outputImage->width(), outputImage->height(), 1);
 
                     if (mip != 0) {
                         auto outputBarrier = outputImage->barrier(vk::PipelineStage::COMPUTE_SHADER, vk::PipelineStage::COMPUTE_SHADER, vk::Access::SHADER_WRITE, vk::Access::SHADER_READ, vk::ImageLayout::SHADER_READ_ONLY);
@@ -744,7 +744,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
                 cmd->bindPipeline();
                 cmd->bindDescriptors();
-                cmd->dispatchCompute(std::ceil(final->width() / 32.f), std::ceil(final->height() / 32.f), 1);
+                cmd->dispatch(final->width(), final->height(), 1);
             });
         }
     }
@@ -791,7 +791,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
             cmd->bindPipeline();
             cmd->bindDescriptors();
-            cmd->dispatchCompute(std::ceil(backbuffer->width() / 32.f), std::ceil(backbuffer->height() / 32.f), 1);
+            cmd->dispatch(backbuffer->width(), backbuffer->height(), 1);
         });
     }
 

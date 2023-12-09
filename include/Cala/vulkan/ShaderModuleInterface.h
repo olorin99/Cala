@@ -5,6 +5,7 @@
 #include <Cala/vulkan/primitives.h>
 #include <span>
 #include <tsl/robin_map.h>
+#include <Ende/math/Vec.h>
 
 namespace cala::vk {
 
@@ -75,6 +76,8 @@ namespace cala::vk {
         PushConstant _pushConstantRanges[5]{};
 
         ShaderStage _stage;
+
+        ende::math::Vec<3, u32> _localSize = {};
 
     };
 

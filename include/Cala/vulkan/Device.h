@@ -118,10 +118,10 @@ namespace cala::vk {
 
 
         ShaderModuleHandle createShaderModule(std::span<u32> spirv, ShaderStage stage);
-
         ShaderModuleHandle recreateShaderModule(ShaderModuleHandle handle, std::span<u32> spirv, ShaderStage stage);
 
         PipelineLayoutHandle createPipelineLayout(const ShaderInterface& interface);
+        PipelineLayoutHandle recreatePipelineLayout(PipelineLayoutHandle handle, const ShaderInterface& interface);
 
 
         SamplerHandle getSampler(Sampler::CreateInfo info);

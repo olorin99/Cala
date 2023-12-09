@@ -1,5 +1,5 @@
 
-layout (local_size_x = 32, local_size_y = 32) in;
+layout (local_size_x = LOCAL_SIZE_X, local_size_y = LOCAL_SIZE_Y) in;
 
 layout (set = 1, binding = 0) uniform writeonly image2D brdfMap;
 

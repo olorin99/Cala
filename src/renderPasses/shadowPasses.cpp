@@ -52,7 +52,7 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                         cmd->bindBuffer(2, 1, drawCount, true);
                         cmd->bindPipeline();
                         cmd->bindDescriptors();
-                        cmd->dispatchCompute(std::ceil(scene.meshCount() / 16.f), 1, 1);
+                        cmd->dispatch(scene.meshCount(), 1, 1);
 
                         cmd->begin(*engine.getShadowFramebuffer());
 
@@ -166,7 +166,7 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                             cmd->bindBuffer(2, 1, drawCount, true);
                             cmd->bindPipeline();
                             cmd->bindDescriptors();
-                            cmd->dispatchCompute(std::ceil(scene.meshCount() / 16.f), 1, 1);
+                            cmd->dispatch(scene.meshCount(), 1, 1);
 
 
                             cmd->begin(*engine.getShadowFramebuffer());

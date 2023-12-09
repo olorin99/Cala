@@ -53,3 +53,7 @@ VkDescriptorSetLayout cala::vk::ShaderProgram::setLayout(u32 set) const {
 const cala::vk::ShaderInterface &cala::vk::ShaderProgram::interface() const {
     return _pipelineLayout->interface();
 }
+
+const ende::math::Vec<3, u32> &cala::vk::ShaderProgram::localSize() const {
+    return _modules.front()->localSize();
+}

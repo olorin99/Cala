@@ -200,7 +200,7 @@ cala::Engine::Engine(vk::Platform &platform)
         cmd->bindImage(1, 0, _brdfImage->defaultView());
         cmd->bindPipeline();
         cmd->bindDescriptors();
-        cmd->dispatchCompute(512 / 32, 512 / 32, 1);
+        cmd->dispatch(512, 512, 1);
 
         brdfBarrier = _brdfImage->barrier(vk::PipelineStage::COMPUTE_SHADER, vk::PipelineStage::FRAGMENT_SHADER, vk::Access::SHADER_READ | vk::Access::SHADER_WRITE, vk::Access::SHADER_READ, vk::ImageLayout::SHADER_READ_ONLY);
         cmd->pipelineBarrier({ &brdfBarrier, 1 });
@@ -300,7 +300,7 @@ cala::vk::ImageHandle cala::Engine::convertToCubeMap(vk::ImageHandle equirectang
         cmd->bindPipeline();
         cmd->bindDescriptors();
 
-        cmd->dispatchCompute(512 / 32, 512 / 32, 6);
+        cmd->dispatch(512, 512, 6);
 
 
         envBarrier = cubeMap->barrier(vk::PipelineStage::COMPUTE_SHADER, vk::PipelineStage::BOTTOM, vk::Access::SHADER_WRITE, vk::Access::NONE, vk::ImageLayout::TRANSFER_DST);
@@ -334,7 +334,7 @@ cala::vk::ImageHandle cala::Engine::generateIrradianceMap(vk::ImageHandle cubeMa
         cmd->bindImage(1, 1, irradianceMap);
         cmd->bindPipeline();
         cmd->bindDescriptors();
-        cmd->dispatchCompute(irradianceMap->width() / 32, irradianceMap->height() / 32, 6);
+        cmd->dispatch(irradianceMap->width(), irradianceMap->height(), 6);
 
         irradianceBarrier = irradianceMap->barrier(vk::PipelineStage::COMPUTE_SHADER, vk::PipelineStage::FRAGMENT_SHADER, vk::Access::SHADER_WRITE, vk::Access::SHADER_READ, vk::ImageLayout::SHADER_READ_ONLY);
         cmd->pipelineBarrier({ &irradianceBarrier, 1 });
@@ -382,7 +382,7 @@ cala::vk::ImageHandle cala::Engine::generatePrefilteredIrradiance(vk::ImageHandl
             cmd->bindPipeline();
             cmd->bindDescriptors();
             f32 computeDim = 512.f * std::pow(0.5, mip);
-            cmd->dispatchCompute(std::ceil(computeDim / 32.f), std::ceil(computeDim / 32.f), 6);
+            cmd->dispatch(computeDim, computeDim, 6);
         }
 
         prefilterBarrier = prefilteredMap->barrier(vk::PipelineStage::COMPUTE_SHADER, vk::PipelineStage::BOTTOM, vk::Access::SHADER_WRITE, vk::Access::NONE, vk::ImageLayout::SHADER_READ_ONLY);
@@ -956,7 +956,7 @@ cala::vk::ShaderProgram cala::Engine::loadProgram(const std::string& name, const
     std::vector<vk::ShaderModuleHandle> modules;
 
     for (auto& info : shaderInfo) {
-        modules.push_back(_assetManager.loadShaderModule(name, info.path, info.stage, info.macros, info.includes));
+        modules.push_back(_assetManager.loadShaderModule(name, info.path, info.stage, info.macros, info.includes, { 32, 32, 32 }));
     }
 
     return { _device.get(), modules };

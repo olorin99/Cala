@@ -21,9 +21,17 @@ void cala::ui::AssetManagerWindow::render() {
             u64 shaderID = 0;
 
             for (auto& shaderModuleMetadata : _assetManager->_shaderModules) {
+                ImGui::PushID(shaderID++);
                 ImGui::Text("Name: %s", shaderModuleMetadata.name.c_str());
                 ImGui::Text("Path: %s", shaderModuleMetadata.path.c_str());
                 ImGui::Text("\tHandle: %i", shaderModuleMetadata.moduleHandle.index());
+                if (shaderModuleMetadata.moduleHandle->stage() == vk::ShaderStage::COMPUTE) {
+                    auto localSize = shaderModuleMetadata.localSize;
+                    ende::math::Vec<3, i32> signedLocalSize{ static_cast<i32>(localSize.x()), static_cast<i32>(localSize.y()), static_cast<i32>(localSize.z())};
+                    if (ImGui::SliderInt3("LocalSize", &signedLocalSize[0], 16, 64))
+                        shaderModuleMetadata.localSize = { static_cast<u32>(signedLocalSize.x()), static_cast<u32>(signedLocalSize.y()), static_cast<u32>(signedLocalSize.z()) };
+//                    ImGui::Text("\tLocalSize: (%d, %d, %d)", localSize.x(), localSize.y(), localSize.z());
+                }
                 if (!shaderModuleMetadata.includes.empty()) {
                     if (ImGui::TreeNode((void*)shaderID++, "Includes")) {
                         for (auto& include : shaderModuleMetadata.includes) {
@@ -45,6 +53,7 @@ void cala::ui::AssetManagerWindow::render() {
                     _assetManager->_engine->logger().info("Reloading Shader: {}", shaderModuleMetadata.path.string());
                     _assetManager->reloadShaderModule(shaderModuleMetadata.hash);
                 }
+                ImGui::PopID();
             }
 
             ImGui::TreePop();

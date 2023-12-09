@@ -110,7 +110,10 @@ namespace cala::vk {
         void drawIndirect(BufferHandle buffer, u32 offset, u32 drawCount, u32 stride = 0);
         void drawIndirectCount(BufferHandle buffer, u32 bufferOffset, BufferHandle countBuffer, u32 countOffset, u32 stride = 0);
 
-        void dispatchCompute(u32 x, u32 y, u32 z);
+        // dispatches with xyz elements internally translated to dispatchWorkgroups(x / program.localSize.x() ...
+        void dispatch(u32 x, u32 y, u32 z);
+        // dispatches with xyz workgroups
+        void dispatchWorkgroups(u32 x, u32 y, u32 z);
 
         void clearImage(ImageHandle image, const ende::math::Vec4f& clearValue = { 0.f, 0.f, 0.f, 0.f });
 
@@ -161,7 +164,7 @@ namespace cala::vk {
         bool _active;
 
         BufferHandle _indexBuffer;
-        const ShaderInterface* _boundInterface;
+        const ShaderProgram* _boundProgram;
 
         struct PipelineKey {
             u32 shaderCount = 0;

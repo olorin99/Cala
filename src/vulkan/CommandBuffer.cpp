@@ -28,7 +28,7 @@ cala::vk::CommandBuffer::CommandBuffer(CommandBuffer &&rhs) noexcept
     _queue(VK_NULL_HANDLE),
     _active(false),
     _indexBuffer{},
-    _boundInterface(nullptr),
+    _boundProgram(nullptr),
     _pipelineKey(),
     _currentPipeline(VK_NULL_HANDLE)
 {
@@ -37,7 +37,7 @@ cala::vk::CommandBuffer::CommandBuffer(CommandBuffer &&rhs) noexcept
     std::swap(_queue, rhs._queue);
     std::swap(_active, rhs._active);
     std::swap(_indexBuffer, rhs._indexBuffer);
-    std::swap(_boundInterface, rhs._boundInterface);
+    std::swap(_boundProgram, rhs._boundProgram);
     std::swap(_pipelineKey, rhs._pipelineKey);
     std::swap(_currentPipeline, rhs._currentPipeline);
     for (u32 i = 0; i < MAX_SET_COUNT; i++) {
@@ -55,7 +55,7 @@ cala::vk::CommandBuffer &cala::vk::CommandBuffer::operator=(CommandBuffer &&rhs)
     std::swap(_queue, rhs._queue);
     std::swap(_active, rhs._active);
     std::swap(_indexBuffer, rhs._indexBuffer);
-    std::swap(_boundInterface, rhs._boundInterface);
+    std::swap(_boundProgram, rhs._boundProgram);
     std::swap(_pipelineKey, rhs._pipelineKey);
     std::swap(_currentPipeline, rhs._currentPipeline);
     for (u32 i = 0; i < MAX_SET_COUNT; i++) {
@@ -148,7 +148,7 @@ void cala::vk::CommandBuffer::bindProgram(const ShaderProgram& program) {
         _pipelineKey.shaders[i] = stageCreateInfo;
     }
     _pipelineKey.shaderCount = program._modules.size();
-    _boundInterface = &program.interface();
+    _boundProgram = &program;
     _pipelineKey.compute = program.stagePresent(ShaderStage::COMPUTE);
     _pipelineDirty = true;
 }
@@ -410,7 +410,13 @@ void cala::vk::CommandBuffer::drawIndirectCount(BufferHandle buffer, u32 bufferO
     writeBufferMarker(PipelineStage::FRAGMENT_SHADER, "vkCmdDrawIndirectCount::FRAGMENT");
 }
 
-void cala::vk::CommandBuffer::dispatchCompute(u32 x, u32 y, u32 z) {
+void cala::vk::CommandBuffer::dispatch(u32 x, u32 y, u32 z) {
+    assert(_boundProgram);
+    auto localSize = _boundProgram->localSize();
+    dispatchWorkgroups(std::ceil(x / static_cast<f32>(localSize.x())), std::ceil(y / static_cast<f32>(localSize.y())), std::ceil(z / static_cast<f32>(localSize.z())));
+}
+
+void cala::vk::CommandBuffer::dispatchWorkgroups(u32 x, u32 y, u32 z) {
     assert(!_pipelineDirty);
     assert(!_descriptorDirty);
     if (!_pipelineKey.compute) throw std::runtime_error("Trying to dispatch compute when graphics pipeline is bound");

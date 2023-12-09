@@ -472,6 +472,6 @@ void debugVxgi(cala::RenderGraph& graph, cala::Engine& engine) {
         cmd->bindImage(2, 0, backbuffer->defaultView());
         cmd->bindPipeline();
         cmd->bindDescriptors();
-        cmd->dispatchCompute(std::ceil(backbuffer->width() / 32.f), std::ceil(backbuffer->height() / 32.f), 1);
+        cmd->dispatch(backbuffer->width(), backbuffer->height(), 1);
     });
 }

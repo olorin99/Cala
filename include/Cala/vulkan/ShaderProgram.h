@@ -41,6 +41,8 @@ namespace cala::vk {
 
         const ShaderInterface& interface() const;
 
+        const ende::math::Vec<3, u32>& localSize() const;
+
 //    private:
 //        friend Builder;
         friend CommandBuffer;

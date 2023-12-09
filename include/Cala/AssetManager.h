@@ -77,7 +77,7 @@ namespace cala {
 
         };
 
-        vk::ShaderModuleHandle loadShaderModule(const std::string& name, const std::filesystem::path& path, vk::ShaderStage stage = vk::ShaderStage::NONE, const std::vector<util::Macro>& macros = {}, std::span<const std::string> includes = {});
+        vk::ShaderModuleHandle loadShaderModule(const std::string& name, const std::filesystem::path& path, vk::ShaderStage stage = vk::ShaderStage::NONE, const std::vector<util::Macro>& macros = {}, std::span<const std::string> includes = {}, const ende::math::Vec<3, u32>& localSize = {});
 
         vk::ShaderModuleHandle reloadShaderModule(u32 hash);
 
@@ -123,6 +123,7 @@ namespace cala {
             vk::ShaderStage stage;
             std::vector<util::Macro> macros;
             std::vector<std::string> includes;
+            ende::math::Vec<3, u32> localSize;
             vk::ShaderModuleHandle moduleHandle;
         };
         std::vector<ShaderModuleMetadata> _shaderModules;

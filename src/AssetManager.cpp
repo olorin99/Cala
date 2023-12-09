@@ -151,12 +151,16 @@ i32 cala::AssetManager::registerModel(const std::string &name, const std::filesy
     return index;
 }
 
-cala::vk::ShaderModuleHandle cala::AssetManager::loadShaderModule(const std::string& name, const std::filesystem::path &path, vk::ShaderStage stage, const std::vector<util::Macro>& macros, std::span<const std::string> includes) {
+cala::vk::ShaderModuleHandle cala::AssetManager::loadShaderModule(const std::string& name, const std::filesystem::path &path, vk::ShaderStage stage, const std::vector<util::Macro>& macros, std::span<const std::string> includes, const ende::math::Vec<3, u32>& localSize) {
     u32 hash = std::hash<std::filesystem::path>()(path);
 
     std::hash<std::string_view> hasher;
     for (auto& macro : macros) {
         u32 h = hasher(macro.value);
+        hash = ende::util::combineHash(hash, h);
+    }
+    for (auto& include : includes) {
+        u32 h = hasher(include);
         hash = ende::util::combineHash(hash, h);
     }
 
@@ -215,7 +219,21 @@ cala::vk::ShaderModuleHandle cala::AssetManager::loadShaderModule(const std::str
 
     auto& moduleMetadata = _shaderModules[metadata.index];
 
-    auto expectedSpirV = util::compileGLSLToSpirv(path.string(), source, stage, macros, searchPaths);
+    auto finalMacros = macros;
+    finalMacros.push_back({
+        "LOCAL_SIZE_X",
+        std::to_string(localSize.x())
+    });
+    finalMacros.push_back({
+        "LOCAL_SIZE_Y",
+        std::to_string(localSize.y())
+    });
+    finalMacros.push_back({
+        "LOCAL_SIZE_Z",
+        std::to_string(localSize.z())
+    });
+
+    auto expectedSpirV = util::compileGLSLToSpirv(path.string(), source, stage, finalMacros, searchPaths);
     if (!expectedSpirV.has_value()) {
         _engine->logger().warn("unable to load shader: {}", path.string());
         _engine->logger().error(expectedSpirV.error());
@@ -226,6 +244,7 @@ cala::vk::ShaderModuleHandle cala::AssetManager::loadShaderModule(const std::str
     auto module = _engine->device().recreateShaderModule(moduleMetadata.moduleHandle, expectedSpirV.value(), stage);
 
     moduleMetadata.moduleHandle = module;
+    moduleMetadata.localSize = module->localSize();
     moduleMetadata.macros.clear();
     for (auto& macro : macros)
         moduleMetadata.macros.push_back(macro);
@@ -260,7 +279,7 @@ cala::vk::ShaderModuleHandle cala::AssetManager::reloadShaderModule(u32 hash) {
     for (auto& include : moduleMetadata.includes)
         includes.push_back(include);
 
-    auto module = loadShaderModule(moduleMetadata.name, moduleMetadata.path, moduleMetadata.stage, macros, includes);
+    auto module = loadShaderModule(moduleMetadata.name, moduleMetadata.path, moduleMetadata.stage, macros, includes, moduleMetadata.localSize);
 
     metadata.loaded = true;
     return module;
