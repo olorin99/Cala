@@ -52,11 +52,21 @@ namespace cala {
             stageData(dstHandle, std::span<const u8>(reinterpret_cast<const u8*>(&data), sizeof(data)), dstOffset);
         }
 
+        template <std::ranges::range Range>
+        void stageData(vk::BufferHandle dstHandle, const Range& range, u32 dstOffset = 0) {
+            stageData(dstHandle, std::span<const u8>(reinterpret_cast<const u8*>(std::ranges::data(range)), std::ranges::size(range) * sizeof(std::ranges::range_value_t<Range>)), dstOffset);
+        }
+
         void stageData(vk::BufferHandle dstHandle, std::span<const u8> data, u32 dstOffset = 0);
 
         template <typename T>
         void stageData(vk::ImageHandle dstHandle, std::span<T> data, vk::Image::DataInfo dataInfo) {
             stageData(dstHandle, std::span<const u8>(reinterpret_cast<const u8*>(data.data()), data.size() * sizeof(T)), dataInfo);
+        }
+
+        template <std::ranges::range Range>
+        void stageData(vk::ImageHandle dstHandle, const Range& range, vk::Image::DataInfo dataInfo) {
+            stageData(dstHandle, std::span<const u8>(reinterpret_cast<const u8*>(std::ranges::data(range)), std::ranges::size(range) * sizeof(std::ranges::range_value_t<Range>)), dataInfo);
         }
 
         void stageData(vk::ImageHandle dstHandle, std::span<const u8> data, vk::Image::DataInfo dataInfo);

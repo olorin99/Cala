@@ -115,8 +115,8 @@ void cala::Scene::prepare(cala::Camera& camera) {
     // update transforms
     traverseNode(_root.get(), _root->transform.local(), _meshTransforms);
 
-    _engine->stageData(_meshDataBuffer[frame], std::span<const u8>(reinterpret_cast<const u8*>(_meshData.data()), _meshData.size() * sizeof(GPUMesh)));
-    _engine->stageData(_meshTransformsBuffer[frame], std::span<const u8>(reinterpret_cast<const u8*>(_meshTransforms.data()), _meshTransforms.size() * sizeof(ende::math::Mat4f)));
+    _engine->stageData(_meshDataBuffer[frame], _meshData);
+    _engine->stageData(_meshTransformsBuffer[frame], _meshTransforms);
 
     std::sort(_lightData.begin(), _lightData.end(), [](const GPULight& lhs, const GPULight& rhs) {
         return lhs.type < rhs.type;
@@ -128,7 +128,7 @@ void cala::Scene::prepare(cala::Camera& camera) {
         data.cameraIndex = lightIndex + 1;
         _lightData.push_back(data);
     }
-    _engine->stageData(_lightBuffer[frame], std::span<const u8>(reinterpret_cast<const u8*>(_lightData.data()), _lightData.size() * sizeof(GPULight)));
+    _engine->stageData(_lightBuffer[frame], _lightData);
 
     u32 lightCount[2] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount) };
     std::span<const u8> ls(reinterpret_cast<const u8*>(lightCount), sizeof(u32) * 2);
@@ -140,7 +140,7 @@ void cala::Scene::prepare(cala::Camera& camera) {
         count.offset = offset;
         offset += count.count;
     }
-    _engine->stageData(_materialCountBuffer[frame], std::span<const u8>(reinterpret_cast<const u8*>(_materialCounts.data()), _materialCounts.size() * sizeof(MaterialCount)));
+    _engine->stageData(_materialCountBuffer[frame], _materialCounts);
 
     _engine->updateMaterialdata();
 }
