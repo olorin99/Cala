@@ -908,7 +908,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     _globalData.transformsBuffer = scene._meshTransformsBuffer[_engine->device().frameIndex()]->address();
     _globalData.cameraBuffer = _cameraBuffer[_engine->device().frameIndex()]->address();
     _globalData.lightBuffer = scene._lightBuffer[_engine->device().frameIndex()]->address();
-    _globalData.lightCountBuffer = scene._lightCountBuffer[_engine->device().frameIndex()]->address();
 
     _engine->stageData(_globalDataBuffer[_engine->device().frameIndex()], _globalData);
 

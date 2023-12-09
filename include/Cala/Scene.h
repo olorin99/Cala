@@ -38,7 +38,6 @@ namespace cala {
         vk::BufferHandle _meshDataBuffer[vk::FRAMES_IN_FLIGHT];
         vk::BufferHandle _meshTransformsBuffer[vk::FRAMES_IN_FLIGHT];
         vk::BufferHandle _lightBuffer[vk::FRAMES_IN_FLIGHT];
-        vk::BufferHandle _lightCountBuffer[vk::FRAMES_IN_FLIGHT];
         vk::BufferHandle _materialCountBuffer[vk::FRAMES_IN_FLIGHT];
         vk::ImageHandle _skyLightMap;
         vk::Image::View _skyLightMapView;

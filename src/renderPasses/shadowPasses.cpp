@@ -183,7 +183,7 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                             cmd->bindProgram(engine.getProgram(cala::Engine::ProgramType::SHADOW_POINT));
 
                             cmd->bindBuffer(3, 0, scene._lightBuffer[engine.device().frameIndex()],
-                                            sizeof(GPULight) * i, sizeof(GPULight), true);
+                                            sizeof(GPULight) * i + sizeof(u32), sizeof(GPULight), true);
 
                             struct ShadowData {
                                 ende::math::Mat4f viewProjection;

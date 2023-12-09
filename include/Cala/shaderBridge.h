@@ -95,18 +95,14 @@ layout (scalar, buffer_reference, buffer_reference_align = 8) buffer LightIndice
 };
 
 layout (scalar, buffer_reference, buffer_reference_align = 8) readonly buffer LightBuffer {
+    uint lightCount;
     GPULight lights[];
 };
 
-layout (scalar, buffer_reference, buffer_reference_align = 8) readonly buffer LightCountBuffer {
-    uint directLightCount;
-    uint pointLightCount;
-};
 #else
 #define LightGridBuffer u64
 #define LightIndicesBuffer u64
 #define LightBuffer u64
-#define LightCountBuffer u64
 #endif
 
 struct GlobalData {
@@ -128,7 +124,6 @@ struct GlobalData {
     TransformsBuffer transformsBuffer;
     CameraBuffer cameraBuffer;
     LightBuffer lightBuffer;
-    LightCountBuffer lightCountBuffer;
 };
 
 #define CALA_GLOBAL_DATA_SET 1

@@ -10,7 +10,7 @@ void debugClusters(cala::RenderGraph& graph, cala::Engine& engine, cala::vk::Swa
 
     debugClusters.addUniformBufferRead("global", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
     debugClusters.addStorageBufferRead("lightGrid", vk::PipelineStage::FRAGMENT_SHADER);
-    debugClusters.addSampledImageRead("deptvk", vk::PipelineStage::FRAGMENT_SHADER);
+    debugClusters.addSampledImageRead("depth", vk::PipelineStage::FRAGMENT_SHADER);
 
     debugClusters.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
         auto global = graph.getBuffer("global");

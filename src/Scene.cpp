@@ -27,18 +27,10 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
     }
     for (u32 i = 0; i < vk::FRAMES_IN_FLIGHT; i++) {
         _lightBuffer[i] = engine->device().createBuffer({
-            .size = (u32)(lightCount * sizeof(GPULight)),
+            .size = (u32)(sizeof(u32) + lightCount * sizeof(GPULight)),
             .usage = vk::BufferUsage::STORAGE,
             .memoryType = vk::MemoryProperties::DEVICE,
             .name = "LightBuffer: " + std::to_string(i)
-        });
-    }
-    for (u32 i = 0; i < vk::FRAMES_IN_FLIGHT; i++) {
-        _lightCountBuffer[i] = engine->device().createBuffer({
-            .size = (u32)(sizeof(u32) * 2),
-            .usage = vk::BufferUsage::STORAGE,
-            .memoryType = vk::MemoryProperties::DEVICE,
-            .name = "LightCountBuffer: " + std::to_string(i)
         });
     }
     for (u32 i = 0; i < vk::FRAMES_IN_FLIGHT; i++) {
@@ -109,7 +101,7 @@ void cala::Scene::prepare(cala::Camera& camera) {
         _materialCountBuffer[frame] = _engine->device().resizeBuffer(_materialCountBuffer[frame], _materialCounts.size() * sizeof(MaterialCount));
     }
     if (_lightData.size() * sizeof(GPULight) >= _lightBuffer[frame]->size()) {
-        _lightBuffer[frame] = _engine->device().resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(GPULight) * 2);
+        _lightBuffer[frame] = _engine->device().resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(GPULight) * 2 + sizeof(u32));
     }
 
     // update transforms
@@ -128,11 +120,9 @@ void cala::Scene::prepare(cala::Camera& camera) {
         data.cameraIndex = lightIndex + 1;
         _lightData.push_back(data);
     }
-    _engine->stageData(_lightBuffer[frame], _lightData);
-
-    u32 lightCount[2] = { _directionalLightCount, static_cast<u32>(_lights.size() - _directionalLightCount) };
-    std::span<const u8> ls(reinterpret_cast<const u8*>(lightCount), sizeof(u32) * 2);
-    _engine->stageData(_lightCountBuffer[frame], ls);
+    _engine->stageData(_lightBuffer[frame], _lightData, sizeof(u32));
+    u32 totalLightCount = _lights.size();
+    _engine->stageData(_lightBuffer[frame], totalLightCount);
 
 
     u32 offset = 0;
