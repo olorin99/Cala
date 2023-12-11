@@ -611,8 +611,22 @@ bool cala::RenderGraph::compile() {
 bool cala::RenderGraph::execute(vk::CommandHandle cmd) {
     PROFILE_NAMED("RenderGraph::execute");
 
+    const char* currentDebugGroup = nullptr;
     for (u32 i = 0; i < _orderedPasses.size(); i++) {
         auto& pass = _orderedPasses[i];
+
+        if (currentDebugGroup != pass->_debugGroup) {
+            if (currentDebugGroup != nullptr)
+                cmd->popDebugLabel();
+
+            currentDebugGroup = pass->_debugGroup;
+            if (currentDebugGroup != nullptr) {
+                cmd->pushDebugLabel(currentDebugGroup);
+            }
+        }
+        //TODO: as well as debug labels have so passes are timed in groups.
+        // this would help as would be able to define operations like bloom downsample which are done in multiple
+        // passes and have them all grouped and not clutter the graphs
 
         auto& timer = _timers[_engine->device().frameIndex()][i];
         timer.first = pass->_label;
@@ -647,6 +661,8 @@ bool cala::RenderGraph::execute(vk::CommandHandle cmd) {
         cmd->popDebugLabel();
         timer.second.stop();
     }
+    if (currentDebugGroup)
+        cmd->popDebugLabel();
     return true;
 }
 

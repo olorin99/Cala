@@ -51,6 +51,8 @@ namespace cala {
 
         void setDebugColour(const std::array<f32, 4>& colour);
 
+        void setDebugGroup(const char* group) { _debugGroup = group; }
+
         void setDimensions(u32 width, u32 height);
 
 
@@ -159,6 +161,8 @@ namespace cala {
             vk::ImageLayout dstLayout = vk::ImageLayout::UNDEFINED;
         };
         std::vector<Barrier> _barriers;
+
+        const char* _debugGroup = nullptr;
 
     };
 

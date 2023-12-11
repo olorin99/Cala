@@ -295,6 +295,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     }
 
     auto& cullLights = _graph.addPass("cull_lights", RenderPass::Type::COMPUTE);
+    cullLights.setDebugGroup("culling");
 
     cullLights.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
     cullLights.addStorageBufferRead("clusters", vk::PipelineStage::COMPUTE_SHADER);
@@ -383,6 +384,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
 
     auto& cullPass = _graph.addPass("cull", RenderPass::Type::COMPUTE);
+    cullPass.setDebugGroup("culling");
 
     cullPass.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
     cullPass.addStorageBufferRead("transforms", vk::PipelineStage::COMPUTE_SHADER);
@@ -577,6 +579,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
 
         {
             auto &bloomDownsamplePass = _graph.addPass("bloom-downsample", RenderPass::Type::COMPUTE);
+            bloomDownsamplePass.setDebugGroup("bloom");
 
             bloomDownsamplePass.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
             bloomDownsamplePass.addSampledImageRead("hdr", vk::PipelineStage::COMPUTE_SHADER);
@@ -640,6 +643,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         }
         {
             auto& bloomUpsamplePass = _graph.addPass("bloom-upsample", RenderPass::Type::COMPUTE);
+            bloomUpsamplePass.setDebugGroup("bloom");
 
             bloomUpsamplePass.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
 
@@ -714,6 +718,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         }
         {
             auto& bloomCompositePass = _graph.addPass("bloom-composite", RenderPass::Type::COMPUTE);
+            bloomCompositePass.setDebugGroup("bloom");
 
             bloomCompositePass.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
 
