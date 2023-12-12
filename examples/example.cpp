@@ -77,17 +77,17 @@ int main() {
 
 
     Transform defaultTransform;
-    scene.addModel(*sponzaAsset, defaultTransform);
+    scene.addModel("sponza", *sponzaAsset, defaultTransform);
 //    scene.addModel(*bistro, defaultTransform);
 //    scene.addModel(*damagedHelmet, sponzaTransform);
-    auto sphereNode = scene.addModel(*sphere, lightTransform);
+    auto sphereNode = scene.addModel("smallSphere", *sphere, lightTransform);
 
     f32 sceneBounds = 10;
 
     Transform t1({ 0, 4, 0 });
     Transform t2({ 2, 1, 0 }, {}, { 1, 1, 1 }, &t1);
 
-    scene.addModel(*sphere, t2);
+    scene.addModel("sphere2", *sphere, t2);
 
     i32 newLights = 10;
 
@@ -108,6 +108,13 @@ int main() {
                             camera.resize(event.window.data1, event.window.data2);
                             break;
                     }
+                    break;
+                case SDL_DROPFILE:
+                    char* droppedFile = event.drop.file;
+                    engine.logger().info("Dropped File: {}", droppedFile);
+                    auto asset = engine.assetManager()->loadModel(droppedFile, droppedFile, material1);
+                    scene.addModel(droppedFile, *asset, defaultTransform);
+                    SDL_free(droppedFile);
                     break;
             }
             guiWindow.context().processEvent(&event);

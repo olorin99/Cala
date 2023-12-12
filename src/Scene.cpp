@@ -151,8 +151,8 @@ cala::Scene::SceneNode* cala::Scene::addNode(const std::string& name, const cala
     }
 }
 
-cala::Scene::SceneNode* addModelNode(cala::Scene& scene, cala::Model& model, cala::Model::Node& node, const cala::Transform& transform, cala::Scene::SceneNode* parent) {
-    auto sceneNode = scene.addNode(node.name, transform, parent);
+cala::Scene::SceneNode* addModelNode(const std::string& name, cala::Scene& scene, cala::Model& model, cala::Model::Node& node, const cala::Transform& transform, cala::Scene::SceneNode* parent) {
+    auto sceneNode = scene.addNode(node.name.empty() ? name : node.name, transform, parent);
     for (auto primitiveIndex : node.primitives) {
         auto& primitive = model.primitives[primitiveIndex];
         scene.addMesh({
@@ -166,14 +166,19 @@ cala::Scene::SceneNode* addModelNode(cala::Scene& scene, cala::Model& model, cal
 
     for (auto& child : node.children) {
         auto& modelNode = model.nodes[child];
-        addModelNode(scene, model, modelNode, cala::Transform(), sceneNode);
+        addModelNode(name, scene, model, modelNode, cala::Transform(), sceneNode);
     }
     return sceneNode;
 }
 
-cala::Scene::SceneNode *cala::Scene::addModel(cala::Model &model, const cala::Transform& transform, cala::Scene::SceneNode *parent) {
-    auto& rootNode = model.nodes.front();
-    return addModelNode(*this, model, rootNode, transform, parent);
+cala::Scene::SceneNode *cala::Scene::addModel(const std::string& name, cala::Model &model, const cala::Transform& transform, cala::Scene::SceneNode *parent) {
+    if (model.nodes.size() > 1) {
+        auto rootNode = addNode(name, transform, parent);
+        for (auto& node : model.nodes)
+            addModelNode(name, *this, model, node, Transform(), rootNode);
+        return rootNode;
+    }
+    return addModelNode(name, *this, model, model.nodes.front(), transform, parent);
 }
 
 cala::Scene::SceneNode *cala::Scene::addMesh(const cala::Mesh &mesh, const cala::Transform &transform, cala::MaterialInstance *materialInstance, cala::Scene::SceneNode *parent) {

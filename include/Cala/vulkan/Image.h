@@ -126,6 +126,8 @@ namespace cala::vk {
 
         ImageType type() const { return _type; }
 
+        const std::string& debugName() const { return _debugName; }
+
     private:
 
         friend Device;
@@ -143,6 +145,7 @@ namespace cala::vk {
         ImageUsage _usage;
         ImageLayout _layout;
         ImageType _type;
+        std::string _debugName;
 
         View _defaultView;
 

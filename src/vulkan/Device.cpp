@@ -450,8 +450,11 @@ bool cala::vk::Device::gc() {
             _logger->warn("attempted to destroy buffer ({}) which has invalid allocation", index);
         buffer._allocation = nullptr;
         _totalDeallocated += buffer.size();
+        if (buffer._debugName.empty())
+            _logger->info("destroyed buffer at index ({})", index);
+        else
+            _logger->info("destroyed buffer at index ({}) named: {}", index, buffer.debugName());
         buffer = Buffer(this);
-        _logger->info("destroyed buffer ({})", index);
     });
 
     _imageList.clearDestroyQueue([this](i32 index, Image& image) {
@@ -471,7 +474,10 @@ bool cala::vk::Device::gc() {
         image._layers = 0;
         image._mips = 0;
         image._format = Format::UNDEFINED;
-        _logger->info("destroyed image ({})", index);
+        if (image._debugName.empty())
+            _logger->info("destroyed image at index ({})", index);
+        else
+            _logger->info("destroyed image at index ({}) named: {}", index, image.debugName());
     });
 
     _shaderModulesList.clearDestroyQueue([this](i32 index, ShaderModule& module) {
@@ -551,6 +557,7 @@ cala::vk::BufferHandle cala::vk::Device::createBuffer(cala::vk::Device::BufferIn
     _bufferList.getResource(index)->_size = info.size;
     _bufferList.getResource(index)->_usage = info.usage;
     _bufferList.getResource(index)->_flags = info.memoryType;
+    _bufferList.getResource(index)->_debugName = info.name;
     if (info.persistentlyMapped)
         _bufferList.getResource(index)->_mapped = _bufferList.getResource(index)->map();
 
@@ -658,6 +665,7 @@ cala::vk::ImageHandle cala::vk::Device::createImage(Image::CreateInfo info) {
     _imageList.getResource(index)->_format = info.format;
     _imageList.getResource(index)->_usage = info.usage;
     _imageList.getResource(index)->_type = type;
+    _imageList.getResource(index)->_debugName = info.name;
 
     _imageList.getResource(index)->_defaultView = std::move(_imageList.getResource(index)->newView(0, _imageList.getResource(index)->mips()));
 

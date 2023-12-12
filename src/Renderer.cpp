@@ -20,26 +20,28 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
 {
     _engine->device().setBindlessSetIndex(0);
 
-    for (auto& buffer : _cameraBuffer) {
+    for (u32 i = 0; auto& buffer : _cameraBuffer) {
         buffer = engine->device().createBuffer({
             .size = sizeof(GPUCamera) * 10,
             .usage = vk::BufferUsage::UNIFORM,
             .memoryType = vk::MemoryProperties::DEVICE,
-            .name = "CameraBuffer: " + std::to_string(_engine->device().frameIndex())
+            .name = "CameraBuffer: " + std::to_string(i++)
         });
     }
-    for (auto& buffer : _globalDataBuffer) {
+    for (u32 i = 0; auto& buffer : _globalDataBuffer) {
         buffer = engine->device().createBuffer({
             .size = sizeof(RendererGlobal),
             .usage = vk::BufferUsage::UNIFORM,
-            .memoryType = vk::MemoryProperties::DEVICE
+            .memoryType = vk::MemoryProperties::DEVICE,
+            .name = "GlobalBuffer:" + std::to_string(i++)
         });
     }
-    for (auto& buffer : _frustumBuffer) {
+    for (u32 i = 0; auto& buffer : _frustumBuffer) {
         buffer = engine->device().createBuffer({
             .size = sizeof(ende::math::Vec4f) * 8,
             .usage = vk::BufferUsage::UNIFORM,
-            .memoryType = vk::MemoryProperties::DEVICE
+            .memoryType = vk::MemoryProperties::DEVICE,
+            .name = "FrustumBuffer: " + std::to_string(i++)
         });
     }
 }

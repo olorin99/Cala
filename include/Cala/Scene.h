@@ -87,7 +87,7 @@ namespace cala {
 
         SceneNode* addNode(const std::string& name, const Transform& transform, SceneNode* parent = nullptr);
 
-        SceneNode* addModel(Model& model, const Transform& transform, SceneNode* parent = nullptr);
+        SceneNode* addModel(const std::string& name, Model& model, const Transform& transform, SceneNode* parent = nullptr);
 
         SceneNode* addMesh(const Mesh& mesh, const Transform& transform, MaterialInstance* materialInstance = nullptr, SceneNode* parent = nullptr);
 
