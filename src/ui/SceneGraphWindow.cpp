@@ -39,6 +39,14 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                 auto label = std::format("Mesh: {}", meshNode->index);
                 if (ImGui::TreeNode(label.c_str())) {
                     auto& meshInfo = scene->_meshes[meshNode->index];
+                    auto& meshData = scene->_meshData[meshNode->index];
+
+                    bool enabled = meshData.enabled;
+                    if (ImGui::Checkbox("Enabled", &enabled))
+                        meshData.enabled = enabled;
+                    bool castShadows = meshData.castShadows;
+                    if (ImGui::Checkbox("Cast Shadows", &castShadows))
+                        meshData.castShadows = castShadows;
 
                     ImGui::Text("First Index: %u", meshInfo.firstIndex);
                     ImGui::Text("Index Count: %u", meshInfo.indexCount);

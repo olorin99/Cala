@@ -31,10 +31,12 @@ struct GPUMesh {
     uint materialIndex;
     vec4 min;
     vec4 max;
+    uint enabled;
+    uint castShadows;
 };
 
 #ifndef __cplusplus
-layout (std430, buffer_reference, buffer_reference_align = 8) readonly buffer MeshBuffer {
+layout (scalar, buffer_reference, buffer_reference_align = 8) readonly buffer MeshBuffer {
     GPUMesh meshData[];
 };
 #else
@@ -42,7 +44,7 @@ layout (std430, buffer_reference, buffer_reference_align = 8) readonly buffer Me
 #endif
 
 #ifndef __cplusplus
-layout (std430, buffer_reference, buffer_reference_align = 8) readonly buffer TransformsBuffer {
+layout (scalar, buffer_reference, buffer_reference_align = 8) readonly buffer TransformsBuffer {
     mat4 transforms[];
 };
 #else

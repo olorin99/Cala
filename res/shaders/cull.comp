@@ -51,6 +51,8 @@ void main() {
     barrier();
 
     GPUMesh mesh = globalData.meshBuffer.meshData[idx];
+    if (mesh.enabled == 0)
+        return;
     vec3 center = (mesh.max.xyz + mesh.min.xyz) * 0.5;
     center = (globalData.transformsBuffer.transforms[idx] * vec4(center, 1.0)).xyz;
     vec3 halfExtent = (mesh.max.xyz - mesh.min.xyz) * 0.5;

@@ -190,7 +190,9 @@ cala::Scene::SceneNode *cala::Scene::addMesh(const cala::Mesh &mesh, const cala:
         instance->material()->id(),
         instance->getIndex(),
         mesh.min,
-        mesh.max
+        mesh.max,
+        true,
+        true
     });
     _meshes.push_back({
         mesh.firstIndex,
