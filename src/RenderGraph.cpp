@@ -707,7 +707,10 @@ void cala::RenderGraph::buildResources() {
                 });
             }
         } else if (auto bufferResource = dynamic_cast<BufferResource*>(resource.get()); bufferResource) {
-            if (!_buffers[i]) {
+            auto buffer = _buffers[i];
+            if (!buffer ||
+                (buffer->usage() & bufferResource->usage) != bufferResource->usage ||
+                buffer->size() < bufferResource->size) {
                 _buffers[i] = _engine->device().createBuffer({
                     .size = bufferResource->size,
                     .usage = bufferResource->usage,
