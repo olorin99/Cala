@@ -238,6 +238,17 @@ cala::Scene::SceneNode *cala::Scene::addLight(const cala::Light &light, const ca
     }
 }
 
+void traverseNodeUpdateMeshIndices(cala::Scene::SceneNode* node, u32 meshIndex) {
+    if (node->type == cala::Scene::NodeType::MESH) {
+        auto meshNode = dynamic_cast<cala::Scene::MeshNode*>(node);
+        if (meshNode->index > meshIndex) {
+            meshNode->index--;
+        }
+    }
+    for (auto& child : node->children)
+        traverseNodeUpdateMeshIndices(child.get(), meshIndex);
+}
+
 void cala::Scene::removeChildNode(cala::Scene::SceneNode *parent, u32 childIndex) {
     if (!parent || parent->children.size() <= childIndex)
         return;
@@ -246,10 +257,10 @@ void cala::Scene::removeChildNode(cala::Scene::SceneNode *parent, u32 childIndex
     if (child->type == NodeType::MESH) {
         auto meshNode = dynamic_cast<MeshNode*>(child);
         _meshData[meshNode->index].enabled = false;
-        //TODO: erase a meshes info without messing up other scene indices
-//        _meshes.erase(_meshes.begin() + meshNode->index);
-//        _meshData.erase(_meshData.begin() + meshNode->index);
-//        _meshTransforms.erase(_meshTransforms.begin() + meshNode->index);
+        _meshes.erase(_meshes.begin() + meshNode->index);
+        _meshData.erase(_meshData.begin() + meshNode->index);
+        _meshTransforms.erase(_meshTransforms.begin() + meshNode->index);
+        traverseNodeUpdateMeshIndices(_root.get(), meshNode->index);
     }
 
     while (!child->children.empty())
