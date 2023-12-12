@@ -93,6 +93,8 @@ namespace cala {
 
         SceneNode* addLight(const Light& light, const Transform& transform, SceneNode* parent = nullptr);
 
+        void removeChildNode(SceneNode* parent, u32 childIndex);
+
     };
 
 }

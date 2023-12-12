@@ -8,12 +8,19 @@ cala::ui::SceneGraphWindow::SceneGraphWindow(ImGuiContext *context, cala::Scene 
 
 void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
 
-    for (auto& child : node->children) {
+    for (u32 childIndex = 0; childIndex < node->children.size(); childIndex++) {
+        auto& child = node->children[childIndex];
         ImGui::PushID(std::hash<const void*>()(child.get()));
         switch (child->type) {
             case cala::Scene::NodeType::NONE:
             {
                 if (ImGui::TreeNode(child->name.c_str())) {
+                    if (ImGui::Button("Delete")) {
+                        scene->removeChildNode(node, childIndex--);
+                        ImGui::TreePop();
+                        ImGui::PopID();
+                        continue;
+                    }
                     auto position = child->transform.pos();
                     if (ImGui::DragFloat3("Position", &position[0], 0.1)) {
                         child->transform.setPos(position);
@@ -38,6 +45,12 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                 auto meshNode = dynamic_cast<cala::Scene::MeshNode*>(child.get());
                 auto label = std::format("Mesh: {}", meshNode->index);
                 if (ImGui::TreeNode(label.c_str())) {
+                    if (ImGui::Button("Delete")) {
+                        scene->removeChildNode(node, childIndex--);
+                        ImGui::TreePop();
+                        ImGui::PopID();
+                        continue;
+                    }
                     auto& meshInfo = scene->_meshes[meshNode->index];
                     auto& meshData = scene->_meshData[meshNode->index];
 
@@ -116,6 +129,12 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                 auto lightNode = dynamic_cast<cala::Scene::LightNode*>(child.get());
                 auto label = std::format("Light: {}", lightNode->index);
                 if (ImGui::TreeNode(label.c_str())) {
+                    if (ImGui::Button("Delete")) {
+                        scene->removeChildNode(node, childIndex--);
+                        ImGui::TreePop();
+                        ImGui::PopID();
+                        continue;
+                    }
                     auto& light = scene->_lights[lightNode->index].second;
 
                     const char* modes[] = { "DIRECTIONAL", "POINT" };
@@ -164,6 +183,7 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                 break;
         }
         ImGui::PopID();
+//        childIndex++;
     }
 }
 
