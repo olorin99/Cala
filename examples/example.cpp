@@ -112,8 +112,12 @@ int main() {
                 case SDL_DROPFILE:
                     char* droppedFile = event.drop.file;
                     engine.logger().info("Dropped File: {}", droppedFile);
-                    auto asset = engine.assetManager()->loadModel(droppedFile, droppedFile, material1);
-                    scene.addModel(droppedFile, *asset, defaultTransform);
+                    std::filesystem::path assetPath = droppedFile;
+                    if (assetPath.extension() == ".gltf" || assetPath.extension() == ".glb") {
+                        auto asset = engine.assetManager()->loadModel(droppedFile, assetPath, material1);
+                        scene.addModel(droppedFile, *asset, defaultTransform);
+                    } else
+                        engine.logger().warn("Unrecognised file type: {}", assetPath.extension().string());
                     SDL_free(droppedFile);
                     break;
             }
