@@ -158,13 +158,13 @@ namespace cala::vk {
 
         friend Device;
 
-        Device* _device;
+        Device* _device = nullptr;
         VkCommandBuffer _buffer;
         VkQueue _queue;
         bool _active;
 
-        BufferHandle _indexBuffer;
-        const ShaderProgram* _boundProgram;
+        BufferHandle _indexBuffer = {};
+        const ShaderProgram* _boundProgram = nullptr;
 
         struct PipelineKey {
             u32 shaderCount = 0;

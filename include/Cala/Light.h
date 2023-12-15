@@ -84,7 +84,7 @@ namespace cala {
         f32 _radius;
         f32 _range;
 
-        vk::ImageHandle _shadowMap;
+        vk::ImageHandle _shadowMap = {};
     };
 
 }

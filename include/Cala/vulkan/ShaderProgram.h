@@ -47,10 +47,10 @@ namespace cala::vk {
 //        friend Builder;
         friend CommandBuffer;
 
-        Device* _device;
-        std::vector<ShaderModuleHandle> _modules;
+        Device* _device = nullptr;
+        std::vector<ShaderModuleHandle> _modules = {};
 
-        PipelineLayoutHandle _pipelineLayout;
+        PipelineLayoutHandle _pipelineLayout = {};
 
     };
 

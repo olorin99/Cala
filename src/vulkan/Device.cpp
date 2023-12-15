@@ -688,7 +688,9 @@ cala::vk::ImageHandle cala::vk::Device::createImage(Image::CreateInfo info) {
 
 cala::vk::ImageHandle cala::vk::Device::getImageHandle(u32 index) {
     assert(index < _imageList.allocated());
-    return _imageList.getHandle(this, index);
+    auto handle = _imageList.getHandle(this, index);
+    handle._data->count++;
+    return handle;
 }
 
 cala::vk::ShaderModuleHandle cala::vk::Device::createShaderModule(std::span<u32> spirv, ShaderStage stage) {

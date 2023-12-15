@@ -49,7 +49,7 @@ int main() {
     light.setPosition({ 0, 1, 0 });
     light.setColour({ 255.f / 255.f, 202.f / 255.f, 136.f / 255.f });
     light.setIntensity(4.649);
-    light.setShadowing(false);
+    light.setShadowing(true);
     Light light1(cala::Light::POINT, false);
     light1.setPosition({ 10, 2, 4 });
     light1.setColour({0, 1, 0});
@@ -63,8 +63,13 @@ int main() {
     light3.setPosition({ -10, 2, 4 });
     light3.setIntensity(1);
     light3.setColour({0.23, 0.46, 0.10});
+    light3.setShadowing(true);
 
+//    scene.addLight(light, lightTransform);
     scene.addLight(light2, lightTransform);
+    scene.addLight(light2, lightTransform);
+    scene.addLight(light2, lightTransform);
+//    scene.addLight(light3, lightTransform);
 
 //    auto background = engine.assetManager()->loadImage("background", "textures/TropicalRuins_3k.hdr", backend::Format::RGBA32_SFLOAT);
 //    auto background = engine.assetManager()->loadImage("background", "textures/Tropical_Beach_3k.hdr", backend::Format::RGBA32_SFLOAT);
@@ -166,6 +171,7 @@ int main() {
 //                l.setIntensity(0.1f);
                     l.setRange(1);
                     l.setColour({ ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f), ende::math::rand(0.f, 1.f) });
+                    l.setShadowing(true);
                     scene.addLight(l, transform);
                 }
             }

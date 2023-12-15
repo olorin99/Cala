@@ -31,7 +31,7 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                 switch (light.type()) {
                     case cala::Light::LightType::DIRECTIONAL:
                     {
-                        auto directionalShadowMap = engine.getShadowMap(shadowIndex++, false);
+                        auto directionalShadowMap = engine.getShadowMap(shadowIndex++, false, cmd);
                         light.setShadowMap(directionalShadowMap);
 
                         f32 halfRange = (light.getFar() - light.getNear()) / 2;
@@ -128,7 +128,7 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                     {
                         cala::Transform shadowTransform(light.getPosition());
                         cala::Camera shadowCam(ende::math::rad(90.f), engine.getShadowMapSize(), engine.getShadowMapSize(), light.getNear(), light.getFar(), &shadowTransform);
-                        auto shadowMap = engine.getShadowMap(shadowIndex++, true);
+                        auto shadowMap = engine.getShadowMap(shadowIndex++, true, cmd);
                         light.setShadowMap(shadowMap);
 
                         for (u32 face = 0; face < 6; face++) {

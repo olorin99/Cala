@@ -392,8 +392,8 @@ cala::vk::ImageHandle cala::Engine::generatePrefilteredIrradiance(vk::ImageHandl
 }
 
 
-cala::vk::ImageHandle cala::Engine::getShadowMap(u32 index, bool point) {
-    if (index < _shadowMaps.size()) {
+cala::vk::ImageHandle cala::Engine::getShadowMap(u32 index, bool point, cala::vk::CommandHandle cmd) {
+    if (index < _shadowMaps.size() && _shadowMaps[index]) {
         if (!point && _shadowMaps[index]->layers() != 6)
             return _shadowMaps[index];
         if (point && _shadowMaps[index]->layers() == 6)
@@ -414,10 +414,15 @@ cala::vk::ImageHandle cala::Engine::getShadowMap(u32 index, bool point) {
         _shadowMaps[index] = map;
     else
         _shadowMaps.push_back(map);
-    _device->immediate([&](vk::CommandHandle cmd) {
+    if (cmd) {
         auto cubeBarrier = map->barrier(vk::PipelineStage::TOP, vk::PipelineStage::TRANSFER, vk::Access::NONE, vk::Access::TRANSFER_WRITE, vk::ImageLayout::SHADER_READ_ONLY);
         cmd->pipelineBarrier({ &cubeBarrier, 1 });
-    });
+    } else {
+        _device->immediate([&](vk::CommandHandle cmd) {
+            auto cubeBarrier = map->barrier(vk::PipelineStage::TOP, vk::PipelineStage::TRANSFER, vk::Access::NONE, vk::Access::TRANSFER_WRITE, vk::ImageLayout::SHADER_READ_ONLY);
+            cmd->pipelineBarrier({ &cubeBarrier, 1 });
+        });
+    }
     return map;
 }
 

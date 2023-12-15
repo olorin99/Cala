@@ -52,13 +52,13 @@ namespace cala::vk {
         Handle& operator=(const Handle& rhs) {
             if (this == &rhs)
                 return *this;
-            if (_data != rhs._data)
-                release();
+            auto newData = rhs._data;
+            if (newData)
+                newData->count++;
+            release();
             _owner = rhs._owner;
             _index = rhs._index;
             _data = rhs._data;
-            if (_data)
-                ++_data->count;
             return *this;
         }
 

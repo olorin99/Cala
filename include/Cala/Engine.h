@@ -152,7 +152,7 @@ namespace cala {
 
         const vk::ShaderProgram& getProgram(ProgramType type);
 
-        vk::ImageHandle getShadowMap(u32 index, bool point);
+        vk::ImageHandle getShadowMap(u32 index, bool point, vk::CommandHandle cmd = {});
 
         void setShadowMapSize(u32 size);
 
@@ -219,22 +219,22 @@ namespace cala {
         u32 _indexOffset;
 
         struct StagedBufferInfo {
-            vk::BufferHandle dstBuffer;
-            u32 dstOffset;
-            u32 srcSize;
-            u32 srcOffset;
+            vk::BufferHandle dstBuffer = {};
+            u32 dstOffset = 0;
+            u32 srcSize = 0;
+            u32 srcOffset = 0;
         };
         std::vector<StagedBufferInfo> _pendingStagedBuffer;
 
         struct StagedImageInfo {
-            vk::ImageHandle dstImage;
-            ende::math::Vec<3, u32> dstDimensions;
-            ende::math::Vec<3, i32> dstOffset;
-            u32 dstMipLevel;
-            u32 dstLayer;
-            u32 dstLayerCount;
-            u32 srcSize;
-            u32 srcOffset;
+            vk::ImageHandle dstImage = {};
+            ende::math::Vec<3, u32> dstDimensions = { 0, 0, 0 };
+            ende::math::Vec<3, i32> dstOffset = { 0, 0, 0 };
+            u32 dstMipLevel = 0;
+            u32 dstLayer = 0;
+            u32 dstLayerCount = 0;
+            u32 srcSize = 0;
+            u32 srcOffset = 0;
         };
         std::vector<StagedImageInfo> _pendingStagedImage;
 

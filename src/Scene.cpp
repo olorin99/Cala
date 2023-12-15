@@ -107,8 +107,8 @@ void cala::Scene::prepare() {
     if (_materialCounts.size() * sizeof(MaterialCount) > _materialCountBuffer[frame]->size()) {
         _materialCountBuffer[frame] = _engine->device().resizeBuffer(_materialCountBuffer[frame], _materialCounts.size() * sizeof(MaterialCount));
     }
-    if (_lightData.size() * sizeof(GPULight) >= _lightBuffer[frame]->size()) {
-        _lightBuffer[frame] = _engine->device().resizeBuffer(_lightBuffer[frame], _lightData.size() * sizeof(GPULight) * 2 + sizeof(u32));
+    if (_lights.size() * sizeof(GPULight) >= _lightBuffer[frame]->size()) {
+        _lightBuffer[frame] = _engine->device().resizeBuffer(_lightBuffer[frame], _lights.size() * sizeof(GPULight) * 2 + sizeof(u32));
     }
 
     // update transforms
