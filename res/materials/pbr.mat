@@ -1,10 +1,10 @@
 {
     "includes": [],
     "materialData": "struct MaterialData {\n  int albedoIndex;\n  int normalIndex;\n  int metallicRoughnessIndex;\n  int emissiveIndex;\n  float emissiveStrength;\n};",
-    "materialDefinition": "struct Material {\n  vec3 albedo;\n  vec3 normal;\n  float metallic;\n  float roughness;\n  vec3 emissive;\n  float emissiveStrength;\n};",
+    "materialDefinition": "struct Material {\n  vec4 albedo;\n  vec3 normal;\n  float metallic;\n  float roughness;\n  vec3 emissive;\n  float emissiveStrength;\n};",
     "materialLoad": { "path": "default/materialLoad.glsl" },
     "lit": { "path":  "default/lit.frag" },
-    "unlit": "vec4 evalMaterial(Material material) {\n  return vec4(material.albedo, 1.0);\n}",
+    "unlit": "vec4 evalMaterial(Material material) {\n  return vec4(material.albedo.rgb, 1.0);\n}",
     "normal": "vec4 evalMaterial(Material material) {\n  return vec4((material.normal + 1) / 2, 1.0);\n}",
     "roughness": "vec4 evalMaterial(Material material) {\n  return vec4(material.roughness, 0.0, 0.0, 1.0);\n}",
     "metallic": "vec4 evalMaterial(Material material) {\n  return vec4(material.metallic, 0.0, 0.0, 1.0);\n}",

@@ -41,20 +41,25 @@ float filterPCF(uint index, vec3 lightPos, float bias, float range) {
 }
 
 float filterPCF2D(int index, vec3 lightPos, vec3 shadowCoords, float bias) {
-    if (lightPos.z > 1.0)
-        return 0.0;
+//    if (lightPos.z > 1.0)
+//        return 0.0;
     float shadow = 0;
-
+    int samples = 20;
     vec2 texelSize = 1.0 / textureSize(CALA_COMBINED_SAMPLER2D(index, globalData.shadowSampler), 0);
-    for(int x = -1; x <= 1; ++x)
-    {
-        for(int y = -1; y <= 1; ++y)
-        {
-            shadow += sampleShadow(index, shadowCoords, vec2(x, y) * texelSize, bias);
-        }
+    float diskRadius = (1.0 + (length(shadowCoords) / 100.f)) / 25.0;
+
+    for (int i = 0; i < samples; i++) {
+        shadow += sampleShadow(index, shadowCoords, sampleOffsetDirections[i].xy * texelSize, bias);
     }
-    shadow /= 9.0;
-    return shadow;
+//    for(int x = -1; x <= 1; ++x)
+//    {
+//        for(int y = -1; y <= 1; ++y)
+//        {
+//            shadow += sampleShadow(index, shadowCoords, vec2(x, y) * texelSize, bias);
+//        }
+//    }
+//    shadow /= 9.0;
+    return shadow / samples;
 }
 
 #endif

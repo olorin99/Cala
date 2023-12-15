@@ -13,8 +13,8 @@ namespace cala {
     class Camera {
     public:
 
-        Camera(f32 fov, f32 width, f32 height, f32 near, f32 far, Transform& transform);
-        Camera(const ende::math::Mat4f& projection, Transform& transform);
+        Camera(f32 fov, f32 width, f32 height, f32 near, f32 far, Transform* transform = nullptr);
+        Camera(const ende::math::Mat4f& projection, Transform* transform = nullptr);
 
         Camera& operator=(const Camera& rhs);
 
@@ -49,12 +49,14 @@ namespace cala {
 
         void setDirty(bool dirty) { _dirty = dirty; }
 
+        void setTransform(Transform* transform) { _transform = transform; }
+
     private:
 
         ende::math::Frustum _frustum;
 
         ende::math::Mat4f _projection;
-        Transform& _transform;
+        Transform* _transform;
         f32 _fov;
         f32 _width;
         f32 _height;

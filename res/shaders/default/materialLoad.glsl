@@ -6,11 +6,11 @@ CALA_USE_SAMPLED_IMAGE(2D)
 Material loadMaterial(MaterialData data) {
     Material material;
     if (data.albedoIndex < 0) {
-        material.albedo = vec3(1.0);
+        material.albedo = vec4(1.0);
     } else {
         vec4 albedaRGBA = texture(CALA_COMBINED_SAMPLER2D(data.albedoIndex, globalData.linearRepeatSampler), fsIn.TexCoords);
 /*if (albedaRGBA.a < 0.001)\n    discard;*/
-        material.albedo = albedaRGBA.rgb;
+        material.albedo = albedaRGBA.rgba;
     }
     if (data.normalIndex < 0) {
         material.normal = vec3(0.52, 0.52, 1);

@@ -354,15 +354,12 @@ void debugFrustum(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& s
     debugFrustum.addDepthRead("depth");
 
     debugFrustum.addUniformBufferRead("global", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
-    debugFrustum.addStorageBufferRead("frustumBuffer", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
 
     debugFrustum.setExecuteFunction([settings, &engine](cala::vk::CommandHandle cmd, cala::RenderGraph& graph) {
         auto global = graph.getBuffer("global");
         auto cameraBuffer = graph.getBuffer("camera");
-        auto frustumBuffer = graph.getBuffer("frustumBuffer");
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
-        cmd->bindBuffer(2, 0, frustumBuffer);
 
         cmd->bindBindings({});
         cmd->bindAttributes({});

@@ -9,10 +9,6 @@ layout (location = 0) out VsOut {
 
 #include "shaderBridge.h"
 
-layout (set = 2, binding = 0) uniform FrustumVertices {
-    vec4 vertex[8];
-};
-
 const uint cubeIndices[] = {
     0, 1, 2, //left
     2, 1, 3,
@@ -36,8 +32,9 @@ void main() {
     vsOut.drawID = 0;
 
     uint index = cubeIndices[gl_VertexIndex];
-    vec4 vertex = vertex[index];
+    GPUCamera cullingCamera = globalData.cameraBuffer.camera;
+    vec4 vertex = cullingCamera.frustum.corners[index];
 
-    GPUCamera camera = globalData.cameraBuffer.camera;
-    gl_Position = camera.projection * camera.view * vertex;
+    GPUCamera mainCamera = globalData.cameraBuffer[globalData.primaryCameraIndex].camera;
+    gl_Position = mainCamera.projection * mainCamera.view * vertex;
 }

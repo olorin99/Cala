@@ -34,6 +34,14 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
         });
     }
     for (u32 i = 0; i < vk::FRAMES_IN_FLIGHT; i++) {
+        _cameraBuffer[i] = engine->device().createBuffer({
+            .size = (u32)(10 * sizeof(GPUCamera)),
+            .usage = vk::BufferUsage::STORAGE,
+            .memoryType = vk::MemoryProperties::DEVICE,
+            .name = "LightBuffer: " + std::to_string(i)
+        });
+    }
+    for (u32 i = 0; i < vk::FRAMES_IN_FLIGHT; i++) {
         _materialCountBuffer[i] = engine->device().createBuffer({
             .size = (u32)(sizeof(MaterialCount) * 1),
             .usage = vk::BufferUsage::UNIFORM | vk::BufferUsage::STORAGE | vk::BufferUsage::INDIRECT,
@@ -80,10 +88,9 @@ void traverseNode(cala::Scene::SceneNode* node, ende::math::Mat4f worldTransform
     }
 }
 
-void cala::Scene::prepare(cala::Camera& camera) {
+void cala::Scene::prepare() {
     PROFILE_NAMED("Scene::prepare");
     u32 frame = _engine->device().frameIndex();
-    camera.updateFrustum();
     _materialCounts.resize(_engine->materialCount());
     for (auto& materialCount : _materialCounts)
         materialCount.count = 0;
@@ -110,19 +117,44 @@ void cala::Scene::prepare(cala::Camera& camera) {
     _engine->stageData(_meshDataBuffer[frame], _meshData);
     _engine->stageData(_meshTransformsBuffer[frame], _meshTransforms);
 
-    std::sort(_lightData.begin(), _lightData.end(), [](const GPULight& lhs, const GPULight& rhs) {
-        return lhs.type < rhs.type;
-    });
+    _cameraData.clear();
+    if (_updateCullingCamera) {
+        auto mainCamera = getMainCamera();
+        mainCamera->updateFrustum();
+        _cullingCameraData = mainCamera->data();
+    }
+    _cameraData.push_back(_cullingCameraData);
+    for (u32 cameraIndex = 0; cameraIndex < _cameras.size(); cameraIndex++) {
+        _cameras[cameraIndex].updateFrustum();
+        auto cameraData = _cameras[cameraIndex].data();
+        _cameraData.push_back(cameraData);
+    }
+
     _lightData.clear();
     for (u32 lightIndex = 0; lightIndex < _lights.size(); lightIndex++) {
         auto& light = _lights[lightIndex].second;
         auto data = light.data();
-        data.cameraIndex = lightIndex + 1;
+
+        if (light.type() == Light::DIRECTIONAL) {
+            f32 halfRange = (light.getFar() - light.getNear()) / 2;
+            cala::Transform lightTransform(light.getPosition(), light.getDirection());
+            cala::Camera lightCamera(ende::math::orthographic<f32>(-20, 20, -20, 20, -halfRange, halfRange), &lightTransform);
+            auto lightCameraData = lightCamera.data();
+            u32 cameraIndex = _cameraData.size();
+            data.cameraIndex = cameraIndex;
+            _cameraData.push_back(lightCameraData);
+        }
+
         _lightData.push_back(data);
     }
     _engine->stageData(_lightBuffer[frame], _lightData, sizeof(u32));
     u32 totalLightCount = _lights.size();
     _engine->stageData(_lightBuffer[frame], totalLightCount);
+
+    if (_cameraData.size() * sizeof(GPUCamera) >= _cameraBuffer[frame]->size()) {
+        _cameraBuffer[frame] = _engine->device().resizeBuffer(_cameraBuffer[frame], _cameraData.size() * sizeof(GPUCamera) * 2);
+    }
+    _engine->stageData(_cameraBuffer[frame], _cameraData);
 
 
     u32 offset = 0;
@@ -222,7 +254,7 @@ cala::Scene::SceneNode *cala::Scene::addMesh(const cala::Mesh &mesh, const cala:
 
 cala::Scene::SceneNode *cala::Scene::addLight(const cala::Light &light, const cala::Transform &transform, cala::Scene::SceneNode *parent) {
     i32 index = _lights.size();
-    _lights.push_back(std::make_pair(2, light));
+    _lights.push_back(std::make_pair(-1, light));
     auto node = std::make_unique<LightNode>();
     node->index = index;
     node->type = NodeType::LIGHT;
@@ -232,6 +264,27 @@ cala::Scene::SceneNode *cala::Scene::addLight(const cala::Light &light, const ca
         parent->children.push_back(std::move(node));
         return parent->children.back().get();
     } else { // add to root
+        node->parent = _root.get();
+        _root->children.push_back(std::move(node));
+        return _root->children.back().get();
+    }
+}
+
+cala::Scene::SceneNode *cala::Scene::addCamera(const cala::Camera &camera, const cala::Transform &transform, cala::Scene::SceneNode *parent) {
+    i32 index = _cameras.size();
+    _cameras.push_back(camera);
+    if (_mainCameraIndex < 0)
+        _mainCameraIndex = index;
+    auto node = std::make_unique<CameraNode>();
+    node->index = index;
+    node->type = NodeType::CAMERA;
+    node->transform = transform;
+    _cameras.back().setTransform(&node->transform);
+    if (parent) {
+        node->parent = parent;
+        parent->children.push_back(std::move(node));
+        return parent->children.back().get();
+    } else {
         node->parent = _root.get();
         _root->children.push_back(std::move(node));
         return _root->children.back().get();
@@ -266,4 +319,20 @@ void cala::Scene::removeChildNode(cala::Scene::SceneNode *parent, u32 childIndex
     while (!child->children.empty())
         removeChildNode(child, 0);
     parent->children.erase(parent->children.begin() + childIndex);
+}
+
+cala::Camera* cala::Scene::getCamera(cala::Scene::SceneNode *node) {
+    assert(node->type == NodeType::CAMERA);
+    return &_cameras[dynamic_cast<CameraNode*>(node)->index];
+}
+
+cala::Camera *cala::Scene::getMainCamera() {
+    assert(_mainCameraIndex >= 0);
+    return &_cameras[_mainCameraIndex];
+}
+
+void cala::Scene::setMainCamera(cala::Scene::CameraNode *node) {
+    assert(node->type == NodeType::CAMERA);
+    _mainCameraIndex = node->index;
+    _cameras[_mainCameraIndex].setDirty(true);
 }

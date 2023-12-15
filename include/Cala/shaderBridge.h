@@ -51,6 +51,11 @@ layout (scalar, buffer_reference, buffer_reference_align = 8) readonly buffer Tr
 #define TransformsBuffer u64
 #endif
 
+struct Frustum {
+    vec4 planes[6];
+    vec4 corners[8];
+};
+
 struct GPUCamera {
     mat4 projection;
     mat4 view;
@@ -58,6 +63,7 @@ struct GPUCamera {
     float near;
     float far;
     float exposure;
+    Frustum frustum;
 };
 
 //layout (set = 0, binding = 1) buffer BindlessCameraBuffer { CameraData camera; } bindlessBuffersCamera[];
@@ -81,10 +87,10 @@ struct GPULight {
     vec3 colour;
     float intensity;
     float shadowRange;
-    float radius;
     float shadowBias;
     int shadowIndex;
     int cameraIndex;
+    uint cascadeCount;
 };
 
 #ifndef __cplusplus
@@ -122,6 +128,7 @@ struct GlobalData {
     int linearRepeatSampler;
     int lodSampler;
     int shadowSampler;
+    int primaryCameraIndex;
     MeshBuffer meshBuffer;
     TransformsBuffer transformsBuffer;
     CameraBuffer cameraBuffer;

@@ -15,33 +15,16 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
     : _engine(engine),
     _swapchain(nullptr),
     _graph(engine),
-    _renderSettings(settings),
-    _cullingFrustum(ende::math::perspective(45.f, 1920.f / 1080.f, 0.1f, 1000.f, true))
+    _renderSettings(settings)
 {
     _engine->device().setBindlessSetIndex(0);
 
-    for (u32 i = 0; auto& buffer : _cameraBuffer) {
-        buffer = engine->device().createBuffer({
-            .size = sizeof(GPUCamera) * 10,
-            .usage = vk::BufferUsage::UNIFORM,
-            .memoryType = vk::MemoryProperties::DEVICE,
-            .name = "CameraBuffer: " + std::to_string(i++)
-        });
-    }
     for (u32 i = 0; auto& buffer : _globalDataBuffer) {
         buffer = engine->device().createBuffer({
-            .size = sizeof(RendererGlobal),
+            .size = sizeof(GlobalData),
             .usage = vk::BufferUsage::UNIFORM,
             .memoryType = vk::MemoryProperties::DEVICE,
             .name = "GlobalBuffer:" + std::to_string(i++)
-        });
-    }
-    for (u32 i = 0; auto& buffer : _frustumBuffer) {
-        buffer = engine->device().createBuffer({
-            .size = sizeof(ende::math::Vec4f) * 8,
-            .usage = vk::BufferUsage::UNIFORM,
-            .memoryType = vk::MemoryProperties::DEVICE,
-            .name = "FrustumBuffer: " + std::to_string(i++)
         });
     }
 }
@@ -109,29 +92,11 @@ f64 cala::Renderer::endFrame() {
     return static_cast<f64>(_engine->device().milliseconds()) / 1000.f;
 }
 
-void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiContext* imGui) {
+void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     PROFILE_NAMED("Renderer::render");
-    if (!_renderSettings.freezeFrustum) {
-        _cullingFrustum = camera.frustum();
-        _frustumCorners = camera.getFrustumCorners();
-    }
-    if ((scene._lights.size() + 1) * sizeof(GPUCamera) > _cameraBuffer[_engine->device().frameIndex()]->size()) {
-        _cameraBuffer[_engine->device().frameIndex()] = _engine->device().resizeBuffer(_cameraBuffer[_engine->device().frameIndex()], (scene._lights.size() + 1) * sizeof(GPUCamera));
-    }
+    auto camera = scene.getMainCamera();
 
-
-    auto cameraData = camera.data();
-    _engine->stageData(_cameraBuffer[_engine->device().frameIndex()], cameraData);
-    _engine->stageData(_frustumBuffer[_engine->device().frameIndex()], std::span<const u8>((u8*)_frustumCorners.data(), 8 * sizeof(ende::math::Vec4f)));
-
-    for (u32 i = 0; i < scene._lights.size(); i++) {
-        auto& light = scene._lights[i].second;
-        cala::Transform transform(light.getPosition(), light.getDirection() );
-        f32 halfRange = (light.getFar() - light.getNear()) / 2;
-        cala::Camera lightCam(ende::math::orthographic<f32>(-20, 20, -20, 20, -halfRange, halfRange), transform);
-        auto lightCameraData = lightCam.data();
-        _engine->stageData(_cameraBuffer[_engine->device().frameIndex()], lightCameraData, sizeof(lightCameraData) * (i + 1));
-    }
+    scene._updateCullingCamera = !_renderSettings.freezeFrustum;
 
     bool overlayDebug = _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugClusters || _renderSettings.debugFrustum || _renderSettings.debugDepth;
     bool fullscreenDebug = _renderSettings.debugNormals || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugMetallic || _renderSettings.debugRoughness;
@@ -229,9 +194,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
     }
     {
         BufferResource cameraResource;
-        cameraResource.size = _cameraBuffer[_engine->device().frameIndex()]->size();
-        cameraResource.usage = _cameraBuffer[_engine->device().frameIndex()]->usage();
-        _graph.addBufferResource("camera", cameraResource, _cameraBuffer[_engine->device().frameIndex()]);
+        cameraResource.size = scene._cameraBuffer[_engine->device().frameIndex()]->size();
+        cameraResource.usage = scene._cameraBuffer[_engine->device().frameIndex()]->usage();
+        _graph.addBufferResource("camera", cameraResource, scene._cameraBuffer[_engine->device().frameIndex()]);
     }
     {
         BufferResource lightsResource;
@@ -239,16 +204,10 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         lightsResource.usage = scene._lightBuffer[_engine->device().frameIndex()]->usage();
         _graph.addBufferResource("lights", lightsResource, scene._lightBuffer[_engine->device().frameIndex()]);
     }
-    {
-        BufferResource frustumBufferResource;
-        frustumBufferResource.size = _frustumBuffer[_engine->device().frameIndex()]->size();
-        frustumBufferResource.usage = _frustumBuffer[_engine->device().frameIndex()]->usage();
-        _graph.addBufferResource("frustumBuffer", frustumBufferResource, _frustumBuffer[_engine->device().frameIndex()]);
-    }
 
 
 
-    if (camera.isDirty()) {
+    if (camera->isDirty()) {
         auto& createClusters = _graph.addPass("create_clusters", RenderPass::Type::COMPUTE);
 
         createClusters.addStorageBufferWrite("clusters", vk::PipelineStage::COMPUTE_SHADER);
@@ -267,11 +226,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
                 f32 near;
                 f32 far;
             } push;
-            push.inverseProjection = camera.projection().inverse();
+            push.inverseProjection = camera->projection().inverse();
             push.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
             push.screenSize = { _swapchain->extent().width, _swapchain->extent().height };
-            push.near = camera.near();
-            push.far = camera.far();
+            push.near = camera->near();
+            push.far = camera->far();
 
             cmd->pushConstants(vk::ShaderStage::COMPUTE, push);
             cmd->bindBuffer(1, 0, clusters, true);
@@ -279,7 +238,7 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             cmd->bindDescriptors();
             cmd->dispatchWorkgroups(16, 9, 24);
         });
-        camera.setDirty(false);
+        camera->setDirty(false);
     }
 
     {
@@ -324,9 +283,9 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
             u64 lightGridBuffer;
             u64 lightIndicesBuffer;
         } push;
-        push.inverseProjection = camera.projection().inverse();
-        push.near = camera.near();
-        push.far = camera.far();
+        push.inverseProjection = camera->projection().inverse();
+        push.near = camera->near();
+        push.far = camera->far();
         push.lightGridBuffer = lightGrid->address();
         push.lightIndicesBuffer = lightIndices->address();
 
@@ -405,7 +364,6 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         cmd->bindProgram(_engine->getProgram(Engine::ProgramType::CULL));
         cmd->bindBindings({});
         cmd->bindAttributes({});
-        cmd->pushConstants(vk::ShaderStage::COMPUTE, _cullingFrustum);
         cmd->bindBuffer(1, 0, global);
         cmd->bindBuffer(2, 0, drawCommands, true);
         cmd->bindBuffer(2, 1, materialCounts, true);
@@ -911,9 +869,11 @@ void cala::Renderer::render(cala::Scene &scene, cala::Camera &camera, ImGuiConte
         .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
     }).index();
 
+    _globalData.primaryCameraIndex = scene.getMainCameraIndex();
+
     _globalData.meshBuffer = scene._meshDataBuffer[_engine->device().frameIndex()]->address();
     _globalData.transformsBuffer = scene._meshTransformsBuffer[_engine->device().frameIndex()]->address();
-    _globalData.cameraBuffer = _cameraBuffer[_engine->device().frameIndex()]->address();
+    _globalData.cameraBuffer = scene._cameraBuffer[_engine->device().frameIndex()]->address();
     _globalData.lightBuffer = scene._lightBuffer[_engine->device().frameIndex()]->address();
 
     _engine->stageData(_globalDataBuffer[_engine->device().frameIndex()], _globalData);

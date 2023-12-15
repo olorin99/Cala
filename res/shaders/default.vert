@@ -27,7 +27,7 @@ void main() {
     T = normalize(T - dot(T, N) * N);
     vec3 B = cross(N, T);
 
-    GPUCamera camera = globalData.cameraBuffer.camera;
+    GPUCamera camera = globalData.cameraBuffer[globalData.primaryCameraIndex].camera;
 
     vsOut.FragPos = (model * vec4(inPosition, 1.0)).xyz;
     vsOut.TexCoords = inTexCoords;

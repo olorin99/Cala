@@ -58,7 +58,7 @@ namespace cala {
 
         f64 endFrame();
 
-        void render(Scene& scene, Camera& camera, ImGuiContext* imGui = nullptr);
+        void render(Scene& scene, ImGuiContext* imGui = nullptr);
 
         std::span<std::pair<const char*, vk::Timer>> timers() { return _graph.getTimers(); }
 
@@ -79,9 +79,7 @@ namespace cala {
         Engine* _engine;
         vk::Swapchain* _swapchain;
 
-        vk::BufferHandle _cameraBuffer[vk::FRAMES_IN_FLIGHT];
         vk::BufferHandle _globalDataBuffer[vk::FRAMES_IN_FLIGHT];
-        vk::BufferHandle _frustumBuffer[vk::FRAMES_IN_FLIGHT];
 
     public:
         RenderGraph _graph;
@@ -94,34 +92,7 @@ namespace cala {
 
         Settings _renderSettings;
 
-        struct RendererGlobal {
-            f32 gamma = 2.2;
-            u32 time = 0;
-            u32 gpuCulling = 1;
-            u32 maxDrawCount = 0;
-            ende::math::Vec<4, u32> tileSizes = { 0, 0, 0, 0 };
-            ende::math::Vec<2, u32> swapchainSize = {0, 0};
-            f32 bloomStrength = 0.5;
-            i32 irradianceIndex = -1;
-            i32 prefilterIndex = -1;
-            i32 brdfIndex = -1;
-            i32 nearestRepeatSampler = -1;
-            i32 linearRepeatSampler = -1;
-            i32 lodSampler = -1;
-            i32 shadowSampler = -1;
-            u64 meshBuffer;
-            u64 transformsBuffer;
-            u64 cameraBuffer;
-            u64 lightBuffer;
-            u64 lightCountBuffer;
-        };
-
         GlobalData _globalData;
-
-        std::vector<ende::math::Vec4f> _frustumCorners;
-        ende::math::Frustum _cullingFrustum;
-
-
 
     };
 

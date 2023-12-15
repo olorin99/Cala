@@ -37,8 +37,10 @@ int main() {
     if (!material1)
         return -2;
 
-    Transform cameraTransform({10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(-90)));
-    Camera camera((f32)ende::math::rad(54.4), platform.windowSize().first, platform.windowSize().second, 0.1f, 100.f, cameraTransform);
+    Camera camera((f32)ende::math::rad(54.4), platform.windowSize().first, platform.windowSize().second, 0.1f, 100.f);
+    auto cameraNode = scene.addCamera(camera, Transform({10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(-90))));
+    scene.addCamera(camera, Transform({-10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(90))));
+
 
     Sampler sampler(engine.device(), {});
 
@@ -62,7 +64,7 @@ int main() {
     light3.setIntensity(1);
     light3.setColour({0.23, 0.46, 0.10});
 
-    scene.addLight(light, lightTransform);
+    scene.addLight(light2, lightTransform);
 
 //    auto background = engine.assetManager()->loadImage("background", "textures/TropicalRuins_3k.hdr", backend::Format::RGBA32_SFLOAT);
 //    auto background = engine.assetManager()->loadImage("background", "textures/Tropical_Beach_3k.hdr", backend::Format::RGBA32_SFLOAT);
@@ -105,7 +107,7 @@ int main() {
                         case SDL_WINDOWEVENT_RESIZED:
                             engine.device().wait();
                             swapchain.resize(event.window.data1, event.window.data2);
-                            camera.resize(event.window.data1, event.window.data2);
+                            scene.getMainCamera()->resize(event.window.data1, event.window.data2);
                             break;
                     }
                     break;
@@ -125,34 +127,34 @@ int main() {
         }
         {
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_W])
-                cameraTransform.addPos(cameraTransform.rot().invertY().front() * dt * 10);
+                scene.getMainCamera()->transform().addPos(scene.getMainCamera()->transform().rot().invertY().front() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_S])
-                cameraTransform.addPos(cameraTransform.rot().invertY().back() * dt * 10);
+                scene.getMainCamera()->transform().addPos(scene.getMainCamera()->transform().rot().invertY().back() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_A])
-                cameraTransform.addPos(cameraTransform.rot().invertY().left() * dt * 10);
+                scene.getMainCamera()->transform().addPos(scene.getMainCamera()->transform().rot().invertY().left() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_D])
-                cameraTransform.addPos(cameraTransform.rot().invertY().right() * dt * 10);
+                scene.getMainCamera()->transform().addPos(scene.getMainCamera()->transform().rot().invertY().right() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LSHIFT])
-                cameraTransform.addPos(cameraTransform.rot().invertY().down() * dt * 10);
+                scene.getMainCamera()->transform().addPos(scene.getMainCamera()->transform().rot().invertY().down() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_SPACE])
-                cameraTransform.addPos(cameraTransform.rot().invertY().up() * dt * 10);
+                scene.getMainCamera()->transform().addPos(scene.getMainCamera()->transform().rot().invertY().up() * dt * 10);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LEFT])
-                cameraTransform.rotate({0, 1, 0}, ende::math::rad(-90) * dt);
+                scene.getMainCamera()->transform().rotate({0, 1, 0}, ende::math::rad(-90) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_RIGHT])
-                cameraTransform.rotate({0, 1, 0}, ende::math::rad(90) * dt);
+                scene.getMainCamera()->transform().rotate({0, 1, 0}, ende::math::rad(90) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_UP])
-                cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(45) * dt);
+                scene.getMainCamera()->transform().rotate(scene.getMainCamera()->transform().rot().right(), ende::math::rad(45) * dt);
             if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_DOWN])
-                cameraTransform.rotate(cameraTransform.rot().right(), ende::math::rad(-45) * dt);
+                scene.getMainCamera()->transform().rotate(scene.getMainCamera()->transform().rot().right(), ende::math::rad(-45) * dt);
         }
 
         {
             guiWindow.render();
 
 
-            f32 exposure = camera.getExposure();
+            f32 exposure = scene.getMainCamera()->getExposure();
             if (ImGui::SliderFloat("Exposure", &exposure, 0, 10))
-                camera.setExposure(exposure);
+                scene.getMainCamera()->setExposure(exposure);
 
             ImGui::SliderInt("New Lights", &newLights, 0, 100);
             if (ImGui::Button("Add Lights")) {
@@ -168,7 +170,7 @@ int main() {
                 }
             }
 
-            auto pos = camera.transform().pos();
+            auto pos = scene.getMainCamera()->transform().pos();
             ImGui::Text("Position: { %f, %f, %f }", pos.x(), pos.y(), pos.z());
 
             {
@@ -190,9 +192,9 @@ int main() {
         }
 
         if (renderer.beginFrame(&swapchain)) {
-            scene.prepare(camera);
+            scene.prepare();
 
-            renderer.render(scene, camera, &guiWindow.context());
+            renderer.render(scene, &guiWindow.context());
 
             dt = renderer.endFrame();
         }

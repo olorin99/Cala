@@ -44,7 +44,6 @@ GPULight cala::Light::data() const {
         _colour,
         _intensity,
         _range,
-        _radius,
         _shadowBias,
         _shadowMap.index()
     };

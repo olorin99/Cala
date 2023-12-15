@@ -13,5 +13,7 @@ layout (location = 0) out VsOut {
 void main() {
     vsOut.TexCoords = inPosition;
 
-    gl_Position = (globalData.cameraBuffer.camera.projection * mat4(mat3(globalData.cameraBuffer.camera.view)) * vec4(inPosition, 1.0)).xyww;
+    GPUCamera camera = globalData.cameraBuffer[globalData.primaryCameraIndex].camera;
+
+    gl_Position = (camera.projection * mat4(mat3(camera.view)) * vec4(inPosition, 1.0)).xyww;
 }

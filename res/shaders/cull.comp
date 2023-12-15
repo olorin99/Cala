@@ -3,10 +3,6 @@ layout (local_size_x = LOCAL_SIZE_X) in;
 
 #include "shaderBridge.h"
 
-layout (push_constant) uniform FrameData {
-    vec4 planes[6];
-};
-
 struct IndexedIndirectCommand {
     uint indexCount;
     uint instanceCount;
@@ -29,8 +25,10 @@ layout (set = 2, binding = 1) buffer MaterialCounts {
 };
 
 bool frustumCheck(vec3 pos, float radius) {
+    GPUCamera cullingCamera = globalData.cameraBuffer.camera;
+
     for (int i = 0; i < 6; i++) {
-        if (dot(vec4(pos, 1.0), planes[i]) + radius < 0.0) {
+        if (dot(vec4(pos, 1.0), cullingCamera.frustum.planes[i]) + radius < 0.0) {
             return false;
         }
     }

@@ -21,48 +21,17 @@ namespace cala {
 
         void addSkyLightMap(vk::ImageHandle skyLightMap, bool equirectangular = false, bool hdr = true);
 
-        void prepare(Camera& camera);
+        void prepare();
 
         u32 meshCount() const { return _meshData.size(); }
 
         u32 lightCount() const { return _lights.size(); }
 
-//    private:
-
-        Engine* _engine;
-
-        u32 _directionalLightCount;
-
-        i32 _lightsDirtyFrame;
-
-        vk::BufferHandle _meshDataBuffer[vk::FRAMES_IN_FLIGHT];
-        vk::BufferHandle _meshTransformsBuffer[vk::FRAMES_IN_FLIGHT];
-        vk::BufferHandle _lightBuffer[vk::FRAMES_IN_FLIGHT];
-        vk::BufferHandle _materialCountBuffer[vk::FRAMES_IN_FLIGHT];
-        vk::ImageHandle _skyLightMap;
-        vk::Image::View _skyLightMapView;
-        vk::ImageHandle _skyLightIrradiance;
-        vk::ImageHandle _skyLightPrefilter;
-        bool _hdrSkyLight;
-        u32 _skyLight;
-
-        std::vector<GPUMesh> _meshData;
-        std::vector<ende::math::Mat4f> _meshTransforms;
-        std::vector<GPULight> _lightData;
-
-        std::vector<Mesh> _meshes;
-        std::vector<std::pair<i32, Light>> _lights;
-
-        struct MaterialCount {
-            u32 count = 0;
-            u32 offset = 0;
-        };
-        std::vector<MaterialCount> _materialCounts;
-
         enum class NodeType {
             NONE = 0,
             MESH = 1,
-            LIGHT = 2
+            LIGHT = 2,
+            CAMERA = 3
         };
 
         struct SceneNode {
@@ -83,7 +52,9 @@ namespace cala {
             i32 index;
         };
 
-        std::unique_ptr<SceneNode> _root;
+        struct CameraNode : public SceneNode {
+            i32 index;
+        };
 
         SceneNode* addNode(const std::string& name, const Transform& transform, SceneNode* parent = nullptr);
 
@@ -93,7 +64,59 @@ namespace cala {
 
         SceneNode* addLight(const Light& light, const Transform& transform, SceneNode* parent = nullptr);
 
+        SceneNode* addCamera(const Camera& camera, const Transform& transform, SceneNode* parent = nullptr);
+
         void removeChildNode(SceneNode* parent, u32 childIndex);
+
+
+        Camera* getCamera(SceneNode* node);
+
+        Camera* getMainCamera();
+
+        i32 getMainCameraIndex() const { return _mainCameraIndex + 1; }
+
+        void setMainCamera(CameraNode* node);
+
+//    private:
+
+        Engine* _engine;
+
+        u32 _directionalLightCount;
+
+        i32 _lightsDirtyFrame;
+
+        vk::BufferHandle _meshDataBuffer[vk::FRAMES_IN_FLIGHT];
+        vk::BufferHandle _meshTransformsBuffer[vk::FRAMES_IN_FLIGHT];
+        vk::BufferHandle _lightBuffer[vk::FRAMES_IN_FLIGHT];
+        vk::BufferHandle _cameraBuffer[vk::FRAMES_IN_FLIGHT];
+        vk::BufferHandle _materialCountBuffer[vk::FRAMES_IN_FLIGHT];
+        vk::ImageHandle _skyLightMap;
+        vk::Image::View _skyLightMapView;
+        vk::ImageHandle _skyLightIrradiance;
+        vk::ImageHandle _skyLightPrefilter;
+        bool _hdrSkyLight;
+        u32 _skyLight;
+
+        std::vector<GPUMesh> _meshData;
+        std::vector<ende::math::Mat4f> _meshTransforms;
+        std::vector<GPULight> _lightData;
+        std::vector<GPUCamera> _cameraData;
+
+        std::vector<Mesh> _meshes;
+        std::vector<std::pair<i32, Light>> _lights;
+        std::vector<Camera> _cameras;
+        i32 _mainCameraIndex = -1;
+        GPUCamera _cullingCameraData = {};
+        i32 _cullingCameraIndex = -1;
+        bool _updateCullingCamera = true;
+
+        struct MaterialCount {
+            u32 count = 0;
+            u32 offset = 0;
+        };
+        std::vector<MaterialCount> _materialCounts;
+
+        std::unique_ptr<SceneNode> _root;
 
     };
 
