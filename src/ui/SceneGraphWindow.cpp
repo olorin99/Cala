@@ -165,7 +165,7 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                             light.setDirection(rotation);
                         }
                         i32 cascadeCount = light.getCascadeCount();
-                        if (ImGui::SliderInt("Cascade Count", &cascadeCount, 1, 9))
+                        if (ImGui::SliderInt("Cascade Count", &cascadeCount, 1, MAX_CASCADES))
                             light.setCascadeCount(cascadeCount);
                         for (u32 cascadeIndex = 0; cascadeIndex < light.getCascadeCount() - 1; cascadeIndex++) {
                             auto label = std::format("Cascade Split: {}", cascadeIndex);
@@ -218,6 +218,15 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                     if (ImGui::DragFloat3("Scale", &scale[0], 0.1)) {
                         child->transform.setScale(scale);
                     }
+                    auto near = scene->getCamera(cameraNode)->near();
+                    if (ImGui::DragFloat("Near", &near, 0.1))
+                        scene->getCamera(cameraNode)->setNear(near);
+                    auto far = scene->getCamera(cameraNode)->far();
+                    if (ImGui::DragFloat("Far", &far, 0.1))
+                        scene->getCamera(cameraNode)->setFar(far);
+                    f32 fov = ende::math::deg(scene->getCamera(cameraNode)->fov());
+                    if (ImGui::SliderFloat("FOV", &fov, 1, 180))
+                        scene->getCamera(cameraNode)->setFov(ende::math::rad(fov));
                     traverseSceneNode(child.get(), scene);
                     ImGui::TreePop();
                 }

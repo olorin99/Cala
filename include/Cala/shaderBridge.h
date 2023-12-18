@@ -81,6 +81,8 @@ struct LightGrid {
     uint count;
 };
 
+#define MAX_CASCADES 7
+
 struct Cascade {
     float distance;
     int shadowMapIndex;
@@ -97,7 +99,7 @@ struct GPULight {
     int cameraIndex;
     uint cascadeCount;
     int padding;
-    Cascade cascades[4];
+    Cascade cascades[MAX_CASCADES];
 };
 
 #ifndef __cplusplus
@@ -113,7 +115,6 @@ layout (scalar, buffer_reference, buffer_reference_align = 8) readonly buffer Li
     uint lightCount;
     GPULight lights[];
 };
-
 #else
 #define LightGridBuffer u64
 #define LightIndicesBuffer u64

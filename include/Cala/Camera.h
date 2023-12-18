@@ -43,16 +43,19 @@ namespace cala {
         GPUCamera data() const;
 
         f32 near() const { return _near; }
+        void setNear(f32 near);
 
         f32 far() const { return _far; }
+        void setFar(f32 far);
 
         bool isDirty() const { return _dirty; }
-
         void setDirty(bool dirty) { _dirty = dirty; }
 
         void setTransform(Transform* transform) { _transform = transform; }
 
         f32 fov() const { return _fov; }
+        void setFov(f32 fov);
+
         f32 width() const { return _width; }
         f32 height() const { return _height; }
 

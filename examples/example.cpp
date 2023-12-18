@@ -59,10 +59,11 @@ int main() {
     light2.setColour({ 255.f / 255.f, 202.f / 255.f, 136.f / 255.f });
     light2.setIntensity(2);
     light2.setShadowing(true);
-    light2.setCascadeCount(3);
+    light2.setCascadeCount(5);
     light2.setCascadeSplit(0, 4.5);
     light2.setCascadeSplit(1, 20);
     light2.setCascadeSplit(2, 50);
+    light2.setCascadeSplit(2, 75);
     Light light3(cala::Light::POINT, false);
     light3.setPosition({ -10, 2, 4 });
     light3.setIntensity(1);

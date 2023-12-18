@@ -96,11 +96,9 @@ void cala::Camera::setExposure(f32 exposure) {
 
 GPUCamera cala::Camera::data() const {
     auto viewPos = _transform->pos();
-//    viewPos = viewPos * ende::math::Vec3f({-1.f, 1.f, -1.f});
 
     auto frustumPlanes = _frustum.planes();
     auto frustumCorners = getFrustumCorners();
-
 
     GPUCamera data {
         _projection,
@@ -116,4 +114,23 @@ GPUCamera cala::Camera::data() const {
         data.frustum.corners[i] = frustumCorners[i];
 
     return data;
+}
+
+
+void cala::Camera::setNear(f32 near) {
+    _near = near;
+    _projection = ende::math::perspective(_fov, _width / _height, _near, _far);
+    _dirty = true;
+}
+
+void cala::Camera::setFar(f32 far) {
+    _far = far;
+    _projection = ende::math::perspective(_fov, _width / _height, _near, _far);
+    _dirty = true;
+}
+
+void cala::Camera::setFov(f32 fov) {
+    _fov = fov;
+    _projection = ende::math::perspective(_fov, _width / _height, _near, _far);
+    _dirty = true;
 }
