@@ -50,9 +50,13 @@ GPULight cala::Light::data() const {
         (u32)_cascadeCount
     };
 
-    for (u32 cascade = 0; cascade < 4; cascade++) {
+    for (u32 cascade = 0; cascade < _cascadeCount - 1; cascade++) {
         data.cascades[cascade].shadowMapIndex = _cascadeMaps[cascade].index();
         data.cascades[cascade].distance = _cascadeSplits[cascade];
+    }
+    if (_cascadeCount > 0) {
+        data.cascades[_cascadeCount - 1].shadowMapIndex = _cascadeMaps[_cascadeCount - 1].index();
+        data.cascades[_cascadeCount - 1].distance = getFar();
     }
 
     if (_type == POINT)

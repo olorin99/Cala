@@ -167,8 +167,8 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                         i32 cascadeCount = light.getCascadeCount();
                         if (ImGui::SliderInt("Cascade Count", &cascadeCount, 1, 9))
                             light.setCascadeCount(cascadeCount);
-                        for (u32 cascadeIndex = 0; cascadeIndex < light.getCascadeCount(); cascadeIndex++) {
-                            auto label = std::format("Cascade: {}", cascadeIndex);
+                        for (u32 cascadeIndex = 0; cascadeIndex < light.getCascadeCount() - 1; cascadeIndex++) {
+                            auto label = std::format("Cascade Split: {}", cascadeIndex);
                             f32 split = light.getCascadeSplit(cascadeIndex);
                             if (ImGui::DragFloat(label.c_str(), &split, 0.1))
                                 light.setCascadeSplit(cascadeIndex, split);

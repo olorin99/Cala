@@ -50,29 +50,22 @@ vec4 directionalLight(GPULight light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0
     float shadow = 1.0;
 
     if (light.shadowIndex >= 0) {
-
-//        float depthValue = (globalData.cameraBuffer[globalData.primaryCameraIndex].camera.view * vec4(fsIn.FragPos, 1.0)).z;
-//        float depthValue = gl_FragCoord.z;
         float depthValue = linearDepth(gl_FragCoord.z, globalData.cameraBuffer[globalData.primaryCameraIndex].camera.near, globalData.cameraBuffer[globalData.primaryCameraIndex].camera.far);
 
-        uint cascadeIndex = 0;
-        for (int i = 0; i < light.cascadeCount; i++) {
-            cascadeIndex = i;
-            if (depthValue < light.cascades[i].distance) {
-                break;
-            }
-        }
-        cascadeIndex = min(cascadeIndex, light.cascadeCount - 1);
-        if (light.cascades[cascadeIndex].shadowMapIndex >= 0) {
+        int finalIndex = 0;
+        for (int cascadeIndex = 0; cascadeIndex < light.cascadeCount; cascadeIndex++) {
             GPUCamera shadowCamera = globalData.cameraBuffer[light.cameraIndex + cascadeIndex].camera;
-
             vec4 shadowPos = shadowCamera.projection * shadowCamera.view * vec4(fsIn.FragPos, 1.0);
             vec3 shadowCoords = vec3(shadowPos.xy * 0.5 + 0.5, shadowPos.z);
-
-            float bias = max(light.shadowBias * (1.0 - dot(normal, L)), 0.0001);
-//        shadow = filterPCF2D(light.cascades[cascadeIndex].shadowMapIndex, light.position, shadowCoords, bias);
-            shadow = sampleShadow(light.cascades[cascadeIndex].shadowMapIndex, shadowCoords, vec2(0), bias);
-            float closestDepth = texture(CALA_COMBINED_SAMPLER2D(light.cascades[cascadeIndex].shadowMapIndex, globalData.shadowSampler), shadowCoords.xy).r;
+            if (depthValue < light.cascades[cascadeIndex].distance &&
+                light.cascades[cascadeIndex].shadowMapIndex >= 0 &&
+                shadowCoords.x > 0.0 && shadowCoords.x < 1.0 &&
+                shadowCoords.y > 0.0 && shadowCoords.y < 1.0) {
+                float bias = max(light.shadowBias * (1.0 - dot(normal, L)), 0.0001);
+                shadow = filterPCF2D(light.cascades[cascadeIndex].shadowMapIndex, light.position, shadowCoords, bias);
+                finalIndex = cascadeIndex;
+                break;
+            }
         }
     }
 
