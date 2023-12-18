@@ -59,7 +59,7 @@ int main() {
     light2.setColour({ 255.f / 255.f, 202.f / 255.f, 136.f / 255.f });
     light2.setIntensity(2);
     light2.setShadowing(true);
-    light2.setCascadeCount(5);
+    light2.setCascadeCount(4);
     light2.setCascadeSplit(0, 4.5);
     light2.setCascadeSplit(1, 20);
     light2.setCascadeSplit(2, 50);
@@ -74,28 +74,31 @@ int main() {
     scene.addLight(light2, lightTransform);
 //    scene.addLight(light3, lightTransform);
 
-//    auto background = engine.assetManager()->loadImage("background", "textures/TropicalRuins_3k.hdr", backend::Format::RGBA32_SFLOAT);
+    auto background = engine.assetManager()->loadImage("background", "textures/TropicalRuins_3k.hdr", vk::Format::RGBA32_SFLOAT);
 //    auto background = engine.assetManager()->loadImage("background", "textures/Tropical_Beach_3k.hdr", backend::Format::RGBA32_SFLOAT);
-//    scene.addSkyLightMap(background, true);
+    scene.addSkyLightMap(background, true);
 
-//    Mesh cube = cala::shapes::cube().mesh(&engine);
+    Mesh cube = cala::shapes::cube().mesh(&engine);
+    auto matInstance = material1->instance();
+    scene.addMesh(cube, Transform({0, 3, 0}, {}, {1, 3, 1}), &matInstance);
 
     auto sphere = engine.assetManager()->loadModel("sphere", "models/sphere.glb", material1);
-    auto sponzaAsset = engine.assetManager()->loadModel("sponza", "models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf", material1);
+//    auto sponzaAsset = engine.assetManager()->loadModel("sponza", "models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf", material1);
 //    auto bistro = engine.assetManager()->loadModel("bistro", "models/bistro/gltf/Bistro_Exterior.gltf", material1);
 //    auto damagedHelmet = engine.assetManager()->loadModel("damagedHelmet", "models/gltf/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf", material1);
 
+    auto plane = engine.assetManager()->loadModel("plane", "models/plane.glb", material1);
+    scene.addModel("plane", *plane, Transform({}, {}, {100, 1, 100}));
 
     Transform defaultTransform;
-    scene.addModel("sponza", *sponzaAsset, defaultTransform);
+//    scene.addModel("sponza", *sponzaAsset, defaultTransform);
 //    scene.addModel(*bistro, defaultTransform);
 //    scene.addModel(*damagedHelmet, sponzaTransform);
     auto sphereNode = scene.addModel("smallSphere", *sphere, lightTransform);
 
     f32 sceneBounds = 10;
 
-    Transform t1({ 0, 4, 0 });
-    Transform t2({ 2, 1, 0 }, {}, { 1, 1, 1 }, &t1);
+    Transform t2({ 2, 4, 0 });
 
     scene.addModel("sphere2", *sphere, t2);
 
@@ -182,11 +185,11 @@ int main() {
             auto pos = scene.getMainCamera()->transform().pos();
             ImGui::Text("Position: { %f, %f, %f }", pos.x(), pos.y(), pos.z());
 
-            {
-                auto parentPos = t2.parent()->pos();
-                if (ImGui::DragFloat3("parent", &parentPos[0], 0.1, -10, 10))
-                    t2.parent()->setPos(parentPos);
-            }
+//            {
+//                auto parentPos = t2.parent()->pos();
+//                if (ImGui::DragFloat3("parent", &parentPos[0], 0.1, -10, 10))
+//                    t2.parent()->setPos(parentPos);
+//            }
 
             ImGui::End();
 

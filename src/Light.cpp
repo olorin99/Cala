@@ -8,8 +8,8 @@ cala::Light::Light(LightType type, bool shadows)
       _intensity(1),
       _constant(1),
       _shadowBias(0.015),
-      _radius(std::sqrt(_intensity / 0.01)),
-      _range(_radius),
+      _size(1),
+      _range(std::sqrt(_intensity / 0.01)),
       _dirty(true)
 {
     switch (_type) {
@@ -30,7 +30,7 @@ cala::Light &cala::Light::operator=(const cala::Light &rhs) {
     _intensity = rhs._intensity;
     _constant = rhs._constant;
     _shadowBias = rhs._shadowBias;
-    _radius = rhs._radius;
+    _size = rhs._size;
     _range = rhs._range;
     return *this;
 }
@@ -43,6 +43,7 @@ GPULight cala::Light::data() const {
         _type,
         _colour,
         _intensity,
+        _size,
         _range,
         _shadowBias,
         _shadowMap.index(),
@@ -91,7 +92,6 @@ void cala::Light::setColour(const ende::math::Vec3f &colour) {
 
 void cala::Light::setIntensity(f32 intensity) {
     _intensity = intensity;
-    _radius = std::sqrt(_intensity / 0.01);
     _dirty = true;
 }
 

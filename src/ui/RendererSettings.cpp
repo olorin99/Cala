@@ -16,12 +16,18 @@ void cala::ui::RendererSettingsWindow::render() {
         ImGui::Checkbox("Depth Pre Pass", &rendererSettings.depthPre);
         ImGui::Checkbox("Skybox Pass", &rendererSettings.skybox);
         if (ImGui::TreeNode("Shadows")) {
-            const char* modes[] = { "256", "512", "1024", "2048", "4096" };
+            const char* sizeStrings[] = { "256", "512", "1024", "2048", "4096" };
             u32 sizes[] = { 256, 512, 1024, 2048, 4096 };
-            static int modeIndex = 0;
-            if (ImGui::Combo("ShadowMap Size", &modeIndex, modes, 5)) {
-                _engine->setShadowMapSize(sizes[modeIndex]);
+            static int sizeIndex = 0;
+            if (ImGui::Combo("ShadowMap Size", &sizeIndex, sizeStrings, 5)) {
+                _engine->setShadowMapSize(sizes[sizeIndex]);
             }
+            const char* modeStrings[] = { "PCSS", "PCF", "HARD" };
+            static int modeIndex = 0;
+            if (ImGui::Combo("Shadow Mode", &modeIndex, modeStrings, 3))
+                rendererSettings.shadowMode = modeIndex;
+            ImGui::SliderInt("PCF Samples", &rendererSettings.pcfSamples, 1, 128);
+            ImGui::SliderInt("PCSS Blocker Samples", &rendererSettings.blockerSamples, 1, 128);
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("Tonemapping Settings")) {

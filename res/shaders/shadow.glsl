@@ -40,26 +40,47 @@ float filterPCF(uint index, vec3 lightPos, float bias, float range) {
     return shadow / samples;
 }
 
-float filterPCF2D(int index, vec3 lightPos, vec3 shadowCoords, float bias) {
-//    if (lightPos.z > 1.0)
-//        return 0.0;
+float filterPCF2D(int index, vec3 shadowCoords, float radius, float bias) {
     float shadow = 0;
-    int samples = 20;
+    int samples = globalData.pcfSamples;
     vec2 texelSize = 1.0 / textureSize(CALA_COMBINED_SAMPLER2D(index, globalData.shadowSampler), 0);
-    float diskRadius = (1.0 + (length(shadowCoords) / 100.f)) / 25.0;
 
     for (int i = 0; i < samples; i++) {
-        shadow += sampleShadow(index, shadowCoords, sampleOffsetDirections[i].xy * texelSize, bias);
+        vec2 randomDirection = random2(globalData.randomOffset * gl_FragCoord.xy * i);
+
+        shadow += sampleShadow(index, shadowCoords, randomDirection * texelSize * radius, bias);
+//        shadow += sampleShadow(index, shadowCoords, sampleOffsetDirections[i].xy * texelSize * radius, bias);
     }
-//    for(int x = -1; x <= 1; ++x)
-//    {
-//        for(int y = -1; y <= 1; ++y)
-//        {
-//            shadow += sampleShadow(index, shadowCoords, vec2(x, y) * texelSize, bias);
-//        }
-//    }
-//    shadow /= 9.0;
     return shadow / samples;
+}
+
+float blockerDistance(int shadowMapIndex, vec3 shadowCoords, float lightSize) {
+    int blockers = 0;
+    float avgDistance = 0;
+    float searchWidth = lightSize * (shadowCoords.z - 0.1) / globalData.cameraBuffer[globalData.primaryCameraIndex].camera.position.z;
+    vec2 texelSize = 1.0 / textureSize(CALA_COMBINED_SAMPLER2D(shadowMapIndex, globalData.shadowSampler), 0);
+    int samples = globalData.blockerSamples;
+
+    for (int i = 0; i < samples; i++) {
+        vec2 randomDirection = random2(globalData.randomOffset * gl_FragCoord.xy * i);
+        float z = texture(CALA_COMBINED_SAMPLER2D(shadowMapIndex, globalData.shadowSampler), shadowCoords.xy + randomDirection * texelSize * searchWidth).r;
+//        float z = texture(CALA_COMBINED_SAMPLER2D(shadowMapIndex, globalData.shadowSampler), shadowCoords.xy + sampleOffsetDirections[i].xy * texelSize * searchWidth).r;
+        if (z < shadowCoords.z) {
+            blockers++;
+            avgDistance += z;
+        }
+    }
+    if (blockers == 0)
+        return -1;
+    return avgDistance / blockers;
+}
+
+float pcss2D(int index, vec3 shadowCoords, float lightSize, float bias) {
+    float blockerDist = blockerDistance(index, shadowCoords, lightSize);
+    if (blockerDist < 0)
+        return 1;
+    float penumbraSize = lightSize * (shadowCoords.z - blockerDist) / blockerDist;
+    return filterPCF2D(index, shadowCoords, penumbraSize, bias);
 }
 
 #endif

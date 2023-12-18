@@ -52,7 +52,6 @@ vec4 directionalLight(GPULight light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0
     if (light.shadowIndex >= 0) {
         float depthValue = linearDepth(gl_FragCoord.z, globalData.cameraBuffer[globalData.primaryCameraIndex].camera.near, globalData.cameraBuffer[globalData.primaryCameraIndex].camera.far);
 
-        int finalIndex = 0;
         for (int cascadeIndex = 0; cascadeIndex < light.cascadeCount; cascadeIndex++) {
             GPUCamera shadowCamera = globalData.cameraBuffer[light.cameraIndex + cascadeIndex].camera;
             vec4 shadowPos = shadowCamera.projection * shadowCamera.view * vec4(fsIn.FragPos, 1.0);
@@ -62,8 +61,17 @@ vec4 directionalLight(GPULight light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0
                 shadowCoords.x > 0.0 && shadowCoords.x < 1.0 &&
                 shadowCoords.y > 0.0 && shadowCoords.y < 1.0) {
                 float bias = max(light.shadowBias * (1.0 - dot(normal, L)), 0.0001);
-                shadow = filterPCF2D(light.cascades[cascadeIndex].shadowMapIndex, light.position, shadowCoords, bias);
-                finalIndex = cascadeIndex;
+                switch (globalData.shadowMode) {
+                    case 0:
+                        shadow = pcss2D(light.cascades[cascadeIndex].shadowMapIndex, shadowCoords, light.size, bias);
+                        break;
+                    case 1:
+                        shadow = filterPCF2D(light.cascades[cascadeIndex].shadowMapIndex, shadowCoords, 1, bias);
+                        break;
+                    case 2:
+                        shadow = sampleShadow(light.cascades[cascadeIndex].shadowMapIndex, shadowCoords, vec2(0), bias);
+                        break;
+                }
                 break;
             }
         }

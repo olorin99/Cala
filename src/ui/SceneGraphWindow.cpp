@@ -147,6 +147,7 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                     auto position = lightNode->transform.pos();
                     auto colour = light.getColour();
                     f32 intensity = light.getIntensity();
+                    f32 size = light.getSize();
                     f32 range = light.getFar();
                     bool shadowing = light.shadowing();
                     f32 shadowBias = light.getShadowBias();
@@ -178,6 +179,8 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                         light.setColour(colour);
                     if (ImGui::SliderFloat("Intensity", &intensity, 1, 100))
                         light.setIntensity(intensity);
+                    if (ImGui::SliderFloat("Size", &size, 1, 100))
+                        light.setSize(size);
                     if (ImGui::SliderFloat("Range", &range, 0, 100))
                         light.setRange(range);
                     if (ImGui::DragFloat("Shadow Bias", &shadowBias, 0.001, -1, 1))

@@ -93,12 +93,12 @@ struct GPULight {
     uint type;
     vec3 colour;
     float intensity;
+    float size;
     float shadowRange;
     float shadowBias;
     int shadowIndex;
     int cameraIndex;
     uint cascadeCount;
-    int padding;
     Cascade cascades[MAX_CASCADES];
 };
 
@@ -128,7 +128,11 @@ struct GlobalData {
     uint maxDrawCount;
     uvec4 tileSizes;
     uvec2 swapchainSize;
+    vec2 randomOffset;
     float bloomStrength;
+    int shadowMode;
+    int pcfSamples;
+    int blockerSamples;
     int irradianceIndex;
     int prefilterIndex;
     int brdfIndex;

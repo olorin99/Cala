@@ -15,7 +15,9 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
     : _engine(engine),
     _swapchain(nullptr),
     _graph(engine),
-    _renderSettings(settings)
+    _renderSettings(settings),
+    _randomGenerator(std::random_device()()),
+    _randomDistribution(0.0, 1.0)
 {
     _engine->device().setBindlessSetIndex(0);
 
@@ -838,7 +840,11 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     _globalData.gpuCulling = _renderSettings.gpuCulling;
     _globalData.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
     _globalData.swapchainSize = { _swapchain->extent().width, _swapchain->extent().height };
+    _globalData.randomOffset = { static_cast<f32>(_randomDistribution(_randomGenerator)), static_cast<f32>(_randomDistribution(_randomGenerator)) };
     _globalData.bloomStrength = _renderSettings.bloomStrength;
+    _globalData.shadowMode = _renderSettings.shadowMode;
+    _globalData.pcfSamples = _renderSettings.pcfSamples;
+    _globalData.blockerSamples = _renderSettings.blockerSamples;
 
     if (_renderSettings.ibl) {
         _globalData.irradianceIndex = scene._skyLightIrradiance.index();
@@ -865,7 +871,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     }).index();
 
     _globalData.shadowSampler = _engine->device().getSampler({
-        .filter = VK_FILTER_NEAREST,
+        .filter = VK_FILTER_LINEAR,
         .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
         .anisotropy = false,
         .minLod = 0,
@@ -874,6 +880,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     }).index();
 
     _globalData.primaryCameraIndex = scene.getMainCameraIndex();
+    _globalData.cullingCameraIndex = 0;
 
     _globalData.meshBuffer = scene._meshDataBuffer[_engine->device().frameIndex()]->address();
     _globalData.transformsBuffer = scene._meshTransformsBuffer[_engine->device().frameIndex()]->address();

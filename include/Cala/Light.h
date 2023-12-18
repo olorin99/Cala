@@ -52,7 +52,8 @@ namespace cala {
             return _intensity;
         }
 
-        f32 getRadius() const { return _radius; }
+        f32 getSize() const { return _size; }
+        void setSize(f32 size) { _size = size; }
 
         void setRange(f32 range);
 
@@ -92,7 +93,7 @@ namespace cala {
         f32 _intensity;
         f32 _constant;
         f32 _shadowBias;
-        f32 _radius;
+        f32 _size;
         f32 _range;
         i32 _cascadeCount = 0;
         f32 _cascadeSplits[10] = {};

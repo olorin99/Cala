@@ -915,7 +915,7 @@ cala::vk::RenderPass* cala::vk::Device::getRenderPass(std::span<RenderPass::Atta
 cala::vk::Framebuffer *cala::vk::Device::getFramebuffer(RenderPass *renderPass, std::span<VkImageView> attachmentImages, std::span<u32> hashes, u32 width, u32 height) {
     u64 hash = ((u64)renderPass->id() << 32);
     for (auto& attachment : hashes)
-        hash = ende::util::combineHash(hash, attachment);
+        hash = ende::util::combineHash(hash, (u64)attachment);
 
     auto it = _framebuffers.find(hash);
     if (it != _framebuffers.end()) {

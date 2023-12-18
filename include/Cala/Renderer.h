@@ -9,6 +9,8 @@
 
 #include <Cala/shaderBridge.h>
 
+#include <random>
+
 class ImGuiContext;
 
 namespace cala {
@@ -29,6 +31,9 @@ namespace cala {
             i32 tonemapType = 0;
             bool bloom = true;
             f32 bloomStrength = 0.3;
+            int shadowMode = 0;
+            i32 pcfSamples = 20;
+            i32 blockerSamples = 20;
             bool depthPre = false;
             bool skybox = true;
             bool freezeFrustum = false;
@@ -87,6 +92,9 @@ namespace cala {
     private:
         vk::Device::FrameInfo _frameInfo;
         vk::Swapchain::Frame _swapchainFrame;
+
+        std::mt19937 _randomGenerator;
+        std::uniform_real_distribution<> _randomDistribution;
 
         Stats _stats;
 
