@@ -248,7 +248,10 @@ namespace cala::vk {
 
             u32 toDestroy() const { return _destroyQueue.size(); }
 
-            H getHandle(Device* device, i32 index) { return { device, -1, _resources[index].second.get() }; }
+            H getHandle(Device* device, i32 index) {
+                _resources[index].second->count++;
+                return { device, -1, _resources[index].second.get() };
+            }
 
             T* getResource(i32 index) { return _resources[index].first.get(); }
 
@@ -260,12 +263,12 @@ namespace cala::vk {
                     index = _freeResources.back();
                     _freeResources.pop_back();
                     _resources[index].first = std::make_unique<T>(device);
-                    _resources[index].second = std::make_unique<typename H::Data>(index, 1, [this](i32 index) {
+                    _resources[index].second = std::make_unique<typename H::Data>(index, 0, [this](i32 index) {
                         _destroyQueue.push_back(std::make_pair(FRAMES_IN_FLIGHT + 1, index));
                     });
                 } else {
                     index = _resources.size();
-                    _resources.emplace_back(std::make_unique<T>(device), std::make_unique<typename H::Data>(index, 1, [this](i32 index) {
+                    _resources.emplace_back(std::make_unique<T>(device), std::make_unique<typename H::Data>(index, 0, [this](i32 index) {
                         _destroyQueue.push_back(std::make_pair(FRAMES_IN_FLIGHT + 1, index));
                     }));
                 }
