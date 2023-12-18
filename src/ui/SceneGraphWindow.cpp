@@ -135,7 +135,7 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                         ImGui::PopID();
                         continue;
                     }
-                    auto& light = scene->_lights[lightNode->index].second;
+                    auto& light = scene->_lights[lightNode->index];
 
                     const char* modes[] = { "DIRECTIONAL", "POINT" };
                     cala::Light::LightType types[] = { cala::Light::LightType::DIRECTIONAL, cala::Light::LightType::POINT };
@@ -163,6 +163,15 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                             ende::math::Quaternion rotation(ende::math::rad(angleDegrees.x()), ende::math::rad(angleDegrees.y()), ende::math::rad(angleDegrees.z()));
                             lightNode->transform.setRot(rotation);
                             light.setDirection(rotation);
+                        }
+                        i32 cascadeCount = light.getCascadeCount();
+                        if (ImGui::SliderInt("Cascade Count", &cascadeCount, 1, 9))
+                            light.setCascadeCount(cascadeCount);
+                        for (u32 cascadeIndex = 0; cascadeIndex < light.getCascadeCount(); cascadeIndex++) {
+                            auto label = std::format("Cascade: {}", cascadeIndex);
+                            f32 split = light.getCascadeSplit(cascadeIndex);
+                            if (ImGui::DragFloat(label.c_str(), &split, 0.1))
+                                light.setCascadeSplit(cascadeIndex, split);
                         }
                     }
                     if (ImGui::ColorEdit3("Colour", &colour[0]))

@@ -39,7 +39,7 @@ vec4 evalMaterial(Material material) {
 
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, material.albedo.rgb, material.metallic);
-    vec3 Lo = vec3(0.0);
+    vec4 Lo = vec4(0.0);
 
     uint maxTileCount = globalData.tileSizes.x * globalData.tileSizes.y * globalData.tileSizes.z - 1;
     uint tileIndex = getTileIndex(gl_FragCoord.xyz, globalData.tileSizes, globalData.swapchainSize, camera.near, camera.far);
@@ -60,11 +60,11 @@ vec4 evalMaterial(Material material) {
     }
 
     vec3 emissive = material.albedo.rgb * material.emissive * material.emissiveStrength;
-    Lo += emissive;
+    Lo += vec4(emissive, 0);
 
     vec3 ambient = getAmbient(globalData.irradianceIndex, globalData.prefilterIndex, globalData.brdfIndex, material.normal, V, F0, material.albedo.rgb, material.roughness, material.metallic);
 
-    vec3 colour = (ambient + Lo);
-
-    return vec4(colour, 1.0);
+    vec4 colour = (vec4(ambient, 0.0) + Lo);
+    return colour;
+//    return vec4(colour, 1.0);
 }

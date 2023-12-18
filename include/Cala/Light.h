@@ -70,6 +70,17 @@ namespace cala {
 
         void setShadowMap(vk::ImageHandle shadowMap);
 
+        i32 getCascadeCount() const { return _cascadeCount; }
+        void setCascadeCount(i32 count) { _cascadeCount = count; }
+
+        f32 getCascadeSplit(i32 cascade) const { return _cascadeSplits[cascade]; }
+        void setCascadeSplit(i32 cascade, f32 range) { _cascadeSplits[cascade] = range; }
+
+        void setCascadeShadowMap(i32 cascade, vk::ImageHandle shadowMap);
+
+        i32 getCameraIndex() const { return _cameraIndex; }
+        void setCameraIndex(i32 index) { _cameraIndex = index; }
+
     private:
         ende::math::Vec3f _position;
         ende::math::Quaternion _rotation;
@@ -83,6 +94,10 @@ namespace cala {
         f32 _shadowBias;
         f32 _radius;
         f32 _range;
+        i32 _cascadeCount = 0;
+        f32 _cascadeSplits[10] = {};
+        vk::ImageHandle _cascadeMaps[10] = {};
+        i32 _cameraIndex = -1;
 
         vk::ImageHandle _shadowMap = {};
     };

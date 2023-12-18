@@ -4,7 +4,7 @@ layout (local_size_x = LOCAL_SIZE_X) in;
 #include "shaderBridge.h"
 
 layout (push_constant) uniform FrameData {
-    vec4 planes[6];
+    uint cameraIndex;
 };
 
 struct IndexedIndirectCommand {
@@ -21,12 +21,13 @@ layout (set = 2, binding = 0) writeonly buffer DrawCommands {
 
 layout (set = 2, binding = 1) buffer Output {
     uint drawCount;
-    uint maxDrawCount;
 };
 
 bool frustumCheck(vec3 pos, float radius) {
+    GPUCamera cullingCamera = globalData.cameraBuffer[cameraIndex].camera;
+
     for (int i = 0; i < 6; i++) {
-        if (dot(vec4(pos, 1.0), planes[i]) + radius < 0.0) {
+        if (dot(vec4(pos, 1.0), cullingCamera.frustum.planes[i]) + radius < 0.0) {
             return false;
         }
     }
@@ -35,14 +36,19 @@ bool frustumCheck(vec3 pos, float radius) {
 
 void main() {
     uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x;
-    if (idx >= maxDrawCount)
+    if (idx >= globalData.maxDrawCount)
         return;
 
     if (idx == 0) {
         atomicExchange(drawCount, 0);
     }
 
+    barrier();
+
     GPUMesh mesh = globalData.meshBuffer.meshData[idx];
+    if (mesh.enabled == 0 || mesh.castShadows == 0)
+        return;
+
     vec3 center = (mesh.max.xyz + mesh.min.xyz) * 0.5;
     center = (globalData.transformsBuffer.transforms[idx] * vec4(center, 1.0)).xyz;
     vec3 halfExtent = (mesh.max.xyz - mesh.min.xyz) * 0.5;

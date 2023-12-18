@@ -144,6 +144,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
             drawCountResource.size = sizeof(u32);
             drawCountResource.usage = vk::BufferUsage::INDIRECT | vk::BufferUsage::STORAGE;
             _graph.addBufferResource("drawCount", drawCountResource);
+            _graph.addBufferResource("shadowDrawCount", drawCountResource);
         }
 
     }
@@ -866,6 +867,9 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     _globalData.shadowSampler = _engine->device().getSampler({
         .filter = VK_FILTER_NEAREST,
         .addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+        .anisotropy = false,
+        .minLod = 0,
+        .maxLod = 1,
         .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
     }).index();
 

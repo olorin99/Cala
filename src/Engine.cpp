@@ -109,12 +109,12 @@ cala::Engine::Engine(vk::Platform &platform)
     }
     {
         _pointShadowCullProgram = loadProgram("pointShadowCullProgram", {
-            { "shaders/point_shadow_cull.comp", vk::ShaderStage::COMPUTE }
+            { "shaders/cull_point_shadow.comp", vk::ShaderStage::COMPUTE }
         });
     }
     {
         _directShadowCullProgram = loadProgram("directShadowCullProgram", {
-            { "shaders/direct_shadow_cull.comp", vk::ShaderStage::COMPUTE }
+            { "shaders/cull_direct_shadow.comp", vk::ShaderStage::COMPUTE }
         });
     }
     {

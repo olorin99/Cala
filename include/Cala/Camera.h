@@ -20,6 +20,7 @@ namespace cala {
 
         void resize(f32 width, f32 height);
 
+        void setProjection(const ende::math::Mat4f& projection) { _projection = projection; }
         inline ende::math::Mat4f projection() const { return _projection; }
 
         ende::math::Mat4f view() const;
@@ -50,6 +51,10 @@ namespace cala {
         void setDirty(bool dirty) { _dirty = dirty; }
 
         void setTransform(Transform* transform) { _transform = transform; }
+
+        f32 fov() const { return _fov; }
+        f32 width() const { return _width; }
+        f32 height() const { return _height; }
 
     private:
 

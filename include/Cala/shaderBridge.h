@@ -81,6 +81,11 @@ struct LightGrid {
     uint count;
 };
 
+struct Cascade {
+    float distance;
+    int shadowMapIndex;
+};
+
 struct GPULight {
     vec3 position;
     uint type;
@@ -91,6 +96,8 @@ struct GPULight {
     int shadowIndex;
     int cameraIndex;
     uint cascadeCount;
+    int padding;
+    Cascade cascades[4];
 };
 
 #ifndef __cplusplus
@@ -129,6 +136,7 @@ struct GlobalData {
     int lodSampler;
     int shadowSampler;
     int primaryCameraIndex;
+    int cullingCameraIndex;
     MeshBuffer meshBuffer;
     TransformsBuffer transformsBuffer;
     CameraBuffer cameraBuffer;

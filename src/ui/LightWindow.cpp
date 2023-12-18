@@ -12,7 +12,7 @@ void cala::ui::LightWindow::render() {
     ImGui::Text("Lights: %lu", _scene->_lights.size());
     ImGui::SliderInt("Light", &_lightIndex, 0, _scene->_lights.size() - 1);
 
-    auto& lightRef = _scene->_lights[_lightIndex].second;
+    auto& lightRef = _scene->_lights[_lightIndex];
 
     ende::math::Vec3f position = lightRef.getPosition();
     ende::math::Vec3f colour = lightRef.getColour();

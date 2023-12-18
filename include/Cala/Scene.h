@@ -77,6 +77,13 @@ namespace cala {
 
         void setMainCamera(CameraNode* node);
 
+
+        const ende::math::Vec3f& minExtent() const { return _min; }
+        const ende::math::Vec3f& maxExtent() const { return _max; }
+        ende::math::Vec3f getSceneCenter() const {
+            return (_min + _max) / 2;
+        }
+
 //    private:
 
         Engine* _engine;
@@ -102,8 +109,10 @@ namespace cala {
         std::vector<GPULight> _lightData;
         std::vector<GPUCamera> _cameraData;
 
+        ende::math::Vec3f _min = { 1000, 1000, 1000 };
+        ende::math::Vec3f _max = { -1000, -1000, -1000 };
         std::vector<Mesh> _meshes;
-        std::vector<std::pair<i32, Light>> _lights;
+        std::vector<Light> _lights;
         std::vector<Camera> _cameras;
         i32 _mainCameraIndex = -1;
         GPUCamera _cullingCameraData = {};

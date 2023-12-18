@@ -38,8 +38,8 @@ int main() {
         return -2;
 
     Camera camera((f32)ende::math::rad(54.4), platform.windowSize().first, platform.windowSize().second, 0.1f, 100.f);
-    auto cameraNode = scene.addCamera(camera, Transform({10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(-90))));
-    scene.addCamera(camera, Transform({-10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(90))));
+    scene.addCamera(camera, Transform({10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(-90))));
+//    scene.addCamera(camera, Transform({-10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(90))));
 
 
     Sampler sampler(engine.device(), {});
@@ -59,6 +59,10 @@ int main() {
     light2.setColour({ 255.f / 255.f, 202.f / 255.f, 136.f / 255.f });
     light2.setIntensity(2);
     light2.setShadowing(true);
+    light2.setCascadeCount(3);
+    light2.setCascadeSplit(0, 4.5);
+    light2.setCascadeSplit(1, 20);
+    light2.setCascadeSplit(2, 50);
     Light light3(cala::Light::POINT, false);
     light3.setPosition({ -10, 2, 4 });
     light3.setIntensity(1);
@@ -66,8 +70,6 @@ int main() {
     light3.setShadowing(true);
 
 //    scene.addLight(light, lightTransform);
-    scene.addLight(light2, lightTransform);
-    scene.addLight(light2, lightTransform);
     scene.addLight(light2, lightTransform);
 //    scene.addLight(light3, lightTransform);
 

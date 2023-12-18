@@ -45,8 +45,15 @@ GPULight cala::Light::data() const {
         _intensity,
         _range,
         _shadowBias,
-        _shadowMap.index()
+        _shadowMap.index(),
+        -1,
+        (u32)_cascadeCount
     };
+
+    for (u32 cascade = 0; cascade < 4; cascade++) {
+        data.cascades[cascade].shadowMapIndex = _cascadeMaps[cascade].index();
+        data.cascades[cascade].distance = _cascadeSplits[cascade];
+    }
 
     if (_type == POINT)
         data.position = _position;
@@ -96,5 +103,10 @@ void cala::Light::setShadowBias(f32 bias) {
 
 void cala::Light::setShadowMap(vk::ImageHandle shadowMap) {
     _shadowMap = shadowMap;
+    _dirty = true;
+}
+
+void cala::Light::setCascadeShadowMap(i32 cascade, vk::ImageHandle shadowMap) {
+    _cascadeMaps[cascade] = shadowMap;
     _dirty = true;
 }

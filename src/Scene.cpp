@@ -38,7 +38,7 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
             .size = (u32)(10 * sizeof(GPUCamera)),
             .usage = vk::BufferUsage::STORAGE,
             .memoryType = vk::MemoryProperties::DEVICE,
-            .name = "LightBuffer: " + std::to_string(i)
+            .name = "CameraBuffer: " + std::to_string(i)
         });
     }
     for (u32 i = 0; i < vk::FRAMES_IN_FLIGHT; i++) {
@@ -118,9 +118,9 @@ void cala::Scene::prepare() {
     _engine->stageData(_meshTransformsBuffer[frame], _meshTransforms);
 
     _cameraData.clear();
+    auto mainCamera = getMainCamera();
+    mainCamera->updateFrustum();
     if (_updateCullingCamera) {
-        auto mainCamera = getMainCamera();
-        mainCamera->updateFrustum();
         _cullingCameraData = mainCamera->data();
     }
     _cameraData.push_back(_cullingCameraData);
@@ -132,17 +132,70 @@ void cala::Scene::prepare() {
 
     _lightData.clear();
     for (u32 lightIndex = 0; lightIndex < _lights.size(); lightIndex++) {
-        auto& light = _lights[lightIndex].second;
+        auto& light = _lights[lightIndex];
         auto data = light.data();
 
         if (light.type() == Light::DIRECTIONAL) {
-            f32 halfRange = (light.getFar() - light.getNear()) / 2;
-            cala::Transform lightTransform(light.getPosition(), light.getDirection());
-            cala::Camera lightCamera(ende::math::orthographic<f32>(-20, 20, -20, 20, -halfRange, halfRange), &lightTransform);
-            auto lightCameraData = lightCamera.data();
+
             u32 cameraIndex = _cameraData.size();
             data.cameraIndex = cameraIndex;
-            _cameraData.push_back(lightCameraData);
+            light.setCameraIndex(cameraIndex);
+
+            for (u32 cascadeIndex = 0; cascadeIndex < light.getCascadeCount(); cascadeIndex++) {
+                f32 near = mainCamera->near();
+                f32 far = mainCamera->far();
+                if (cascadeIndex > 0)
+                    near = light.getCascadeSplit(cascadeIndex - 1) - 1;
+                if (cascadeIndex < light.getCascadeCount() - 1)
+                    far = light.getCascadeSplit(cascadeIndex) + 5;
+
+                Camera cascadeCamera(mainCamera->fov(), mainCamera->width(), mainCamera->height(), near, far, &mainCamera->transform());
+                auto frustumCorners = cascadeCamera.getFrustumCorners();
+
+                ende::math::Vec3f center = { 0, 0, 0 };
+                for (auto& corner : frustumCorners)
+                    center = center + corner.xyz();
+                center = center / frustumCorners.size();
+
+                Transform cascadeTransform(center, mainCamera->transform().rot());
+                cascadeCamera.setTransform(&cascadeTransform);
+
+                ende::math::Vec3f min = { std::numeric_limits<f32>::max(), std::numeric_limits<f32>::max(), std::numeric_limits<f32>::max() };
+                ende::math::Vec3f max = { std::numeric_limits<f32>::lowest(), std::numeric_limits<f32>::lowest(), std::numeric_limits<f32>::lowest() };
+
+                auto cascadeView = cascadeCamera.view();
+                for (auto& corner : frustumCorners) {
+                    auto cornerLightSpace = cascadeView.transform(corner);
+                    min = {
+                            std::min(min.x(), cornerLightSpace.x()),
+                            std::min(min.y(), cornerLightSpace.y()),
+                            std::min(min.z(), cornerLightSpace.z()),
+                    };
+                    max = {
+                            std::max(max.x(), cornerLightSpace.x()),
+                            std::max(max.y(), cornerLightSpace.y()),
+                            std::max(max.z(), cornerLightSpace.z()),
+                    };
+                }
+
+                const f32 mult = 10;
+                if (min.z() < 0)
+                    min[2] = min.z() * mult;
+                else
+                    min[2] = min.z() / mult;
+                if (max.z() < 0)
+                    max[2] = max.z() / mult;
+                else
+                    max[2] = max.z() * mult;
+
+                cascadeTransform.setRot(light.getDirection());
+                auto projection = ende::math::orthographic<f32>(min.x(), max.x(), min.y(), max.y(), min.z(), max.z());
+                cascadeCamera.setProjection(projection);
+                cascadeCamera.updateFrustum();
+
+                _cameraData.push_back(cascadeCamera.data());
+
+            }
         }
 
         _lightData.push_back(data);
@@ -236,6 +289,18 @@ cala::Scene::SceneNode *cala::Scene::addMesh(const cala::Mesh &mesh, const cala:
     _meshTransforms.push_back(transform.local());
     assert(_meshData.size() == _meshTransforms.size());
     assert(_meshData.size() == _meshes.size());
+
+    _min = {
+            std::min(_min.x(), mesh.min.x()),
+            std::min(_min.y(), mesh.min.y()),
+            std::min(_min.z(), mesh.min.z())
+    };
+    _max = {
+            std::max(_max.x(), mesh.max.x()),
+            std::max(_max.y(), mesh.max.y()),
+            std::max(_max.z(), mesh.max.z())
+    };
+
     auto node = std::make_unique<MeshNode>();
     node->index = index;
     node->type = NodeType::MESH;
@@ -254,7 +319,7 @@ cala::Scene::SceneNode *cala::Scene::addMesh(const cala::Mesh &mesh, const cala:
 
 cala::Scene::SceneNode *cala::Scene::addLight(const cala::Light &light, const cala::Transform &transform, cala::Scene::SceneNode *parent) {
     i32 index = _lights.size();
-    _lights.push_back(std::make_pair(-1, light));
+    _lights.push_back(light);
     auto node = std::make_unique<LightNode>();
     node->index = index;
     node->type = NodeType::LIGHT;
