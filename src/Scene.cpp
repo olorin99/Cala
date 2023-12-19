@@ -145,9 +145,9 @@ void cala::Scene::prepare() {
                 f32 near = mainCamera->near();
                 f32 far = mainCamera->far();
                 if (cascadeIndex > 0)
-                    near = light.getCascadeSplit(cascadeIndex - 1) - 1;
+                    near = light.getCascadeSplit(cascadeIndex - 1);
                 if (cascadeIndex < light.getCascadeCount() - 1)
-                    far = light.getCascadeSplit(cascadeIndex) + 5;
+                    far = light.getCascadeSplit(cascadeIndex);
 
                 Camera cascadeCamera(mainCamera->fov(), mainCamera->width(), mainCamera->height(), near, far, &mainCamera->transform());
                 auto frustumCorners = cascadeCamera.getFrustumCorners();

@@ -60,18 +60,52 @@ vec4 directionalLight(GPULight light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0
                 light.cascades[cascadeIndex].shadowMapIndex >= 0 &&
                 shadowCoords.x > 0.0 && shadowCoords.x < 1.0 &&
                 shadowCoords.y > 0.0 && shadowCoords.y < 1.0) {
+
+                float fade = 1 - (light.cascades[cascadeIndex].distance - depthValue) / light.cascades[cascadeIndex].distance;
+                fade = (fade - 0.8) * 5.0;
+
+                float shadowMain = 1.0;
                 float bias = max(light.shadowBias * (1.0 - dot(normal, L)), 0.0001);
                 switch (globalData.shadowMode) {
                     case 0:
-                        shadow = pcss2D(light.cascades[cascadeIndex].shadowMapIndex, shadowCoords, light.size, bias);
+                        shadowMain = pcss2D(light.cascades[cascadeIndex].shadowMapIndex, shadowCoords, light.size, bias);
                         break;
                     case 1:
-                        shadow = filterPCF2D(light.cascades[cascadeIndex].shadowMapIndex, shadowCoords, 1, bias);
+                        shadowMain = filterPCF2D(light.cascades[cascadeIndex].shadowMapIndex, shadowCoords, 1, bias);
                         break;
                     case 2:
-                        shadow = sampleShadow(light.cascades[cascadeIndex].shadowMapIndex, shadowCoords, vec2(0), bias);
+                        shadowMain = sampleShadow(light.cascades[cascadeIndex].shadowMapIndex, shadowCoords, vec2(0), bias);
                         break;
                 }
+
+                if (fade > 0 && cascadeIndex < light.cascadeCount - 1) {
+                    int fadeCascadeIndex = cascadeIndex + 1;
+                    GPUCamera fadeShadowCamera = globalData.cameraBuffer[light.cameraIndex + fadeCascadeIndex].camera;
+                    vec4 fadeShadowPos = fadeShadowCamera.projection * fadeShadowCamera.view * vec4(fsIn.FragPos, 1.0);
+                    vec3 fadeShadowCoords = vec3(fadeShadowPos.xy * 0.5 + 0.5, fadeShadowPos.z);
+
+                    if (depthValue < light.cascades[fadeCascadeIndex].distance &&
+                        light.cascades[fadeCascadeIndex].shadowMapIndex >= 0 &&
+                        fadeShadowCoords.x > 0.0 && fadeShadowCoords.x < 1.0 &&
+                        fadeShadowCoords.y > 0.0 && fadeShadowCoords.y < 1.0) {
+
+                        float shadowFade = 1.0;
+                        switch (globalData.shadowMode) {
+                            case 0:
+                                shadowFade = pcss2D(light.cascades[fadeCascadeIndex].shadowMapIndex, fadeShadowCoords, light.size, bias);
+                                break;
+                            case 1:
+                                shadowFade = filterPCF2D(light.cascades[fadeCascadeIndex].shadowMapIndex, fadeShadowCoords, 1, bias);
+                                break;
+                            case 2:
+                                shadowFade = sampleShadow(light.cascades[fadeCascadeIndex].shadowMapIndex, fadeShadowCoords, vec2(0), bias);
+                                break;
+                        }
+                        shadow = mix(shadowMain, shadowFade, fade);
+                    }
+                } else
+                    shadow = shadowMain;
+
                 break;
             }
         }
