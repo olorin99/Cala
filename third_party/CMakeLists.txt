@@ -5,6 +5,7 @@ add_library(stb_image_write STATIC stb_image_write.cpp stb_image_write.h)
 add_subdirectory(Ende)
 add_subdirectory(fastgltf)
 add_subdirectory(volk)
+add_subdirectory(meshoptimizer)
 
 set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(SPIRV-Headers)

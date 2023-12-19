@@ -12,6 +12,7 @@
 #include <Ende/math/Mat.h>
 #include <Ende/math/Quaternion.h>
 #include <stack>
+#include <meshoptimizer.h>
 
 template <>
 cala::vk::Handle<cala::vk::ShaderModule, cala::vk::Device>& cala::AssetManager::Asset<cala::vk::ShaderModuleHandle>::operator*() noexcept {
@@ -564,19 +565,25 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             u32 firstVertex = vertices.size();
             auto& indicesAccessor = asset->accessors[primitive.indicesAccessor.value()];
             u32 indexCount = indicesAccessor.count;
-            indices.resize(indices.size() + indicesAccessor.count);
+
+            std::vector<Vertex> meshVertices;
+            std::vector<u32> meshIndices(indexCount);
+//            indices.resize(indices.size() + indicesAccessor.count);
             fastgltf::iterateAccessorWithIndex<std::uint32_t>(asset.get(), indicesAccessor, [&](std::uint32_t index, std::size_t idx) {
-                assert(firstIndex + idx < indices.size());
-                indices[firstIndex + idx] = index + firstVertex;
+//                assert(firstIndex + idx < indices.size());
+//                indices[firstIndex + idx] = index + firstVertex;
+                meshIndices[idx] = index;
             });
 
             if (auto positionIT = primitive.findAttribute("POSITION"); positionIT != primitive.attributes.end()) {
                 auto& positionAccessor = asset->accessors[positionIT->second];
-                vertices.resize(vertices.size() + positionAccessor.count);
+//                vertices.resize(vertices.size() + positionAccessor.count);
+                meshVertices.resize(positionAccessor.count);
                 fastgltf::iterateAccessorWithIndex<ende::math::Vec3f>(asset.get(), positionAccessor, [&](ende::math::Vec3f position, std::size_t idx) {
-                    assert(firstVertex + idx < vertices.size());
+//                    assert(firstVertex + idx < vertices.size());
                     position = worldMatrix.transform(position);
-                    vertices[firstVertex + idx].position = position;
+//                    vertices[firstVertex + idx].position = position;
+                    meshVertices[idx].position = position;
                     min = {
                             std::min(min.x(), position.x()),
                             std::min(min.y(), position.y()),
@@ -593,26 +600,50 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             if (auto normalIT = primitive.findAttribute("NORMAL"); normalIT != primitive.attributes.end()) {
                 auto& normalAccessor = asset->accessors[normalIT->second];
                 fastgltf::iterateAccessorWithIndex<ende::math::Vec3f>(asset.get(), normalAccessor, [&](ende::math::Vec3f normal, std::size_t idx) {
-                    assert(firstVertex + idx < vertices.size());
-                    vertices[firstVertex + idx].normal = normal;
+//                    assert(firstVertex + idx < vertices.size());
+//                    vertices[firstVertex + idx].normal = normal;
+                    meshVertices[idx].normal = normal;
                 });
             }
 
             if (auto texCoordIT = primitive.findAttribute("TEXCOORD_0"); texCoordIT != primitive.attributes.end()) {
                 auto& texCoordAccessor = asset->accessors[texCoordIT->second];
                 fastgltf::iterateAccessorWithIndex<ende::math::Vec<2, f32>>(asset.get(), texCoordAccessor, [&](ende::math::Vec<2, f32> texCoord, std::size_t idx) {
-                    assert(firstVertex + idx < vertices.size());
-                    vertices[firstVertex + idx].texCoords = texCoord;
+//                    assert(firstVertex + idx < vertices.size());
+//                    vertices[firstVertex + idx].texCoords = texCoord;
+                    meshVertices[idx].texCoords = texCoord;
                 });
             }
 
             if (auto tangentIT = primitive.findAttribute("TANGENT"); tangentIT != primitive.attributes.end()) {
                 auto& tangentAccessor = asset->accessors[tangentIT->second];
                 fastgltf::iterateAccessorWithIndex<ende::math::Vec4f>(asset.get(), tangentAccessor, [&](ende::math::Vec4f tangent, std::size_t idx) {
-                    assert(firstVertex + idx < vertices.size());
-                    vertices[firstVertex + idx].tangent = tangent;
+//                    assert(firstVertex + idx < vertices.size());
+//                    vertices[firstVertex + idx].tangent = tangent;
+                    meshVertices[idx].tangent = tangent;
                 });
             }
+
+            std::vector<unsigned int> remap(indexCount);
+            size_t vertexCount = meshopt_generateVertexRemap(&remap[0], &meshIndices[0], indexCount, &meshVertices[0], meshVertices.size(), sizeof(Vertex));
+
+            std::vector<Vertex> optimisedVertices(vertexCount);
+            std::vector<u32> optimisedIndices(indexCount);
+
+            meshopt_remapIndexBuffer(&optimisedIndices[0], &meshIndices[0], indexCount, &remap[0]);
+            meshopt_remapVertexBuffer(&optimisedVertices[0], &meshVertices[0], meshVertices.size(), sizeof(Vertex), &remap[0]);
+
+            meshopt_optimizeVertexCache(&optimisedIndices[0], &optimisedIndices[0], indexCount, vertexCount);
+            meshopt_optimizeOverdraw(&optimisedIndices[0], &optimisedIndices[0], indexCount, (f32*)&optimisedVertices[0], vertexCount, sizeof(Vertex), 1.05f);
+            meshopt_optimizeVertexFetch(&optimisedVertices[0], &optimisedIndices[0], indexCount, &optimisedVertices[0], vertexCount, sizeof(Vertex));
+
+            for (auto& index : optimisedIndices)
+                index += firstVertex;
+
+            vertices.insert(vertices.end(), optimisedVertices.begin(), optimisedVertices.end());
+            indices.insert(indices.end(), optimisedIndices.begin(), optimisedIndices.end());
+
+
 
             Model::Primitive mesh{};
             mesh.firstIndex = firstIndex;
