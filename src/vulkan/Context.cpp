@@ -47,11 +47,16 @@ cala::vk::DeviceProperties getDeviceProperties(VkPhysicalDevice physicalDevice) 
     cala::vk::DeviceProperties properties{};
 
     VkPhysicalDeviceProperties2 deviceProperties2{};
+
     VkPhysicalDeviceDescriptorIndexingProperties indexingProperties{};
     indexingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES;
 
+    VkPhysicalDeviceMeshShaderPropertiesEXT meshShaderProperties{};
+    meshShaderProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
+
     deviceProperties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
     deviceProperties2.pNext = &indexingProperties;
+    indexingProperties.pNext = &meshShaderProperties;
 
     vkGetPhysicalDeviceProperties2(physicalDevice, &deviceProperties2);
 
@@ -107,6 +112,45 @@ cala::vk::DeviceProperties getDeviceProperties(VkPhysicalDevice physicalDevice) 
     properties.deviceLimits.maxSamplerAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
 
     properties.deviceLimits.timestampPeriod = deviceProperties.limits.timestampPeriod;
+
+
+    properties.deviceLimits.maxTaskWorkGroupTotalCount = meshShaderProperties.maxTaskWorkGroupTotalCount;
+    properties.deviceLimits.maxTaskWorkGroupCount[0] = meshShaderProperties.maxTaskWorkGroupCount[0];
+    properties.deviceLimits.maxTaskWorkGroupCount[1] = meshShaderProperties.maxTaskWorkGroupCount[1];
+    properties.deviceLimits.maxTaskWorkGroupCount[2] = meshShaderProperties.maxTaskWorkGroupCount[2];
+    properties.deviceLimits.maxTaskWorkGroupInvocations = meshShaderProperties.maxTaskWorkGroupInvocations;
+    properties.deviceLimits.maxTaskWorkGroupSize[0] = meshShaderProperties.maxTaskWorkGroupSize[0];
+    properties.deviceLimits.maxTaskWorkGroupSize[1] = meshShaderProperties.maxTaskWorkGroupSize[1];
+    properties.deviceLimits.maxTaskWorkGroupSize[2] = meshShaderProperties.maxTaskWorkGroupSize[2];
+    properties.deviceLimits.maxTaskPayloadSize = meshShaderProperties.maxTaskPayloadSize;
+    properties.deviceLimits.maxTaskSharedMemorySize = meshShaderProperties.maxTaskSharedMemorySize;
+    properties.deviceLimits.maxTaskPayloadAndSharedMemorySize = meshShaderProperties.maxTaskPayloadAndSharedMemorySize;
+    properties.deviceLimits.maxMeshWorkGroupTotalCount = meshShaderProperties.maxMeshWorkGroupTotalCount;
+    properties.deviceLimits.maxMeshWorkGroupCount[0] = meshShaderProperties.maxMeshWorkGroupCount[0];
+    properties.deviceLimits.maxMeshWorkGroupCount[1] = meshShaderProperties.maxMeshWorkGroupCount[1];
+    properties.deviceLimits.maxMeshWorkGroupCount[2] = meshShaderProperties.maxMeshWorkGroupCount[2];
+    properties.deviceLimits.maxMeshWorkGroupInvocations = meshShaderProperties.maxMeshWorkGroupInvocations;
+    properties.deviceLimits.maxMeshWorkGroupSize[0] = meshShaderProperties.maxMeshWorkGroupSize[0];
+    properties.deviceLimits.maxMeshWorkGroupSize[1] = meshShaderProperties.maxMeshWorkGroupSize[1];
+    properties.deviceLimits.maxMeshWorkGroupSize[2] = meshShaderProperties.maxMeshWorkGroupSize[2];
+    properties.deviceLimits.maxMeshSharedMemorySize = meshShaderProperties.maxMeshSharedMemorySize;
+    properties.deviceLimits.maxMeshPayloadAndSharedMemorySize = meshShaderProperties.maxMeshPayloadAndSharedMemorySize;
+    properties.deviceLimits.maxMeshOutputMemorySize = meshShaderProperties.maxMeshOutputMemorySize;
+    properties.deviceLimits.maxMeshPayloadAndOutputMemorySize = meshShaderProperties.maxMeshPayloadAndOutputMemorySize;
+    properties.deviceLimits.maxMeshOutputComponents = meshShaderProperties.maxMeshOutputComponents;
+    properties.deviceLimits.maxMeshOutputVertices = meshShaderProperties.maxMeshOutputVertices;
+    properties.deviceLimits.maxMeshOutputPrimitives = meshShaderProperties.maxMeshOutputPrimitives;
+    properties.deviceLimits.maxMeshOutputLayers = meshShaderProperties.maxMeshOutputLayers;
+    properties.deviceLimits.maxMeshMultiviewViewCount = meshShaderProperties.maxMeshMultiviewViewCount;
+    properties.deviceLimits.meshOutputPerVertexGranularity = meshShaderProperties.meshOutputPerVertexGranularity;
+    properties.deviceLimits.meshOutputPerPrimitiveGranularity = meshShaderProperties.meshOutputPerPrimitiveGranularity;
+    properties.deviceLimits.maxPreferredTaskWorkGroupInvocations = meshShaderProperties.maxPreferredTaskWorkGroupInvocations;
+    properties.deviceLimits.maxPreferredMeshWorkGroupInvocations = meshShaderProperties.maxPreferredMeshWorkGroupInvocations;
+    properties.deviceLimits.prefersLocalInvocationVertexOutput = meshShaderProperties.prefersLocalInvocationVertexOutput;
+    properties.deviceLimits.prefersLocalInvocationPrimitiveOutput = meshShaderProperties.prefersLocalInvocationPrimitiveOutput;
+    properties.deviceLimits.prefersCompactVertexOutput = meshShaderProperties.prefersCompactVertexOutput;
+    properties.deviceLimits.prefersCompactPrimitiveOutput = meshShaderProperties.prefersCompactPrimitiveOutput;
+
     return properties;
 }
 
@@ -264,6 +308,14 @@ std::expected<cala::vk::Context, cala::vk::Error> cala::vk::Context::create(cala
     if (context._supportedExtensions.AMD_device_coherent_memory)
         deviceExtensions.push_back(VK_AMD_DEVICE_COHERENT_MEMORY_EXTENSION_NAME);
 #endif
+    if (info.requestedFeatures.meshShader) {
+        if (context._supportedExtensions.EXT_mesh_shader)
+            deviceExtensions.push_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
+        else {
+            if (info.logger)
+                info.logger->warn("Unable to enable mesh shading");
+        }
+    }
 
 
     u32 queueCount = 0;
@@ -336,6 +388,12 @@ std::expected<cala::vk::Context, cala::vk::Error> cala::vk::Context::create(cala
     appendFeatureChain(&deviceFeatures2, &vulkan13Features);
 
     //TODO: mesh shader and raytracing features
+    VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures{};
+    meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+    meshShaderFeatures.meshShader = VK_TRUE;
+    meshShaderFeatures.taskShader = VK_TRUE;
+    if (info.requestedFeatures.meshShader)
+        appendFeatureChain(&deviceFeatures2, &meshShaderFeatures);
 
     // create device
     VkDeviceCreateInfo createInfo{};

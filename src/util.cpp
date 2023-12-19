@@ -133,6 +133,12 @@ std::expected<std::vector<u32>, std::string> cala::util::compileGLSLToSpirv(std:
         case vk::ShaderStage::COMPUTE:
             kind = shaderc_shader_kind::shaderc_compute_shader;
             break;
+        case vk::ShaderStage::TASK:
+            kind = shaderc_shader_kind::shaderc_task_shader;
+            break;
+        case vk::ShaderStage::MESH:
+            kind = shaderc_shader_kind::shaderc_mesh_shader;
+            break;
         default:
             return std::unexpected("invalid shader stage used for compilation");
     }

@@ -17,7 +17,10 @@ std::expected<std::unique_ptr<cala::vk::Device>, cala::vk::Error> cala::vk::Devi
     auto contextResult = Context::create({
         .applicationName = "CalaExample",
         .instanceExtensions = requiredExtensions,
-        .logger = device->_logger
+        .logger = device->_logger,
+        .requestedFeatures = {
+                .meshShader = true
+        }
     });
     if (!contextResult)
         return std::unexpected(contextResult.error());

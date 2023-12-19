@@ -121,6 +121,26 @@ layout (scalar, buffer_reference, buffer_reference_align = 8) readonly buffer Li
 #define LightBuffer u64
 #endif
 
+struct Vertex {
+    vec3 position;
+    vec3 normal;
+    vec2 texCoords;
+    vec4 tangent;
+};
+
+#ifndef __cplusplus
+layout (scalar, buffer_reference, buffer_reference_align = 8) buffer VertexBuffer {
+    Vertex vertices[];
+};
+
+layout (scalar, buffer_reference, buffer_reference_align = 8) buffer IndexBuffer {
+    uint indices[];
+};
+#else
+#define VertexBuffer u64
+#define IndexBuffer u64
+#endif
+
 struct GlobalData {
     float gamma;
     uint time;
@@ -143,6 +163,8 @@ struct GlobalData {
     int shadowSampler;
     int primaryCameraIndex;
     int cullingCameraIndex;
+    VertexBuffer vertexBuffer;
+    IndexBuffer indexBuffer;
     MeshBuffer meshBuffer;
     TransformsBuffer transformsBuffer;
     CameraBuffer cameraBuffer;

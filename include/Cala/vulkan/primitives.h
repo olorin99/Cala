@@ -237,7 +237,15 @@ namespace cala::vk {
         FRAGMENT = 0x00000010,
         COMPUTE = 0x00000020,
         ALL_GRAPHICS = 0x0000001F,
-        ALL = 0x7FFFFFFF
+        ALL = 0x7FFFFFFF,
+        RAYGEN = 0x00000100,
+        ANYHIT = 0x00000200,
+        CLOSESTHIT = 0x00000400,
+        MISS = 0x00000800,
+        INTERSECTION = 0x00001000,
+        CALLABLE = 0x00002000,
+        TASK = 0x00000040,
+        MESH = 0x00000080
     };
 
     enum class Access : u64 {
@@ -321,7 +329,11 @@ namespace cala::vk {
         RESOLVE = 0x200000000,
         BLIT = 0x400000000,
         CLEAR = 0x800000000,
-        INDEX_INPUT = 0x1000000000
+        INDEX_INPUT = 0x1000000000,
+        ACCELERATION_STRUCTURE_BUILD = 0x02000000,
+        RAY_TRACING_SHADER = 0x00200000,
+        TASK_SHADER = 0x00080000,
+        MESH_SHADER = 0x00100000
     };
 
     enum class AttribType {

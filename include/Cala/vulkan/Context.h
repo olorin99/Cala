@@ -44,6 +44,35 @@ namespace cala::vk {
         f32 maxSamplerAnisotropy = 0;
 
         f32 timestampPeriod = 0;
+
+        u32 maxTaskWorkGroupTotalCount = 0;
+        u32 maxTaskWorkGroupCount[3] = {};
+        u32 maxTaskWorkGroupInvocations = 0;
+        u32 maxTaskWorkGroupSize[3] = {};
+        u32 maxTaskPayloadSize = 0;
+        u32 maxTaskSharedMemorySize = 0;
+        u32 maxTaskPayloadAndSharedMemorySize = 0;
+        u32 maxMeshWorkGroupTotalCount = 0;
+        u32 maxMeshWorkGroupCount[3] = {};
+        u32 maxMeshWorkGroupInvocations = 0;
+        u32 maxMeshWorkGroupSize[3] = {};
+        u32 maxMeshSharedMemorySize = 0;
+        u32 maxMeshPayloadAndSharedMemorySize = 0;
+        u32 maxMeshOutputMemorySize = 0;
+        u32 maxMeshPayloadAndOutputMemorySize = 0;
+        u32 maxMeshOutputComponents = 0;
+        u32 maxMeshOutputVertices = 0;
+        u32 maxMeshOutputPrimitives = 0;
+        u32 maxMeshOutputLayers = 0;
+        u32 maxMeshMultiviewViewCount = 0;
+        u32 meshOutputPerVertexGranularity = 0;
+        u32 meshOutputPerPrimitiveGranularity = 0;
+        u32 maxPreferredTaskWorkGroupInvocations = 0;
+        u32 maxPreferredMeshWorkGroupInvocations = 0;
+        bool prefersLocalInvocationVertexOutput = false;
+        bool prefersLocalInvocationPrimitiveOutput = false;
+        bool prefersCompactVertexOutput = false;
+        bool prefersCompactPrimitiveOutput = false;
     };
 
     struct DeviceProperties {
@@ -94,6 +123,7 @@ namespace cala::vk {
             std::span<const char* const> deviceExtensions = {};
             std::function<u32(const DeviceProperties&)> selector = {};
             spdlog::logger* logger = nullptr;
+            DeviceFeatures requestedFeatures = {};
         };
         static std::expected<Context, Error> create(ContextInfo info);
 

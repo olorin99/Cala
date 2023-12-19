@@ -883,6 +883,8 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     _globalData.primaryCameraIndex = scene.getMainCameraIndex();
     _globalData.cullingCameraIndex = 0;
 
+    _globalData.vertexBuffer = _engine->vertexBuffer()->address();
+    _globalData.indexBuffer = _engine->indexBuffer()->address();
     _globalData.meshBuffer = scene._meshDataBuffer[_engine->device().frameIndex()]->address();
     _globalData.transformsBuffer = scene._meshTransformsBuffer[_engine->device().frameIndex()]->address();
     _globalData.cameraBuffer = scene._cameraBuffer[_engine->device().frameIndex()]->address();
