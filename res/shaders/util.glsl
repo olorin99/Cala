@@ -1,6 +1,9 @@
 #ifndef SHADER_UTIL_GLSL
 #define SHADER_UTIL_GLSL
 
+#include "bindings.glsl"
+CALA_USE_SAMPLED_IMAGE(1D)
+
 float linearDepth(float depth, float near, float far) {
     float depthRange = depth;
     return 2.0 * near * far / (far + near - depthRange * (far - near));
@@ -25,6 +28,10 @@ vec2 random2(vec2 uv) {
     float noiseX = (fract(sin(dot(uv, vec2(12.9898,78.233) * 2.0)) * 43758.5453));
     float noiseY = sqrt(1 - noiseX * noiseX);
     return vec2(noiseX, noiseY);
+}
+
+vec2 poisson(float u) {
+    return texture(CALA_COMBINED_SAMPLER(1D, globalData.poissonIndex, globalData.nearestRepeatSampler), u).xy * 2 - 1;
 }
 
 //float random(vec2 uv) {

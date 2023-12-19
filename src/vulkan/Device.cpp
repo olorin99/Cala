@@ -160,6 +160,18 @@ std::expected<std::unique_ptr<cala::vk::Device>, cala::vk::Error> cala::vk::Devi
         .borderColour = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
     });
 
+    device->_defaultImage = device->createImage({
+        .width = 2,
+        .height = 2,
+        .format = Format::RGBA8_UNORM,
+        .usage = ImageUsage::SAMPLED | ImageUsage::STORAGE | ImageUsage::TRANSFER_DST,
+        .name = "defaultImage"
+    });
+    device->immediate([&](CommandHandle cmd) {
+        auto barrier = device->_defaultImage->barrier(PipelineStage::TOP, PipelineStage::COMPUTE_SHADER | PipelineStage::FRAGMENT_SHADER, Access::NONE, Access::SHADER_READ, ImageLayout::SHADER_READ_ONLY);
+        cmd->pipelineBarrier({ &barrier, 1 });
+    });
+
     return device;
 }
 
@@ -171,6 +183,8 @@ cala::vk::Device::~Device() {
     if (usingTimeline())
         _timelineSemaphore.signal(std::numeric_limits<u64>::max());
     VK_TRY(vkQueueWaitIdle(_context.getQueue(QueueType::GRAPHICS))); //ensures last frame finished before destroying stuff
+
+    _defaultImage = {};
 
     for (auto& markerBuffer : _markerBuffer)
         markerBuffer = BufferHandle{};
@@ -460,7 +474,7 @@ bool cala::vk::Device::gc() {
     _imageList.clearDestroyQueue([this](i32 index, Image& image) {
         VmaAllocation allocation = image._allocation;
         image._defaultView = vk::Image::View();
-        updateBindlessImage(index, _imageList.getResource(0)->_defaultView);
+        updateBindlessImage(index, _defaultImage->_defaultView);
         if (image.image() != VK_NULL_HANDLE)
             vmaDestroyImage(context().allocator(), image.image(), allocation);
         else

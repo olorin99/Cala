@@ -211,6 +211,7 @@ namespace cala {
         vk::ShaderProgram _depthDebugProgram;
         vk::ShaderProgram _voxelVisualisationProgram;
 
+        vk::ImageHandle _poissonImage;
         vk::ImageHandle _brdfImage;
 
         vk::BufferHandle _globalVertexBuffer;

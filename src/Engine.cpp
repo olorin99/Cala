@@ -9,6 +9,7 @@
 #include <json.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <stb_image_write.h>
+#include <PoissonGenerator.h>
 
 cala::vk::RenderPass::Attachment shadowPassAttachment {
         cala::vk::Format::D32_SFLOAT,
@@ -180,6 +181,26 @@ cala::Engine::Engine(vk::Platform &platform)
 //            { "shaders/voxel/visualise.comp", vk::ShaderModule::COMPUTE }
 //        });
     }
+
+    PoissonGenerator::DefaultPRNG defaultPrng;
+    auto poissonPoints = PoissonGenerator::generatePoissonPoints(16, defaultPrng);
+    std::vector<f32> poissonData;
+    for (auto& point : poissonPoints) {
+        poissonData.push_back(point.x);
+        poissonData.push_back(point.y);
+    }
+
+    _poissonImage = _device->createImage({
+        .width = static_cast<u32>(poissonPoints.size()),
+        .format = vk::Format::RG32_SFLOAT,
+        .usage = vk::ImageUsage::SAMPLED | vk::ImageUsage::TRANSFER_DST,
+        .name = "poisson"
+    });
+    stageData(_poissonImage, poissonData, {
+        .mipLevel = 0,
+        .width = static_cast<u32>(poissonPoints.size()),
+        .format = 2 * 4
+    });
 
     _brdfImage = _device->createImage({
         .width = 512,
@@ -591,9 +612,14 @@ void cala::Engine::stageData(vk::ImageHandle dstHandle, std::span<const u8> data
             uploadSizeRemaining = data.size() - uploadOffset;
 
             i32 index = (data.size() - uploadSizeRemaining) / dataInfo.format;
-            i32 z = index / (dataInfo.width * dataInfo.height);
-            index -= (z * (dataInfo.width * dataInfo.height));
-            i32 y = index / dataInfo.width;
+            i32 z = 0;
+            if (dataInfo.depth > 1) {
+                z = index / (dataInfo.width * dataInfo.height);
+                index -= (z * (dataInfo.width * dataInfo.height));
+            }
+            i32 y = 0;
+            if (dataInfo.height > 1)
+                y = index / dataInfo.width;
             i32 x = index % dataInfo.width;
 
             dstOffset = { x, y, z };

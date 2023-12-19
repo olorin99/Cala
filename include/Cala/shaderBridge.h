@@ -129,6 +129,7 @@ struct GlobalData {
     uvec4 tileSizes;
     uvec2 swapchainSize;
     vec2 randomOffset;
+    int poissonIndex;
     float bloomStrength;
     int shadowMode;
     int pcfSamples;

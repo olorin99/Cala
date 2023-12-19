@@ -841,6 +841,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     _globalData.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
     _globalData.swapchainSize = { _swapchain->extent().width, _swapchain->extent().height };
     _globalData.randomOffset = { static_cast<f32>(_randomDistribution(_randomGenerator)), static_cast<f32>(_randomDistribution(_randomGenerator)) };
+    _globalData.poissonIndex = _engine->_poissonImage.index();
     _globalData.bloomStrength = _renderSettings.bloomStrength;
     _globalData.shadowMode = _renderSettings.shadowMode;
     _globalData.pcfSamples = _renderSettings.pcfSamples;

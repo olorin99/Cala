@@ -308,6 +308,8 @@ namespace cala::vk {
         SamplerHandle _defaultSampler = {};
         SamplerHandle _defaultShadowSampler = {};
 
+        ImageHandle _defaultImage = {};
+
         std::vector<std::pair<Sampler::CreateInfo, std::unique_ptr<Sampler>>> _samplers = {};
 
         VkDescriptorPool _descriptorPool = VK_NULL_HANDLE;
