@@ -78,12 +78,12 @@ int main() {
 //    auto background = engine.assetManager()->loadImage("background", "textures/Tropical_Beach_3k.hdr", backend::Format::RGBA32_SFLOAT);
     scene.addSkyLightMap(background, true);
 
-//    Mesh cube = cala::shapes::cube().mesh(&engine);
-//    auto matInstance = material1->instance();
-//    scene.addMesh(cube, Transform({0, 3, 0}, {}, {1, 3, 1}), &matInstance);
+    Mesh cube = cala::shapes::cube().mesh(&engine);
+    auto matInstance = material1->instance();
+    scene.addMesh(cube, Transform({0, 3, 0}, {}, {1, 3, 1}), &matInstance);
 
-    auto sphere = engine.assetManager()->loadModel("sphere", "models/sphere.glb", material1);
-    auto sponzaAsset = engine.assetManager()->loadModel("sponza", "models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf", material1);
+//    auto sphere = engine.assetManager()->loadModel("sphere", "models/sphere.glb", material1);
+//    auto sponzaAsset = engine.assetManager()->loadModel("sponza", "models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf", material1);
 //    auto bistro = engine.assetManager()->loadModel("bistro", "models/bistro/gltf/Bistro_Exterior.gltf", material1);
 //    auto damagedHelmet = engine.assetManager()->loadModel("damagedHelmet", "models/gltf/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf", material1);
 
@@ -91,16 +91,16 @@ int main() {
 //    scene.addModel("plane", *plane, Transform({}, {}, {100, 1, 100}));
 
     Transform defaultTransform;
-    scene.addModel("sponza", *sponzaAsset, defaultTransform);
+//    scene.addModel("sponza", *sponzaAsset, defaultTransform);
 //    scene.addModel(*bistro, defaultTransform);
 //    scene.addModel(*damagedHelmet, sponzaTransform);
-    auto sphereNode = scene.addModel("smallSphere", *sphere, lightTransform);
+//    auto sphereNode = scene.addModel("smallSphere", *sphere, lightTransform);
 
     f32 sceneBounds = 10;
 
     Transform t2({ 2, 4, 0 });
 
-    scene.addModel("sphere2", *sphere, t2);
+//    scene.addModel("sphere2", *sphere, t2);
 
     i32 newLights = 10;
 
@@ -196,12 +196,12 @@ int main() {
             ImGui::Render();
         }
 
-        {
-            f32 seconds = engine.getRunningTime().milliseconds() / 1000.f;
-            f32 factor = std::clamp(seconds / 100, 0.f, 1.f);
-            auto currentPos = ende::math::Vec3f{-10, 1, 0}.lerp(ende::math::Vec3f{10, 1, 0}, factor);
-            sphereNode->transform.setPos(currentPos);
-        }
+//        {
+//            f32 seconds = engine.getRunningTime().milliseconds() / 1000.f;
+//            f32 factor = std::clamp(seconds / 100, 0.f, 1.f);
+//            auto currentPos = ende::math::Vec3f{-10, 1, 0}.lerp(ende::math::Vec3f{10, 1, 0}, factor);
+//            sphereNode->transform.setPos(currentPos);
+//        }
 
         if (renderer.beginFrame(&swapchain)) {
             scene.prepare();

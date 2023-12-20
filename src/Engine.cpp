@@ -947,16 +947,29 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
                 includedFiles.push_back(eval.first);
 
 
-            vk::ShaderProgram handle = loadProgram(name, {
-                { "shaders/default.vert", vk::ShaderStage::VERTEX },
-                { "shaders/default/default.frag", vk::ShaderStage::FRAGMENT, {
-                    { "MATERIAL_DATA", materialData.second ? "" : materialData.first },
-                    { "MATERIAL_DEFINITION", materialDefinition.second ? "" : materialDefinition.first },
-                    { "MATERIAL_LOAD", materialLoad.second ? "" : materialLoad.first },
-                    { "MATERIAL_EVAL", eval.second ? "" : eval.first },
-                }, includedFiles }
-            });
-            return handle;
+
+            if (_device->context().getEnabledFeatures().meshShading) {
+                return loadProgram(name, {
+                        { "shaders/default.task", vk::ShaderStage::TASK },
+                        { "shaders/default.mesh", vk::ShaderStage::MESH },
+                        { "shaders/default/default.frag", vk::ShaderStage::FRAGMENT, {
+                            { "MATERIAL_DATA", materialData.second ? "" : materialData.first },
+                            { "MATERIAL_DEFINITION", materialDefinition.second ? "" : materialDefinition.first },
+                            { "MATERIAL_LOAD", materialLoad.second ? "" : materialLoad.first },
+                            { "MATERIAL_EVAL", eval.second ? "" : eval.first },
+                        }, includedFiles }
+                });
+            } else {
+                return loadProgram(name, {
+                        { "shaders/default.vert", vk::ShaderStage::VERTEX },
+                        { "shaders/default/default.frag", vk::ShaderStage::FRAGMENT, {
+                            { "MATERIAL_DATA", materialData.second ? "" : materialData.first },
+                            { "MATERIAL_DEFINITION", materialDefinition.second ? "" : materialDefinition.first },
+                            { "MATERIAL_LOAD", materialLoad.second ? "" : materialLoad.first },
+                            { "MATERIAL_EVAL", eval.second ? "" : eval.first },
+                        }, includedFiles }
+                });
+            }
         };
 
         vk::ShaderProgram litHandle = addVariant(std::format("{}##lit", path.filename().string()), litEval);

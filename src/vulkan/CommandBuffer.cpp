@@ -362,14 +362,18 @@ void cala::vk::CommandBuffer::draw(u32 count, u32 instanceCount, u32 first, u32 
     assert(!_pipelineDirty);
     assert(!_descriptorDirty);
     if (_pipelineKey.compute) throw std::runtime_error("Trying to draw when compute pipeline is bound");
-    if (indexed && _indexBuffer)
+    if (indexed && _indexBuffer) {
         vkCmdDrawIndexed(_buffer, count, instanceCount, first, 0, firstInstance);
-    else
+        writeBufferMarker(PipelineStage::VERTEX_SHADER, "vkCmdDrawIndexed::VERTEX");
+        writeBufferMarker(PipelineStage::GEOMETRY_SHADER, "vkCmdDrawIndexed::GEOMETRY");
+        writeBufferMarker(PipelineStage::FRAGMENT_SHADER, "vkCmdDrawIndexed::FRAGMENT");
+    } else {
         vkCmdDraw(_buffer, count, instanceCount, first, firstInstance);
+        writeBufferMarker(PipelineStage::VERTEX_SHADER, "vkCmdDraw::VERTEX");
+        writeBufferMarker(PipelineStage::GEOMETRY_SHADER, "vkCmdDraw::GEOMETRY");
+        writeBufferMarker(PipelineStage::FRAGMENT_SHADER, "vkCmdDraw::FRAGMENT");
+    }
     ++_drawCallCount;
-    writeBufferMarker(PipelineStage::VERTEX_SHADER, "vkCmdDrawIndirectCount::VERTEX");
-    writeBufferMarker(PipelineStage::GEOMETRY_SHADER, "vkCmdDrawIndirectCount::GEOMETRY");
-    writeBufferMarker(PipelineStage::FRAGMENT_SHADER, "vkCmdDrawIndirectCount::FRAGMENT");
 }
 
 void cala::vk::CommandBuffer::drawIndirect(BufferHandle buffer, u32 offset, u32 drawCount, u32 stride) {
@@ -381,9 +385,9 @@ void cala::vk::CommandBuffer::drawIndirect(BufferHandle buffer, u32 offset, u32 
         stride = sizeof(u32) * 4;
     vkCmdDrawIndirect(_buffer, buffer->buffer(), offset, drawCount, stride);
     ++_drawCallCount;
-    writeBufferMarker(PipelineStage::VERTEX_SHADER, "vkCmdDrawIndirectCount::VERTEX");
-    writeBufferMarker(PipelineStage::GEOMETRY_SHADER, "vkCmdDrawIndirectCount::GEOMETRY");
-    writeBufferMarker(PipelineStage::FRAGMENT_SHADER, "vkCmdDrawIndirectCount::FRAGMENT");
+    writeBufferMarker(PipelineStage::VERTEX_SHADER, "vkCmdDrawIndirect::VERTEX");
+    writeBufferMarker(PipelineStage::GEOMETRY_SHADER, "vkCmdDrawIndirect::GEOMETRY");
+    writeBufferMarker(PipelineStage::FRAGMENT_SHADER, "vkCmdDrawIndirect::FRAGMENT");
 }
 
 void cala::vk::CommandBuffer::drawIndirectCount(BufferHandle buffer, u32 bufferOffset, BufferHandle countBuffer, u32 countOffset, u32 stride) {
@@ -421,9 +425,9 @@ void cala::vk::CommandBuffer::drawMeshTasksWorkGroups(u32 x, u32 y, u32 z) {
     assert(!_descriptorDirty);
     vkCmdDrawMeshTasksEXT(_buffer, x, y, z);
     ++_drawCallCount;
-    writeBufferMarker(PipelineStage::TASK_SHADER, "vkCmdDrawMeshTasksIndirectEXT::TASK");
-    writeBufferMarker(PipelineStage::MESH_SHADER, "vkCmdDrawMeshTasksIndirectEXT::MESH");
-    writeBufferMarker(PipelineStage::FRAGMENT_SHADER, "vkCmdDrawMeshTasksIndirectEXT::FRAGMENT");
+    writeBufferMarker(PipelineStage::TASK_SHADER, "vkCmdDrawMeshTasksEXT::TASK");
+    writeBufferMarker(PipelineStage::MESH_SHADER, "vkCmdDrawMeshTasksEXT::MESH");
+    writeBufferMarker(PipelineStage::FRAGMENT_SHADER, "vkCmdDrawMeshTasksEXT::FRAGMENT");
 }
 
 void cala::vk::CommandBuffer::drawMeshTasksIndirect(cala::vk::BufferHandle buffer, u32 offset, u32 drawCount, u32 stride) {

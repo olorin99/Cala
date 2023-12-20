@@ -1,0 +1,22 @@
+layout (local_size_x = 1) in;
+
+#include "shaderBridge.h"
+
+struct TaskPayload {
+    uint index;
+    uint firstIndex;
+    uint indexCount;
+};
+taskPayloadSharedEXT TaskPayload payload;
+
+void main() {
+    uint meshIndex = gl_GlobalInvocationID.x;
+//    if (meshIndex >= globalData.maxDrawCount)
+//        return;
+
+//    GPUMesh mesh = globalData.meshBuffer.meshData[meshIndex];
+    payload.index = meshIndex;
+//    payload.firstIndex = mesh.firstIndex;
+//    payload.indexCount = mesh.indexCount;
+    EmitMeshTasksEXT(3, 1, 1);
+}

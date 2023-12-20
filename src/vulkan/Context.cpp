@@ -385,6 +385,7 @@ std::expected<cala::vk::Context, cala::vk::Error> cala::vk::Context::create(cala
     VkPhysicalDeviceVulkan13Features vulkan13Features{};
     vulkan13Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
     vulkan13Features.synchronization2 = VK_TRUE;
+    vulkan13Features.maintenance4 = VK_TRUE;
     appendFeatureChain(&deviceFeatures2, &vulkan13Features);
 
     //TODO: mesh shader and raytracing features
@@ -392,7 +393,7 @@ std::expected<cala::vk::Context, cala::vk::Error> cala::vk::Context::create(cala
     meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
     meshShaderFeatures.meshShader = VK_TRUE;
     meshShaderFeatures.taskShader = VK_TRUE;
-    if (info.requestedFeatures.meshShader)
+    if (info.requestedFeatures.meshShader && context._supportedExtensions.EXT_mesh_shader)
         appendFeatureChain(&deviceFeatures2, &meshShaderFeatures);
 
     // create device
@@ -416,7 +417,7 @@ std::expected<cala::vk::Context, cala::vk::Error> cala::vk::Context::create(cala
 
     volkLoadDevice(context._logicalDevice);
 
-    context._enabledFeatures.meshShading = false;
+    context._enabledFeatures.meshShading = meshShaderFeatures.meshShader;
     context._enabledFeatures.deviceAddress = vulkan12Features.bufferDeviceAddress;
     context._enabledFeatures.sync2 = vulkan13Features.synchronization2;
 

@@ -203,6 +203,9 @@ cala::vk::ShaderModuleHandle cala::AssetManager::loadShaderModule(const std::str
         "#extension GL_EXT_scalar_block_layout : enable\n"
         "#extension GL_EXT_shader_explicit_arithmetic_types : enable\n\n";
 
+    if (stage == vk::ShaderStage::MESH || stage == vk::ShaderStage::TASK)
+        source += "#extension GL_EXT_mesh_shader : enable\n\n";
+
     source += rawSource;
 
     size_t it = source.find("INCLUDES_GO_HERE;");

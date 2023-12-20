@@ -1159,8 +1159,10 @@ std::expected<VkPipeline, cala::vk::Error> cala::vk::Device::getPipeline(Command
         colorBlending.blendConstants[2] = 0.f;
         colorBlending.blendConstants[3] = 0.f;
 
-        pipelineInfo.pVertexInputState = &vertexInputInfo;
-        pipelineInfo.pInputAssemblyState = &inputAssembly;
+        if (key.shaders[0].stage != (VkShaderStageFlagBits)ShaderStage::TASK && key.shaders[0].stage != (VkShaderStageFlagBits)ShaderStage::MESH) {
+            pipelineInfo.pVertexInputState = &vertexInputInfo;
+            pipelineInfo.pInputAssemblyState = &inputAssembly;
+        }
         pipelineInfo.pViewportState = &viewportState;
         pipelineInfo.pRasterizationState = &rasterizer;
         pipelineInfo.pMultisampleState = &multisample;
@@ -1170,8 +1172,6 @@ std::expected<VkPipeline, cala::vk::Error> cala::vk::Device::getPipeline(Command
 
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex = -1;
-
-//        VkPipeline pipeline;
 
         auto res = vkCreateGraphicsPipelines(context().device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
         if (res != VK_SUCCESS)
@@ -1220,27 +1220,19 @@ cala::vk::Device::Stats cala::vk::Device::stats() const {
 }
 
 void cala::vk::Device::printMarkers() {
-
-//    ende::fs::File file;
-//    file.open("markers.log"_path, ende::fs::out);
-
     for (u32 frame = 0; frame < FRAMES_IN_FLIGHT; frame++) {
-//        file.write(std::format("Frame: {}", frame));
         if (!_markerBuffer[frame])
             continue;
+
+        _logger->warn("Frame: {} Marked Commands", frame);
 
         u32* markers = static_cast<u32*>(_markerBuffer[frame]->persistentMapping());
         for (u32 i = 0; i < _markerBuffer[frame]->size() / sizeof(u32); i++) {
             u32 marker = markers[i];
-            auto cmd = marker < _markedCmds[frame].size() ? _markedCmds[i][frame] : std::make_pair( "NullCmd", 0 );
-//            file.write(std::format("Command: {}\nMarker[{}]: {}\n", cmd.first, i, marker));
-            _logger->warn("Command: {}\nMarker[{}]: {}", cmd.first, i, marker);
+            auto cmd = i < _markedCmds[frame].size() ? _markedCmds[frame][i] : std::make_pair( "NullCmd", 0 );
+            _logger->warn("Command: {}, Marker[{}]: {}", cmd.first, i, marker);
             if (marker == 0)
                 break;
         }
-
-//        file.write("\n\n\n");
     }
-
-//    file.close();
 }

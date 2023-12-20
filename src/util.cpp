@@ -146,6 +146,11 @@ std::expected<std::vector<u32>, std::string> cala::util::compileGLSLToSpirv(std:
     shaderc::Compiler compiler;
     shaderc::CompileOptions options;
 
+    options.SetGenerateDebugInfo();
+    options.SetOptimizationLevel(shaderc_optimization_level_zero);
+    options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
+    options.SetTargetSpirv(shaderc_spirv_version_1_6);
+
     FileFinder finder;
     for (auto& path : searchPaths)
         finder.addSearchPath(path);
@@ -154,15 +159,15 @@ std::expected<std::vector<u32>, std::string> cala::util::compileGLSLToSpirv(std:
     for (auto& macro : macros)
         options.AddMacroDefinition(macro.name, macroize(macro.value));
 
-    shaderc::PreprocessedSourceCompilationResult  preprocessedResult = compiler.PreprocessGlsl(glsl.data(), kind, name.data(), options);
-    if (preprocessedResult.GetCompilationStatus() != shaderc_compilation_status_success) {
-        return std::unexpected(std::format("Failed to preprocess shader {}:\n\tErrors: {}\n\tWarnings: {}\n\tMessage: {}\n{}\n\nShader path: {}", name, preprocessedResult.GetNumErrors(), preprocessedResult.GetNumErrors(), preprocessedResult.GetErrorMessage(), glsl, name));
-    }
+//    shaderc::PreprocessedSourceCompilationResult  preprocessedResult = compiler.PreprocessGlsl(glsl.data(), kind, name.data(), options);
+//    if (preprocessedResult.GetCompilationStatus() != shaderc_compilation_status_success) {
+//        return std::unexpected(std::format("Failed to preprocess shader {}:\n\tErrors: {}\n\tWarnings: {}\n\tMessage: {}\n{}\n\nShader path: {}", name, preprocessedResult.GetNumErrors(), preprocessedResult.GetNumErrors(), preprocessedResult.GetErrorMessage(), glsl, name));
+//    }
 
     shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(glsl.data(), kind, name.data(), options);
     if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
-        std::string preprocessed = { preprocessedResult.begin(), preprocessedResult.end() };
-        return std::unexpected(std::format("Failed to compile shader {}:\n\tErrors: {}\n\tWarnings: {}\n\tMessage: {}\n{}\n\nShader path: {}", name, result.GetNumErrors(), result.GetNumWarnings(), result.GetErrorMessage(), preprocessed, name));
+//        std::string preprocessed = { preprocessedResult.begin(), preprocessedResult.end() };
+        return std::unexpected(std::format("Failed to compile shader {}:\n\tErrors: {}\n\tWarnings: {}\n\tMessage: {}\n{}\n\nShader path: {}", name, result.GetNumErrors(), result.GetNumWarnings(), result.GetErrorMessage(), glsl, name));
     }
 
     return std::vector<u32>(result.cbegin(), result.cend());

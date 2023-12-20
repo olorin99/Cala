@@ -78,7 +78,7 @@ cala::vk::ShaderModuleInterface::ShaderModuleInterface(std::span<u32> spirv, cal
     spirv_cross::Compiler compiler(spirv.data(), spirv.size());
     spirv_cross::ShaderResources resources = compiler.get_shader_resources();
 
-    if (stage == ShaderStage::COMPUTE) {
+    if (stage == ShaderStage::COMPUTE || stage == ShaderStage::TASK || stage == ShaderStage::MESH) {
         u32 x = compiler.get_execution_mode_argument(spv::ExecutionModeLocalSize, 0);
         u32 y = compiler.get_execution_mode_argument(spv::ExecutionModeLocalSize, 1);
         u32 z = compiler.get_execution_mode_argument(spv::ExecutionModeLocalSize, 2);

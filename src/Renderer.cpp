@@ -425,17 +425,17 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
         else
             forwardPass.addDepthWrite("depth");
 
-        forwardPass.addUniformBufferRead("global", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addUniformBufferRead("global", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER | vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
         forwardPass.addSampledImageRead("pointDepth", vk::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addIndirectRead("drawCommands");
         forwardPass.addStorageBufferRead("lightIndices", vk::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addStorageBufferRead("lightGrid", vk::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addStorageBufferRead("lights", vk::PipelineStage::FRAGMENT_SHADER);
-        forwardPass.addStorageBufferRead("meshData", vk::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addStorageBufferRead("meshData", vk::PipelineStage::FRAGMENT_SHADER | vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
         forwardPass.addIndirectRead("materialCounts");
         forwardPass.addVertexRead("vertexBuffer");
         forwardPass.addIndexRead("indexBuffer");
-        forwardPass.addStorageBufferRead("camera", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
+        forwardPass.addStorageBufferRead("camera", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER | vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
 
         forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
 
@@ -480,9 +480,10 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
                 cmd->bindVertexBuffer(0, _engine->_globalVertexBuffer);
                 cmd->bindIndexBuffer(_engine->_globalIndexBuffer);
 
-                u32 drawCommandOffset = scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand);
-                u32 countOffset = i * (sizeof(u32) * 2);
-                cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
+//                u32 drawCommandOffset = scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand);
+//                u32 countOffset = i * (sizeof(u32) * 2);
+//                cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
+                cmd->drawMeshTasks(scene.meshCount(), 1, 1);
             }
         });
     }
