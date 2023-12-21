@@ -25,7 +25,8 @@ void cala::ui::AssetManagerWindow::render() {
                 ImGui::Text("Name: %s", shaderModuleMetadata.name.c_str());
                 ImGui::Text("Path: %s", shaderModuleMetadata.path.c_str());
                 ImGui::Text("\tHandle: %i", shaderModuleMetadata.moduleHandle.index());
-                if (shaderModuleMetadata.moduleHandle->stage() == vk::ShaderStage::COMPUTE) {
+                auto stage = shaderModuleMetadata.moduleHandle->stage();
+                if (stage == vk::ShaderStage::COMPUTE || stage == vk::ShaderStage::TASK || stage == vk::ShaderStage::MESH) {
                     auto localSize = shaderModuleMetadata.localSize;
                     ende::math::Vec<3, i32> signedLocalSize{ static_cast<i32>(localSize.x()), static_cast<i32>(localSize.y()), static_cast<i32>(localSize.z())};
                     if (ImGui::SliderInt3("LocalSize", &signedLocalSize[0], 16, 64))

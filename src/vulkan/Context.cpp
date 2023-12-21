@@ -380,6 +380,9 @@ std::expected<cala::vk::Context, cala::vk::Error> cala::vk::Context::create(cala
     vulkan12Features.timelineSemaphore = VK_TRUE;
     vulkan12Features.bufferDeviceAddress = VK_TRUE;
     vulkan12Features.scalarBlockLayout = VK_TRUE;
+    vulkan12Features.storageBuffer8BitAccess = true;
+    vulkan12Features.vulkanMemoryModel = true;
+    vulkan12Features.vulkanMemoryModelDeviceScope = true;
     appendFeatureChain(&deviceFeatures2, &vulkan12Features);
 
     VkPhysicalDeviceVulkan13Features vulkan13Features{};

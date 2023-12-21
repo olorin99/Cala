@@ -13,5 +13,8 @@
         "test": true,
         "write": true,
         "compareOp": "LESS"
+    },
+    "raster_state": {
+        "cullMode": "NONE"
     }
 }

@@ -10,6 +10,8 @@ namespace cala {
     struct Mesh {
         u32 firstIndex = 0;
         u32 indexCount = 0;
+        u32 meshletIndex = 0;
+        u32 meshletCount = 0;
         MaterialInstance* materialInstance = nullptr;
         ende::math::Vec4f min = { -1, -1, -1 };
         ende::math::Vec4f max = { 1, 1, 1 };

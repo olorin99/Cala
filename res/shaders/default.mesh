@@ -1,5 +1,6 @@
-layout (local_size_x = 1) in;
-layout (triangles, max_vertices = 3, max_primitives = 1) out;
+
+layout (local_size_x = 64) in;
+layout (triangles, max_vertices = 64, max_primitives = 64) out;
 
 layout (location = 0) out VsOut {
         vec3 FragPos;
@@ -12,79 +13,54 @@ layout (location = 0) out VsOut {
 #include "shaderBridge.h"
 
 struct TaskPayload {
-    uint index;
-    uint firstIndex;
-    uint indexCount;
+    uint meshIndex;
+    uint baseIndex;
+    uint offset[32];
 };
 taskPayloadSharedEXT TaskPayload payload;
 
-
-const vec4[3] positions = {
-        vec4( 0.0, -1.0, 0.0, 1.0),
-        vec4(-1.0,  1.0, 0.0, 1.0),
-        vec4( 1.0,  1.0, 0.0, 1.0)
-};
-
-const vec4[3] colors = {
-        vec4(0.0, 1.0, 0.0, 1.0),
-        vec4(0.0, 0.0, 1.0, 1.0),
-        vec4(1.0, 0.0, 0.0, 1.0)
-};
-
 void main() {
 
-    uint idx = gl_GlobalInvocationID.x;
+    uint threadIndex = gl_LocalInvocationIndex;
 
     GPUCamera camera = globalData.cameraBuffer[globalData.primaryCameraIndex].camera;
-    mat4 model = globalData.transformsBuffer.transforms[payload.index];
+    mat4 model = globalData.transformsBuffer.transforms[payload.meshIndex];
 
-    vec4 offset = vec4(0.0, 0.0, gl_GlobalInvocationID.x, 0.0);
+    GPUMesh mesh = globalData.meshBuffer.meshData[payload.meshIndex];
 
-    SetMeshOutputsEXT(3, 1);
-    for (uint i = 0; i < 3; i++) {
-        meshOut[i].FragPos = (model * (positions[i] + offset)).xyz;
-        meshOut[i].TexCoords = vec2(0, 1);
-        meshOut[i].TBN = mat3(1);
-        meshOut[i].ViewPos = camera.position;
-        meshOut[i].drawID = payload.index;
+    uint meshletIndex = mesh.meshletIndex + gl_WorkGroupID.x;
+    Meshlet meshlet = globalData.meshletBuffer.meshlets[meshletIndex];
 
-        gl_MeshVerticesEXT[i].gl_Position = camera.projection * camera.view * model * (positions[i] + offset);
+    SetMeshOutputsEXT(meshlet.indexCount, meshlet.primitiveCount);
+
+    if (threadIndex < meshlet.indexCount) {
+        uint index = globalData.meshletIndexBuffer.indices[meshlet.indexOffset + threadIndex] + meshlet.vertexOffset;
+        Vertex vertex = globalData.vertexBuffer.vertices[index];
+        vec4 fragPos = model * vec4(vertex.position, 1.0);
+
+        float tangentDirection = vertex.tangent.w;
+        if (tangentDirection == 0)
+            tangentDirection = 1;
+
+        vec3 T = normalize(mat3(model) * vertex.tangent.xyz) * tangentDirection;
+        vec3 N = normalize(mat3(model) * vertex.normal);
+        T = normalize(T - dot(T, N) * N);
+        vec3 B = cross(N, T);
+
+        meshOut[threadIndex].FragPos = fragPos.xyz;
+        meshOut[threadIndex].TexCoords = vertex.texCoords;
+        meshOut[threadIndex].TBN = mat3(T, B, N);
+        meshOut[threadIndex].ViewPos = camera.position;
+        meshOut[threadIndex].drawID = payload.meshIndex;
+
+        gl_MeshVerticesEXT[threadIndex].gl_Position = camera.projection * camera.view * fragPos;
     }
 
+    if (threadIndex < meshlet.primitiveCount) {
+        uint a = globalData.primitiveBuffer.primitives[meshlet.primitiveOffset + threadIndex * 3 + 0];
+        uint b = globalData.primitiveBuffer.primitives[meshlet.primitiveOffset + threadIndex * 3 + 1];
+        uint c = globalData.primitiveBuffer.primitives[meshlet.primitiveOffset + threadIndex * 3 + 2];
 
-
-//    if (idx >= payload.indexCount)
-//        return;
-//
-//    GPUCamera camera = globalData.cameraBuffer[globalData.primaryCameraIndex].camera;
-//    mat4 model = globalData.transformsBuffer.transforms[payload.index];
-//
-//    SetMeshOutputsEXT(3, 1);
-//    for (uint i = 0; i < 3; i++) {
-//        uint id = payload.firstIndex + idx * 3 + i;
-//
-//        uint index = globalData.indexBuffer.indices[id];
-//        Vertex vertex = globalData.vertexBuffer.vertices[index];
-//
-//
-//        float tangentDirection = vertex.tangent.w;
-//        if (tangentDirection == 0)
-//            tangentDirection = 1;
-//
-//        vec3 T = normalize(mat3(model) * vertex.tangent.xyz) * tangentDirection;
-//        vec3 N = normalize(mat3(model) * vertex.normal);
-//        T = normalize(T - dot(T, N) * N);
-//        vec3 B = cross(N, T);
-//
-//
-//        meshOut[id].FragPos = (model * vec4(vertex.position, 1.0)).xyz;
-//        meshOut[id].TexCoords = vertex.texCoords;
-//        meshOut[id].TBN = mat3(T, B, N);
-//        meshOut[id].ViewPos = camera.position;
-//        meshOut[id].drawID = payload.index;
-//
-//        gl_MeshVerticesEXT[id].gl_Position = camera.projection * camera.view * model * vec4(vertex.position, 1.0);
-//    }
-
-    gl_PrimitiveTriangleIndicesEXT[idx] =  uvec3(0, 1, 2);
+        gl_PrimitiveTriangleIndicesEXT[threadIndex] = uvec3(a, b, c);
+    }
 }

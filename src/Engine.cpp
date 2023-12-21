@@ -47,6 +47,9 @@ cala::Engine::Engine(vk::Platform &platform)
       })),
       _vertexOffset(0),
       _indexOffset(0),
+      _meshletOffset(0),
+      _meshletIndexOffset(0),
+      _primitiveOffset(0),
       _stagingSize(1 << 24), // 16mb
       _stagingOffset(0),
       _stagingBuffer(_device->createBuffer({
@@ -239,6 +242,27 @@ cala::Engine::Engine(vk::Platform &platform)
         .usage = vk::BufferUsage::INDEX | vk::BufferUsage::TRANSFER_DST,
         .memoryType = vk::MemoryProperties::DEVICE,
         .name = "globalIndexBuffer"
+    });
+
+    _globalMeshletBuffer = _device->createBuffer({
+        .size = 1000000,
+        .usage = vk::BufferUsage::STORAGE | vk::BufferUsage::TRANSFER_DST,
+        .memoryType = vk::MemoryProperties::DEVICE,
+        .name = "globalMeshletBuffer"
+    });
+
+    _globalMeshletIndexBuffer = _device->createBuffer({
+        .size = 1000000,
+        .usage = vk::BufferUsage::STORAGE | vk::BufferUsage::TRANSFER_DST,
+        .memoryType = vk::MemoryProperties::DEVICE,
+        .name = "globalMeshletIndexBuffer"
+    });
+
+    _globalPrimitiveBuffer = _device->createBuffer({
+        .size = 1000000,
+        .usage = vk::BufferUsage::STORAGE | vk::BufferUsage::TRANSFER_DST,
+        .memoryType = vk::MemoryProperties::DEVICE,
+        .name = "globalPrimitiveBuffer"
     });
 
     _cube = new Mesh(shapes::cube().mesh(this));
@@ -525,6 +549,39 @@ u32 cala::Engine::uploadIndexData(std::span<u32> data) {
     stageData(_globalIndexBuffer, std::span<const u8>(reinterpret_cast<const u8*>(data.data()), data.size() * sizeof(f32)), currentOffset);
 
     _indexOffset += data.size() * sizeof(u32);
+    return currentOffset;
+}
+
+u32 cala::Engine::uploadMeshletData(std::span<Meshlet> data) {
+    u32 currentOffset = _meshletOffset;
+    if (currentOffset + data.size() * sizeof(Meshlet) >= _globalMeshletBuffer->size()) {
+        flushStagedData();
+        _globalMeshletBuffer = _device->resizeBuffer(_globalMeshletBuffer, currentOffset + data.size() * sizeof(Meshlet), true);
+    }
+    stageData(_globalMeshletBuffer, data, currentOffset);
+    _meshletOffset += data.size() * sizeof(Meshlet);
+    return currentOffset;
+}
+
+u32 cala::Engine::uploadMeshletIndicesData(std::span<u32> data) {
+    u32 currentOffset = _meshletIndexOffset;
+    if (currentOffset + data.size() * sizeof(u32) >= _globalMeshletIndexBuffer->size()) {
+        flushStagedData();
+        _globalMeshletIndexBuffer = _device->resizeBuffer(_globalMeshletIndexBuffer, currentOffset + data.size() * sizeof(u32), true);
+    }
+    stageData(_globalMeshletIndexBuffer, data, currentOffset);
+    _meshletIndexOffset += data.size() * sizeof(u32);
+    return currentOffset;
+}
+
+u32 cala::Engine::uploadPrimitiveData(std::span<u8> data) {
+    u32 currentOffset = _primitiveOffset;
+    if (currentOffset + data.size() * sizeof(u8) >= _globalPrimitiveBuffer->size()) {
+        flushStagedData();
+        _globalPrimitiveBuffer = _device->resizeBuffer(_globalPrimitiveBuffer, currentOffset + data.size() * sizeof(u8), true);
+    }
+    stageData(_globalPrimitiveBuffer, data, currentOffset);
+    _primitiveOffset += data.size() * sizeof(u8);
     return currentOffset;
 }
 

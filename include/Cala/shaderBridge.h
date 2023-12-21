@@ -24,9 +24,32 @@ using mat3 = ende::math::Mat<3, f32>;
 using mat4 = ende::math::Mat<4, f32>;
 #endif
 
+struct Meshlet {
+    uint vertexOffset;
+    uint indexOffset;
+    uint indexCount;
+    uint primitiveOffset;
+    uint primitiveCount;
+};
+
+#ifndef __cplusplus
+layout (scalar, buffer_reference, buffer_reference_align = 8) readonly buffer MeshletBuffer {
+    Meshlet meshlets[];
+};
+
+layout (scalar, buffer_reference, buffer_reference_align = 8) readonly buffer PrimitiveBuffer {
+    uint8_t primitives[];
+};
+#else
+#define MeshletBuffer u64
+#define PrimitiveBuffer u64
+#endif
+
 struct GPUMesh {
     uint firstIndex;
     uint indexCount;
+    uint meshletIndex;
+    uint meshletCount;
     uint materialID;
     uint materialIndex;
     vec4 min;
@@ -165,6 +188,9 @@ struct GlobalData {
     int cullingCameraIndex;
     VertexBuffer vertexBuffer;
     IndexBuffer indexBuffer;
+    MeshletBuffer meshletBuffer;
+    IndexBuffer meshletIndexBuffer;
+    PrimitiveBuffer primitiveBuffer;
     MeshBuffer meshBuffer;
     TransformsBuffer transformsBuffer;
     CameraBuffer cameraBuffer;

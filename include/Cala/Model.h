@@ -22,6 +22,8 @@ namespace cala {
         struct Primitive {
             u32 firstIndex;
             u32 indexCount;
+            u32 meshletIndex;
+            u32 meshletCount;
             i32 materialIndex;
             AABB aabb;
         };

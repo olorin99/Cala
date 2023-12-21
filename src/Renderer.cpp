@@ -483,7 +483,8 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
 //                u32 drawCommandOffset = scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand);
 //                u32 countOffset = i * (sizeof(u32) * 2);
 //                cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
-                cmd->drawMeshTasks(scene.meshCount(), 1, 1);
+//                cmd->drawMeshTasks(scene.meshCount(), 1, 1);
+                cmd->drawMeshTasksWorkGroups(scene.meshCount(), 1, 1);
             }
         });
     }
@@ -886,6 +887,9 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
 
     _globalData.vertexBuffer = _engine->vertexBuffer()->address();
     _globalData.indexBuffer = _engine->indexBuffer()->address();
+    _globalData.meshletBuffer = _engine->meshletBuffer()->address();
+    _globalData.meshletIndexBuffer = _engine->meshletIndexBuffer()->address();
+    _globalData.primitiveBuffer = _engine->primitiveBuffer()->address();
     _globalData.meshBuffer = scene._meshDataBuffer[_engine->device().frameIndex()]->address();
     _globalData.transformsBuffer = scene._meshTransformsBuffer[_engine->device().frameIndex()]->address();
     _globalData.cameraBuffer = scene._cameraBuffer[_engine->device().frameIndex()]->address();

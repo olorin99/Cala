@@ -243,6 +243,8 @@ cala::Scene::SceneNode* addModelNode(const std::string& name, cala::Scene& scene
         scene.addMesh({
             primitive.firstIndex,
             primitive.indexCount,
+            primitive.meshletIndex,
+            primitive.meshletCount,
             &model.materials[primitive.materialIndex],
             { primitive.aabb.min.x(), primitive.aabb.min.y(), primitive.aabb.min.z(), 1.0 },
             { primitive.aabb.max.x(), primitive.aabb.max.y(), primitive.aabb.max.z(), 1.0 },
@@ -272,6 +274,8 @@ cala::Scene::SceneNode *cala::Scene::addMesh(const cala::Mesh &mesh, const cala:
     _meshData.push_back(GPUMesh{
         mesh.firstIndex,
         mesh.indexCount,
+        mesh.meshletIndex,
+        mesh.meshletCount,
         instance->material()->id(),
         instance->getIndex(),
         mesh.min,
@@ -282,6 +286,8 @@ cala::Scene::SceneNode *cala::Scene::addMesh(const cala::Mesh &mesh, const cala:
     _meshes.push_back({
         mesh.firstIndex,
         mesh.indexCount,
+        mesh.meshletIndex,
+        mesh.meshletCount,
         instance,
         mesh.min,
         mesh.max

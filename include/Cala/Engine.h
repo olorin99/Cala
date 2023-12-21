@@ -13,6 +13,8 @@
 
 #include <Cala/AssetManager.h>
 
+#include <Cala/shaderBridge.h>
+
 namespace cala {
 
     class Probe;
@@ -46,6 +48,12 @@ namespace cala {
         u32 uploadVertexData(std::span<f32> data);
 
         u32 uploadIndexData(std::span<u32> data);
+
+        u32 uploadMeshletData(std::span<Meshlet> data);
+
+        u32 uploadMeshletIndicesData(std::span<u32> data);
+
+        u32 uploadPrimitiveData(std::span<u8> data);
 
         template <typename T>
         void stageData(vk::BufferHandle dstHandle, const T& data, u32 dstOffset = 0) {
@@ -105,6 +113,12 @@ namespace cala {
         vk::BufferHandle vertexBuffer() const { return _globalVertexBuffer; }
 
         vk::BufferHandle indexBuffer() const { return _globalIndexBuffer; }
+
+        vk::BufferHandle meshletBuffer() const { return _globalMeshletBuffer; }
+
+        vk::BufferHandle meshletIndexBuffer() const { return _globalMeshletIndexBuffer; }
+
+        vk::BufferHandle primitiveBuffer() const { return _globalPrimitiveBuffer; }
 
         VkVertexInputBindingDescription globalBinding() const {
             VkVertexInputBindingDescription binding{};
@@ -218,6 +232,13 @@ namespace cala {
         vk::BufferHandle _globalIndexBuffer;
         u32 _vertexOffset;
         u32 _indexOffset;
+
+        vk::BufferHandle _globalMeshletBuffer;
+        vk::BufferHandle _globalMeshletIndexBuffer;
+        vk::BufferHandle _globalPrimitiveBuffer;
+        u32 _meshletOffset;
+        u32 _meshletIndexOffset;
+        u32 _primitiveOffset;
 
         struct StagedBufferInfo {
             vk::BufferHandle dstBuffer = {};
