@@ -111,6 +111,9 @@ cala::Engine::Engine(vk::Platform &platform)
             { "shaders/cull.comp", vk::ShaderStage::COMPUTE }
         });
     }
+    _cullMeshShaderProgram = loadProgram("cullMeshShaderProgram", {
+            { "shaders/cull_mesh_shader.comp", vk::ShaderStage::COMPUTE }
+    });
     {
         _pointShadowCullProgram = loadProgram("pointShadowCullProgram", {
             { "shaders/cull_point_shadow.comp", vk::ShaderStage::COMPUTE }
@@ -1083,6 +1086,8 @@ const cala::vk::ShaderProgram& cala::Engine::getProgram(cala::Engine::ProgramTyp
             return _bloomCompositeProgram;
         case ProgramType::CULL:
             return _cullProgram;
+        case ProgramType::CULL_MESH_SHADER:
+            return _cullMeshShaderProgram;
         case ProgramType::CULL_POINT:
             return _pointShadowCullProgram;
         case ProgramType::CULL_DIRECT:

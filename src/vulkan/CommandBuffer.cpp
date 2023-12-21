@@ -433,6 +433,8 @@ void cala::vk::CommandBuffer::drawMeshTasksWorkGroups(u32 x, u32 y, u32 z) {
 void cala::vk::CommandBuffer::drawMeshTasksIndirect(cala::vk::BufferHandle buffer, u32 offset, u32 drawCount, u32 stride) {
     assert(!_pipelineDirty);
     assert(!_descriptorDirty);
+    if (stride == 0)
+        stride = sizeof(u32) * 3;
     vkCmdDrawMeshTasksIndirectEXT(_buffer, buffer->buffer(), offset, drawCount, stride);
     ++_drawCallCount;
     writeBufferMarker(PipelineStage::TASK_SHADER, "vkCmdDrawMeshTasksIndirectEXT::TASK");
@@ -444,6 +446,9 @@ void cala::vk::CommandBuffer::drawMeshTasksIndirectCount(cala::vk::BufferHandle 
     assert(!_pipelineDirty);
     assert(!_descriptorDirty);
     assert(countBuffer->size() > countOffset);
+    if (stride == 0)
+        stride = sizeof(u32) * 3;
+
     u32 maxDrawCount = (buffer->size() - bufferOffset) / stride;
     vkCmdDrawMeshTasksIndirectCountEXT(_buffer, buffer->buffer(), bufferOffset, countBuffer->buffer(), countOffset, maxDrawCount, stride);
     ++_drawCallCount;

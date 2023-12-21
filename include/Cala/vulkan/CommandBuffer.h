@@ -112,8 +112,8 @@ namespace cala::vk {
 
         void drawMeshTasks(u32 x, u32 y, u32 z);
         void drawMeshTasksWorkGroups(u32 x, u32 y, u32 z);
-        void drawMeshTasksIndirect(BufferHandle buffer, u32 offset, u32 drawCount, u32 stride);
-        void drawMeshTasksIndirectCount(BufferHandle buffer, u32 bufferOffset, BufferHandle countBuffer, u32 countOffset, u32 stride);
+        void drawMeshTasksIndirect(BufferHandle buffer, u32 offset, u32 drawCount, u32 stride = 0);
+        void drawMeshTasksIndirectCount(BufferHandle buffer, u32 bufferOffset, BufferHandle countBuffer, u32 countOffset, u32 stride = 0);
 
         // dispatches with xyz elements internally translated to dispatchWorkgroups(x / program.localSize.x() ...
         void dispatch(u32 x, u32 y, u32 z);

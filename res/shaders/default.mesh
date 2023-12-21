@@ -14,8 +14,7 @@ layout (location = 0) out VsOut {
 
 struct TaskPayload {
     uint meshIndex;
-    uint baseIndex;
-    uint offset[32];
+    uint offset[64];
 };
 taskPayloadSharedEXT TaskPayload payload;
 
@@ -28,7 +27,7 @@ void main() {
 
     GPUMesh mesh = globalData.meshBuffer.meshData[payload.meshIndex];
 
-    uint meshletIndex = mesh.meshletIndex + gl_WorkGroupID.x;
+    uint meshletIndex = mesh.meshletIndex + payload.offset[gl_WorkGroupID.x];
     Meshlet meshlet = globalData.meshletBuffer.meshlets[meshletIndex];
 
     SetMeshOutputsEXT(meshlet.indexCount, meshlet.primitiveCount);

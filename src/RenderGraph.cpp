@@ -109,7 +109,7 @@ void cala::RenderPass::addDepthRead(cala::ImageIndex index) {
 
 void cala::RenderPass::addIndirectRead(const char *label) {
     if (auto resource = reads(label, vk::Access::INDIRECT_READ,
-                              vk::PipelineStage::DRAW_INDIRECT | vk::PipelineStage::VERTEX_INPUT | vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::INDEX_INPUT,
+                              vk::PipelineStage::DRAW_INDIRECT | vk::PipelineStage::VERTEX_INPUT | vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::INDEX_INPUT | vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER,
                               vk::ImageLayout::UNDEFINED); resource) {
         auto bufferResource = dynamic_cast<BufferResource*>(resource);
         bufferResource->usage = bufferResource->usage | vk::BufferUsage::INDIRECT;
@@ -118,7 +118,7 @@ void cala::RenderPass::addIndirectRead(const char *label) {
 
 void cala::RenderPass::addIndirectRead(cala::BufferIndex index) {
     if (auto resource = reads(index, vk::Access::INDIRECT_READ,
-                              vk::PipelineStage::DRAW_INDIRECT | vk::PipelineStage::VERTEX_INPUT | vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::INDEX_INPUT,
+                              vk::PipelineStage::DRAW_INDIRECT | vk::PipelineStage::VERTEX_INPUT | vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::INDEX_INPUT | vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER,
                               vk::ImageLayout::UNDEFINED); resource) {
         auto bufferResource = dynamic_cast<BufferResource*>(resource);
         bufferResource->usage = bufferResource->usage | vk::BufferUsage::INDIRECT;

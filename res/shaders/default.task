@@ -1,25 +1,43 @@
-layout (local_size_x = 32) in;
+layout (local_size_x = 64) in;
 
 #include "shaderBridge.h"
 
 struct TaskPayload {
     uint meshIndex;
-    uint baseIndex;
-    uint offset[32];
+    uint offset[64];
 };
 taskPayloadSharedEXT TaskPayload payload;
 
+struct MeshTaskCommand {
+    uint x;
+    uint y;
+    uint z;
+    uint meshID;
+};
+
+layout (set = 1, binding = 1) readonly buffer DrawCommands {
+    MeshTaskCommand commands[];
+};
+
+shared uint meshletCount;
+
 void main() {
+    meshletCount = 0;
+    barrier();
+
     uint meshletIndex = gl_GlobalInvocationID.x;
-    uint meshIndex = gl_WorkGroupID.x;
+    uint meshIndex = commands[gl_DrawID].meshID;
     //TODO: meshlet culling
 
     GPUMesh mesh = globalData.meshBuffer.meshData[meshIndex];
 
-    payload.offset[gl_LocalInvocationIndex] = gl_LocalInvocationIndex;
-    uint localIdx = gl_LocalInvocationIndex;
-    if (localIdx == 0) {
+    if (meshletIndex < mesh.meshletCount) {
+        uint index = atomicAdd(meshletCount, 1);
+
+        payload.offset[index] = meshletIndex;
         payload.meshIndex = meshIndex;
     }
-    EmitMeshTasksEXT(mesh.meshletCount, 1, 1);
+
+    barrier();
+    EmitMeshTasksEXT(meshletCount, 1, 1);
 }

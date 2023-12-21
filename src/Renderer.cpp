@@ -364,7 +364,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
         auto materialCounts = graph.getBuffer("materialCounts");
         auto drawCommands = graph.getBuffer("drawCommands");
         cmd->clearDescriptors();
-        cmd->bindProgram(_engine->getProgram(Engine::ProgramType::CULL));
+        cmd->bindProgram(_engine->getProgram(Engine::ProgramType::CULL_MESH_SHADER));
         cmd->bindBindings({});
         cmd->bindAttributes({});
         cmd->bindBuffer(1, 0, global);
@@ -428,6 +428,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
         forwardPass.addUniformBufferRead("global", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER | vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
         forwardPass.addSampledImageRead("pointDepth", vk::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addIndirectRead("drawCommands");
+        forwardPass.addStorageBufferRead("drawCommands", vk::PipelineStage::TASK_SHADER);
         forwardPass.addStorageBufferRead("lightIndices", vk::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addStorageBufferRead("lightGrid", vk::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addStorageBufferRead("lights", vk::PipelineStage::FRAGMENT_SHADER);
@@ -464,6 +465,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
                 cmd->bindRasterState(material->getRasterState());
                 cmd->bindDepthState(material->getDepthState());
                 cmd->bindBuffer(CALA_MATERIAL_SET, CALA_MATERIAL_BINDING, material->buffer(), true);
+                cmd->bindBuffer(1, 1, drawCommands, true);
 
                 struct ForwardPush {
                     u64 lightGridBuffer;
@@ -481,10 +483,12 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
                 cmd->bindIndexBuffer(_engine->_globalIndexBuffer);
 
 //                u32 drawCommandOffset = scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand);
-//                u32 countOffset = i * (sizeof(u32) * 2);
+                u32 drawCommandOffset = scene._materialCounts[i].offset * sizeof(u32) * 4;
+                u32 countOffset = i * (sizeof(u32) * 2);
 //                cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
 //                cmd->drawMeshTasks(scene.meshCount(), 1, 1);
-                cmd->drawMeshTasksWorkGroups(scene.meshCount(), 1, 1);
+//                cmd->drawMeshTasksWorkGroups(scene.meshCount(), 1, 1);
+                cmd->drawMeshTasksIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset, sizeof(u32) * 4);
             }
         });
     }
