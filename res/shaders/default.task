@@ -33,6 +33,7 @@ void main() {
 
     if (meshletIndex < mesh.meshletCount) {
         uint index = atomicAdd(meshletCount, 1);
+        atomicAdd(globalData.feedbackBuffer.feedback.drawnMeshlets, 1);
 
         payload.offset[index] = meshletIndex;
         payload.meshIndex = meshIndex;

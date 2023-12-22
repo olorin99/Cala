@@ -164,6 +164,23 @@ layout (scalar, buffer_reference, buffer_reference_align = 8) buffer IndexBuffer
 #define IndexBuffer u64
 #endif
 
+
+
+struct FeedbackInfo {
+    uint drawnMeshes;
+    uint culledMeshes;
+    uint drawnMeshlets;
+    uint culledMeshlets;
+};
+
+#ifndef __cplusplus
+layout (scalar, buffer_reference, buffer_reference_align = 8) buffer FeedbackBuffer {
+    FeedbackInfo feedback;
+};
+#else
+#define FeedbackBuffer u64
+#endif
+
 struct GlobalData {
     float gamma;
     uint time;
@@ -195,6 +212,7 @@ struct GlobalData {
     TransformsBuffer transformsBuffer;
     CameraBuffer cameraBuffer;
     LightBuffer lightBuffer;
+    FeedbackBuffer feedbackBuffer;
 };
 
 #define CALA_GLOBAL_DATA_SET 1

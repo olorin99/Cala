@@ -69,6 +69,10 @@ namespace cala {
 
         struct Stats {
             u32 drawCallCount = 0;
+            u32 drawnMeshes = 0;
+            u32 drawnMeshlets = 0;
+            u32 culledMeshes = 0;
+            u32 culledMeshlets = 0;
         };
 
         Stats stats() const { return _stats; }
@@ -85,6 +89,7 @@ namespace cala {
         vk::Swapchain* _swapchain;
 
         vk::BufferHandle _globalDataBuffer[vk::FRAMES_IN_FLIGHT];
+        vk::BufferHandle _feedbackBuffer[vk::FRAMES_IN_FLIGHT];
 
     public:
         RenderGraph _graph;
@@ -101,6 +106,7 @@ namespace cala {
         Settings _renderSettings;
 
         GlobalData _globalData;
+        FeedbackInfo _feedbackInfo;
 
     };
 

@@ -29,12 +29,30 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
             .name = "GlobalBuffer:" + std::to_string(i++)
         });
     }
+    for (u32 i = 0; auto& buffer : _feedbackBuffer) {
+        buffer = engine->device().createBuffer({
+            .size = sizeof(FeedbackInfo),
+            .usage = vk::BufferUsage::STORAGE,
+            .memoryType = vk::MemoryProperties::READBACK,
+            .persistentlyMapped = true,
+            .name = "FeedbackBuffer: " + std::to_string(i++)
+        });
+    }
 }
 
 bool cala::Renderer::beginFrame(cala::vk::Swapchain* swapchain) {
     _swapchain = swapchain;
     assert(_swapchain);
     auto beginResult = _engine->device().beginFrame();
+
+    if (_feedbackBuffer[_engine->device().prevFrameIndex()] && _feedbackBuffer[_engine->device().prevFrameIndex()]->persistentlyMapped()) {
+        std::memcpy(&_feedbackInfo, _feedbackBuffer[_engine->device().prevFrameIndex()]->persistentMapping(), sizeof(FeedbackInfo));
+        _stats.drawnMeshes = _feedbackInfo.drawnMeshes;
+        _stats.drawnMeshlets = _feedbackInfo.drawnMeshlets;
+        _stats.culledMeshes = _feedbackInfo.culledMeshes;
+        _stats.culledMeshlets = _feedbackInfo.culledMeshlets;
+        std::memset(_feedbackBuffer[_engine->device().prevFrameIndex()]->persistentMapping(), 0, sizeof(FeedbackInfo));
+    }
 
     if (_renderSettings.boundedFrameTime) {
         f64 frameTime = _engine->device().milliseconds();
@@ -206,6 +224,11 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
         lightsResource.size = scene._lightBuffer[_engine->device().frameIndex()]->size();
         lightsResource.usage = scene._lightBuffer[_engine->device().frameIndex()]->usage();
         _graph.addBufferResource("lights", lightsResource, scene._lightBuffer[_engine->device().frameIndex()]);
+
+        BufferResource feedbackResource;
+        feedbackResource.size = _feedbackBuffer[_engine->device().frameIndex()]->size();
+        feedbackResource.usage = _feedbackBuffer[_engine->device().frameIndex()]->usage();
+        _graph.addBufferResource("feedback", feedbackResource, _feedbackBuffer[_engine->device().frameIndex()]);
     }
 
 
@@ -356,6 +379,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     cullPass.addStorageBufferWrite("materialCounts", vk::PipelineStage::COMPUTE_SHADER);
     cullPass.addStorageBufferWrite("drawCommands", vk::PipelineStage::COMPUTE_SHADER);
     cullPass.addStorageBufferRead("camera", vk::PipelineStage::COMPUTE_SHADER);
+    cullPass.addStorageBufferWrite("feedback", vk::PipelineStage::COMPUTE_SHADER);
 
     cullPass.setDebugColour({0.3, 0.3, 1, 1});
 
@@ -437,6 +461,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
         forwardPass.addVertexRead("vertexBuffer");
         forwardPass.addIndexRead("indexBuffer");
         forwardPass.addStorageBufferRead("camera", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER | vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+        forwardPass.addStorageBufferWrite("feedback", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
 
         forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});
 
@@ -898,6 +923,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     _globalData.transformsBuffer = scene._meshTransformsBuffer[_engine->device().frameIndex()]->address();
     _globalData.cameraBuffer = scene._cameraBuffer[_engine->device().frameIndex()]->address();
     _globalData.lightBuffer = scene._lightBuffer[_engine->device().frameIndex()]->address();
+    _globalData.feedbackBuffer = _feedbackBuffer[_engine->device().frameIndex()]->address();
 
     _engine->stageData(_globalDataBuffer[_engine->device().frameIndex()], _globalData);
 

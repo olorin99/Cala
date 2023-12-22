@@ -72,6 +72,9 @@ void main() {
             command.z = 1;
             command.meshID = idx;
             commands[offset + a] = command;
+            atomicAdd(globalData.feedbackBuffer.feedback.drawnMeshes, 1);
+        } else {
+            atomicAdd(globalData.feedbackBuffer.feedback.culledMeshes, 1);
         }
     } else {
         uint a = atomicAdd(counts[mesh.materialID].count, 1);
@@ -82,5 +85,6 @@ void main() {
         command.z = 1;
         command.meshID = idx;
         commands[offset + a] = command;
+        atomicAdd(globalData.feedbackBuffer.feedback.drawnMeshes, 1);
     }
 }
