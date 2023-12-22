@@ -154,6 +154,7 @@ namespace cala {
             CULL_DIRECT,
             CULL_LIGHTS,
             CREATE_CLUSTERS,
+            DEBUG_MESHLETS,
             DEBUG_CLUSTER,
             DEBUG_NORMALS,
             DEBUG_WORLDPOS,
@@ -219,6 +220,7 @@ namespace cala {
         vk::ShaderProgram _bloomUpsampleProgram;
         vk::ShaderProgram _bloomCompositeProgram;
 
+        vk::ShaderProgram _meshletDebugProgram;
         vk::ShaderProgram _clusterDebugProgram;
         vk::ShaderProgram _normalsDebugProgram;
         vk::ShaderProgram _worldPosDebugProgram;

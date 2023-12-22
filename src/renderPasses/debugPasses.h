@@ -25,6 +25,8 @@ void debugFrustum(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& s
 
 void debugDepthPass(cala::RenderGraph& graph, cala::Engine& engine);
 
+void debugMeshletPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene);
+
 void debugClusterFrustums(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings);
 
 void debugVxgi(cala::RenderGraph& graph, cala::Engine& engine);

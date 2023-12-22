@@ -134,6 +134,11 @@ cala::Engine::Engine(vk::Platform &platform)
             { "shaders/cull_lights.comp", vk::ShaderStage::COMPUTE }
         });
     }
+    _meshletDebugProgram = loadProgram("debugMeshletProgram", {
+            { "shaders/default.task", vk::ShaderStage::TASK },
+            { "shaders/default.mesh", vk::ShaderStage::MESH },
+            { "shaders/debug/meshlet.frag", vk::ShaderStage::FRAGMENT }
+    });
     {
         _clusterDebugProgram = loadProgram("clusterDebugProgram", {
             { "shaders/fullscreen.vert", vk::ShaderStage::VERTEX },
@@ -1096,6 +1101,8 @@ const cala::vk::ShaderProgram& cala::Engine::getProgram(cala::Engine::ProgramTyp
             return _cullLightsProgram;
         case ProgramType::CREATE_CLUSTERS:
             return _createClustersProgram;
+        case ProgramType::DEBUG_MESHLETS:
+            return _meshletDebugProgram;
         case ProgramType::DEBUG_CLUSTER:
             return _clusterDebugProgram;
         case ProgramType::DEBUG_NORMALS:

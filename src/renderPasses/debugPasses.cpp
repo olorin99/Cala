@@ -411,6 +411,52 @@ void debugDepthPass(cala::RenderGraph& graph, cala::Engine& engine) {
     });
 }
 
+void debugMeshletPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene) {
+    auto& debugMeshlet = graph.addPass("debug_meshlet");
+
+    debugMeshlet.addColourWrite("backbuffer");
+    debugMeshlet.addDepthWrite("depth");
+
+    debugMeshlet.addUniformBufferRead("global", vk::PipelineStage::FRAGMENT_SHADER | vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+    debugMeshlet.addIndirectRead("drawCommands");
+    debugMeshlet.addStorageBufferRead("drawCommands", vk::PipelineStage::TASK_SHADER);
+    debugMeshlet.addIndirectRead("materialCounts");
+    debugMeshlet.addStorageBufferRead("vertexBuffer", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+    debugMeshlet.addStorageBufferRead("transforms", vk::PipelineStage::VERTEX_SHADER);
+    debugMeshlet.addStorageBufferRead("meshData", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
+    debugMeshlet.addStorageBufferRead("camera", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
+    debugMeshlet.addStorageBufferWrite("feedback", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+
+    debugMeshlet.setExecuteFunction([&](cala::vk::CommandHandle cmd, cala::RenderGraph& graph) {
+        auto global = graph.getBuffer("global");
+        auto drawCommands = graph.getBuffer("drawCommands");
+        auto materialCounts = graph.getBuffer("materialCounts");
+        cmd->clearDescriptors();
+        cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 1, drawCommands, true);
+
+        auto binding = engine.globalBinding();
+        auto attributes = engine.globalVertexAttributes();
+        cmd->bindBindings({ &binding, 1 });
+        cmd->bindAttributes(attributes);
+
+        cmd->bindDepthState({ true, true, cala::vk::CompareOp::LESS_EQUAL });
+        cmd->bindRasterState({});
+//            cmd->bindPipeline();
+        cmd->bindVertexBuffer(0, engine.vertexBuffer());
+        cmd->bindIndexBuffer(engine.indexBuffer());
+        for (u32 material = 0; material < scene._materialCounts.size(); material++) {
+            cmd->bindProgram(engine.getProgram(cala::Engine::ProgramType::DEBUG_MESHLETS));
+            cmd->bindPipeline();
+            cmd->bindDescriptors();
+
+            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(u32) * 4;
+            u32 countOffset = material * (sizeof(u32) * 2);
+            cmd->drawMeshTasksIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset, sizeof(u32) * 4);
+        }
+    });
+}
+
 //void debugClusterFrustums(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings) {
 //    auto& debugClusterFrustums = graph.addPass("debug_cluster_frustums");
 //

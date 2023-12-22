@@ -119,7 +119,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     scene._updateCullingCamera = !_renderSettings.freezeFrustum;
 
     bool overlayDebug = _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugClusters || _renderSettings.debugFrustum || _renderSettings.debugDepth;
-    bool fullscreenDebug = _renderSettings.debugNormals || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugMetallic || _renderSettings.debugRoughness;
+    bool fullscreenDebug = _renderSettings.debugNormals || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugMetallic || _renderSettings.debugRoughness || _renderSettings.debugMeshlets;
     bool debugViewEnabled = overlayDebug || fullscreenDebug;
 
     vk::CommandHandle cmd = _frameInfo.cmd;
@@ -363,6 +363,10 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
 
     if (_renderSettings.debugDepth) {
         debugDepthPass(_graph, *_engine);
+    }
+
+    if (_renderSettings.debugMeshlets) {
+        debugMeshletPass(_graph, *_engine, scene);
     }
 
 

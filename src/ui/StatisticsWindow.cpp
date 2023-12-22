@@ -17,10 +17,10 @@ void cala::ui::StatisticsWindow::render() {
         ImGui::Text("Draw Calls: %d", rendererStats.drawCallCount);
         ImGui::Text("Drawn Meshes: %d", rendererStats.drawnMeshes);
         ImGui::Text("Culled Meshes: %d", rendererStats.culledMeshes);
-        ImGui::Text("Culled mesh ratio: %f%%", (static_cast<f32>(rendererStats.culledMeshes) / (static_cast<f32>(rendererStats.drawnMeshes) + static_cast<f32>(rendererStats.culledMeshes))) * 100);
+        ImGui::Text("Culled mesh ratio: %.0f%%", (static_cast<f32>(rendererStats.culledMeshes) / (static_cast<f32>(rendererStats.drawnMeshes) + static_cast<f32>(rendererStats.culledMeshes))) * 100);
         ImGui::Text("Drawn Meshlets: %d", rendererStats.drawnMeshlets);
         ImGui::Text("Culled Meshlets: %d", rendererStats.culledMeshlets);
-        ImGui::Text("Culled meshlet ratio: %f%%", (static_cast<f32>(rendererStats.culledMeshlets) / (static_cast<f32>(rendererStats.drawnMeshlets) + static_cast<f32>(rendererStats.culledMeshlets))) * 100);
+        ImGui::Text("Culled meshlet ratio: %.0f%%", (static_cast<f32>(rendererStats.culledMeshlets) / (static_cast<f32>(rendererStats.drawnMeshlets) + static_cast<f32>(rendererStats.culledMeshlets))) * 100);
 
         auto pipelineStats = _engine->device().context().getPipelineStatistics();
 

@@ -8,6 +8,7 @@ layout (location = 0) out VsOut {
         mat3 TBN;
         vec3 ViewPos;
         flat uint drawID;
+        flat uint meshletID;
 } meshOut[];
 
 #include "shaderBridge.h"
@@ -51,6 +52,7 @@ void main() {
         meshOut[threadIndex].TBN = mat3(T, B, N);
         meshOut[threadIndex].ViewPos = camera.position;
         meshOut[threadIndex].drawID = payload.meshIndex;
+        meshOut[threadIndex].meshletID = meshletIndex;
 
         gl_MeshVerticesEXT[threadIndex].gl_Position = camera.projection * camera.view * fragPos;
     }

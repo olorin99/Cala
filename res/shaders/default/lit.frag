@@ -4,7 +4,6 @@
 #include "lighting.glsl"
 
 vec4 evalMaterial(Material material) {
-
 //    float opacity = material.albedo.a;
 //    int x = int(gl_FragCoord.x) % 4;
 //    int y = int(gl_FragCoord.y) % 4;
