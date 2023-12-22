@@ -19,26 +19,46 @@ layout (set = 1, binding = 1) readonly buffer DrawCommands {
     MeshTaskCommand commands[];
 };
 
-shared uint meshletCount;
+bool frustumCheck(vec3 pos, float radius) {
+    GPUCamera cullingCamera = globalData.cameraBuffer.camera;
+
+    for (int i = 0; i < 6; i++) {
+        if (dot(vec4(pos, 1.0), cullingCamera.frustum.planes[i]) + radius < 0.0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool coneCull(Meshlet meshlet, vec3 cameraPos) {
+    return dot(normalize(meshlet.coneApex - cameraPos), meshlet.coneAxis) >= meshlet.coneCutoff;
+}
 
 void main() {
-    meshletCount = 0;
-    barrier();
-
     uint meshletIndex = gl_GlobalInvocationID.x;
     uint meshIndex = commands[gl_DrawID].meshID;
     //TODO: meshlet culling
 
     GPUMesh mesh = globalData.meshBuffer.meshData[meshIndex];
+    GPUCamera camera = globalData.cameraBuffer.camera;
 
+    bool visible = false;
     if (meshletIndex < mesh.meshletCount) {
-        uint index = atomicAdd(meshletCount, 1);
-        atomicAdd(globalData.feedbackBuffer.feedback.drawnMeshlets, 1);
-
-        payload.offset[index] = meshletIndex;
-        payload.meshIndex = meshIndex;
+        Meshlet meshlet = globalData.meshletBuffer.meshlets[mesh.meshletIndex + meshletIndex];
+        vec3 center = (globalData.transformsBuffer.transforms[meshIndex] * vec4(meshlet.center, 1.0)).xyz;
+        visible = frustumCheck(center, meshlet.radius);
+//        visible = visible && !coneCull(meshlet, camera.position);
     }
+    uvec4 vote = subgroupBallot(visible);
+    uint visibleCount = subgroupBallotBitCount(vote);
+    if (visible) {
+        uint index = subgroupBallotExclusiveBitCount(vote);
+        payload.offset[index] = meshletIndex;
+        atomicAdd(globalData.feedbackBuffer.feedback.drawnMeshlets, 1);
+    } else {
+        atomicAdd(globalData.feedbackBuffer.feedback.culledMeshlets, 1);
+    }
+    payload.meshIndex = meshIndex;
 
-    barrier();
-    EmitMeshTasksEXT(meshletCount, 1, 1);
+    EmitMeshTasksEXT(visibleCount, 1, 1);
 }

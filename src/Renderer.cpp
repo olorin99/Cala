@@ -453,7 +453,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
         else
             forwardPass.addDepthWrite("depth");
 
-        forwardPass.addUniformBufferRead("global", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER | vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+        forwardPass.addUniformBufferRead("global", vk::PipelineStage::FRAGMENT_SHADER | vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
         forwardPass.addSampledImageRead("pointDepth", vk::PipelineStage::FRAGMENT_SHADER);
         forwardPass.addIndirectRead("drawCommands");
         forwardPass.addStorageBufferRead("drawCommands", vk::PipelineStage::TASK_SHADER);
@@ -464,7 +464,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
         forwardPass.addIndirectRead("materialCounts");
         forwardPass.addVertexRead("vertexBuffer");
         forwardPass.addIndexRead("indexBuffer");
-        forwardPass.addStorageBufferRead("camera", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER | vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+        forwardPass.addStorageBufferRead("camera", vk::PipelineStage::FRAGMENT_SHADER | vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
         forwardPass.addStorageBufferWrite("feedback", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
 
         forwardPass.setDebugColour({0.4, 0.1, 0.9, 1});

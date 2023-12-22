@@ -71,7 +71,7 @@ int main() {
     light3.setShadowing(true);
 
 //    scene.addLight(light, lightTransform);
-    scene.addLight(light2, lightTransform);
+    auto lightNode = scene.addLight(light2, lightTransform);
 //    scene.addLight(light3, lightTransform);
 
     auto background = engine.assetManager()->loadImage("background", "textures/TropicalRuins_3k.hdr", vk::Format::RGBA32_SFLOAT);
@@ -82,21 +82,41 @@ int main() {
 //    auto matInstance = material1->instance();
 //    scene.addMesh(cube, Transform({0, 3, 0}, {}, {1, 3, 1}), &matInstance);
 
-    auto sponzaAsset = engine.assetManager()->loadModel("sponza", "models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf", material1);
+//    auto sponzaAsset = engine.assetManager()->loadModel("sponza", "models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf", material1);
 //    auto bistro = engine.assetManager()->loadModel("bistro", "models/bistro/gltf/Bistro_Exterior.gltf", material1);
 //    auto damagedHelmet = engine.assetManager()->loadModel("damagedHelmet", "models/gltf/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf", material1);
-    auto suzanne = engine.assetManager()->loadModel("suzanne", "models/gltf/glTF-Sample-Models/2.0/Suzanne/glTF/Suzanne.gltf", material1);
+//    auto suzanne = engine.assetManager()->loadModel("suzanne", "models/gltf/glTF-Sample-Models/2.0/Suzanne/glTF/Suzanne.gltf", material1);
     auto sphere = engine.assetManager()->loadModel("sphere", "models/sphere.glb", material1);
+    auto sibenik = engine.assetManager()->loadModel("sibenik", "models/gltf/sibenik/sibenik.gltf", material1);
+//    auto sanMiguel = engine.assetManager()->loadModel("San Miguel", "models/gltf/San_Miguel/San_Miguel.gltf", material1);
 
-    scene.addModel("suzanne", *suzanne, Transform());
+    scene.addModel("lightSphere", *sphere, Transform(), lightNode);
+
+    scene.addModel("sibenik", *sibenik, Transform());
+//    scene.addModel("San Miguel", *sanMiguel, Transform());
+//
+//    for (u32 i = 0; i < 10; i++) {
+//        for (u32 j = 0; j < 10; j++) {
+//            for (u32 k = 0; k < 10; k++) {
+//                f32 x = i * 3;
+//                f32 y = j * 3;
+//                f32 z = k * 3;
+//                Transform transform({ x, y, z });
+//
+//                scene.addModel("suzanne", *suzanne, transform);
+//            }
+//        }
+//    }
+
+
 //    auto plane = engine.assetManager()->loadModel("plane", "models/plane.glb", material1);
 //    scene.addModel("plane", *plane, Transform({}, {}, {100, 1, 100}));
 
     Transform defaultTransform;
-    scene.addModel("sponza", *sponzaAsset, defaultTransform);
-//    scene.addModel(*bistro, defaultTransform);
+//    scene.addModel("sponza", *sponzaAsset, defaultTransform);
+//    scene.addModel("bistro", *bistro, defaultTransform);
 //    scene.addModel(*damagedHelmet, sponzaTransform);
-    auto sphereNode = scene.addModel("smallSphere", *sphere, lightTransform);
+//    auto sphereNode = scene.addModel("smallSphere", *sphere, lightTransform);
 
     f32 sceneBounds = 10;
 

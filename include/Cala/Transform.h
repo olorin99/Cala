@@ -10,7 +10,7 @@ namespace cala {
     class Transform {
     public:
 
-        Transform(const ende::math::Vec3f& pos = { 0, 0, 0 }, const ende::math::Quaternion& rot = { 0, 0, 0, 1 }, const ende::math::Vec3f& scale = { 1, 1, 1 }, Transform* parent = nullptr);
+        Transform(const ende::math::Vec3f& pos = { 0, 0, 0 }, const ende::math::Quaternion& rot = { 0, 0, 0, 1 }, const ende::math::Vec3f& scale = { 1, 1, 1 });
 
         Transform(const ende::math::Mat4f& matrix);
 
@@ -48,18 +48,12 @@ namespace cala {
 
         void setDirty(bool dirty) { _dirty = dirty; }
 
-        Transform* parent() { return _parent; }
-
-        bool updateWorld();
-
     private:
 
         ende::math::Vec3f _position;
         ende::math::Quaternion _rotation;
         ende::math::Vec3f _scale;
-        bool _dirty;
-        ende::math::Mat4f _world;
-        Transform* _parent;
+        bool _dirty = true;
 
     };
 

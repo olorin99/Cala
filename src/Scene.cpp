@@ -65,27 +65,20 @@ void cala::Scene::addSkyLightMap(vk::ImageHandle skyLightMap, bool equirectangul
     _hdrSkyLight = hdr;
 }
 
-template <typename T>
-void assignMemory(void* address, u32 offset, const T& data) {
-    u8* start = static_cast<u8*>(address) + offset;
-    *reinterpret_cast<T*>(start) = data;
-}
-
-template <typename T>
-void assignMemory(void* address, u32 offset, T* data, u32 count) {
-    u8* start = static_cast<u8*>(address) + offset;
-    std::memcpy(start, data, count * sizeof(T));
-}
-
 void traverseNode(cala::Scene::SceneNode* node, ende::math::Mat4f worldTransform, std::vector<ende::math::Mat4f>& meshTransforms) {
-    auto transform = worldTransform * node->transform.local();
+    if (node->transform.isDirty()) {
+        node->worldTransform = worldTransform * node->transform.local();
+    }
+
     if (auto meshNode = dynamic_cast<cala::Scene::MeshNode*>(node); meshNode && node->transform.isDirty())
-        meshTransforms[meshNode->index] = transform;
+        meshTransforms[meshNode->index] = node->worldTransform;
 
     for (auto& child : node->children) {
-        child->transform.setDirty(node->transform.isDirty());
-        traverseNode(child.get(), transform, meshTransforms);
+        if (node->transform.isDirty())
+            child->transform.setDirty(node->transform.isDirty());
+        traverseNode(child.get(), node->worldTransform, meshTransforms);
     }
+    node->transform.setDirty(false);
 }
 
 void cala::Scene::prepare() {
@@ -112,7 +105,7 @@ void cala::Scene::prepare() {
     }
 
     // update transforms
-    traverseNode(_root.get(), _root->transform.local(), _meshTransforms);
+    traverseNode(_root.get(), ende::math::identity<4, f32>(), _meshTransforms);
 
     _engine->stageData(_meshDataBuffer[frame], _meshData);
     _engine->stageData(_meshTransformsBuffer[frame], _meshTransforms);

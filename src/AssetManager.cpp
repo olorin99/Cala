@@ -205,7 +205,8 @@ cala::vk::ShaderModuleHandle cala::AssetManager::loadShaderModule(const std::str
         "#extension GL_EXT_shader_explicit_arithmetic_types : enable\n\n";
 
     if (stage == vk::ShaderStage::MESH || stage == vk::ShaderStage::TASK)
-        source += "#extension GL_EXT_mesh_shader : enable\n\n";
+        source += "#extension GL_EXT_mesh_shader : enable\n"
+                  "#extension GL_KHR_shader_subgroup_ballot : enable\n\n";
 
     source += rawSource;
 
@@ -657,12 +658,26 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             meshletsMesh.reserve(meshletCount);
 
             for (u32 i = 0; i < meshMeshlets.size(); i++) {
+                auto& meshlet = meshMeshlets[i];
+                meshopt_Bounds bounds = meshopt_computeMeshletBounds(&meshletVertices[meshlet.vertex_offset], &meshletTriangles[meshlet.triangle_offset], meshlet.triangle_count, (f32*)optimisedVertices.data(), optimisedVertices.size(), sizeof(Vertex));
+
+                ende::math::Vec3f center{ bounds.center[0], bounds.center[1], bounds.center[2] };
+                f32 radius = bounds.radius;
+                ende::math::Vec3f coneApex{ bounds.cone_apex[0], bounds.cone_apex[1], bounds.cone_apex[2] };
+                ende::math::Vec3f coneAxis{ bounds.cone_axis[0], bounds.cone_axis[1], bounds.cone_axis[2] };
+                f32 coneCutoff = bounds.cone_cutoff;
+
                 meshletsMesh.push_back({
                     firstVertex,
-                    meshMeshlets[i].vertex_offset + firstMeshletIndex,
-                    meshMeshlets[i].vertex_count,
-                    meshMeshlets[i].triangle_offset + firstPrimitive,
-                    meshMeshlets[i].triangle_count
+                    meshlet.vertex_offset + firstMeshletIndex,
+                    meshlet.vertex_count,
+                    meshlet.triangle_offset + firstPrimitive,
+                    meshlet.triangle_count,
+                    center,
+                    radius,
+                    coneApex,
+                    coneAxis,
+                    coneCutoff
                 });
             }
 

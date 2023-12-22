@@ -30,6 +30,11 @@ struct Meshlet {
     uint indexCount;
     uint primitiveOffset;
     uint primitiveCount;
+    vec3 center;
+    float radius;
+    vec3 coneApex;
+    vec3 coneAxis;
+    float coneCutoff;
 };
 
 #ifndef __cplusplus

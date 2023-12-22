@@ -39,6 +39,7 @@ namespace cala {
 
             NodeType type = NodeType::NONE;
             Transform transform = {};
+            ende::math::Mat4f worldTransform = {};
             std::string name;
             SceneNode* parent = nullptr;
             std::vector<std::unique_ptr<SceneNode>> children;

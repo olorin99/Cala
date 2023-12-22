@@ -1,12 +1,10 @@
 #include "Cala/Transform.h"
 
 
-cala::Transform::Transform(const ende::math::Vec3f &pos, const ende::math::Quaternion &rot, const ende::math::Vec3f &scale, Transform* parent)
+cala::Transform::Transform(const ende::math::Vec3f &pos, const ende::math::Quaternion &rot, const ende::math::Vec3f &scale)
     : _position(pos),
     _rotation(rot),
     _scale(scale),
-    _parent(parent),
-    _world(ende::math::identity<4, f32>()),
     _dirty(true)
 {}
 
@@ -21,10 +19,6 @@ ende::math::Mat4f cala::Transform::local() const {
     ende::math::Mat4f rotation = _rotation.toMat();
     ende::math::Mat4f scale = ende::math::scale<4, f32>(_scale);
     return translation * rotation * scale;
-}
-
-ende::math::Mat4f cala::Transform::world() {
-    return _world;
 }
 
 cala::Transform &cala::Transform::rotate(const ende::math::Quaternion &rot) {
@@ -70,17 +64,4 @@ cala::Transform &cala::Transform::setScale(const ende::math::Vec3f &scale) {
 cala::Transform &cala::Transform::setScale(f32 scale) {
     _dirty = true;
     return setScale({ scale, scale, scale });
-}
-
-bool cala::Transform::updateWorld() {
-    if (!_parent && _dirty) {
-        _world = local();
-        return _dirty;
-    }
-    if (!_parent)
-        return _dirty;
-    _dirty = _dirty || _parent->updateWorld();
-    if (_dirty)
-        _world = _parent->_world * local();
-    return _dirty;
 }
