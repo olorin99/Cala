@@ -12,13 +12,14 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
 
     auto& pointShadows = graph.addPass("point_shadows", cala::RenderPass::Type::COMPUTE);
 
-    pointShadows.addUniformBufferRead("global", cala::vk::PipelineStage::VERTEX_SHADER | cala::vk::PipelineStage::FRAGMENT_SHADER);
+    pointShadows.addUniformBufferRead("global", cala::vk::PipelineStage::COMPUTE_SHADER | cala::vk::PipelineStage::TASK_SHADER | cala::vk::PipelineStage::MESH_SHADER | cala::vk::PipelineStage::FRAGMENT_SHADER);
     pointShadows.addStorageImageWrite("pointDepth", cala::vk::PipelineStage::FRAGMENT_SHADER);
-    pointShadows.addStorageBufferRead("transforms", cala::vk::PipelineStage::VERTEX_SHADER);
+    pointShadows.addStorageBufferRead("transforms", cala::vk::PipelineStage::COMPUTE_SHADER | cala::vk::PipelineStage::TASK_SHADER | cala::vk::PipelineStage::MESH_SHADER);
 //    pointShadows.addStorageBufferRead("meshData", vk::PipelineStage::VERTEX_SHADER);
     pointShadows.addVertexRead("vertexBuffer");
     pointShadows.addIndexRead("indexBuffer");
     pointShadows.addIndirectRead("shadowDrawCommands");
+    pointShadows.addStorageBufferRead("shadowDrawCommands", cala::vk::PipelineStage::TASK_SHADER | cala::vk::PipelineStage::COMPUTE_SHADER);
     pointShadows.addStorageBufferWrite("shadowDrawCount", cala::vk::PipelineStage::COMPUTE_SHADER);
 
     pointShadows.setExecuteFunction([&engine, &scene](cala::vk::CommandHandle cmd, cala::RenderGraph& graph) {
@@ -50,11 +51,17 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                             cmd->bindDescriptors();
                             cmd->dispatch(scene.meshCount(), 1, 1);
 
+                            auto drawCommandBarrier = drawCommands->barrier(cala::vk::PipelineStage::COMPUTE_SHADER,
+                                                                            cala::vk::PipelineStage::TASK_SHADER | cala::vk::PipelineStage::DRAW_INDIRECT,
+                                                                            cala::vk::Access::SHADER_WRITE,
+                                                                            cala::vk::Access::SHADER_READ | cala::vk::Access::INDIRECT_READ);
+                            cmd->pipelineBarrier({ &drawCommandBarrier, 1 });
+
                             cmd->begin(*engine.getShadowFramebuffer());
 
                             cmd->clearDescriptors();
                             cmd->bindRasterState({
-                                cala::vk::CullMode::FRONT
+                                cala::vk::CullMode::NONE
                             });
                             cmd->bindDepthState({
                                 true, true,
@@ -63,20 +70,13 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
 
                             cmd->bindProgram(engine.getProgram(cala::Engine::ProgramType::SHADOW_DIRECT));
 
-                            cmd->pushConstants(cala::vk::ShaderStage::VERTEX, light.getCameraIndex() + cascadeIndex);
-
-                            auto binding = engine.globalBinding();
-                            auto attributes = engine.globalVertexAttributes();
-                            cmd->bindBindings({ &binding, 1 });
-                            cmd->bindAttributes(attributes);
-
+                            cmd->pushConstants(cala::vk::ShaderStage::TASK | cala::vk::ShaderStage::MESH, light.getCameraIndex() + cascadeIndex);
                             cmd->bindBuffer(1, 0, global);
+                            cmd->bindBuffer(1, 1, drawCommands, true);
 
                             cmd->bindPipeline();
                             cmd->bindDescriptors();
-                            cmd->bindVertexBuffer(0, engine.vertexBuffer());
-                            cmd->bindIndexBuffer(engine.indexBuffer());
-                            cmd->drawIndirectCount(drawCommands, 0, drawCount, 0);
+                            cmd->drawMeshTasksIndirectCount(drawCommands, 0, drawCount, 0, sizeof(MeshTaskCommand));
 
                             cmd->end(*engine.getShadowFramebuffer());
 
@@ -155,17 +155,21 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
                             cmd->bindDescriptors();
                             cmd->dispatch(scene.meshCount(), 1, 1);
 
+                            auto drawCommandBarrier = drawCommands->barrier(cala::vk::PipelineStage::COMPUTE_SHADER,
+                                                                            cala::vk::PipelineStage::TASK_SHADER | cala::vk::PipelineStage::DRAW_INDIRECT,
+                                                                            cala::vk::Access::SHADER_WRITE,
+                                                                            cala::vk::Access::SHADER_READ | cala::vk::Access::INDIRECT_READ);
+                            cmd->pipelineBarrier({ &drawCommandBarrier, 1 });
+
 
                             cmd->begin(*engine.getShadowFramebuffer());
 
                             cmd->clearDescriptors();
-                            cmd->bindRasterState({
-                                                         cala::vk::CullMode::FRONT
-                                                 });
+                            cmd->bindRasterState({ cala::vk::CullMode::NONE });
                             cmd->bindDepthState({
-                                                        true, true,
-                                                        cala::vk::CompareOp::LESS_EQUAL
-                                                });
+                                true, true,
+                                cala::vk::CompareOp::LESS_EQUAL
+                            });
 
                             cmd->bindProgram(engine.getProgram(cala::Engine::ProgramType::SHADOW_POINT));
 
@@ -174,32 +178,18 @@ void shadowPoint(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& sc
 
                             struct ShadowData {
                                 ende::math::Mat4f viewProjection;
-                                ende::math::Vec3f position;
-                                f32 near;
-                                f32 far;
                             };
                             ShadowData shadowData{
-                                    shadowCam.viewProjection(),
-                                    shadowCam.transform().pos(),
-                                    shadowCam.near(),
-                                    shadowCam.far()
+                                    shadowCam.viewProjection()
                             };
-                            cmd->pushConstants(
-                                    cala::vk::ShaderStage::VERTEX | cala::vk::ShaderStage::FRAGMENT,
-                                    shadowData);
-
-                            auto binding = engine.globalBinding();
-                            auto attributes = engine.globalVertexAttributes();
-                            cmd->bindBindings({ &binding, 1 });
-                            cmd->bindAttributes(attributes);
-
+                            cmd->pushConstants(cala::vk::ShaderStage::TASK, shadowFrustum);
+                            cmd->pushConstants(cala::vk::ShaderStage::MESH, shadowData, 96);
                             cmd->bindBuffer(1, 0, global);
+                            cmd->bindBuffer(1, 1, drawCommands, true);
 
                             cmd->bindPipeline();
                             cmd->bindDescriptors();
-                            cmd->bindVertexBuffer(0, engine.vertexBuffer());
-                            cmd->bindIndexBuffer(engine.indexBuffer());
-                            cmd->drawIndirectCount(drawCommands, 0, drawCount, 0);
+                            cmd->drawMeshTasksIndirectCount(drawCommands, 0, drawCount, 0, sizeof(MeshTaskCommand));
 
                             cmd->end(*engine.getShadowFramebuffer());
 

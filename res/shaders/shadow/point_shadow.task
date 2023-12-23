@@ -1,0 +1,59 @@
+layout (local_size_x = 64) in;
+
+#include "shaderBridge.h"
+
+struct TaskPayload {
+    uint meshIndex;
+    uint offset[64];
+};
+taskPayloadSharedEXT TaskPayload payload;
+
+layout (scalar, set = 1, binding = 1) readonly buffer DrawCommands {
+    MeshTaskCommand commands[];
+};
+
+layout (push_constant) uniform FrameData {
+    vec4 planes[6];
+};
+
+bool frustumCheck(vec3 pos, float radius) {
+    for (int i = 0; i < 6; i++) {
+        if (dot(vec4(pos, 1.0), planes[i]) + radius < 0.0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool coneCull(Meshlet meshlet, vec3 cameraPos) {
+    return dot(normalize(meshlet.coneApex - cameraPos), meshlet.coneAxis) >= meshlet.coneCutoff;
+}
+
+void main() {
+    uint threadIndex = gl_GlobalInvocationID.x;
+    uint meshIndex = commands[gl_DrawID].meshID;
+
+    GPUMesh mesh = globalData.meshBuffer.meshData[meshIndex];
+
+    LOD lod = mesh.lods[commands[gl_DrawID].meshLOD];
+    uint meshletIndex = lod.meshletOffset + threadIndex;
+
+    bool visible = false;
+    if (threadIndex < lod.meshletCount) {
+        Meshlet meshlet = globalData.meshletBuffer.meshlets[meshletIndex];
+        vec3 center = (globalData.transformsBuffer.transforms[meshIndex] * vec4(meshlet.center, 1.0)).xyz;
+        visible = true;//frustumCheck(center, meshlet.radius);
+//        visible = visible && !coneCull(meshlet, camera.position);
+        atomicAdd(globalData.feedbackBuffer.feedback.totalMeshlets, 1);
+    }
+    uvec4 vote = subgroupBallot(visible);
+    uint visibleCount = subgroupBallotBitCount(vote);
+    if (visible) {
+        uint index = subgroupBallotExclusiveBitCount(vote);
+        payload.offset[index] = meshletIndex;
+        atomicAdd(globalData.feedbackBuffer.feedback.drawnMeshlets, 1);
+    }
+    payload.meshIndex = meshIndex;
+
+    EmitMeshTasksEXT(visibleCount, 1, 1);
+}

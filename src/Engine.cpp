@@ -64,17 +64,15 @@ cala::Engine::Engine(vk::Platform &platform)
     spdlog::flush_every(std::chrono::seconds(5));
     _device->setBindlessSetIndex(0);
     _assetManager.setAssetPath("../../res");
-    {
-        _pointShadowProgram = loadProgram("pointShadowProgram", {
-            { "shaders/shadow_point.vert", vk::ShaderStage::VERTEX },
-            { "shaders/shadow_point.frag", vk::ShaderStage::FRAGMENT }
-        });
-    }
-    {
-        _directShadowProgram = loadProgram("directShadowProgram", {
-            { "shaders/shadow.vert", vk::ShaderStage::VERTEX }
-        });
-    }
+    _pointShadowProgram = loadProgram("pointShadowProgram", {
+        { "shaders/shadow/point_shadow.task", vk::ShaderStage::TASK },
+        { "shaders/shadow/point_shadow.mesh", vk::ShaderStage::MESH },
+        { "shaders/shadow_point.frag", vk::ShaderStage::FRAGMENT }
+    });
+    _directShadowProgram = loadProgram("directShadowProgram", {
+        { "shaders/shadow/shadow.task", vk::ShaderStage::TASK },
+        { "shaders/shadow/direct_shadow.mesh", vk::ShaderStage::MESH }
+    });
     {
         _equirectangularToCubeMap = loadProgram("equirectangularToCubeMap", {
             { "shaders/equirectangularToCubeMap.comp", vk::ShaderStage::COMPUTE }
@@ -112,18 +110,14 @@ cala::Engine::Engine(vk::Platform &platform)
         });
     }
     _cullMeshShaderProgram = loadProgram("cullMeshShaderProgram", {
-            { "shaders/cull_mesh_shader.comp", vk::ShaderStage::COMPUTE }
+        { "shaders/cull_mesh_shader.comp", vk::ShaderStage::COMPUTE }
     });
-    {
-        _pointShadowCullProgram = loadProgram("pointShadowCullProgram", {
-            { "shaders/cull_point_shadow.comp", vk::ShaderStage::COMPUTE }
-        });
-    }
-    {
-        _directShadowCullProgram = loadProgram("directShadowCullProgram", {
-            { "shaders/cull_direct_shadow.comp", vk::ShaderStage::COMPUTE }
-        });
-    }
+    _pointShadowCullProgram = loadProgram("pointShadowCullProgram", {
+        { "shaders/shadow/cull_point_shadow.comp", vk::ShaderStage::COMPUTE }
+    });
+    _directShadowCullProgram = loadProgram("directShadowCullProgram", {
+        { "shaders/shadow/cull_direct_shadow.comp", vk::ShaderStage::COMPUTE }
+    });
     {
         _createClustersProgram = loadProgram("createClustersProgram", {
             { "shaders/create_clusters.comp", vk::ShaderStage::COMPUTE }
@@ -135,9 +129,9 @@ cala::Engine::Engine(vk::Platform &platform)
         });
     }
     _meshletDebugProgram = loadProgram("debugMeshletProgram", {
-            { "shaders/default.task", vk::ShaderStage::TASK },
-            { "shaders/default.mesh", vk::ShaderStage::MESH },
-            { "shaders/debug/meshlet.frag", vk::ShaderStage::FRAGMENT }
+        { "shaders/default.task", vk::ShaderStage::TASK },
+        { "shaders/default.mesh", vk::ShaderStage::MESH },
+        { "shaders/debug/meshlet.frag", vk::ShaderStage::FRAGMENT }
     });
     {
         _clusterDebugProgram = loadProgram("clusterDebugProgram", {
@@ -145,12 +139,11 @@ cala::Engine::Engine(vk::Platform &platform)
             { "shaders/debug/clusters_debug.frag", vk::ShaderStage::FRAGMENT }
         });
     }
-    {
-        _worldPosDebugProgram = loadProgram("worldPosDebugProgram", {
-            { "shaders/default.vert", vk::ShaderStage::VERTEX },
+    _worldPosDebugProgram = loadProgram("worldPosDebugProgram", {
+            { "shaders/default.task", vk::ShaderStage::TASK },
+            { "shaders/default.mesh", vk::ShaderStage::MESH },
             { "shaders/debug/world_pos.frag", vk::ShaderStage::FRAGMENT }
-        });
-    }
+    });
     {
         _frustumDebugProgram = loadProgram("frustumDebugProgram", {
             { "shaders/debug/debug_frustum.vert", vk::ShaderStage::VERTEX },

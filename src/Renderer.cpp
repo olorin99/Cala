@@ -158,10 +158,10 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
             drawCommandsResource.usage = vk::BufferUsage::INDIRECT | vk::BufferUsage::STORAGE;
             _graph.addBufferResource("drawCommands", drawCommandsResource);
 
-            BufferResource shadowDrawCommandsResource;
-            shadowDrawCommandsResource.size = scene.meshCount() * sizeof(VkDrawIndexedIndirectCommand);
-            shadowDrawCommandsResource.usage = vk::BufferUsage::INDIRECT;
-            _graph.addBufferResource("shadowDrawCommands", shadowDrawCommandsResource);
+//            BufferResource shadowDrawCommandsResource;
+//            shadowDrawCommandsResource.size = scene.meshCount() * sizeof(VkDrawIndexedIndirectCommand);
+//            shadowDrawCommandsResource.usage = vk::BufferUsage::INDIRECT;
+            _graph.addBufferResource("shadowDrawCommands", drawCommandsResource);
         }
         {
             BufferResource drawCountResource;
@@ -511,9 +511,6 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
 
                 cmd->bindPipeline();
                 cmd->bindDescriptors();
-
-                cmd->bindVertexBuffer(0, _engine->_globalVertexBuffer);
-                cmd->bindIndexBuffer(_engine->_globalIndexBuffer);
 
                 u32 drawCommandOffset = scene._materialCounts[i].offset * sizeof(MeshTaskCommand);
                 u32 countOffset = i * (sizeof(u32) * 2);

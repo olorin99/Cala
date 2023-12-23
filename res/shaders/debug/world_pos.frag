@@ -5,6 +5,7 @@ layout (location = 0) in VsOut {
     mat3 TBN;
     vec3 ViewPos;
     flat uint drawID;
+    flat uint meshletID;
 } fsIn;
 
 layout (location = 0) out vec4 FragColour;

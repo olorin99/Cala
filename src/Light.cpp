@@ -7,7 +7,7 @@ cala::Light::Light(LightType type, bool shadows)
       _colour({1, 1, 1}),
       _intensity(1),
       _constant(1),
-      _shadowBias(0.015),
+      _shadowBias(0.0),
       _size(1),
       _range(std::sqrt(_intensity / 0.01)),
       _dirty(true)

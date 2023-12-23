@@ -307,7 +307,7 @@ void cala::vk::CommandBuffer::bindImage(u32 set, u32 binding, cala::vk::ImageHan
 }
 
 void cala::vk::CommandBuffer::pushConstants(ShaderStage stage, std::span<const u8> data, u32 offset) {
-    assert(offset + data.size() <= 128);
+//    assert(offset + data.size() <= 128);
     vkCmdPushConstants(_buffer, _pipelineKey.layout, getShaderStage(stage), offset, data.size(), data.data());
 }
 
@@ -423,6 +423,10 @@ void cala::vk::CommandBuffer::drawMeshTasks(u32 x, u32 y, u32 z) {
 void cala::vk::CommandBuffer::drawMeshTasksWorkGroups(u32 x, u32 y, u32 z) {
     assert(!_pipelineDirty);
     assert(!_descriptorDirty);
+    if (!_boundProgram->stagePresent(ShaderStage::MESH)) {
+        _device->logger().warn("Attempted to issue mesh shader draw without mesh shader bound");
+        return;
+    }
     vkCmdDrawMeshTasksEXT(_buffer, x, y, z);
     ++_drawCallCount;
     writeBufferMarker(PipelineStage::TASK_SHADER, "vkCmdDrawMeshTasksEXT::TASK");
@@ -433,6 +437,10 @@ void cala::vk::CommandBuffer::drawMeshTasksWorkGroups(u32 x, u32 y, u32 z) {
 void cala::vk::CommandBuffer::drawMeshTasksIndirect(cala::vk::BufferHandle buffer, u32 offset, u32 drawCount, u32 stride) {
     assert(!_pipelineDirty);
     assert(!_descriptorDirty);
+    if (!_boundProgram->stagePresent(ShaderStage::MESH)) {
+        _device->logger().warn("Attempted to issue mesh shader draw without mesh shader bound");
+        return;
+    }
     if (stride == 0)
         stride = sizeof(u32) * 3;
     vkCmdDrawMeshTasksIndirectEXT(_buffer, buffer->buffer(), offset, drawCount, stride);
@@ -446,6 +454,10 @@ void cala::vk::CommandBuffer::drawMeshTasksIndirectCount(cala::vk::BufferHandle 
     assert(!_pipelineDirty);
     assert(!_descriptorDirty);
     assert(countBuffer->size() > countOffset);
+    if (!_boundProgram->stagePresent(ShaderStage::MESH)) {
+        _device->logger().warn("Attempted to issue mesh shader draw without mesh shader bound");
+        return;
+    }
     if (stride == 0)
         stride = sizeof(u32) * 3;
 

@@ -1,0 +1,44 @@
+
+layout (local_size_x = 64) in;
+layout (triangles, max_vertices = 64, max_primitives = 64) out;
+
+#include "shaderBridge.h"
+
+struct TaskPayload {
+    uint meshIndex;
+    uint offset[64];
+};
+taskPayloadSharedEXT TaskPayload payload;
+
+layout (push_constant) uniform PushConstants {
+    uint cameraIndex;
+};
+
+void main() {
+
+    uint threadIndex = gl_LocalInvocationIndex;
+
+    GPUCamera camera = globalData.cameraBuffer[cameraIndex].camera;
+    mat4 model = globalData.transformsBuffer.transforms[payload.meshIndex];
+
+    uint meshletIndex = payload.offset[gl_WorkGroupID.x];
+    Meshlet meshlet = globalData.meshletBuffer.meshlets[meshletIndex];
+
+    SetMeshOutputsEXT(meshlet.indexCount, meshlet.primitiveCount);
+
+    if (threadIndex < meshlet.indexCount) {
+        uint index = globalData.meshletIndexBuffer.indices[meshlet.indexOffset + threadIndex] + meshlet.vertexOffset;
+        Vertex vertex = globalData.vertexBuffer.vertices[index];
+        vec4 fragPos = model * vec4(vertex.position, 1.0);
+
+        gl_MeshVerticesEXT[threadIndex].gl_Position = camera.projection * camera.view * fragPos;
+    }
+
+    if (threadIndex < meshlet.primitiveCount) {
+        uint a = globalData.primitiveBuffer.primitives[meshlet.primitiveOffset + threadIndex * 3 + 0];
+        uint b = globalData.primitiveBuffer.primitives[meshlet.primitiveOffset + threadIndex * 3 + 1];
+        uint c = globalData.primitiveBuffer.primitives[meshlet.primitiveOffset + threadIndex * 3 + 2];
+
+        gl_PrimitiveTriangleIndicesEXT[threadIndex] = uvec3(a, b, c);
+    }
+}

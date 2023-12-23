@@ -55,6 +55,7 @@ void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene
 
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 1, drawCommands, true);
         auto binding = engine.globalBinding();
         auto attributes = engine.globalVertexAttributes();
         cmd->bindBindings({ &binding, 1 });
@@ -72,9 +73,9 @@ void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene
             cmd->bindPipeline();
             cmd->bindDescriptors();
 
-            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
+            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(MeshTaskCommand);
             u32 countOffset = material * (sizeof(u32) * 2);
-            cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
+            cmd->drawMeshTasksIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset, sizeof(MeshTaskCommand));
         }
     });
 }
@@ -98,6 +99,7 @@ void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
         auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 1, drawCommands, true);
 
         auto binding = engine.globalBinding();
         auto attributes = engine.globalVertexAttributes();
@@ -117,9 +119,9 @@ void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
             cmd->bindPipeline();
             cmd->bindDescriptors();
 
-            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
+            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(MeshTaskCommand);
             u32 countOffset = material * (sizeof(u32) * 2);
-            cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
+            cmd->drawMeshTasksIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset, sizeof(MeshTaskCommand));
         }
     });
 }
@@ -143,6 +145,7 @@ void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sce
         auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 1, drawCommands, true);
 
         auto binding = engine.globalBinding();
         auto attributes = engine.globalVertexAttributes();
@@ -162,9 +165,9 @@ void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sce
             cmd->bindPipeline();
             cmd->bindDescriptors();
 
-            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
+            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(MeshTaskCommand);
             u32 countOffset = material * (sizeof(u32) * 2);
-            cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
+            cmd->drawMeshTasksIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset, sizeof(MeshTaskCommand));
         }
     });
 }
@@ -188,6 +191,7 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene&
         auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 1, drawCommands, true);
 
         auto binding = engine.globalBinding();
         auto attributes = engine.globalVertexAttributes();
@@ -207,9 +211,9 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene&
             cmd->bindPipeline();
             cmd->bindDescriptors();
 
-            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
+            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(MeshTaskCommand);
             u32 countOffset = material * (sizeof(u32) * 2);
-            cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
+            cmd->drawMeshTasksIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset, sizeof(MeshTaskCommand));
         }
     });
 }
@@ -233,6 +237,7 @@ void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala
         auto materialCounts = graph.getBuffer("materialCounts");
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
+        cmd->bindBuffer(1, 1, drawCommands, true);
 
         auto binding = engine.globalBinding();
         auto attributes = engine.globalVertexAttributes();
@@ -249,9 +254,9 @@ void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala
             cmd->bindPipeline();
             cmd->bindDescriptors();
 
-            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
+            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(MeshTaskCommand);
             u32 countOffset = material * (sizeof(u32) * 2);
-            cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
+            cmd->drawMeshTasksIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset, sizeof(MeshTaskCommand));
         }
     });
 }
@@ -295,9 +300,9 @@ void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
             cmd->bindPipeline();
             cmd->bindDescriptors();
 
-            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
+            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(MeshTaskCommand);
             u32 countOffset = material * (sizeof(u32) * 2);
-            cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
+            cmd->drawMeshTasksIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset, sizeof(MeshTaskCommand));
         }
     });
 }
