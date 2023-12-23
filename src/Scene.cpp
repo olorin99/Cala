@@ -233,15 +233,21 @@ cala::Scene::SceneNode* addModelNode(const std::string& name, cala::Scene& scene
     auto sceneNode = scene.addNode(node.name.empty() ? name : node.name, transform, parent);
     for (auto primitiveIndex : node.primitives) {
         auto& primitive = model.primitives[primitiveIndex];
-        scene.addMesh({
+        cala::Mesh mesh = {
             primitive.firstIndex,
             primitive.indexCount,
             primitive.meshletIndex,
             primitive.meshletCount,
             &model.materials[primitive.materialIndex],
             { primitive.aabb.min.x(), primitive.aabb.min.y(), primitive.aabb.min.z(), 1.0 },
-            { primitive.aabb.max.x(), primitive.aabb.max.y(), primitive.aabb.max.z(), 1.0 },
-        }, cala::Transform(), nullptr, sceneNode);
+            { primitive.aabb.max.x(), primitive.aabb.max.y(), primitive.aabb.max.z(), 1.0 }
+        };
+        for (u32 level = 0; level < MAX_LODS; level++) {
+            mesh.lods[level].meshletOffset = primitive.lods[level].meshletOffset;
+            mesh.lods[level].meshletCount = primitive.lods[level].meshletCount;
+            mesh.lodCount = primitive.lodCount;
+        }
+        scene.addMesh(mesh, cala::Transform(), nullptr, sceneNode);
     }
 
     for (auto& child : node.children) {
@@ -274,17 +280,16 @@ cala::Scene::SceneNode *cala::Scene::addMesh(const cala::Mesh &mesh, const cala:
         mesh.min,
         mesh.max,
         true,
-        true
+        true,
+        mesh.lodCount
     });
-    _meshes.push_back({
-        mesh.firstIndex,
-        mesh.indexCount,
-        mesh.meshletIndex,
-        mesh.meshletCount,
-        instance,
-        mesh.min,
-        mesh.max
-    });
+    for (u32 level = 0; level < MAX_LODS; level++) {
+        _meshData.back().lods[level].meshletOffset = mesh.lods[level].meshletOffset;
+        _meshData.back().lods[level].meshletCount = mesh.lods[level].meshletCount;
+    }
+    _meshes.push_back(mesh);
+    // materialInstance can be changed by the parameter passed to function
+    _meshes.back().materialInstance = instance;
     _meshTransforms.push_back(transform.local());
     assert(_meshData.size() == _meshTransforms.size());
     assert(_meshData.size() == _meshes.size());

@@ -27,6 +27,7 @@ void cala::ui::StatisticsWindow::render() {
         if (rendererStats.drawnMeshlets + rendererStats.culledMeshlets == 0)
             culledMeshletRatio = 0;
         ImGui::Text("Culled meshlet ratio: %.0f%%", culledMeshletRatio);
+        ImGui::Text("Drawn Triangles %d", rendererStats.drawnTriangles);
 
         auto pipelineStats = _engine->device().context().getPipelineStatistics();
 

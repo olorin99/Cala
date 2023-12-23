@@ -4,6 +4,7 @@
 #include <Cala/vulkan/Buffer.h>
 #include <Cala/Engine.h>
 #include <optional>
+#include <Cala/shaderBridge.h>
 
 namespace cala {
 
@@ -15,6 +16,8 @@ namespace cala {
         MaterialInstance* materialInstance = nullptr;
         ende::math::Vec4f min = { -1, -1, -1 };
         ende::math::Vec4f max = { 1, 1, 1 };
+        LOD lods[MAX_LODS] = {};
+        u32 lodCount = 0;
 
         VkVertexInputBindingDescription _binding = {};
         std::array<vk::Attribute, 4> _attributes = {};

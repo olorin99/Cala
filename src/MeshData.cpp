@@ -69,6 +69,6 @@ cala::Mesh cala::MeshData::mesh(cala::Engine* engine) {
         index += vertexOffset / sizeof(Vertex);
     u32 indexOffset = engine->uploadIndexData(_indices);
 
-    Mesh mesh = {static_cast<u32>(indexOffset / sizeof(u32)), (u32)_indices.size(), 0, 0, nullptr, {}, {}, engine->globalBinding(), engine->globalVertexAttributes()};
+    Mesh mesh = {static_cast<u32>(indexOffset / sizeof(u32)), (u32)_indices.size(), 0, 0, nullptr, {}, {}, {}, 0, engine->globalBinding(), engine->globalVertexAttributes()};
     return std::move(mesh);
 }

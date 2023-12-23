@@ -49,8 +49,9 @@ bool cala::Renderer::beginFrame(cala::vk::Swapchain* swapchain) {
         std::memcpy(&_feedbackInfo, _feedbackBuffer[_engine->device().prevFrameIndex()]->persistentMapping(), sizeof(FeedbackInfo));
         _stats.drawnMeshes = _feedbackInfo.drawnMeshes;
         _stats.drawnMeshlets = _feedbackInfo.drawnMeshlets;
-        _stats.culledMeshes = _feedbackInfo.culledMeshes;
-        _stats.culledMeshlets = _feedbackInfo.culledMeshlets;
+        _stats.culledMeshes = _feedbackInfo.totalMeshes - _feedbackInfo.drawnMeshes;
+        _stats.culledMeshlets = _feedbackInfo.totalMeshlets - _feedbackInfo.drawnMeshlets;
+        _stats.drawnTriangles = _feedbackInfo.drawnTriangles;
         std::memset(_feedbackBuffer[_engine->device().prevFrameIndex()]->persistentMapping(), 0, sizeof(FeedbackInfo));
     }
 
@@ -153,11 +154,14 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
         }
         {
             BufferResource drawCommandsResource;
-            drawCommandsResource.size = scene.meshCount() * sizeof(VkDrawIndexedIndirectCommand);
-            drawCommandsResource.usage = vk::BufferUsage::INDIRECT;
+            drawCommandsResource.size = scene.meshCount() * sizeof(MeshTaskCommand);
+            drawCommandsResource.usage = vk::BufferUsage::INDIRECT | vk::BufferUsage::STORAGE;
             _graph.addBufferResource("drawCommands", drawCommandsResource);
 
-            _graph.addBufferResource("shadowDrawCommands", drawCommandsResource);
+            BufferResource shadowDrawCommandsResource;
+            shadowDrawCommandsResource.size = scene.meshCount() * sizeof(VkDrawIndexedIndirectCommand);
+            shadowDrawCommandsResource.usage = vk::BufferUsage::INDIRECT;
+            _graph.addBufferResource("shadowDrawCommands", shadowDrawCommandsResource);
         }
         {
             BufferResource drawCountResource;
@@ -511,13 +515,9 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
                 cmd->bindVertexBuffer(0, _engine->_globalVertexBuffer);
                 cmd->bindIndexBuffer(_engine->_globalIndexBuffer);
 
-//                u32 drawCommandOffset = scene._materialCounts[i].offset * sizeof(VkDrawIndexedIndirectCommand);
-                u32 drawCommandOffset = scene._materialCounts[i].offset * sizeof(u32) * 4;
+                u32 drawCommandOffset = scene._materialCounts[i].offset * sizeof(MeshTaskCommand);
                 u32 countOffset = i * (sizeof(u32) * 2);
-//                cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
-//                cmd->drawMeshTasks(scene.meshCount(), 1, 1);
-//                cmd->drawMeshTasksWorkGroups(scene.meshCount(), 1, 1);
-                cmd->drawMeshTasksIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset, sizeof(u32) * 4);
+                cmd->drawMeshTasksIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset, sizeof(MeshTaskCommand));
             }
         });
     }

@@ -450,9 +450,9 @@ void debugMeshletPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scen
             cmd->bindPipeline();
             cmd->bindDescriptors();
 
-            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(u32) * 4;
+            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(MeshTaskCommand);
             u32 countOffset = material * (sizeof(u32) * 2);
-            cmd->drawMeshTasksIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset, sizeof(u32) * 4);
+            cmd->drawMeshTasksIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset, sizeof(MeshTaskCommand));
         }
     });
 }

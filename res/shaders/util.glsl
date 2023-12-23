@@ -19,6 +19,11 @@ uint getTileIndex(vec3 position, uvec4 tileSizes, uvec2 screenSize, float near, 
     return tileIndex;
 }
 
+float random(float seed) {
+    float noise = fract(sin(dot(vec2(seed), vec2(12.9898,78.233)*2.0)) * 43758.5453);
+    return abs(noise.x) * 0.5;
+}
+
 float random(vec2 uv) {
     vec2 noise = (fract(vec2(sin(dot(uv, vec2(12.9898,78.233)*2.0)) * 43758.5453)));
     return abs(noise.x + noise.y) * 0.5;

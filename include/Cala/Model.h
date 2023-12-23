@@ -19,6 +19,11 @@ namespace cala {
             ende::math::Vec3f max;
         };
 
+        struct LOD {
+            u32 meshletOffset;
+            u32 meshletCount;
+        };
+
         struct Primitive {
             u32 firstIndex;
             u32 indexCount;
@@ -26,6 +31,8 @@ namespace cala {
             u32 meshletCount;
             i32 materialIndex;
             AABB aabb;
+            LOD lods[10];
+            u32 lodCount;
         };
 
         struct Node {

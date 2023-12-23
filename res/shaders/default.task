@@ -8,14 +8,7 @@ struct TaskPayload {
 };
 taskPayloadSharedEXT TaskPayload payload;
 
-struct MeshTaskCommand {
-    uint x;
-    uint y;
-    uint z;
-    uint meshID;
-};
-
-layout (set = 1, binding = 1) readonly buffer DrawCommands {
+layout (scalar, set = 1, binding = 1) readonly buffer DrawCommands {
     MeshTaskCommand commands[];
 };
 
@@ -35,19 +28,22 @@ bool coneCull(Meshlet meshlet, vec3 cameraPos) {
 }
 
 void main() {
-    uint meshletIndex = gl_GlobalInvocationID.x;
+    uint threadIndex = gl_GlobalInvocationID.x;
     uint meshIndex = commands[gl_DrawID].meshID;
-    //TODO: meshlet culling
 
     GPUMesh mesh = globalData.meshBuffer.meshData[meshIndex];
     GPUCamera camera = globalData.cameraBuffer.camera;
 
+    LOD lod = mesh.lods[commands[gl_DrawID].meshLOD];
+    uint meshletIndex = lod.meshletOffset + threadIndex;
+
     bool visible = false;
-    if (meshletIndex < mesh.meshletCount) {
-        Meshlet meshlet = globalData.meshletBuffer.meshlets[mesh.meshletIndex + meshletIndex];
+    if (threadIndex < lod.meshletCount) {
+        Meshlet meshlet = globalData.meshletBuffer.meshlets[meshletIndex];
         vec3 center = (globalData.transformsBuffer.transforms[meshIndex] * vec4(meshlet.center, 1.0)).xyz;
         visible = frustumCheck(center, meshlet.radius);
 //        visible = visible && !coneCull(meshlet, camera.position);
+        atomicAdd(globalData.feedbackBuffer.feedback.totalMeshlets, 1);
     }
     uvec4 vote = subgroupBallot(visible);
     uint visibleCount = subgroupBallotBitCount(vote);
@@ -55,8 +51,6 @@ void main() {
         uint index = subgroupBallotExclusiveBitCount(vote);
         payload.offset[index] = meshletIndex;
         atomicAdd(globalData.feedbackBuffer.feedback.drawnMeshlets, 1);
-    } else {
-        atomicAdd(globalData.feedbackBuffer.feedback.culledMeshlets, 1);
     }
     payload.meshIndex = meshIndex;
 

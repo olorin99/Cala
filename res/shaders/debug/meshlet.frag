@@ -10,6 +10,7 @@ layout (location = 0) in VsOut {
 
 layout (location = 0) out vec4 FragColour;
 
+#include "util.glsl"
 
 vec3 hue2rgb(float hue) {
     hue = fract(hue);
@@ -20,6 +21,7 @@ vec3 hue2rgb(float hue) {
 }
 
 void main() {
+//    vec3 colour = vec3(random(float(fsIn.meshletID)), random(float(fsIn.meshletID) * 2), random(float(fsIn.meshletID) / 2));
     vec3 colour = hue2rgb(fsIn.meshletID * 1.71f);
     FragColour = vec4(colour, 1.0);
 }

@@ -11,14 +11,7 @@ struct IndexedIndirectCommand {
     uint firstInstance;
 };
 
-struct MeshTaskCommand {
-    uint x;
-    uint y;
-    uint z;
-    uint meshID;
-};
-
-layout (set = 2, binding = 0) writeonly buffer DrawCommands {
+layout (scalar, set = 2, binding = 0) writeonly buffer DrawCommands {
     MeshTaskCommand commands[];
 };
 
@@ -42,6 +35,30 @@ bool frustumCheck(vec3 pos, float radius) {
     return true;
 }
 
+uint getLOD(uint lodCount, vec3 aabbMin, vec3 aabbMax) {
+    GPUCamera camera = globalData.cameraBuffer.camera;
+    vec3 pos = camera.position;
+
+    float dx = max(aabbMin.x - pos.x, max(0.0, pos.x - aabbMax.x));
+    float dy = max(aabbMin.y - pos.y, max(0.0, pos.y - aabbMax.y));
+    float dz = max(aabbMin.z - pos.z, max(0.0, pos.z - aabbMax.z));
+    float dist = sqrt(dx * dx + dy * dy + dz + dz);
+
+
+    const float firstLODDist = min(camera.far, 1000) * 0.3;
+    const float maxDist = min(camera.far, 1000) - firstLODDist;
+    const float restLODDist = maxDist / MAX_LODS;
+
+    const uint maxLods = min(lodCount, MAX_LODS);
+
+    for (uint i = 0; i < maxLods; i++) {
+        if (dist < (firstLODDist + restLODDist * i)) {
+            return i;
+        }
+    }
+    return maxLods - 1;
+}
+
 void main() {
     uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x;
     if (idx >= globalData.maxDrawCount)
@@ -62,29 +79,25 @@ void main() {
     center = (globalData.transformsBuffer.transforms[idx] * vec4(center, 1.0)).xyz;
     vec3 halfExtent = (mesh.max.xyz - mesh.min.xyz) * 0.5;
 
+    bool visible = true;
     if (globalData.gpuCulling > 0) {
-        if (frustumCheck(center, length(halfExtent))) {
-            uint a = atomicAdd(counts[mesh.materialID].count, 1);
-            uint offset = counts[mesh.materialID].offset;
-            MeshTaskCommand command;
-            command.x = uint(ceil(mesh.meshletCount / 32.0));
-            command.y = 1;
-            command.z = 1;
-            command.meshID = idx;
-            commands[offset + a] = command;
-            atomicAdd(globalData.feedbackBuffer.feedback.drawnMeshes, 1);
-        } else {
-            atomicAdd(globalData.feedbackBuffer.feedback.culledMeshes, 1);
-        }
-    } else {
+        visible = frustumCheck(center, length(halfExtent));
+    }
+    if (visible) {
+        uint lod = getLOD(mesh.lodCount, mesh.min.xyz, mesh.max.xyz);
+        uint meshletCount = mesh.lods[lod].meshletCount;
+
         uint a = atomicAdd(counts[mesh.materialID].count, 1);
         uint offset = counts[mesh.materialID].offset;
+
         MeshTaskCommand command;
-        command.x = 1;
+        command.x = uint(ceil(meshletCount / 64.0));
         command.y = 1;
         command.z = 1;
         command.meshID = idx;
+        command.meshLOD = lod;
         commands[offset + a] = command;
         atomicAdd(globalData.feedbackBuffer.feedback.drawnMeshes, 1);
     }
+    atomicAdd(globalData.feedbackBuffer.feedback.totalMeshes, 1);
 }

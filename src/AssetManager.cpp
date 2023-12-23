@@ -624,6 +624,81 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
                 });
             }
 
+            struct MeshletLOD {
+                std::vector<u32> indices;
+                std::vector<Meshlet> meshlets;
+                std::vector<u32> meshletIndices;
+                std::vector<u8> primitives;
+            };
+
+            const auto generateMeshletLOD = [](const std::vector<Vertex>& vertices, const std::vector<u32>& indices, u32 vertexOffset, u32 indexOffset, u32 primitiveOffset, f32 threshold, f32 error) -> std::optional<MeshletLOD> {
+                const u32 maxVertices = 64;
+                const u32 maxTriangles = 64;
+                const f32 coneWeight = 0.f;
+
+                std::vector<u32> lodIndices = indices;
+                if (threshold < 1.f) {
+                    if (indices.size() < 1024)
+                        return {};
+                    lodIndices.clear();
+                    lodIndices.resize(indices.size());
+                    const u32 targetIndexCount = indices.size() * threshold;
+                    f32 lodError = 0.f;
+                    u32 lodIndexCount = meshopt_simplify(&lodIndices[0], indices.data(), indices.size(), (f32*)vertices.data(), vertices.size(), sizeof(Vertex), targetIndexCount, error, 0, &lodError);
+//                    u32 lodIndexCount = meshopt_simplifySloppy(&lodIndices[0], indices.data(), indices.size(), (f32*)vertices.data(), vertices.size(), sizeof(Vertex), targetIndexCount, error, &lodError);
+                    if (indices.size() == lodIndexCount)
+                        return {};
+                    lodIndices.resize(lodIndexCount);
+//                    meshopt_optimizeVertexCache(lodIndices.data(), lodIndices.data(), lodIndices.size(), vertices.size());
+                }
+
+                u32 maxMeshlets = meshopt_buildMeshletsBound(lodIndices.size(), maxVertices, maxTriangles);
+                std::vector<meshopt_Meshlet> meshMeshlets(maxMeshlets);
+                std::vector<u32> meshletVertices(maxMeshlets * maxVertices);
+                std::vector<u8> meshletTriangles(maxMeshlets * maxTriangles * 3);
+
+                u32 meshletCount = meshopt_buildMeshlets(meshMeshlets.data(), meshletVertices.data(), meshletTriangles.data(), lodIndices.data(), lodIndices.size(), (f32*)vertices.data(), vertices.size(), sizeof(Vertex), maxVertices, maxTriangles, coneWeight);
+
+                auto& lastMeshlet = meshMeshlets[meshletCount - 1];
+                meshletVertices.resize(lastMeshlet.vertex_offset + lastMeshlet.vertex_count);
+                meshletTriangles.resize(lastMeshlet.triangle_offset + ((lastMeshlet.triangle_count * 3 + 3) & ~3));
+                meshMeshlets.resize(meshletCount);
+
+                std::vector<Meshlet> meshletsMesh;
+                meshletsMesh.reserve(meshletCount);
+
+                for (u32 i = 0; i < meshMeshlets.size(); i++) {
+                    auto& meshlet = meshMeshlets[i];
+                    meshopt_Bounds bounds = meshopt_computeMeshletBounds(&meshletVertices[meshlet.vertex_offset], &meshletTriangles[meshlet.triangle_offset], meshlet.triangle_count, (f32*)vertices.data(), vertices.size(), sizeof(Vertex));
+
+                    ende::math::Vec3f center{ bounds.center[0], bounds.center[1], bounds.center[2] };
+                    f32 radius = bounds.radius;
+                    ende::math::Vec3f coneApex{ bounds.cone_apex[0], bounds.cone_apex[1], bounds.cone_apex[2] };
+                    ende::math::Vec3f coneAxis{ bounds.cone_axis[0], bounds.cone_axis[1], bounds.cone_axis[2] };
+                    f32 coneCutoff = bounds.cone_cutoff;
+
+                    meshletsMesh.push_back({
+                        vertexOffset,
+                        meshlet.vertex_offset + indexOffset,
+                        meshlet.vertex_count,
+                        meshlet.triangle_offset + primitiveOffset,
+                        meshlet.triangle_count,
+                        center,
+                        radius,
+                        coneApex,
+                        coneAxis,
+                        coneCutoff
+                    });
+                }
+
+                return MeshletLOD{
+                    lodIndices,
+                    meshletsMesh,
+                    meshletVertices,
+                    meshletTriangles
+                };
+            };
+
             std::vector<unsigned int> remap(indexCount);
             size_t vertexCount = meshopt_generateVertexRemap(&remap[0], &meshIndices[0], indexCount, &meshVertices[0], meshVertices.size(), sizeof(Vertex));
 
@@ -637,53 +712,37 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             meshopt_optimizeOverdraw(&optimisedIndices[0], &optimisedIndices[0], indexCount, (f32*)&optimisedVertices[0], vertexCount, sizeof(Vertex), 1.05f);
             meshopt_optimizeVertexFetch(&optimisedVertices[0], &optimisedIndices[0], indexCount, &optimisedVertices[0], vertexCount, sizeof(Vertex));
 
+            auto lod0 = generateMeshletLOD(optimisedVertices, optimisedIndices, firstVertex, firstMeshletIndex, firstPrimitive, 1, 1e-2f).value();
 
-            const u32 maxVertices = 64;
-            const u32 maxTriangles = 64;
-            const f32 coneWeight = 0.f;
+            meshlets.insert(meshlets.end(), lod0.meshlets.begin(), lod0.meshlets.end());
+            meshletIndices.insert(meshletIndices.end(), lod0.meshletIndices.begin(), lod0.meshletIndices.end());
+            primitives.insert(primitives.end(), lod0.primitives.begin(), lod0.primitives.end());
 
-            u32 maxMeshlets = meshopt_buildMeshletsBound(optimisedIndices.size(), maxVertices, maxTriangles);
-            std::vector<meshopt_Meshlet> meshMeshlets(maxMeshlets);
-            std::vector<u32> meshletVertices(maxMeshlets * maxVertices);
-            std::vector<u8> meshletTriangles(maxMeshlets * maxTriangles * 3);
+            std::vector<MeshletLOD> lods;
+            lods.push_back(lod0);
+            u32 vertexOffset = firstVertex;
+            u32 indexOffset = firstMeshletIndex + lod0.meshletIndices.size();
+            u32 primitiveOffset = firstPrimitive + lod0.primitives.size();
 
-            u32 meshletCount = meshopt_buildMeshlets(meshMeshlets.data(), meshletVertices.data(), meshletTriangles.data(), optimisedIndices.data(), optimisedIndices.size(), (f32*)optimisedVertices.data(), optimisedVertices.size(), sizeof(Vertex), maxVertices, maxTriangles, coneWeight);
+            u32 lodCount = 1;
+            for (u32 level = 1 ; level < MAX_LODS; level++) {
+                auto& previousLod = lods.back();
+                auto lodOptional = generateMeshletLOD(optimisedVertices, previousLod.indices, vertexOffset, indexOffset, primitiveOffset, 0.2, 1e-2f);
+                if (!lodOptional)
+                    break;
 
-            auto& lastMeshlet = meshMeshlets[meshletCount - 1];
-            meshletVertices.resize(lastMeshlet.vertex_offset + lastMeshlet.vertex_count);
-            meshletTriangles.resize(lastMeshlet.triangle_offset + ((lastMeshlet.triangle_count * 3 + 3) & ~3));
-            meshMeshlets.resize(meshletCount);
+                auto lod = lodOptional.value();
 
-            std::vector<Meshlet> meshletsMesh;
-            meshletsMesh.reserve(meshletCount);
+                indexOffset += lod.meshletIndices.size();
+                primitiveOffset += lod.primitives.size();
 
-            for (u32 i = 0; i < meshMeshlets.size(); i++) {
-                auto& meshlet = meshMeshlets[i];
-                meshopt_Bounds bounds = meshopt_computeMeshletBounds(&meshletVertices[meshlet.vertex_offset], &meshletTriangles[meshlet.triangle_offset], meshlet.triangle_count, (f32*)optimisedVertices.data(), optimisedVertices.size(), sizeof(Vertex));
+                meshlets.insert(meshlets.end(), lod.meshlets.begin(), lod.meshlets.end());
+                meshletIndices.insert(meshletIndices.end(), lod.meshletIndices.begin(), lod.meshletIndices.end());
+                primitives.insert(primitives.end(), lod.primitives.begin(), lod.primitives.end());
 
-                ende::math::Vec3f center{ bounds.center[0], bounds.center[1], bounds.center[2] };
-                f32 radius = bounds.radius;
-                ende::math::Vec3f coneApex{ bounds.cone_apex[0], bounds.cone_apex[1], bounds.cone_apex[2] };
-                ende::math::Vec3f coneAxis{ bounds.cone_axis[0], bounds.cone_axis[1], bounds.cone_axis[2] };
-                f32 coneCutoff = bounds.cone_cutoff;
-
-                meshletsMesh.push_back({
-                    firstVertex,
-                    meshlet.vertex_offset + firstMeshletIndex,
-                    meshlet.vertex_count,
-                    meshlet.triangle_offset + firstPrimitive,
-                    meshlet.triangle_count,
-                    center,
-                    radius,
-                    coneApex,
-                    coneAxis,
-                    coneCutoff
-                });
+                lods.push_back(lod);
+                lodCount++;
             }
-
-            meshlets.insert(meshlets.end(), meshletsMesh.begin(), meshletsMesh.end());
-            meshletIndices.insert(meshletIndices.end(), meshletVertices.begin(), meshletVertices.end());
-            primitives.insert(primitives.end(), meshletTriangles.begin(), meshletTriangles.end());
 
             for (auto& index : optimisedIndices)
                 index += firstVertex;
@@ -695,10 +754,18 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             mesh.firstIndex = firstIndex;
             mesh.indexCount = indexCount;
             mesh.meshletIndex = firstMeshlet;
-            mesh.meshletCount = meshletCount;
+            mesh.meshletCount = lod0.meshlets.size();
             mesh.materialIndex = primitive.materialIndex.has_value() ? primitive.materialIndex.value() : 0;
             mesh.aabb.min = min;
             mesh.aabb.max = max;
+            mesh.lodCount = lodCount;
+            u32 meshletOffset = firstMeshlet;
+            for (u32 level = 0; level < lodCount && level < MAX_LODS; level++) {
+                auto& lod = lods[level];
+                mesh.lods[level].meshletOffset = meshletOffset;
+                mesh.lods[level].meshletCount = lod.meshlets.size();
+                meshletOffset += lod.meshlets.size();
+            }
             modelNode.primitives.push_back(meshes.size());
             meshes.push_back(mesh);
         }
@@ -735,6 +802,8 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
     u32 meshletOffset = _engine->uploadMeshletData(meshlets);
     for (auto& mesh : meshes) {
         mesh.meshletIndex += meshletOffset / sizeof(Meshlet);
+        for (u32 level = 0; level < mesh.lodCount && level < MAX_LODS; level++)
+            mesh.lods[level].meshletOffset += meshletOffset / sizeof(Meshlet);
     }
 
 //    Model model;

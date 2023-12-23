@@ -24,6 +24,14 @@ using mat3 = ende::math::Mat<3, f32>;
 using mat4 = ende::math::Mat<4, f32>;
 #endif
 
+struct MeshTaskCommand {
+    uint x;
+    uint y;
+    uint z;
+    uint meshID;
+    uint meshLOD;
+};
+
 struct Meshlet {
     uint vertexOffset;
     uint indexOffset;
@@ -50,6 +58,13 @@ layout (scalar, buffer_reference, buffer_reference_align = 8) readonly buffer Pr
 #define PrimitiveBuffer u64
 #endif
 
+#define MAX_LODS 5
+
+struct LOD {
+    uint meshletOffset;
+    uint meshletCount;
+};
+
 struct GPUMesh {
     uint firstIndex;
     uint indexCount;
@@ -61,6 +76,8 @@ struct GPUMesh {
     vec4 max;
     uint enabled;
     uint castShadows;
+    uint lodCount;
+    LOD lods[MAX_LODS];
 };
 
 #ifndef __cplusplus
@@ -173,9 +190,10 @@ layout (scalar, buffer_reference, buffer_reference_align = 8) buffer IndexBuffer
 
 struct FeedbackInfo {
     uint drawnMeshes;
-    uint culledMeshes;
+    uint totalMeshes;
     uint drawnMeshlets;
-    uint culledMeshlets;
+    uint totalMeshlets;
+    uint drawnTriangles;
 };
 
 #ifndef __cplusplus
