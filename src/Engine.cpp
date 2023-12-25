@@ -1012,46 +1012,54 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
             if (eval.second)
                 includedFiles.push_back(eval.first);
 
+            return loadProgram(name, {
+                { "shaders/visibility_buffer/visibility_material.comp", vk::ShaderStage::COMPUTE, {
+                    { "MATERIAL_DATA", materialData.second ? "" : materialData.first },
+                    { "MATERIAL_DEFINITION", materialDefinition.second ? "" : materialDefinition.first },
+                    { "MATERIAL_LOAD", materialLoad.second ? "" : materialLoad.first },
+                    { "MATERIAL_EVAL", eval.second ? "" : eval.first },
+                }, includedFiles }
+            });
 
 
-            if (_device->context().getEnabledFeatures().meshShading) {
-                return loadProgram(name, {
-                        { "shaders/default.task", vk::ShaderStage::TASK },
-                        { "shaders/default.mesh", vk::ShaderStage::MESH },
-                        { "shaders/default/default.frag", vk::ShaderStage::FRAGMENT, {
-                            { "MATERIAL_DATA", materialData.second ? "" : materialData.first },
-                            { "MATERIAL_DEFINITION", materialDefinition.second ? "" : materialDefinition.first },
-                            { "MATERIAL_LOAD", materialLoad.second ? "" : materialLoad.first },
-                            { "MATERIAL_EVAL", eval.second ? "" : eval.first },
-                        }, includedFiles }
-                });
-            } else {
-                return loadProgram(name, {
-                        { "shaders/default.vert", vk::ShaderStage::VERTEX },
-                        { "shaders/default/default.frag", vk::ShaderStage::FRAGMENT, {
-                            { "MATERIAL_DATA", materialData.second ? "" : materialData.first },
-                            { "MATERIAL_DEFINITION", materialDefinition.second ? "" : materialDefinition.first },
-                            { "MATERIAL_LOAD", materialLoad.second ? "" : materialLoad.first },
-                            { "MATERIAL_EVAL", eval.second ? "" : eval.first },
-                        }, includedFiles }
-                });
-            }
+//            if (_device->context().getEnabledFeatures().meshShading) {
+//                return loadProgram(name, {
+//                        { "shaders/default.task", vk::ShaderStage::TASK },
+//                        { "shaders/default.mesh", vk::ShaderStage::MESH },
+//                        { "shaders/default/default.frag", vk::ShaderStage::FRAGMENT, {
+//                            { "MATERIAL_DATA", materialData.second ? "" : materialData.first },
+//                            { "MATERIAL_DEFINITION", materialDefinition.second ? "" : materialDefinition.first },
+//                            { "MATERIAL_LOAD", materialLoad.second ? "" : materialLoad.first },
+//                            { "MATERIAL_EVAL", eval.second ? "" : eval.first },
+//                        }, includedFiles }
+//                });
+//            } else {
+//                return loadProgram(name, {
+//                        { "shaders/default.vert", vk::ShaderStage::VERTEX },
+//                        { "shaders/default/default.frag", vk::ShaderStage::FRAGMENT, {
+//                            { "MATERIAL_DATA", materialData.second ? "" : materialData.first },
+//                            { "MATERIAL_DEFINITION", materialDefinition.second ? "" : materialDefinition.first },
+//                            { "MATERIAL_LOAD", materialLoad.second ? "" : materialLoad.first },
+//                            { "MATERIAL_EVAL", eval.second ? "" : eval.first },
+//                        }, includedFiles }
+//                });
+//            }
         };
 
         vk::ShaderProgram litHandle = addVariant(std::format("{}##lit", path.filename().string()), litEval);
         material->setVariant(Material::Variant::LIT, std::move(litHandle));
 
-        vk::ShaderProgram unlitHandle = addVariant(std::format("{}##unlit", path.filename().string()), unlitEval);
-        material->setVariant(Material::Variant::UNLIT, std::move(unlitHandle));
-
-        vk::ShaderProgram normalsHandle = addVariant(std::format("{}##normal", path.filename().string()), normalEval);
-        material->setVariant(Material::Variant::NORMAL, std::move(normalsHandle));
-
-        vk::ShaderProgram metallicHandle = addVariant(std::format("{}##metallic", path.filename().string()), metallicEval);
-        material->setVariant(Material::Variant::METALLIC, std::move(metallicHandle));
-
-        vk::ShaderProgram roughnessHandle = addVariant(std::format("{}##roughness", path.filename().string()), roughnessEval);
-        material->setVariant(Material::Variant::ROUGHNESS, std::move(roughnessHandle));
+//        vk::ShaderProgram unlitHandle = addVariant(std::format("{}##unlit", path.filename().string()), unlitEval);
+//        material->setVariant(Material::Variant::UNLIT, std::move(unlitHandle));
+//
+//        vk::ShaderProgram normalsHandle = addVariant(std::format("{}##normal", path.filename().string()), normalEval);
+//        material->setVariant(Material::Variant::NORMAL, std::move(normalsHandle));
+//
+//        vk::ShaderProgram metallicHandle = addVariant(std::format("{}##metallic", path.filename().string()), metallicEval);
+//        material->setVariant(Material::Variant::METALLIC, std::move(metallicHandle));
+//
+//        vk::ShaderProgram roughnessHandle = addVariant(std::format("{}##roughness", path.filename().string()), roughnessEval);
+//        material->setVariant(Material::Variant::ROUGHNESS, std::move(roughnessHandle));
 
         material->build();
 

@@ -4,8 +4,8 @@
 //#define sizeof(Type) (uint64_t(Type(uint64_t(0))+1))
 #include "util.glsl"
 
-vec4 pointLight(GPULight light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 albedo, float roughness, float metallic) {
-    vec3 lightVec = light.position - fsIn.FragPos;
+vec4 pointLight(GPULight light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 albedo, float roughness, float metallic, vec3 worldPos) {
+    vec3 lightVec = light.position - worldPos;
     vec3 L = normalize(lightVec);
     float NdotL = max(dot(normal, L), 0.0);
 
@@ -13,7 +13,7 @@ vec4 pointLight(GPULight light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3
 
     if (light.shadowIndex >= 0) {
         float bias = max(light.shadowBias * (1.0 - dot(normal, L)), 0.0001);
-        shadow = filterPCF(light.shadowIndex, light.position, bias, light.shadowRange);
+        shadow = filterPCF(light.shadowIndex, worldPos, light.position, bias, light.shadowRange);
     }
 
     if (shadow == 0)
@@ -43,18 +43,18 @@ vec4 pointLight(GPULight light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3
     return vec4((kD * albedo / PI + specular) * radiance * NdotL * shadow, 1.0);
 }
 
-vec4 directionalLight(GPULight light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 albedo, float roughness, float metallic) {
+vec4 directionalLight(GPULight light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0, vec3 albedo, float roughness, float metallic, float depth, vec3 worldPos) {
     vec3 L = normalize(light.position);
     float NdotL = max(dot(normal, L), 0.0);
 
     float shadow = 1.0;
 
     if (light.shadowIndex >= 0) {
-        float depthValue = linearDepth(gl_FragCoord.z, globalData.cameraBuffer[globalData.primaryCameraIndex].camera.near, globalData.cameraBuffer[globalData.primaryCameraIndex].camera.far);
+        float depthValue = linearDepth(depth, globalData.cameraBuffer[globalData.primaryCameraIndex].camera.near, globalData.cameraBuffer[globalData.primaryCameraIndex].camera.far);
 
         for (int cascadeIndex = 0; cascadeIndex < light.cascadeCount; cascadeIndex++) {
             GPUCamera shadowCamera = globalData.cameraBuffer[light.cameraIndex + cascadeIndex].camera;
-            vec4 shadowPos = shadowCamera.projection * shadowCamera.view * vec4(fsIn.FragPos, 1.0);
+            vec4 shadowPos = shadowCamera.projection * shadowCamera.view * vec4(worldPos, 1.0);
             vec3 shadowCoords = vec3(shadowPos.xy * 0.5 + 0.5, shadowPos.z);
             if (depthValue < light.cascades[cascadeIndex].distance &&
                 light.cascades[cascadeIndex].shadowMapIndex >= 0 &&
@@ -81,7 +81,7 @@ vec4 directionalLight(GPULight light, vec3 normal, vec3 viewPos, vec3 V, vec3 F0
                 if (fade > 0 && cascadeIndex < light.cascadeCount - 1) {
                     int fadeCascadeIndex = cascadeIndex + 1;
                     GPUCamera fadeShadowCamera = globalData.cameraBuffer[light.cameraIndex + fadeCascadeIndex].camera;
-                    vec4 fadeShadowPos = fadeShadowCamera.projection * fadeShadowCamera.view * vec4(fsIn.FragPos, 1.0);
+                    vec4 fadeShadowPos = fadeShadowCamera.projection * fadeShadowCamera.view * vec4(worldPos, 1.0);
                     vec3 fadeShadowCoords = vec3(fadeShadowPos.xy * 0.5 + 0.5, fadeShadowPos.z);
 
                     if (depthValue < light.cascades[fadeCascadeIndex].distance &&

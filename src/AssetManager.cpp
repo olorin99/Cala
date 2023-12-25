@@ -314,6 +314,7 @@ cala::vk::ImageHandle cala::AssetManager::loadImage(const std::string &name, con
         f32* hdrData = stbi_loadf(filePath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
         data = reinterpret_cast<u8*>(hdrData);
     } else {
+        stbi_set_flip_vertically_on_load(false);
         data = stbi_load(filePath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
     }
     if (!data) {

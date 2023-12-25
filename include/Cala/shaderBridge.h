@@ -235,6 +235,8 @@ struct GlobalData {
     TransformsBuffer transformsBuffer;
     CameraBuffer cameraBuffer;
     LightBuffer lightBuffer;
+    LightGridBuffer lightGridBuffer;
+    LightIndicesBuffer lightIndicesBuffer;
     FeedbackBuffer feedbackBuffer;
 };
 

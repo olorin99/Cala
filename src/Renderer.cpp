@@ -501,13 +501,26 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
 
         if (!fullscreenDebug) {
             auto& visibilityMaterialPass = _graph.addPass("visibility_material_pass", RenderPass::Type::COMPUTE);
-            if (_renderSettings.tonemap)
-                visibilityMaterialPass.addColourWrite("hdr");
-            else
-                visibilityMaterialPass.addColourWrite("backbuffer");
+            if (_renderSettings.tonemap) {
+                visibilityMaterialPass.addStorageImageWrite("hdr", vk::PipelineStage::COMPUTE_SHADER);
+            }
+            else {
+                visibilityMaterialPass.addStorageImageWrite("backbuffer", vk::PipelineStage::COMPUTE_SHADER);
+            }
+
+            visibilityMaterialPass.addStorageImageRead("visibility", vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addSampledImageRead("depth", vk::PipelineStage::COMPUTE_SHADER);
+
+            visibilityMaterialPass.addSampledImageRead("pointDepth", vk::PipelineStage::COMPUTE_SHADER);
 
             visibilityMaterialPass.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
-            visibilityMaterialPass.addStorageImageRead("visibility", vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addStorageBufferRead("vertexBuffer", vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addStorageBufferRead("indexBuffer", vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addStorageBufferRead("meshData", vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addStorageBufferRead("lightIndices", vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addStorageBufferRead("lightGrid", vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addStorageBufferRead("lights", vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addStorageBufferRead("camera", vk::PipelineStage::COMPUTE_SHADER);
 
             visibilityMaterialPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
                 auto global = graph.getBuffer("global");
@@ -517,25 +530,36 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
                     image = graph.getImage("hdr");
                 else
                     image = graph.getImage("backbuffer");
+                auto depth = graph.getImage("depth");
 
                 cmd->clearDescriptors();
                 cmd->bindBuffer(1, 0, global);
 
-                cmd->bindProgram(_engine->getProgram(Engine::ProgramType::DEBUG_MESHLETS));
+                for (u32 i = 0; i < scene._materialCounts.size(); i++) {
+                    Material* material = &_engine->_materials[i];
+                    if (!material)
+                        continue;
+                    cmd->bindProgram(material->getVariant(Material::Variant::LIT));
 
-                struct Push {
-                    i32 visibilityImageIndex;
-                    u32 backbufferIndex;
-                } push;
-                push.visibilityImageIndex = visibilityImage.index();
-                push.backbufferIndex = image.index();
+                    cmd->bindBuffer(CALA_MATERIAL_SET, CALA_MATERIAL_BINDING, material->buffer(), true);
 
-                cmd->pushConstants(vk::ShaderStage::COMPUTE, push);
+                    struct Push {
+                        i32 visibilityImageIndex;
+                        i32 backbufferIndex;
+                        i32 depthIndex;
+                    } push;
+                    push.visibilityImageIndex = visibilityImage.index();
+                    push.backbufferIndex = image.index();
+                    push.depthIndex = depth.index();
 
-                cmd->bindPipeline();
-                cmd->bindDescriptors();
+                    cmd->pushConstants(vk::ShaderStage::COMPUTE, push);
 
-                cmd->dispatch(image->width(), image->height(), 1);
+                    cmd->bindPipeline();
+                    cmd->bindDescriptors();
+
+                    cmd->dispatch(image->width(), image->height(), 1);
+                }
+
             });
         }
     }
@@ -1020,6 +1044,8 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     _globalData.transformsBuffer = scene._meshTransformsBuffer[_engine->device().frameIndex()]->address();
     _globalData.cameraBuffer = scene._cameraBuffer[_engine->device().frameIndex()]->address();
     _globalData.lightBuffer = scene._lightBuffer[_engine->device().frameIndex()]->address();
+    _globalData.lightGridBuffer = _graph.getBuffer("lightGrid")->address();
+    _globalData.lightIndicesBuffer = _graph.getBuffer("lightIndices")->address();
     _globalData.feedbackBuffer = _feedbackBuffer[_engine->device().frameIndex()]->address();
 
     _engine->stageData(_globalDataBuffer[_engine->device().frameIndex()], _globalData);

@@ -3,7 +3,7 @@
 #include "shadow.glsl"
 #include "lighting.glsl"
 
-vec4 evalMaterial(Material material) {
+vec4 evalMaterial(Material material, InterpolatedValues values) {
 //    float opacity = material.albedo.a;
 //    int x = int(gl_FragCoord.x) % 4;
 //    int y = int(gl_FragCoord.y) % 4;
@@ -33,27 +33,27 @@ vec4 evalMaterial(Material material) {
 
     GPUCamera camera = globalData.cameraBuffer[globalData.primaryCameraIndex].camera;
 
-    vec3 viewPos = fsIn.ViewPos;
-    vec3 V = normalize(viewPos - fsIn.FragPos);
+    vec3 viewPos = camera.position;
+    vec3 V = normalize(viewPos - values.worldPosition);
 
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, material.albedo.rgb, material.metallic);
     vec4 Lo = vec4(0.0);
 
     uint maxTileCount = globalData.tileSizes.x * globalData.tileSizes.y * globalData.tileSizes.z - 1;
-    uint tileIndex = getTileIndex(gl_FragCoord.xyz, globalData.tileSizes, globalData.swapchainSize, camera.near, camera.far);
+    uint tileIndex = getTileIndex(vec3(values.screenPosition, values.depth), globalData.tileSizes, globalData.swapchainSize, camera.near, camera.far);
 
-    LightGrid grid = lightGridBuffer.lightGrid[min(tileIndex, maxTileCount)];
+    LightGrid grid = globalData.lightGridBuffer.lightGrid[min(tileIndex, maxTileCount)];
 
     for (uint i = 0; i < grid.count; i++) {
-        uint lightIndex = lightIndicesBuffer.lightIndices[grid.offset + i];
+        uint lightIndex = globalData.lightIndicesBuffer.lightIndices[grid.offset + i];
         GPULight light = globalData.lightBuffer.lights[lightIndex];
         switch (light.type) {
             case 0:
-                Lo += directionalLight(light, material.normal, viewPos, V, F0, material.albedo.rgb, material.roughness, material.metallic);
+                Lo += directionalLight(light, material.normal, viewPos, V, F0, material.albedo.rgb, material.roughness, material.metallic, values.depth, values.worldPosition);
                 break;
             case 1:
-                Lo += pointLight(light, material.normal, viewPos, V, F0, material.albedo.rgb, material.roughness, material.metallic);
+                Lo += pointLight(light, material.normal, viewPos, V, F0, material.albedo.rgb, material.roughness, material.metallic, values.worldPosition);
                 break;
         }
     }

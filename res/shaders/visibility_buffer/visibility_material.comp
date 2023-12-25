@@ -1,0 +1,165 @@
+
+layout (local_size_x = LOCAL_SIZE_X, local_size_y = LOCAL_SIZE_Y, local_size_z = 1) in;
+
+#include "shaderBridge.h"
+#include "bindings.glsl"
+#include "visibility_buffer/visibility.glsl"
+
+layout (rg32ui, set = 0, binding = CALA_BINDLESS_STORAGE_IMAGE) uniform readonly uimage2D calaBindlessStorageImages2Dreadonlyrg32ui[];
+CALA_USE_STORAGE_IMAGE(2D, writeonly);
+
+layout (push_constant) uniform PushData {
+    int visibilityImageIndex;
+    int backbufferIndex;
+    int depthIndex;
+};
+
+uint[3] loadIndices(Meshlet meshlet, uint primitiveID) {
+    uint vertexOffset = meshlet.vertexOffset;
+    uint indexOffset = meshlet.indexOffset;
+    uint primitiveOffset = meshlet.primitiveOffset;
+
+    uint[] primitiveIDs = uint[](
+        globalData.primitiveBuffer.primitives[primitiveOffset + primitiveID * 3 + 0],
+        globalData.primitiveBuffer.primitives[primitiveOffset + primitiveID * 3 + 1],
+        globalData.primitiveBuffer.primitives[primitiveOffset + primitiveID * 3 + 2]
+    );
+
+    return uint[3](
+        globalData.meshletIndexBuffer.indices[indexOffset + primitiveIDs[0]] + vertexOffset,
+        globalData.meshletIndexBuffer.indices[indexOffset + primitiveIDs[1]] + vertexOffset,
+        globalData.meshletIndexBuffer.indices[indexOffset + primitiveIDs[2]] + vertexOffset
+    );
+}
+
+Vertex[3] loadVertices(uint[3] indices) {
+    return Vertex[3](
+        globalData.vertexBuffer.vertices[indices[0]],
+        globalData.vertexBuffer.vertices[indices[1]],
+        globalData.vertexBuffer.vertices[indices[2]]
+    );
+}
+
+MATERIAL_DATA;
+
+MATERIAL_DEFINITION;
+
+MATERIAL_LOAD;
+
+MATERIAL_EVAL;
+
+INCLUDES_GO_HERE;
+
+layout (set = CALA_MATERIAL_SET, binding = CALA_MATERIAL_BINDING) readonly buffer MatData {
+    MaterialData materials[];
+};
+
+void main() {
+
+    ivec2 globCoords = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 outputSize = imageSize(CALA_GET_STORAGE_IMAGE2D(writeonly, backbufferIndex));
+    vec2 texCoords = (vec2(globCoords) + 0.5) / outputSize;
+    if (any(greaterThanEqual(globCoords, outputSize)))
+        return;
+
+    ivec2 inputSize = imageSize(calaBindlessStorageImages2Dreadonlyrg32ui[visibilityImageIndex]);
+
+    uvec2 data = imageLoad(calaBindlessStorageImages2Dreadonlyrg32ui[visibilityImageIndex], globCoords).rg;
+    uint visibility = data.x;
+    uint drawID = data.y;
+
+    uint meshletID = getMeshletID(visibility);
+    uint primitiveID = getPrimitiveID(visibility);
+
+    GPUMesh mesh = globalData.meshBuffer.meshData[drawID];
+    Meshlet meshlet = globalData.meshletBuffer.meshlets[meshletID];
+
+    uint[] indices = loadIndices(meshlet, primitiveID);
+    Vertex[] vertices = loadVertices(indices);
+
+    mat4 transform = globalData.transformsBuffer.transforms[drawID];
+    GPUCamera camera = globalData.cameraBuffer[globalData.primaryCameraIndex].camera;
+
+    vec3[] worldPositions = vec3[](
+        (transform * vec4(vertices[0].position, 1.0)).xyz,
+        (transform * vec4(vertices[1].position, 1.0)).xyz,
+        (transform * vec4(vertices[2].position, 1.0)).xyz
+    );
+    vec4[] clipPositions = vec4[](
+        camera.projection * camera.view * vec4(worldPositions[0], 1.0),
+        camera.projection * camera.view * vec4(worldPositions[1], 1.0),
+        camera.projection * camera.view * vec4(worldPositions[2], 1.0)
+    );
+
+    BarycentricDeriv derivitives = calcDerivitives(clipPositions, texCoords * 2 - 1, globalData.swapchainSize);
+    vec3 worldPosition = interpolateVec3(derivitives, worldPositions);
+
+    vec3[] normals = vec3[](
+        vertices[0].normal,
+        vertices[1].normal,
+        vertices[2].normal
+    );
+    vec3 normal = normalize(interpolateVec3(derivitives, normals));
+
+    vec2[] uvs = vec2[](
+        vertices[0].texCoords,
+        vertices[1].texCoords,
+        vertices[2].texCoords
+    );
+    UVGradient uvGrad = calcUVDerivitives(derivitives, uvs);
+
+    mat3 invTransform = mat3(transpose(inverse(transform)));
+    vec3 wNormal = normalize(invTransform * normal);
+    mat3 TBN = mat3(0.0);
+    {
+        const vec3 ddx_position = analyticalDdx(derivitives, worldPositions);
+        const vec3 ddy_position = analyticalDdy(derivitives, worldPositions);
+        const vec2 ddx_uv = uvGrad.ddx;
+        const vec2 ddy_uv = uvGrad.ddy;
+
+        const vec3 N = wNormal;
+        const vec3 T = normalize(ddx_position * ddy_uv.y - ddy_position * ddx_uv.y);
+        const vec3 B = -normalize(cross(N, T));
+        TBN = mat3(T, B, N);
+    }
+
+    float depth = texture(CALA_COMBINED_SAMPLER2D(depthIndex, globalData.shadowSampler), texCoords).r;
+
+    InterpolatedValues values;
+    values.worldPosition = worldPosition;
+    values.screenPosition = vec2(globCoords);
+    values.depth = depth;
+    values.normal = normal;
+    values.uvGrad = uvGrad;
+    values.TBN = TBN;
+
+
+    MaterialData materialData = materials[mesh.materialIndex];
+    Material material = loadMaterial(materialData, values);
+    vec4 colour = evalMaterial(material, values);
+    vec3 result = colour.xyz;
+
+//    vec3 albedo = vec3(0.0);
+//    if (materialData.albedoIndex >= 0)
+//        albedo = texture(CALA_COMBINED_SAMPLER2D(nonuniformEXT(materialData.albedoIndex), globalData.linearRepeatSampler), values.uvGrad.uv).rgb;
+
+//    vec3 result = vec3(values.depth, 0, 0);
+//    vec3 result = vec3(derivitives.ddy);
+//    vec3 result = values.worldPosition;
+//    vec3 result = vec3(normal);
+//    vec3 result = vec3(material.normal);
+//    vec3 result = material.albedo.xyz;
+//    vec3 result = albedo;
+//    vec3 result = material.normal.xyz;
+//    vec3 result = vec3(material.roughness, 0.0, 0.0);
+//    vec3 result = vec3(values.uvGrad.uv, 0.0);
+//    vec3 result = vec3(mesh.materialIndex, 0.0, 0.0);
+//    vec3 result = vec3(materialData.albedoIndex, 0.0, 0.0);
+//    vec3 result = vec3(uvGrad.ddx, 0.0);
+//    vec3 result = vec3(uvGrad.ddy, 0.0);
+//    vec3 result = vec3(meshletID, primitiveID, drawID);
+//    vec3 result = hue2rgb(meshletID * 1.71f);
+//    vec3 result = vec3(values.uvGrad.uv, materialData.albedoIndex);
+
+    imageStore(CALA_GET_STORAGE_IMAGE2D(writeonly, backbufferIndex), globCoords, vec4(result, 1.0));
+}

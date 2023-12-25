@@ -1,6 +1,8 @@
 #ifndef SHADOW_GLSL
 #define SHADOW_GLSL
 
+#include "util.glsl"
+
 CALA_USE_SAMPLED_IMAGE(Cube)
 CALA_USE_SAMPLED_IMAGE(2D)
 
@@ -27,10 +29,10 @@ vec3(1, 0, 1), vec3(-1, 0, 1), vec3(1, 0, -1), vec3(-1, 0, -1),
 vec3(0, 1, 1), vec3(0, -1, 1), vec3(0, -1, -1), vec3(0, 1, -1)
 );
 
-float filterPCF(uint index, vec3 lightPos, float bias, float range) {
+float filterPCF(uint index, vec3 worldPos, vec3 lightPos, float bias, float range) {
     float shadow = 0;
     int samples = 20;
-    vec3 viewDir = fsIn.FragPos - lightPos;
+    vec3 viewDir = worldPos - lightPos;
     float viewDistance = length(viewDir);
     float diskRadius = (1.0 + (viewDistance / 100.f)) / 25.0;
 
