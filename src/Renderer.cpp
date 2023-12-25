@@ -132,6 +132,12 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     {
         // Register resources used by graph
         {
+            ImageResource visibilityAttachment;
+//            visibilityAttachment.format = vk::Format::R64_UINT;
+            visibilityAttachment.format = vk::Format::RG32_UINT;
+            _graph.addImageResource("visibility", visibilityAttachment);
+        }
+        {
             ImageResource colourAttachment;
             colourAttachment.format = vk::Format::RGBA32_SFLOAT;
             _graph.addImageResource("hdr", colourAttachment);
@@ -446,8 +452,98 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
         });
     }
 
-    if (_renderSettings.forward && !fullscreenDebug) {
+    {
+        auto& visibilityPass = _graph.addPass("visibility_pass");
+        visibilityPass.addColourWrite("visibility");
+        visibilityPass.addDepthWrite("depth");
+
+        visibilityPass.addUniformBufferRead("global", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
+        visibilityPass.addStorageBufferRead("camera", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+        visibilityPass.addStorageBufferRead("drawCommands", vk::PipelineStage::TASK_SHADER);
+        visibilityPass.addStorageBufferRead("meshData", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+//        visibilityPass.addStorageBufferRead("meshlets", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+        visibilityPass.addStorageBufferRead("transforms", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+        visibilityPass.addStorageBufferRead("vertexBuffer", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+        visibilityPass.addStorageBufferRead("indexBuffer", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+
+        visibilityPass.addStorageBufferWrite("feedback", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+
+        visibilityPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
+            auto global = graph.getBuffer("global");
+            auto drawCommands = graph.getBuffer("drawCommands");
+            auto materialCounts = graph.getBuffer("materialCounts");
+
+            cmd->clearDescriptors();
+            if (scene.meshCount() == 0)
+                return;
+
+            cmd->bindBuffer(1, 0, global);
+            cmd->bindBuffer(1, 1, drawCommands, true);
+
+            for (u32 i = 0; i < scene._materialCounts.size(); i++) {
+                Material* material = &_engine->_materials[i];
+                if (!material)
+                    continue;
+
+                cmd->bindProgram(_engine->getProgram(Engine::ProgramType::VISIBILITY));
+
+                cmd->bindRasterState(material->getRasterState());
+                cmd->bindDepthState(material->getDepthState());
+
+                cmd->bindPipeline();
+                cmd->bindDescriptors();
+
+                u32 drawCommandOffset = scene._materialCounts[i].offset * sizeof(MeshTaskCommand);
+                u32 countOffset = i * (sizeof(u32) * 2);
+                cmd->drawMeshTasksIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset, sizeof(MeshTaskCommand));
+            }
+        });
+
+        if (!fullscreenDebug) {
+            auto& visibilityMaterialPass = _graph.addPass("visibility_material_pass", RenderPass::Type::COMPUTE);
+            if (_renderSettings.tonemap)
+                visibilityMaterialPass.addColourWrite("hdr");
+            else
+                visibilityMaterialPass.addColourWrite("backbuffer");
+
+            visibilityMaterialPass.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addStorageImageRead("visibility", vk::PipelineStage::COMPUTE_SHADER);
+
+            visibilityMaterialPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
+                auto global = graph.getBuffer("global");
+                auto visibilityImage = graph.getImage("visibility");
+                vk::ImageHandle image;
+                if (_renderSettings.tonemap)
+                    image = graph.getImage("hdr");
+                else
+                    image = graph.getImage("backbuffer");
+
+                cmd->clearDescriptors();
+                cmd->bindBuffer(1, 0, global);
+
+                cmd->bindProgram(_engine->getProgram(Engine::ProgramType::DEBUG_MESHLETS));
+
+                struct Push {
+                    i32 visibilityImageIndex;
+                    u32 backbufferIndex;
+                } push;
+                push.visibilityImageIndex = visibilityImage.index();
+                push.backbufferIndex = image.index();
+
+                cmd->pushConstants(vk::ShaderStage::COMPUTE, push);
+
+                cmd->bindPipeline();
+                cmd->bindDescriptors();
+
+                cmd->dispatch(image->width(), image->height(), 1);
+            });
+        }
+    }
+
+    if (false && _renderSettings.forward && !fullscreenDebug) {
         auto& forwardPass = _graph.addPass("forward");
+        forwardPass.addStorageImageRead("visibility", vk::PipelineStage::FRAGMENT_SHADER);
+
         if (_renderSettings.tonemap)
             forwardPass.addColourWrite("hdr");
         else

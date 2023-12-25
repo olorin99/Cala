@@ -77,13 +77,19 @@ namespace cala::vk {
         RG16_SFLOAT = 83,
 
         RGBA16_SFLOAT = 97,
-
+        R32_UINT = 98,
+        R32_SINT = 99,
         R32_SFLOAT = 100,
+        RG32_UINT = 101,
+        RG32_SINT = 102,
         RG32_SFLOAT = 103,
         RGB32_SFLOAT = 106,
         RGBA32_UINT = 107,
         RGBA32_SINT = 108,
         RGBA32_SFLOAT = 109,
+        R64_UINT = 110,
+        R64_SINT = 111,
+        R64_SFLOAT = 112,
 
         D16_UNORM = 124,
 

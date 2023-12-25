@@ -128,10 +128,18 @@ cala::Engine::Engine(vk::Platform &platform)
             { "shaders/cull_lights.comp", vk::ShaderStage::COMPUTE }
         });
     }
+
+    _visibilityBufferProgram = loadProgram("visibilityProgram", {
+        { "shaders/visibility_buffer/visibility.task", vk::ShaderStage::TASK },
+        { "shaders/visibility_buffer/visibility.mesh", vk::ShaderStage::MESH },
+        { "shaders/visibility_buffer/visibility.frag", vk::ShaderStage::FRAGMENT }
+    });
+
     _meshletDebugProgram = loadProgram("debugMeshletProgram", {
-        { "shaders/default.task", vk::ShaderStage::TASK },
-        { "shaders/default.mesh", vk::ShaderStage::MESH },
-        { "shaders/debug/meshlet.frag", vk::ShaderStage::FRAGMENT }
+        { "shaders/visibility_buffer/debug_meshlets.comp", vk::ShaderStage::COMPUTE },
+//        { "shaders/default.task", vk::ShaderStage::TASK },
+//        { "shaders/default.mesh", vk::ShaderStage::MESH },
+//        { "shaders/debug/meshlet.frag", vk::ShaderStage::FRAGMENT }
     });
     {
         _clusterDebugProgram = loadProgram("clusterDebugProgram", {
@@ -1094,6 +1102,8 @@ const cala::vk::ShaderProgram& cala::Engine::getProgram(cala::Engine::ProgramTyp
             return _cullLightsProgram;
         case ProgramType::CREATE_CLUSTERS:
             return _createClustersProgram;
+        case ProgramType::VISIBILITY:
+            return _visibilityBufferProgram;
         case ProgramType::DEBUG_MESHLETS:
             return _meshletDebugProgram;
         case ProgramType::DEBUG_CLUSTER:
