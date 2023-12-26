@@ -8,6 +8,8 @@ namespace cala::vk {
     class Timer {
     public:
 
+        Timer();
+
         Timer(Device& driver, u32 index = 0);
 
         void start(CommandHandle cmd);
@@ -17,12 +19,13 @@ namespace cala::vk {
         u64 result();
 
     private:
+        friend Device;
 
-        Device* _driver;
+        Device* _driver = nullptr;
 
-        u32 _index;
-        CommandHandle _cmdBuffer;
-        u64 _result;
+        u32 _index = 0;
+        CommandHandle _cmdBuffer = {};
+        u64 _result = 0;
 
     };
 

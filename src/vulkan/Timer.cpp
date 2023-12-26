@@ -3,6 +3,13 @@
 
 static u32 indexCount = 0;
 
+cala::vk::Timer::Timer()
+    : _driver(nullptr),
+    _index(indexCount++),
+    _cmdBuffer{},
+    _result(0)
+{}
+
 cala::vk::Timer::Timer(Device &driver, u32 index)
     : _driver(&driver),
     _index(indexCount++),

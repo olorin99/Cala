@@ -745,6 +745,9 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
                 lodCount++;
             }
 
+//            std::for_each(std::execution::par, optimisedIndices.begin(), optimisedIndices.end(), [firstVertex](auto& index) {
+//                index += firstVertex;
+//            });
             for (auto& index : optimisedIndices)
                 index += firstVertex;
 
@@ -786,21 +789,36 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
 
     std::span<f32> vs(reinterpret_cast<f32*>(vertices.data()), vertices.size() * sizeof(Vertex) / sizeof(f32));
     u32 vertexOffset = _engine->uploadVertexData(vs);
+//    std::for_each(std::execution::par, indices.begin(), indices.end(), [vertexOffset](auto& index) {
+//        index += vertexOffset / sizeof(Vertex);
+//    });
     for (auto& idx : indices)
         idx += vertexOffset / sizeof(Vertex);
     u32 indexOffset = _engine->uploadIndexData(indices);
+//    std::for_each(std::execution::par, meshes.begin(), meshes.end(), [indexOffset](auto& mesh) {
+//        mesh.firstIndex += indexOffset / sizeof(u32);
+//    });
     for (auto& mesh : meshes)
         mesh.firstIndex += indexOffset / sizeof(u32);
 
     u32 meshletIndexOffset = _engine->uploadMeshletIndicesData(meshletIndices);
     u32 primitiveOffset = _engine->uploadPrimitiveData(primitives);
-
+//    std::for_each(std::execution::par, meshlets.begin(), meshlets.end(), [vertexOffset, meshletIndexOffset, primitiveOffset](auto& meshlet) {
+//        meshlet.vertexOffset += vertexOffset / sizeof(Vertex);
+//        meshlet.indexOffset += meshletIndexOffset / sizeof(u32);
+//        meshlet.primitiveOffset += primitiveOffset / sizeof(u8);
+//    });
     for (auto& meshlet : meshlets) {
         meshlet.vertexOffset += vertexOffset / sizeof(Vertex);
         meshlet.indexOffset += meshletIndexOffset / sizeof(u32);
         meshlet.primitiveOffset += primitiveOffset / sizeof(u8);
     }
     u32 meshletOffset = _engine->uploadMeshletData(meshlets);
+//    std::for_each(std::execution::par, meshes.begin(), meshes.end(), [meshletOffset](auto& mesh) {
+//        mesh.meshletIndex += meshletOffset / sizeof(Meshlet);
+//        for (u32 level = 0; level < mesh.lodCount && level < MAX_LODS; level++)
+//            mesh.lods[level].meshletOffset += meshletOffset / sizeof(Meshlet);
+//    });
     for (auto& mesh : meshes) {
         mesh.meshletIndex += meshletOffset / sizeof(Meshlet);
         for (u32 level = 0; level < mesh.lodCount && level < MAX_LODS; level++)

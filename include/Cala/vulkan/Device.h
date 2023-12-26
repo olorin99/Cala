@@ -10,6 +10,7 @@
 #include <Cala/vulkan/Handle.h>
 #include <Ende/time/StopWatch.h>
 #include <spdlog/spdlog.h>
+#include <Cala/vulkan/Timer.h>
 
 namespace cala::ui {
     class ResourceViewer;
@@ -74,9 +75,13 @@ namespace cala::vk {
         std::expected<void, Error> endSingleTimeCommands(CommandHandle buffer);
 
         template <typename F>
-        void immediate(F func, QueueType queueType = QueueType::GRAPHICS) {
+        u64 immediate(F func, QueueType queueType = QueueType::GRAPHICS, bool time = false) {
             auto cmd = beginSingleTimeCommands(queueType);
+            if (time)
+                _immediateTimer.start(cmd);
             func(cmd);
+            if (time)
+                _immediateTimer.stop();
             endSingleTimeCommands(cmd).transform_error([&] (auto error) {
                 switch (error) {
                     case Error::INVALID_COMMAND_BUFFER:
@@ -88,6 +93,9 @@ namespace cala::vk {
                 }
                 return error;
             });
+            if (time)
+                return _immediateTimer.result();
+            return 0;
         }
 
         template<typename F>
@@ -215,6 +223,8 @@ namespace cala::vk {
         u64 _frameCount = 0;
         ende::time::StopWatch _frameClock = {};
         ende::time::Duration _lastFrameTime = 0;
+
+        Timer _immediateTimer = {};
 
         std::vector<std::function<void(CommandHandle)>> _deferredCommands = {};
 

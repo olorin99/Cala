@@ -710,6 +710,7 @@ u32 cala::Engine::flushStagedData() {
     PROFILE_NAMED("Engine::flushStagedData");
     u32 bytesUploaded = 0;
     if (!_pendingStagedBuffer.empty() || !_pendingStagedImage.empty()) {
+        //u64 time = ;
         _device->immediate([&](vk::CommandHandle cmd) {
             for (auto& staged : _pendingStagedBuffer) {
                 VkBufferCopy  bufferCopy{};
@@ -746,10 +747,11 @@ u32 cala::Engine::flushStagedData() {
                 cmd->pipelineBarrier({ &barrier, 1 });
                 bytesUploaded += staged.srcSize;
             }
-        });
+        }, vk::QueueType::GRAPHICS, false);
         _pendingStagedBuffer.clear();
         _pendingStagedImage.clear();
         _stagingOffset = 0;
+//        _logger.info("{} gpu time spend on flush", time);
     }
     _device->increaseDataUploadCount(bytesUploaded);
     return bytesUploaded;

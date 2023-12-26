@@ -45,6 +45,8 @@ std::expected<std::unique_ptr<cala::vk::Device>, cala::vk::Error> cala::vk::Devi
         }
     }
 
+    device->_immediateTimer._driver = device.get();
+
     VkDescriptorPoolSize poolSizes[] = {
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, device->context().getLimits().maxBindlessSampledImages },
             { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, device->context().getLimits().maxBindlessStorageBuffers },
@@ -292,6 +294,7 @@ cala::vk::Device::Device(cala::vk::Device &&rhs) noexcept {
     std::swap(_bytesUploadedToGPUPerFrame, rhs._bytesUploadedToGPUPerFrame);
     std::swap(_totalAllocated, rhs._totalAllocated);
     std::swap(_totalDeallocated, rhs._totalDeallocated);
+    std::swap(_immediateSemaphore, rhs._immediateSemaphore);
 }
 
 cala::vk::Device &cala::vk::Device::operator==(cala::vk::Device &&rhs) noexcept {
@@ -331,6 +334,7 @@ cala::vk::Device &cala::vk::Device::operator==(cala::vk::Device &&rhs) noexcept 
     std::swap(_bytesUploadedToGPUPerFrame, rhs._bytesUploadedToGPUPerFrame);
     std::swap(_totalAllocated, rhs._totalAllocated);
     std::swap(_totalDeallocated, rhs._totalDeallocated);
+    std::swap(_immediateSemaphore, rhs._immediateSemaphore);
     return *this;
 }
 
