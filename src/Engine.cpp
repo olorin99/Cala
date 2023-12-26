@@ -134,6 +134,9 @@ cala::Engine::Engine(vk::Platform &platform)
         { "shaders/visibility_buffer/visibility.mesh", vk::ShaderStage::MESH },
         { "shaders/visibility_buffer/visibility.frag", vk::ShaderStage::FRAGMENT }
     });
+    _visibilityCountProgram = loadProgram("visibilityCountProgram", {
+        { "shaders/visibility_buffer/material_count.comp", vk::ShaderStage::COMPUTE}
+    });
 
     _meshletDebugProgram = loadProgram("debugMeshletProgram", {
         { "shaders/visibility_buffer/debug_meshlets.comp", vk::ShaderStage::COMPUTE },
@@ -1112,6 +1115,8 @@ const cala::vk::ShaderProgram& cala::Engine::getProgram(cala::Engine::ProgramTyp
             return _createClustersProgram;
         case ProgramType::VISIBILITY:
             return _visibilityBufferProgram;
+        case ProgramType::VISIBILITY_COUNT:
+            return _visibilityCountProgram;
         case ProgramType::DEBUG_MESHLETS:
             return _meshletDebugProgram;
         case ProgramType::DEBUG_CLUSTER:

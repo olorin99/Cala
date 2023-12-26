@@ -155,6 +155,7 @@ namespace cala {
             CULL_LIGHTS,
             CREATE_CLUSTERS,
             VISIBILITY,
+            VISIBILITY_COUNT,
             DEBUG_MESHLETS,
             DEBUG_CLUSTER,
             DEBUG_NORMALS,
@@ -222,6 +223,7 @@ namespace cala {
         vk::ShaderProgram _bloomCompositeProgram;
 
         vk::ShaderProgram _visibilityBufferProgram;
+        vk::ShaderProgram _visibilityCountProgram;
 
         vk::ShaderProgram _meshletDebugProgram;
         vk::ShaderProgram _clusterDebugProgram;

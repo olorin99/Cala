@@ -1,0 +1,42 @@
+
+layout (local_size_x = LOCAL_SIZE_X, local_size_y = LOCAL_SIZE_Y, local_size_z = 1) in;
+
+#include "shaderBridge.h"
+#include "bindings.glsl"
+#include "visibility_buffer/visibility.glsl"
+
+layout (rg32ui, set = 0, binding = CALA_BINDLESS_STORAGE_IMAGE) uniform readonly uimage2D calaBindlessStorageImages2Dreadonlyrg32ui[];
+CALA_USE_STORAGE_IMAGE(2D, writeonly);
+
+layout (push_constant) uniform PushData {
+    int visibilityImageIndex;
+    uint materialCounts;
+};
+
+struct MaterialCount {
+    uint count;
+    uint offset;
+};
+
+layout (scalar, set = 1, binding = 1) buffer MaterialCounts {
+    MaterialCount materials[];
+};
+
+void main() {
+
+    ivec2 globCoords = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 inputSize = imageSize(calaBindlessStorageImages2Dreadonlyrg32ui[visibilityImageIndex]);
+    if (any(greaterThanEqual(globCoords, inputSize)))
+        return;
+
+    uvec2 data = imageLoad(calaBindlessStorageImages2Dreadonlyrg32ui[visibilityImageIndex], globCoords).rg;
+    uint visibility = data.x;
+    uint drawID = data.y;
+
+    uint meshletID = getMeshletID(visibility);
+    uint primitiveID = getPrimitiveID(visibility);
+
+    GPUMesh mesh = globalData.meshBuffer.meshData[drawID];
+
+    atomicAdd(materials[mesh.materialID].count, 1);
+}
