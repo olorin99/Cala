@@ -13,7 +13,7 @@ layout (location = 0) out uvec2 VisibilityInfo;
 #include "visibility_buffer/visibility.glsl"
 
 void main() {
-    uint64_t visibility = setMeshletID(fsIn.meshletID);
+    uint visibility = setMeshletID(fsIn.meshletID);
     visibility |= setPrimitiveID(gl_PrimitiveID);
     VisibilityInfo = uvec2(visibility, fsIn.drawID);
 }

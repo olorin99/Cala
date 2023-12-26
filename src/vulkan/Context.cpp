@@ -417,7 +417,12 @@ std::expected<cala::vk::Context, cala::vk::Error> cala::vk::Context::create(cala
 //    createInfo.enabledLayerCount = 1;
 //    createInfo.ppEnabledLayerNames = validationLayers;
 #endif
-    VK_TRY(vkCreateDevice(context._physicalDevice, &createInfo, nullptr, &context._logicalDevice));
+
+    // At time of writing note amdgpu-pro does not support task shaders. It has support for mesh shaders but not task.
+    auto result = vkCreateDevice(context._physicalDevice, &createInfo, nullptr, &context._logicalDevice);
+    if (result != VK_SUCCESS) {
+        return std::unexpected(static_cast<Error>(result));
+    }
 
     volkLoadDevice(context._logicalDevice);
 
