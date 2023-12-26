@@ -140,6 +140,9 @@ cala::Engine::Engine(vk::Platform &platform)
     _visibilityOffsetProgram = loadProgram("visibilityOffsetProgram", {
         { "shaders/visibility_buffer/material_offset.comp", vk::ShaderStage::COMPUTE}
     });
+    _visibilityPositionsProgram = loadProgram("visibilityPositionProgram", {
+            { "shaders/visibility_buffer/pixel_positions.comp", vk::ShaderStage::COMPUTE}
+    });
 
     _meshletDebugProgram = loadProgram("debugMeshletProgram", {
         { "shaders/visibility_buffer/debug_meshlets.comp", vk::ShaderStage::COMPUTE },
@@ -1122,6 +1125,8 @@ const cala::vk::ShaderProgram& cala::Engine::getProgram(cala::Engine::ProgramTyp
             return _visibilityCountProgram;
         case ProgramType::VISIBILITY_OFFSET:
             return _visibilityOffsetProgram;
+        case ProgramType::VISIBILITY_POSITION:
+            return _visibilityPositionsProgram;
         case ProgramType::DEBUG_MESHLETS:
             return _meshletDebugProgram;
         case ProgramType::DEBUG_CLUSTER:

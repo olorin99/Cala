@@ -138,11 +138,11 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     auto materialCountBufferIndex = _graph.addBufferResource("materialCount", visibilityMaterialResource);
 
     BufferResource visibilityPixelPositions;
-    visibilityPixelPositions.size = _swapchain->extent().width * _swapchain->extent().height * sizeof(u32) * 2;
+    visibilityPixelPositions.size = _swapchain->extent().width * _swapchain->extent().height * sizeof(i32) * 2;
     auto pixelPositionsBufferIndex = _graph.addBufferResource("pixelPositions", visibilityPixelPositions);
 
     BufferResource visibilityDispatchCommands;
-    visibilityDispatchCommands.size = _engine->materialCount() * sizeof(DispatchCommand);
+    visibilityDispatchCommands.size = _engine->materialCount() * sizeof(VisibilityDispatchCommand);
     auto visibilityDispatchBufferIndex = _graph.addBufferResource("dispatchCommands", visibilityDispatchCommands);
     {
         // Register resources used by graph
@@ -507,6 +507,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
                 cmd->clearDescriptors();
 
                 cmd->bindBuffer(1, 1, materialCounts, true);
+                cmd->bindBuffer(1, 2, dispatchCommands, true);
                 cmd->bindProgram(_engine->getProgram(Engine::ProgramType::VISIBILITY_OFFSET));
 
                 struct OffsetPush {
@@ -519,6 +520,31 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
                 cmd->bindDescriptors();
 
                 cmd->dispatchWorkgroups(1, 1, 1);
+
+                barrier = materialCounts->barrier(vk::PipelineStage::COMPUTE_SHADER, vk::PipelineStage::COMPUTE_SHADER,
+                                                  vk::Access::SHADER_READ | vk::Access::SHADER_WRITE,
+                                                  vk::Access::SHADER_READ | vk::Access::SHADER_WRITE);
+                cmd->pipelineBarrier({&barrier, 1});
+
+                cmd->clearDescriptors();
+
+                cmd->bindBuffer(1, 0, global);
+                cmd->bindBuffer(1, 1, materialCounts, true);
+                cmd->bindBuffer(1, 2, pixelPositions, true);
+                cmd->bindProgram(_engine->getProgram(Engine::ProgramType::VISIBILITY_POSITION));
+
+                struct PixelPush {
+                    i32 visibilityImageIndex;
+                    u32 materialCount;
+                } pixelPush;
+                pixelPush.visibilityImageIndex = visibilityImage.index();
+                pixelPush.materialCount = scene._materialCounts.size();
+                cmd->pushConstants(vk::ShaderStage::COMPUTE, pixelPush);
+
+                cmd->bindPipeline();
+                cmd->bindDescriptors();
+
+                cmd->dispatch(visibilityImage->width(), visibilityImage->height(), 1);
             });
         }
 

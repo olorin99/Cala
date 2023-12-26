@@ -17,6 +17,10 @@ layout (scalar, set = 1, binding = 1) buffer MaterialCounts {
     MaterialCount materials[];
 };
 
+layout (scalar, set = 1, binding = 2) buffer CommandList {
+    VisibilityDispatchCommand commands[];
+};
+
 shared uint sharedSum[2][gl_WorkGroupSize.x * 2];
 
 void main() {
@@ -29,6 +33,8 @@ void main() {
     sharedSum[0][gl_LocalInvocationIndex + 1] = materials[min(gl_LocalInvocationIndex, materialCounts - 1)].count;
     sharedSum[1][gl_LocalInvocationIndex + 1] = materials[min(gl_LocalInvocationIndex, materialCounts - 1)].count;
 
+    barrier();
+
     uint loopCount = 0;
     for (int i = 1; i < materialCounts; i <<= 1) {
         uint getIndex = loopCount % 2;
@@ -40,5 +46,14 @@ void main() {
         barrier();
     }
 
-    materials[gl_LocalInvocationIndex].offset = sharedSum[loopCount % 2][gl_LocalInvocationIndex];
+    materials[min(gl_LocalInvocationIndex, materialCounts - 1)].offset = sharedSum[loopCount % 2][gl_LocalInvocationIndex];
+
+    VisibilityDispatchCommand command;
+    command.x = uint(ceil(materials[min(gl_LocalInvocationIndex, materialCounts - 1)].count / 32.0));
+    command.y = 1;
+    command.z = 1;
+    command.materialID = min(gl_LocalInvocationIndex, materialCounts - 1);
+    commands[min(gl_LocalInvocationIndex, materialCounts - 1)] = command;
+
+    materials[min(gl_LocalInvocationIndex, materialCounts - 1)].count = 0;
 }
