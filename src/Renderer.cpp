@@ -45,14 +45,14 @@ bool cala::Renderer::beginFrame(cala::vk::Swapchain* swapchain) {
     assert(_swapchain);
     auto beginResult = _engine->device().beginFrame();
 
-    if (_feedbackBuffer[_engine->device().prevFrameIndex()] && _feedbackBuffer[_engine->device().prevFrameIndex()]->persistentlyMapped()) {
-        std::memcpy(&_feedbackInfo, _feedbackBuffer[_engine->device().prevFrameIndex()]->persistentMapping(), sizeof(FeedbackInfo));
+    if (_feedbackBuffer[_engine->device().frameIndex()] && _feedbackBuffer[_engine->device().frameIndex()]->persistentlyMapped()) {
+        std::memcpy(&_feedbackInfo, _feedbackBuffer[_engine->device().frameIndex()]->persistentMapping(), sizeof(FeedbackInfo));
         _stats.drawnMeshes = _feedbackInfo.drawnMeshes;
         _stats.drawnMeshlets = _feedbackInfo.drawnMeshlets;
         _stats.culledMeshes = _feedbackInfo.totalMeshes - _feedbackInfo.drawnMeshes;
         _stats.culledMeshlets = _feedbackInfo.totalMeshlets - _feedbackInfo.drawnMeshlets;
         _stats.drawnTriangles = _feedbackInfo.drawnTriangles;
-        std::memset(_feedbackBuffer[_engine->device().prevFrameIndex()]->persistentMapping(), 0, sizeof(FeedbackInfo));
+        std::memset(_feedbackBuffer[_engine->device().frameIndex()]->persistentMapping(), 0, sizeof(FeedbackInfo));
     }
 
     if (_renderSettings.boundedFrameTime) {
@@ -120,7 +120,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     scene._updateCullingCamera = !_renderSettings.freezeFrustum;
 
     bool overlayDebug = _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugClusters || _renderSettings.debugFrustum || _renderSettings.debugDepth;
-    bool fullscreenDebug = _renderSettings.debugNormals || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugMetallic || _renderSettings.debugRoughness || _renderSettings.debugMeshlets;
+    bool fullscreenDebug = _renderSettings.debugNormals || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugMetallic || _renderSettings.debugRoughness || _renderSettings.debugMeshlets || _renderSettings.debugPrimitives;
     bool debugViewEnabled = overlayDebug || fullscreenDebug;
 
     vk::CommandHandle cmd = _frameInfo.cmd;
@@ -129,6 +129,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
 
     _graph.reset();
 
+    // Register resources used by graph
     ImageResource visibilityAttachment;
     visibilityAttachment.format = vk::Format::RG32_UINT;
     auto visibilityImageIndex = _graph.addImageResource("visibility", visibilityAttachment);
@@ -144,51 +145,35 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     BufferResource visibilityDispatchCommands;
     visibilityDispatchCommands.size = _engine->materialCount() * sizeof(DispatchCommand);
     auto visibilityDispatchBufferIndex = _graph.addBufferResource("dispatchCommands", visibilityDispatchCommands);
-    {
-        // Register resources used by graph
 
-        {
-            ImageResource colourAttachment;
-            colourAttachment.format = vk::Format::RGBA32_SFLOAT;
-            _graph.addImageResource("hdr", colourAttachment);
-        }
-        {
-            ImageResource backbufferAttachment;
-            backbufferAttachment.format = vk::Format::RGBA8_UNORM;
-            _graph.addImageResource("backbuffer", backbufferAttachment);
-            _graph.addAlias("backbuffer", "backbuffer-debug");
-        }
-        {
-            ImageResource depthAttachment;
-            depthAttachment.format = vk::Format::D32_SFLOAT;
-            _graph.addImageResource("depth", depthAttachment);
-        }
-        {
-            BufferResource clustersResource;
-            clustersResource.size = sizeof(ende::math::Vec4f) * 2 * 16 * 9 * 24;
-            _graph.addBufferResource("clusters", clustersResource);
-        }
-        {
-            BufferResource drawCommandsResource;
-            drawCommandsResource.size = scene.meshCount() * sizeof(MeshTaskCommand);
-            drawCommandsResource.usage = vk::BufferUsage::INDIRECT | vk::BufferUsage::STORAGE;
-            _graph.addBufferResource("drawCommands", drawCommandsResource);
+    ImageResource colourAttachment;
+    colourAttachment.format = vk::Format::RGBA32_SFLOAT;
+    auto hdrImageIndex = _graph.addImageResource("hdr", colourAttachment);
 
-//            BufferResource shadowDrawCommandsResource;
-//            shadowDrawCommandsResource.size = scene.meshCount() * sizeof(VkDrawIndexedIndirectCommand);
-//            shadowDrawCommandsResource.usage = vk::BufferUsage::INDIRECT;
-            _graph.addBufferResource("shadowDrawCommands", drawCommandsResource);
-        }
-        {
-            BufferResource drawCountResource;
-            drawCountResource.size = sizeof(u32);
-            drawCountResource.usage = vk::BufferUsage::INDIRECT | vk::BufferUsage::STORAGE;
-            _graph.addBufferResource("drawCount", drawCountResource);
-            _graph.addBufferResource("shadowDrawCount", drawCountResource);
-        }
+    ImageResource backbufferAttachment;
+    backbufferAttachment.format = vk::Format::RGBA8_UNORM;
+    auto backbufferIndex = _graph.addImageResource("backbuffer", backbufferAttachment);
+    _graph.addAlias("backbuffer", "backbuffer-debug");
 
-    }
+    ImageResource depthAttachment;
+    depthAttachment.format = vk::Format::D32_SFLOAT;
+    auto depthIndex = _graph.addImageResource("depth", depthAttachment);
 
+    BufferResource clustersResource;
+    clustersResource.size = sizeof(ende::math::Vec4f) * 2 * 16 * 9 * 24;
+    auto clustersIndex = _graph.addBufferResource("clusters", clustersResource);
+
+    BufferResource drawCommandsResource;
+    drawCommandsResource.size = scene.meshCount() * sizeof(MeshTaskCommand);
+    drawCommandsResource.usage = vk::BufferUsage::INDIRECT | vk::BufferUsage::STORAGE;
+    auto drawCommandsIndex = _graph.addBufferResource("drawCommands", drawCommandsResource);
+    auto shadowDrawCommandsIndex = _graph.addBufferResource("shadowDrawCommands", drawCommandsResource);
+
+    BufferResource drawCountResource;
+    drawCountResource.size = sizeof(u32);
+    drawCountResource.usage = vk::BufferUsage::INDIRECT | vk::BufferUsage::STORAGE;
+    auto drawCountIndex = _graph.addBufferResource("drawCount", drawCountResource);
+    auto shadowDrawCountIndex = _graph.addBufferResource("shadowDrawCount", drawCountResource);
 
 
 //    ImageResource directDepth;
@@ -197,55 +182,45 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
 //    pointDepth.transient = false;
 //    pointDepth.width = 10;
 //    pointDepth.height = 10;
-    {
-        BufferResource globalResource;
-        globalResource.size = _globalDataBuffer[_engine->device().frameIndex()]->size();
-        globalResource.usage = _globalDataBuffer[_engine->device().frameIndex()]->usage();
-        _graph.addBufferResource("global", globalResource, _globalDataBuffer[_engine->device().frameIndex()]);
-    }
-    {
-        BufferResource transformsResource;
-        transformsResource.size = scene._meshTransformsBuffer[_engine->device().frameIndex()]->size();
-        transformsResource.usage = scene._meshTransformsBuffer[_engine->device().frameIndex()]->usage();
-        _graph.addBufferResource("transforms", transformsResource, scene._meshTransformsBuffer[_engine->device().frameIndex()]);
-    }
-    {
-        BufferResource meshDataResource;
-        meshDataResource.size = scene._meshDataBuffer[_engine->device().frameIndex()]->size();
-        meshDataResource.usage = scene._meshDataBuffer[_engine->device().frameIndex()]->usage();
-        _graph.addBufferResource("meshData", meshDataResource, scene._meshDataBuffer[_engine->device().frameIndex()]);
-    }
-    {
-        BufferResource vertexBufferResource;
-        vertexBufferResource.size = _engine->_globalVertexBuffer->size();
-        vertexBufferResource.usage = _engine->_globalVertexBuffer->usage();
-        _graph.addBufferResource("vertexBuffer", vertexBufferResource, _engine->_globalVertexBuffer);
-    }
-    {
-        BufferResource indexBufferResource;
-        indexBufferResource.size = _engine->_globalIndexBuffer->size();
-        indexBufferResource.usage = _engine->_globalIndexBuffer->usage();
-        _graph.addBufferResource("indexBuffer", indexBufferResource, _engine->_globalIndexBuffer);
-    }
-    {
-        BufferResource cameraResource;
-        cameraResource.size = scene._cameraBuffer[_engine->device().frameIndex()]->size();
-        cameraResource.usage = scene._cameraBuffer[_engine->device().frameIndex()]->usage();
-        _graph.addBufferResource("camera", cameraResource, scene._cameraBuffer[_engine->device().frameIndex()]);
-    }
-    {
-        BufferResource lightsResource;
-        lightsResource.size = scene._lightBuffer[_engine->device().frameIndex()]->size();
-        lightsResource.usage = scene._lightBuffer[_engine->device().frameIndex()]->usage();
-        _graph.addBufferResource("lights", lightsResource, scene._lightBuffer[_engine->device().frameIndex()]);
+    BufferResource globalResource;
+    globalResource.size = _globalDataBuffer[_engine->device().frameIndex()]->size();
+    globalResource.usage = _globalDataBuffer[_engine->device().frameIndex()]->usage();
+    auto globalIndex = _graph.addBufferResource("global", globalResource, _globalDataBuffer[_engine->device().frameIndex()]);
 
-        BufferResource feedbackResource;
-        feedbackResource.size = _feedbackBuffer[_engine->device().frameIndex()]->size();
-        feedbackResource.usage = _feedbackBuffer[_engine->device().frameIndex()]->usage();
-        _graph.addBufferResource("feedback", feedbackResource, _feedbackBuffer[_engine->device().frameIndex()]);
-    }
+    BufferResource transformsResource;
+    transformsResource.size = scene._meshTransformsBuffer[_engine->device().frameIndex()]->size();
+    transformsResource.usage = scene._meshTransformsBuffer[_engine->device().frameIndex()]->usage();
+    auto transformsIndex = _graph.addBufferResource("transforms", transformsResource, scene._meshTransformsBuffer[_engine->device().frameIndex()]);
 
+    BufferResource meshDataResource;
+    meshDataResource.size = scene._meshDataBuffer[_engine->device().frameIndex()]->size();
+    meshDataResource.usage = scene._meshDataBuffer[_engine->device().frameIndex()]->usage();
+    auto meshDataIndex = _graph.addBufferResource("meshData", meshDataResource, scene._meshDataBuffer[_engine->device().frameIndex()]);
 
+    BufferResource vertexBufferResource;
+    vertexBufferResource.size = _engine->_globalVertexBuffer->size();
+    vertexBufferResource.usage = _engine->_globalVertexBuffer->usage();
+    auto vertexBufferIndex = _graph.addBufferResource("vertexBuffer", vertexBufferResource, _engine->_globalVertexBuffer);
+
+    BufferResource indexBufferResource;
+    indexBufferResource.size = _engine->_globalIndexBuffer->size();
+    indexBufferResource.usage = _engine->_globalIndexBuffer->usage();
+    auto indexBufferIndex = _graph.addBufferResource("indexBuffer", indexBufferResource, _engine->_globalIndexBuffer);
+
+    BufferResource cameraResource;
+    cameraResource.size = scene._cameraBuffer[_engine->device().frameIndex()]->size();
+    cameraResource.usage = scene._cameraBuffer[_engine->device().frameIndex()]->usage();
+    auto cameraBufferIndex = _graph.addBufferResource("camera", cameraResource, scene._cameraBuffer[_engine->device().frameIndex()]);
+
+    BufferResource lightsResource;
+    lightsResource.size = scene._lightBuffer[_engine->device().frameIndex()]->size();
+    lightsResource.usage = scene._lightBuffer[_engine->device().frameIndex()]->usage();
+    auto lightBufferIndex = _graph.addBufferResource("lights", lightsResource, scene._lightBuffer[_engine->device().frameIndex()]);
+
+    BufferResource feedbackResource;
+    feedbackResource.size = _feedbackBuffer[_engine->device().frameIndex()]->size();
+    feedbackResource.usage = _feedbackBuffer[_engine->device().frameIndex()]->usage();
+    auto feedbackBufferIndex = _graph.addBufferResource("feedback", feedbackResource, _feedbackBuffer[_engine->device().frameIndex()]);
 
     if (camera->isDirty()) {
         auto& createClusters = _graph.addPass("create_clusters", RenderPass::Type::COMPUTE);
@@ -281,19 +256,17 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
         camera->setDirty(false);
     }
 
-    {
-        BufferResource lightGridResource;
-        lightGridResource.size = sizeof(u32) * 2 * 16 * 9 * 24;
-        _graph.addBufferResource("lightGrid", lightGridResource);
+    BufferResource lightGridResource;
+    lightGridResource.size = sizeof(u32) * 2 * 16 * 9 * 24;
+    auto lightGridIndex = _graph.addBufferResource("lightGrid", lightGridResource);
 
-        BufferResource lightIndicesResource;
-        lightIndicesResource.size = sizeof(u32) * 16 * 9 * 24 * 100;
-        _graph.addBufferResource("lightIndices", lightIndicesResource);
+    BufferResource lightIndicesResource;
+    lightIndicesResource.size = sizeof(u32) * 16 * 9 * 24 * 100;
+    auto lightIndicesIndex = _graph.addBufferResource("lightIndices", lightIndicesResource);
 
-        BufferResource lightGlobalIndexResource;
-        lightGlobalIndexResource.size = sizeof(u32);
-        _graph.addBufferResource("lightGlobalResource", lightGlobalIndexResource);
-    }
+    BufferResource lightGlobalIndexResource;
+    lightGlobalIndexResource.size = sizeof(u32);
+    auto lightGlobalResource = _graph.addBufferResource("lightGlobalResource", lightGlobalIndexResource);
 
     auto& cullLights = _graph.addPass("cull_lights", RenderPass::Type::COMPUTE);
     cullLights.setDebugGroup("culling");
@@ -340,47 +313,139 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     });
 
     if (_renderSettings.debugClusters) {
-        debugClusters(_graph, *_engine, *_swapchain);
+        debugClusters(_graph, *_engine, *_swapchain, {
+            .backbufferDebug = {},
+            .backbuffer = backbufferIndex,
+            .depth = depthIndex,
+            .global = globalIndex,
+            .lightGrid = lightGridIndex
+        });
     }
 
     if (_renderSettings.debugNormals) {
-        debugNormalPass(_graph, *_engine, scene);
+        debugNormalPass(_graph, *_engine, scene, {
+            .backbuffer = backbufferIndex,
+            .depth = depthIndex,
+            .visbility = visibilityImageIndex,
+            .global = globalIndex,
+            .materialCount = materialCountBufferIndex,
+            .pixelPositions = pixelPositionsBufferIndex,
+            .dispatchBuffer = visibilityDispatchBufferIndex,
+            .camera = cameraBufferIndex,
+            .meshData = meshDataIndex,
+            .transforms = transformsIndex,
+            .vertexBuffer = vertexBufferIndex,
+            .indexBuffer = indexBufferIndex
+        });
     }
 
     if (_renderSettings.debugRoughness) {
-        debugRoughnessPass(_graph, *_engine, scene);
+        debugRoughnessPass(_graph, *_engine, scene, {
+            .backbuffer = backbufferIndex,
+            .depth = depthIndex,
+            .visbility = visibilityImageIndex,
+            .global = globalIndex,
+            .materialCount = materialCountBufferIndex,
+            .pixelPositions = pixelPositionsBufferIndex,
+            .dispatchBuffer = visibilityDispatchBufferIndex,
+            .camera = cameraBufferIndex,
+            .meshData = meshDataIndex,
+            .transforms = transformsIndex,
+            .vertexBuffer = vertexBufferIndex,
+            .indexBuffer = indexBufferIndex
+        });
     }
 
     if (_renderSettings.debugMetallic) {
-        debugMetallicPass(_graph, *_engine, scene);
+        debugMetallicPass(_graph, *_engine, scene, {
+            .backbuffer = backbufferIndex,
+            .depth = depthIndex,
+            .visbility = visibilityImageIndex,
+            .global = globalIndex,
+            .materialCount = materialCountBufferIndex,
+            .pixelPositions = pixelPositionsBufferIndex,
+            .dispatchBuffer = visibilityDispatchBufferIndex,
+            .camera = cameraBufferIndex,
+            .meshData = meshDataIndex,
+            .transforms = transformsIndex,
+            .vertexBuffer = vertexBufferIndex,
+            .indexBuffer = indexBufferIndex
+        });
     }
 
     if (_renderSettings.debugUnlit) {
-        debugUnlitPass(_graph, *_engine, scene);
+        debugUnlitPass(_graph, *_engine, scene, {
+            .backbuffer = backbufferIndex,
+            .depth = depthIndex,
+            .visbility = visibilityImageIndex,
+            .global = globalIndex,
+            .materialCount = materialCountBufferIndex,
+            .pixelPositions = pixelPositionsBufferIndex,
+            .dispatchBuffer = visibilityDispatchBufferIndex,
+            .camera = cameraBufferIndex,
+            .meshData = meshDataIndex,
+            .transforms = transformsIndex,
+            .vertexBuffer = vertexBufferIndex,
+            .indexBuffer = indexBufferIndex
+        });
     }
 
     if (_renderSettings.debugWorldPos) {
-        debugWorldPositionPass(_graph, *_engine, scene);
+        debugWorldPositionPass(_graph, *_engine, scene, {
+            .backbuffer = backbufferIndex,
+            .depth = depthIndex,
+            .visbility = visibilityImageIndex,
+            .global = globalIndex,
+            .materialCount = materialCountBufferIndex,
+            .pixelPositions = pixelPositionsBufferIndex,
+            .dispatchBuffer = visibilityDispatchBufferIndex,
+            .camera = cameraBufferIndex,
+            .meshData = meshDataIndex,
+            .transforms = transformsIndex,
+            .vertexBuffer = vertexBufferIndex,
+            .indexBuffer = indexBufferIndex
+        });
     }
 
-    if (_renderSettings.debugWireframe) {
-        debugWireframePass(_graph, *_engine, scene, _renderSettings);
-    }
-
-    if (_renderSettings.debugNormalLines) {
-        debugNormalLinesPass(_graph, *_engine, scene, _renderSettings);
-    }
+//    if (_renderSettings.debugWireframe) {
+//        debugWireframePass(_graph, *_engine, scene, _renderSettings);
+//    }
+//
+//    if (_renderSettings.debugNormalLines) {
+//        debugNormalLinesPass(_graph, *_engine, scene, _renderSettings);
+//    }
 
     if (_renderSettings.debugFrustum) {
-        debugFrustum(_graph, *_engine, scene, _renderSettings);
+        debugFrustum(_graph, *_engine, _renderSettings, {
+            .backbuffer = backbufferIndex,
+            .depth = depthIndex,
+            .global = globalIndex,
+            .camera = cameraBufferIndex
+        });
     }
 
     if (_renderSettings.debugDepth) {
-        debugDepthPass(_graph, *_engine);
+        debugDepthPass(_graph, *_engine, {
+            .backbuffer = backbufferIndex,
+            .depth = depthIndex,
+            .global = globalIndex
+        });
     }
 
     if (_renderSettings.debugMeshlets) {
-        debugMeshletPass(_graph, *_engine, scene);
+        debugMeshletPass(_graph, *_engine, {
+            .backbuffer = backbufferIndex,
+            .visbility = visibilityImageIndex,
+            .global = globalIndex
+        });
+    }
+
+    if (_renderSettings.debugPrimitives) {
+        debugPrimitivePass(_graph, *_engine, {
+            .backbuffer = backbufferIndex,
+            .visbility = visibilityImageIndex,
+            .global = globalIndex
+        });
     }
 
 
@@ -391,20 +456,20 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     auto& cullPass = _graph.addPass("cull", RenderPass::Type::COMPUTE);
     cullPass.setDebugGroup("culling");
 
-    cullPass.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
-    cullPass.addStorageBufferRead("transforms", vk::PipelineStage::COMPUTE_SHADER);
-    cullPass.addStorageBufferRead("meshData", vk::PipelineStage::COMPUTE_SHADER);
-    cullPass.addStorageBufferWrite("drawCount", vk::PipelineStage::COMPUTE_SHADER);
-    cullPass.addStorageBufferWrite("drawCommands", vk::PipelineStage::COMPUTE_SHADER);
-    cullPass.addStorageBufferRead("camera", vk::PipelineStage::COMPUTE_SHADER);
-    cullPass.addStorageBufferWrite("feedback", vk::PipelineStage::COMPUTE_SHADER);
+    cullPass.addUniformBufferRead(globalIndex, vk::PipelineStage::COMPUTE_SHADER);
+    cullPass.addStorageBufferRead(transformsIndex, vk::PipelineStage::COMPUTE_SHADER);
+    cullPass.addStorageBufferRead(meshDataIndex, vk::PipelineStage::COMPUTE_SHADER);
+    cullPass.addStorageBufferWrite(drawCountIndex, vk::PipelineStage::COMPUTE_SHADER);
+    cullPass.addStorageBufferWrite(drawCommandsIndex, vk::PipelineStage::COMPUTE_SHADER);
+    cullPass.addStorageBufferRead(cameraBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
+    cullPass.addStorageBufferWrite(feedbackBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
 
     cullPass.setDebugColour({0.3, 0.3, 1, 1});
 
     cullPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
-        auto global = graph.getBuffer("global");
-        auto drawCount = graph.getBuffer("drawCount");
-        auto drawCommands = graph.getBuffer("drawCommands");
+        auto global = graph.getBuffer(globalIndex);
+        auto drawCount = graph.getBuffer(drawCountIndex);
+        auto drawCommands = graph.getBuffer(drawCommandsIndex);
         cmd->clearDescriptors();
         cmd->bindProgram(_engine->getProgram(Engine::ProgramType::CULL_MESH_SHADER));
         cmd->bindBindings({});
@@ -420,24 +485,24 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     {
         auto& visibilityPass = _graph.addPass("visibility_pass");
         visibilityPass.addColourWrite(visibilityImageIndex);
-        visibilityPass.addDepthWrite("depth");
+        visibilityPass.addDepthWrite(depthIndex);
 
-        visibilityPass.addUniformBufferRead("global", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
-        visibilityPass.addStorageBufferRead("camera", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
-        visibilityPass.addStorageBufferRead("drawCommands", vk::PipelineStage::TASK_SHADER);
-        visibilityPass.addIndirectRead("drawCount");
-        visibilityPass.addStorageBufferRead("meshData", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+        visibilityPass.addUniformBufferRead(globalIndex, vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
+        visibilityPass.addStorageBufferRead(cameraBufferIndex, vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+        visibilityPass.addStorageBufferRead(drawCommandsIndex, vk::PipelineStage::TASK_SHADER);
+        visibilityPass.addIndirectRead(drawCountIndex);
+        visibilityPass.addStorageBufferRead(meshDataIndex, vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
 //        visibilityPass.addStorageBufferRead("meshlets", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
-        visibilityPass.addStorageBufferRead("transforms", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
-        visibilityPass.addStorageBufferRead("vertexBuffer", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
-        visibilityPass.addStorageBufferRead("indexBuffer", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+        visibilityPass.addStorageBufferRead(transformsIndex, vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+        visibilityPass.addStorageBufferRead(vertexBufferIndex, vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+        visibilityPass.addStorageBufferRead(indexBufferIndex, vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
 
-        visibilityPass.addStorageBufferWrite("feedback", vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
+        visibilityPass.addStorageBufferWrite(feedbackBufferIndex, vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER);
 
         visibilityPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
-            auto global = graph.getBuffer("global");
-            auto drawCommands = graph.getBuffer("drawCommands");
-            auto drawCount = graph.getBuffer("drawCount");
+            auto global = graph.getBuffer(globalIndex);
+            auto drawCommands = graph.getBuffer(drawCommandsIndex);
+            auto drawCount = graph.getBuffer(drawCountIndex);
 
             cmd->clearDescriptors();
             if (scene.meshCount() == 0)
@@ -462,14 +527,14 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
             auto &visibilityCountPass = _graph.addPass("visibility_count_pass", RenderPass::Type::COMPUTE);
             visibilityCountPass.addStorageImageRead(visibilityImageIndex, vk::PipelineStage::COMPUTE_SHADER);
 
-            visibilityCountPass.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
-            visibilityCountPass.addStorageBufferRead("meshData", vk::PipelineStage::COMPUTE_SHADER);
+            visibilityCountPass.addUniformBufferRead(globalIndex, vk::PipelineStage::COMPUTE_SHADER);
+            visibilityCountPass.addStorageBufferRead(meshDataIndex, vk::PipelineStage::COMPUTE_SHADER);
             visibilityCountPass.addStorageBufferWrite(materialCountBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
             visibilityCountPass.addStorageBufferWrite(pixelPositionsBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
             visibilityCountPass.addStorageBufferWrite(visibilityDispatchBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
 
             visibilityCountPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph &graph) {
-                auto global = graph.getBuffer("global");
+                auto global = graph.getBuffer(globalIndex);
                 auto visibilityImage = graph.getImage(visibilityImageIndex);
                 auto materialCounts = graph.getBuffer(materialCountBufferIndex);
                 auto pixelPositions = graph.getBuffer(pixelPositionsBufferIndex);
@@ -551,39 +616,39 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
         if (!fullscreenDebug) {
             auto& visibilityMaterialPass = _graph.addPass("visibility_material_pass", RenderPass::Type::COMPUTE);
             if (_renderSettings.tonemap) {
-                visibilityMaterialPass.addStorageImageWrite("hdr", vk::PipelineStage::COMPUTE_SHADER);
+                visibilityMaterialPass.addStorageImageWrite(hdrImageIndex, vk::PipelineStage::COMPUTE_SHADER);
             }
             else {
-                visibilityMaterialPass.addStorageImageWrite("backbuffer", vk::PipelineStage::COMPUTE_SHADER);
+                visibilityMaterialPass.addStorageImageWrite(backbufferIndex, vk::PipelineStage::COMPUTE_SHADER);
             }
 
             visibilityMaterialPass.addStorageImageRead(visibilityImageIndex, vk::PipelineStage::COMPUTE_SHADER);
-            visibilityMaterialPass.addSampledImageRead("depth", vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addSampledImageRead(depthIndex, vk::PipelineStage::COMPUTE_SHADER);
 
             visibilityMaterialPass.addSampledImageRead("pointDepth", vk::PipelineStage::COMPUTE_SHADER);
 
-            visibilityMaterialPass.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
-            visibilityMaterialPass.addStorageBufferRead("vertexBuffer", vk::PipelineStage::COMPUTE_SHADER);
-            visibilityMaterialPass.addStorageBufferRead("indexBuffer", vk::PipelineStage::COMPUTE_SHADER);
-            visibilityMaterialPass.addStorageBufferRead("meshData", vk::PipelineStage::COMPUTE_SHADER);
-            visibilityMaterialPass.addStorageBufferRead("lightIndices", vk::PipelineStage::COMPUTE_SHADER);
-            visibilityMaterialPass.addStorageBufferRead("lightGrid", vk::PipelineStage::COMPUTE_SHADER);
-            visibilityMaterialPass.addStorageBufferRead("lights", vk::PipelineStage::COMPUTE_SHADER);
-            visibilityMaterialPass.addStorageBufferRead("camera", vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addUniformBufferRead(globalIndex, vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addStorageBufferRead(vertexBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addStorageBufferRead(indexBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addStorageBufferRead(meshDataIndex, vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addStorageBufferRead(transformsIndex, vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addStorageBufferRead(lightIndicesIndex, vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addStorageBufferRead(lightGridIndex, vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addStorageBufferRead(lightBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addStorageBufferRead(cameraBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
 
             visibilityMaterialPass.addStorageBufferRead(pixelPositionsBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
             visibilityMaterialPass.addIndirectRead(visibilityDispatchBufferIndex);
-            visibilityMaterialPass.addStorageBufferRead(visibilityDispatchBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
 
             visibilityMaterialPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
-                auto global = graph.getBuffer("global");
-                auto visibilityImage = graph.getImage("visibility");
+                auto global = graph.getBuffer(globalIndex);
+                auto visibilityImage = graph.getImage(visibilityImageIndex);
                 vk::ImageHandle image;
                 if (_renderSettings.tonemap)
-                    image = graph.getImage("hdr");
+                    image = graph.getImage(hdrImageIndex);
                 else
-                    image = graph.getImage("backbuffer");
-                auto depth = graph.getImage("depth");
+                    image = graph.getImage(backbufferIndex);
+                auto depth = graph.getImage(depthIndex);
                 auto materialCounts = graph.getBuffer(materialCountBufferIndex);
                 auto pixelPositions = graph.getBuffer(pixelPositionsBufferIndex);
                 auto dispatchCommands = graph.getBuffer(visibilityDispatchBufferIndex);
@@ -821,16 +886,16 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
             auto& bloomCompositePass = _graph.addPass("bloom-composite", RenderPass::Type::COMPUTE);
             bloomCompositePass.setDebugGroup("bloom");
 
-            bloomCompositePass.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
+            bloomCompositePass.addUniformBufferRead(globalIndex, vk::PipelineStage::COMPUTE_SHADER);
 
-            bloomCompositePass.addStorageImageRead("hdr", vk::PipelineStage::COMPUTE_SHADER);
+            bloomCompositePass.addStorageImageRead(hdrImageIndex, vk::PipelineStage::COMPUTE_SHADER);
             bloomCompositePass.addStorageImageRead("bloomUpsample-0", vk::PipelineStage::COMPUTE_SHADER);
             bloomCompositePass.addStorageImageWrite("bloomFinal", vk::PipelineStage::COMPUTE_SHADER);
 
             bloomCompositePass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
-                auto global = graph.getBuffer("global");
+                auto global = graph.getBuffer(globalIndex);
                 auto upsample = graph.getImage("bloomUpsample-0");
-                auto hdr = graph.getImage("hdr");
+                auto hdr = graph.getImage(hdrImageIndex);
                 auto final = graph.getImage("bloomFinal");
 
                 cmd->clearDescriptors();
@@ -858,29 +923,29 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     if (_renderSettings.tonemap && !fullscreenDebug) {
         auto& tonemapPass = _graph.addPass("tonemap", RenderPass::Type::COMPUTE);
 
-        tonemapPass.addUniformBufferRead("global", vk::PipelineStage::COMPUTE_SHADER);
+        tonemapPass.addUniformBufferRead(globalIndex, vk::PipelineStage::COMPUTE_SHADER);
         if (overlayDebug)
             tonemapPass.addStorageImageWrite("backbuffer-debug", vk::PipelineStage::COMPUTE_SHADER);
         else
-            tonemapPass.addStorageImageWrite("backbuffer", vk::PipelineStage::COMPUTE_SHADER);
+            tonemapPass.addStorageImageWrite(backbufferIndex, vk::PipelineStage::COMPUTE_SHADER);
 
         if (_renderSettings.bloom)
             tonemapPass.addStorageImageRead("bloomFinal", vk::PipelineStage::COMPUTE_SHADER);
         else
-            tonemapPass.addStorageImageRead("hdr", vk::PipelineStage::COMPUTE_SHADER);
+            tonemapPass.addStorageImageRead(hdrImageIndex, vk::PipelineStage::COMPUTE_SHADER);
 
 
         tonemapPass.addStorageImageRead("bloomUpsample-0", vk::PipelineStage::COMPUTE_SHADER);
 
         tonemapPass.setDebugColour({0.1, 0.4, 0.7, 1});
         tonemapPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
-            auto global = graph.getBuffer("global");
+            auto global = graph.getBuffer(globalIndex);
             vk::ImageHandle hdrImage;
             if (_renderSettings.bloom)
                 hdrImage = graph.getImage("bloomFinal");
             else
-                hdrImage = graph.getImage("hdr");
-            auto backbuffer = graph.getImage("backbuffer");
+                hdrImage = graph.getImage(hdrImageIndex);
+            auto backbuffer = graph.getImage(backbufferIndex);
             cmd->clearDescriptors();
             cmd->bindProgram(_engine->getProgram(Engine::ProgramType::TONEMAP));
             cmd->bindBindings({});
@@ -904,16 +969,16 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     if (_renderSettings.skybox && scene._skyLightMap && !fullscreenDebug) {
         auto& skyboxPass = _graph.addPass("skybox");
         if (scene._hdrSkyLight && _renderSettings.tonemap)
-            skyboxPass.addColourWrite("hdr");
+            skyboxPass.addColourWrite(hdrImageIndex);
         else
-            skyboxPass.addColourWrite("backbuffer");
-        skyboxPass.addDepthRead("depth");
+            skyboxPass.addColourWrite(backbufferIndex);
+        skyboxPass.addDepthRead(depthIndex);
         skyboxPass.setDebugColour({0, 0.7, 0.1, 1});
 
-        skyboxPass.addUniformBufferRead("global", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
+        skyboxPass.addUniformBufferRead(globalIndex, vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
 
         skyboxPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
-            auto global = graph.getBuffer("global");
+            auto global = graph.getBuffer(globalIndex);
             cmd->clearDescriptors();
             cmd->bindProgram(_engine->getProgram(Engine::ProgramType::SKYBOX));
             cmd->bindRasterState({ vk::CullMode::NONE });
@@ -932,13 +997,13 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
         });
     }
 
+    ImageResource uiBackbufferAttachment;
+    uiBackbufferAttachment.format = vk::Format::RGBA8_UNORM;
+    auto uiBackbufferIndex = _graph.addImageResource("ui-backbuffer", uiBackbufferAttachment);
     if (imGui) {
-        ImageResource backbufferAttachment;
-        backbufferAttachment.format = vk::Format::RGBA8_UNORM;
-        auto uiBackbufferIndex = _graph.addImageResource("ui-backbuffer", backbufferAttachment);
 
         auto& uiPass = _graph.addPass("ui");
-        uiPass.addSampledImageRead("backbuffer", vk::PipelineStage::FRAGMENT_SHADER);
+        uiPass.addSampledImageRead(backbufferIndex, vk::PipelineStage::FRAGMENT_SHADER);
         uiPass.addColourWrite(uiBackbufferIndex);
         uiPass.setDebugColour({0.7, 0.1, 0.4, 1});
 
@@ -959,11 +1024,11 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
 
         auto& blitPass = _graph.addPass("blit", RenderPass::Type::TRANSFER);
 //        blitPass.addBlitRead("backbuffer");
-        blitPass.addBlitRead("ui-backbuffer");
+        blitPass.addBlitRead(uiBackbufferIndex);
         blitPass.addBlitWrite(finalSwapchainIndex);
 
         blitPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
-            auto backbuffer = graph.getImage("ui-backbuffer");
+            auto backbuffer = graph.getImage(uiBackbufferIndex);
             _swapchain->blitImageToFrame(_swapchainFrame.index, cmd, *backbuffer);
         });
     }

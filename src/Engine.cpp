@@ -145,10 +145,10 @@ cala::Engine::Engine(vk::Platform &platform)
     });
 
     _meshletDebugProgram = loadProgram("debugMeshletProgram", {
-        { "shaders/visibility_buffer/debug_meshlets.comp", vk::ShaderStage::COMPUTE },
-//        { "shaders/default.task", vk::ShaderStage::TASK },
-//        { "shaders/default.mesh", vk::ShaderStage::MESH },
-//        { "shaders/debug/meshlet.frag", vk::ShaderStage::FRAGMENT }
+        { "shaders/debug/debug_meshlets.comp", vk::ShaderStage::COMPUTE }
+    });
+    _primitiveDebugProgram = loadProgram("debugPrimitiveProgram", {
+        { "shaders/debug/debug_primitives.comp", vk::ShaderStage::COMPUTE }
     });
     {
         _clusterDebugProgram = loadProgram("clusterDebugProgram", {
@@ -157,9 +157,7 @@ cala::Engine::Engine(vk::Platform &platform)
         });
     }
     _worldPosDebugProgram = loadProgram("worldPosDebugProgram", {
-            { "shaders/default.task", vk::ShaderStage::TASK },
-            { "shaders/default.mesh", vk::ShaderStage::MESH },
-            { "shaders/debug/world_pos.frag", vk::ShaderStage::FRAGMENT }
+        { "shaders/debug/world_pos.comp", vk::ShaderStage::COMPUTE }
     });
     {
         _frustumDebugProgram = loadProgram("frustumDebugProgram", {
@@ -1058,17 +1056,17 @@ cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u3
         vk::ShaderProgram litHandle = addVariant(std::format("{}##lit", path.filename().string()), litEval);
         material->setVariant(Material::Variant::LIT, std::move(litHandle));
 
-//        vk::ShaderProgram unlitHandle = addVariant(std::format("{}##unlit", path.filename().string()), unlitEval);
-//        material->setVariant(Material::Variant::UNLIT, std::move(unlitHandle));
+        vk::ShaderProgram unlitHandle = addVariant(std::format("{}##unlit", path.filename().string()), unlitEval);
+        material->setVariant(Material::Variant::UNLIT, std::move(unlitHandle));
 //
-//        vk::ShaderProgram normalsHandle = addVariant(std::format("{}##normal", path.filename().string()), normalEval);
-//        material->setVariant(Material::Variant::NORMAL, std::move(normalsHandle));
+        vk::ShaderProgram normalsHandle = addVariant(std::format("{}##normal", path.filename().string()), normalEval);
+        material->setVariant(Material::Variant::NORMAL, std::move(normalsHandle));
 //
-//        vk::ShaderProgram metallicHandle = addVariant(std::format("{}##metallic", path.filename().string()), metallicEval);
-//        material->setVariant(Material::Variant::METALLIC, std::move(metallicHandle));
+        vk::ShaderProgram metallicHandle = addVariant(std::format("{}##metallic", path.filename().string()), metallicEval);
+        material->setVariant(Material::Variant::METALLIC, std::move(metallicHandle));
 //
-//        vk::ShaderProgram roughnessHandle = addVariant(std::format("{}##roughness", path.filename().string()), roughnessEval);
-//        material->setVariant(Material::Variant::ROUGHNESS, std::move(roughnessHandle));
+        vk::ShaderProgram roughnessHandle = addVariant(std::format("{}##roughness", path.filename().string()), roughnessEval);
+        material->setVariant(Material::Variant::ROUGHNESS, std::move(roughnessHandle));
 
         material->build();
 
@@ -1129,6 +1127,8 @@ const cala::vk::ShaderProgram& cala::Engine::getProgram(cala::Engine::ProgramTyp
             return _visibilityPositionsProgram;
         case ProgramType::DEBUG_MESHLETS:
             return _meshletDebugProgram;
+        case ProgramType::DEBUG_PRIMITIVES:
+            return _primitiveDebugProgram;
         case ProgramType::DEBUG_CLUSTER:
             return _clusterDebugProgram;
         case ProgramType::DEBUG_NORMALS:

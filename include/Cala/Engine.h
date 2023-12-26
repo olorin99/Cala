@@ -159,6 +159,7 @@ namespace cala {
             VISIBILITY_OFFSET,
             VISIBILITY_POSITION,
             DEBUG_MESHLETS,
+            DEBUG_PRIMITIVES,
             DEBUG_CLUSTER,
             DEBUG_NORMALS,
             DEBUG_WORLDPOS,
@@ -230,6 +231,7 @@ namespace cala {
         vk::ShaderProgram _visibilityPositionsProgram;
 
         vk::ShaderProgram _meshletDebugProgram;
+        vk::ShaderProgram _primitiveDebugProgram;
         vk::ShaderProgram _clusterDebugProgram;
         vk::ShaderProgram _normalsDebugProgram;
         vk::ShaderProgram _worldPosDebugProgram;

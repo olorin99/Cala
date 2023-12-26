@@ -99,6 +99,7 @@ void cala::ui::RendererSettingsWindow::render() {
             ImGui::Checkbox("\tFrustum", &rendererSettings.debugFrustum);
             ImGui::Checkbox("\tDepth", &rendererSettings.debugDepth);
             ImGui::Checkbox("\tMeshlets", &rendererSettings.debugMeshlets);
+            ImGui::Checkbox("\tPrimitives", &rendererSettings.debugPrimitives);
 
             f32 gamma = _renderer->getGamma();
             if (ImGui::SliderFloat("Gamma", &gamma, 0, 5))

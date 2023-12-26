@@ -1,0 +1,86 @@
+
+layout (local_size_x = LOCAL_SIZE_X, local_size_y = LOCAL_SIZE_Y, local_size_z = 1) in;
+
+#include "shaderBridge.h"
+#include "bindings.glsl"
+#include "visibility_buffer/visibility.glsl"
+
+layout (rg32ui, set = 0, binding = CALA_BINDLESS_STORAGE_IMAGE) uniform readonly uimage2D calaBindlessStorageImages2Dreadonlyrg32ui[];
+CALA_USE_STORAGE_IMAGE(2D, writeonly);
+
+layout (push_constant) uniform PushData {
+    int visibilityImageIndex;
+    int backbufferIndex;
+};
+
+uint[3] loadIndices(Meshlet meshlet, uint primitiveID) {
+    uint vertexOffset = meshlet.vertexOffset;
+    uint indexOffset = meshlet.indexOffset;
+    uint primitiveOffset = meshlet.primitiveOffset;
+
+    uint[] primitiveIDs = uint[](
+    globalData.primitiveBuffer.primitives[primitiveOffset + primitiveID * 3 + 0],
+    globalData.primitiveBuffer.primitives[primitiveOffset + primitiveID * 3 + 1],
+    globalData.primitiveBuffer.primitives[primitiveOffset + primitiveID * 3 + 2]
+    );
+
+    return uint[3](
+    globalData.meshletIndexBuffer.indices[indexOffset + primitiveIDs[0]] + vertexOffset,
+    globalData.meshletIndexBuffer.indices[indexOffset + primitiveIDs[1]] + vertexOffset,
+    globalData.meshletIndexBuffer.indices[indexOffset + primitiveIDs[2]] + vertexOffset
+    );
+}
+
+Vertex[3] loadVertices(uint[3] indices) {
+    return Vertex[3](
+    globalData.vertexBuffer.vertices[indices[0]],
+    globalData.vertexBuffer.vertices[indices[1]],
+    globalData.vertexBuffer.vertices[indices[2]]
+    );
+}
+
+void main() {
+
+    const ivec2 globCoords = ivec2(gl_GlobalInvocationID);
+    const ivec2 outputSize = imageSize(CALA_GET_STORAGE_IMAGE2D(writeonly, backbufferIndex));
+    const vec2 texCoords = (vec2(globCoords) + 0.5) / outputSize;
+    if (any(greaterThanEqual(globCoords, outputSize)))
+        return;
+
+    const ivec2 inputSize = imageSize(calaBindlessStorageImages2Dreadonlyrg32ui[visibilityImageIndex]);
+
+    const uvec2 data = imageLoad(calaBindlessStorageImages2Dreadonlyrg32ui[visibilityImageIndex], globCoords).rg;
+    const uint visibility = data.x;
+    const uint drawID = data.y;
+
+    const uint meshletID = getMeshletID(visibility);
+    const uint primitiveID = getPrimitiveID(visibility);
+
+    const GPUMesh mesh = globalData.meshBuffer.meshData[drawID];
+    const Meshlet meshlet = globalData.meshletBuffer.meshlets[meshletID];
+
+    const uint[] indices = loadIndices(meshlet, primitiveID);
+    const Vertex[] vertices = loadVertices(indices);
+
+    const mat4 transform = globalData.transformsBuffer.transforms[drawID];
+    const GPUCamera camera = globalData.cameraBuffer[globalData.primaryCameraIndex].camera;
+
+    const vec3[] worldPositions = vec3[](
+        (transform * vec4(vertices[0].position, 1.0)).xyz,
+        (transform * vec4(vertices[1].position, 1.0)).xyz,
+        (transform * vec4(vertices[2].position, 1.0)).xyz
+    );
+    const vec4[] clipPositions = vec4[](
+        camera.projection * camera.view * vec4(worldPositions[0], 1.0),
+        camera.projection * camera.view * vec4(worldPositions[1], 1.0),
+        camera.projection * camera.view * vec4(worldPositions[2], 1.0)
+    );
+
+    const BarycentricDeriv derivitives = calcDerivitives(clipPositions, texCoords * 2 - 1, globalData.swapchainSize);
+    const vec3 worldPosition = interpolateVec3(derivitives, worldPositions);
+
+
+    vec3 result = worldPosition;
+
+    imageStore(CALA_GET_STORAGE_IMAGE2D(writeonly, backbufferIndex), globCoords, vec4(result, 1.0));
+}
