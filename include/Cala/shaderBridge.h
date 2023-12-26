@@ -30,13 +30,6 @@ struct DispatchCommand {
     uint z;
 };
 
-struct VisibilityDispatchCommand {
-    uint x;
-    uint y;
-    uint z;
-    uint materialID;
-};
-
 struct MeshTaskCommand {
     uint x;
     uint y;

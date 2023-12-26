@@ -119,6 +119,7 @@ namespace cala::vk {
         void dispatch(u32 x, u32 y, u32 z);
         // dispatches with xyz workgroups
         void dispatchWorkgroups(u32 x, u32 y, u32 z);
+        void dispatchIndirect(BufferHandle buffer, u32 offset);
 
         void clearImage(ImageHandle image, const ende::math::Vec4f& clearValue = { 0.f, 0.f, 0.f, 0.f });
 

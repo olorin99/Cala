@@ -18,7 +18,7 @@ layout (scalar, set = 1, binding = 1) buffer MaterialCounts {
 };
 
 layout (scalar, set = 1, binding = 2) buffer CommandList {
-    VisibilityDispatchCommand commands[];
+    DispatchCommand commands[];
 };
 
 shared uint sharedSum[2][gl_WorkGroupSize.x * 2];
@@ -48,11 +48,11 @@ void main() {
 
     materials[min(gl_LocalInvocationIndex, materialCounts - 1)].offset = sharedSum[loopCount % 2][gl_LocalInvocationIndex];
 
-    VisibilityDispatchCommand command;
-    command.x = uint(ceil(materials[min(gl_LocalInvocationIndex, materialCounts - 1)].count / 32.0));
-    command.y = 1;
+    DispatchCommand command;
+    float sqrtCount = sqrt(float(materials[min(gl_LocalInvocationIndex, materialCounts - 1)].count));
+    command.x = uint(ceil(sqrtCount / 32.0));
+    command.y = uint(ceil(sqrtCount / 32.0));
     command.z = 1;
-    command.materialID = min(gl_LocalInvocationIndex, materialCounts - 1);
     commands[min(gl_LocalInvocationIndex, materialCounts - 1)] = command;
 
     materials[min(gl_LocalInvocationIndex, materialCounts - 1)].count = 0;

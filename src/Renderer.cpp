@@ -142,7 +142,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     auto pixelPositionsBufferIndex = _graph.addBufferResource("pixelPositions", visibilityPixelPositions);
 
     BufferResource visibilityDispatchCommands;
-    visibilityDispatchCommands.size = _engine->materialCount() * sizeof(VisibilityDispatchCommand);
+    visibilityDispatchCommands.size = _engine->materialCount() * sizeof(DispatchCommand);
     auto visibilityDispatchBufferIndex = _graph.addBufferResource("dispatchCommands", visibilityDispatchCommands);
     {
         // Register resources used by graph
@@ -572,6 +572,8 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
             visibilityMaterialPass.addStorageBufferRead("camera", vk::PipelineStage::COMPUTE_SHADER);
 
             visibilityMaterialPass.addStorageBufferRead(pixelPositionsBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
+            visibilityMaterialPass.addIndirectRead(visibilityDispatchBufferIndex);
+            visibilityMaterialPass.addStorageBufferRead(visibilityDispatchBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
 
             visibilityMaterialPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph& graph) {
                 auto global = graph.getBuffer("global");
@@ -582,9 +584,14 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
                 else
                     image = graph.getImage("backbuffer");
                 auto depth = graph.getImage("depth");
+                auto materialCounts = graph.getBuffer(materialCountBufferIndex);
+                auto pixelPositions = graph.getBuffer(pixelPositionsBufferIndex);
+                auto dispatchCommands = graph.getBuffer(visibilityDispatchBufferIndex);
 
                 cmd->clearDescriptors();
                 cmd->bindBuffer(1, 0, global);
+                cmd->bindBuffer(1, 1, materialCounts, true);
+                cmd->bindBuffer(1, 2, pixelPositions, true);
 
                 for (u32 i = 0; i < _engine->materialCount(); i++) {
                     Material* material = &_engine->_materials[i];
@@ -598,17 +605,20 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
                         i32 visibilityImageIndex;
                         i32 backbufferIndex;
                         i32 depthIndex;
+                        u32 materialIndex;
                     } push;
                     push.visibilityImageIndex = visibilityImage.index();
                     push.backbufferIndex = image.index();
                     push.depthIndex = depth.index();
+                    push.materialIndex = i;
 
                     cmd->pushConstants(vk::ShaderStage::COMPUTE, push);
 
                     cmd->bindPipeline();
                     cmd->bindDescriptors();
 
-                    cmd->dispatch(image->width(), image->height(), 1);
+                    u32 dispatchOffset = i * sizeof(DispatchCommand);
+                    cmd->dispatchIndirect(dispatchCommands, dispatchOffset);
                 }
 
             });

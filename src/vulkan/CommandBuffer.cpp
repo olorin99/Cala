@@ -483,6 +483,17 @@ void cala::vk::CommandBuffer::dispatchWorkgroups(u32 x, u32 y, u32 z) {
     writeBufferMarker(PipelineStage::COMPUTE_SHADER, "vkCmdDispatch");
 }
 
+void cala::vk::CommandBuffer::dispatchIndirect(cala::vk::BufferHandle buffer, u32 offset) {
+    assert(!_pipelineDirty);
+    assert(!_descriptorDirty);
+    if (!_boundProgram->stagePresent(ShaderStage::COMPUTE)) {
+        _device->logger().warn("Attempted to issue compute shader dispatch without compute shader bound");
+        return;
+    }
+    vkCmdDispatchIndirect(_buffer, buffer->buffer(), offset);
+    writeBufferMarker(PipelineStage::COMPUTE_SHADER, "vkCmdDispatch");
+}
+
 void cala::vk::CommandBuffer::clearImage(cala::vk::ImageHandle image, const ende::math::Vec4f& clearValue) {
     VkClearColorValue clearColour = { clearValue.x(), clearValue.y(), clearValue.z(), clearValue.w() };
     VkImageSubresourceRange range{};
