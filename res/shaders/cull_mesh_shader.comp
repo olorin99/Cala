@@ -20,8 +20,8 @@ struct MaterialCount {
     uint offset;
 };
 
-layout (set = 2, binding = 1) buffer MaterialCounts {
-    MaterialCount counts[];
+layout (set = 2, binding = 1) buffer Count {
+    uint drawCount;
 };
 
 bool frustumCheck(vec3 pos, float radius) {
@@ -65,9 +65,7 @@ void main() {
         return;
 
     if (idx == 0) {
-        for (uint i = 0; i < counts.length(); i++) {
-            atomicExchange(counts[i].count, 0);
-        }
+        atomicExchange(drawCount, 0);
     }
 
     barrier();
@@ -87,8 +85,7 @@ void main() {
         uint lod = getLOD(mesh.lodCount, mesh.min.xyz, mesh.max.xyz);
         uint meshletCount = mesh.lods[lod].meshletCount;
 
-        uint a = atomicAdd(counts[mesh.materialID].count, 1);
-        uint offset = counts[mesh.materialID].offset;
+        uint a = atomicAdd(drawCount, 1);
 
         MeshTaskCommand command;
         command.x = uint(ceil(meshletCount / 64.0));
@@ -96,7 +93,7 @@ void main() {
         command.z = 1;
         command.meshID = idx;
         command.meshLOD = lod;
-        commands[offset + a] = command;
+        commands[a] = command;
         atomicAdd(globalData.feedbackBuffer.feedback.drawnMeshes, 1);
     }
     atomicAdd(globalData.feedbackBuffer.feedback.totalMeshes, 1);

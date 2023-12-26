@@ -33,6 +33,7 @@ int main() {
 
     ui::GuiWindow guiWindow(engine, renderer, scene, swapchain, platform.window());
 
+    Material* material = engine.loadMaterial("../../res/materials/expanded_pbr.mat");
     Material* material1 = engine.loadMaterial("../../res/materials/pbr.mat");
     if (!material1)
         return -2;
@@ -86,7 +87,7 @@ int main() {
 //    auto bistro = engine.assetManager()->loadModel("bistro", "models/bistro/gltf/Bistro_Exterior.gltf", material1);
 //    auto damagedHelmet = engine.assetManager()->loadModel("damagedHelmet", "models/gltf/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf", material1);
 //    auto suzanne = engine.assetManager()->loadModel("suzanne", "models/gltf/glTF-Sample-Models/2.0/Suzanne/glTF/Suzanne.gltf", material1);
-    auto sphere = engine.assetManager()->loadModel("sphere", "models/sphere.glb", material1);
+    auto sphere = engine.assetManager()->loadModel("sphere", "models/sphere.glb", material);
 //    auto sibenik = engine.assetManager()->loadModel("sibenik", "models/gltf/sibenik/sibenik.gltf", material1);
 //    auto sanMiguel = engine.assetManager()->loadModel("San Miguel", "models/gltf/San_Miguel/San_Miguel.gltf", material1);
 
@@ -95,18 +96,19 @@ int main() {
 //    scene.addModel("sibenik", *sibenik, Transform());
 //    scene.addModel("San Miguel", *sanMiguel, Transform());
 //
-//    for (u32 i = 0; i < 10; i++) {
-//        for (u32 j = 0; j < 10; j++) {
-//            for (u32 k = 0; k < 10; k++) {
-//                f32 x = i * 3;
-//                f32 y = j * 3;
-//                f32 z = k * 3;
-//                Transform transform({ x, y, z });
-//
+    for (u32 i = 0; i < 10; i++) {
+        for (u32 j = 0; j < 10; j++) {
+            for (u32 k = 0; k < 10; k++) {
+                f32 x = i * 3;
+                f32 y = j * 3;
+                f32 z = k * 3;
+                Transform transform({ x, y, z });
+
 //                scene.addModel("suzanne", *suzanne, transform);
-//            }
-//        }
-//    }
+                scene.addModel("sphere", *sphere, transform);
+            }
+        }
+    }
 
 
 //    auto plane = engine.assetManager()->loadModel("plane", "models/plane.glb", material1);
