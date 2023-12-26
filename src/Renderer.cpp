@@ -119,8 +119,8 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
 
     scene._updateCullingCamera = !_renderSettings.freezeFrustum;
 
-    bool overlayDebug = _renderSettings.debugWireframe || _renderSettings.debugNormalLines || _renderSettings.debugClusters || _renderSettings.debugFrustum || _renderSettings.debugDepth;
-    bool fullscreenDebug = _renderSettings.debugNormals || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugMetallic || _renderSettings.debugRoughness || _renderSettings.debugMeshlets || _renderSettings.debugPrimitives;
+    bool overlayDebug = _renderSettings.debugNormalLines || _renderSettings.debugClusters || _renderSettings.debugFrustum || _renderSettings.debugDepth;
+    bool fullscreenDebug = _renderSettings.debugWireframe || _renderSettings.debugNormals || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugMetallic || _renderSettings.debugRoughness || _renderSettings.debugMeshlets || _renderSettings.debugPrimitives;
     bool debugViewEnabled = overlayDebug || fullscreenDebug;
 
     vk::CommandHandle cmd = _frameInfo.cmd;
@@ -323,7 +323,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     }
 
     if (_renderSettings.debugNormals) {
-        debugNormalPass(_graph, *_engine, scene, {
+        debugNormalPass(_graph, *_engine, {
             .backbuffer = backbufferIndex,
             .depth = depthIndex,
             .visbility = visibilityImageIndex,
@@ -340,7 +340,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     }
 
     if (_renderSettings.debugRoughness) {
-        debugRoughnessPass(_graph, *_engine, scene, {
+        debugRoughnessPass(_graph, *_engine, {
             .backbuffer = backbufferIndex,
             .depth = depthIndex,
             .visbility = visibilityImageIndex,
@@ -357,7 +357,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     }
 
     if (_renderSettings.debugMetallic) {
-        debugMetallicPass(_graph, *_engine, scene, {
+        debugMetallicPass(_graph, *_engine, {
             .backbuffer = backbufferIndex,
             .depth = depthIndex,
             .visbility = visibilityImageIndex,
@@ -374,7 +374,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     }
 
     if (_renderSettings.debugUnlit) {
-        debugUnlitPass(_graph, *_engine, scene, {
+        debugUnlitPass(_graph, *_engine, {
             .backbuffer = backbufferIndex,
             .depth = depthIndex,
             .visbility = visibilityImageIndex,
@@ -391,7 +391,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     }
 
     if (_renderSettings.debugWorldPos) {
-        debugWorldPositionPass(_graph, *_engine, scene, {
+        debugWorldPositionPass(_graph, *_engine, {
             .backbuffer = backbufferIndex,
             .depth = depthIndex,
             .visbility = visibilityImageIndex,
@@ -407,9 +407,18 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
         });
     }
 
-//    if (_renderSettings.debugWireframe) {
-//        debugWireframePass(_graph, *_engine, scene, _renderSettings);
-//    }
+    if (_renderSettings.debugWireframe) {
+        debugWireframePass(_graph, *_engine, _renderSettings, {
+            .backbuffer = backbufferIndex,
+            .visbility = visibilityImageIndex,
+            .global = globalIndex,
+            .camera = cameraBufferIndex,
+            .meshData = meshDataIndex,
+            .transforms = transformsIndex,
+            .vertexBuffer = vertexBufferIndex,
+            .indexBuffer = indexBufferIndex
+        });
+    }
 //
 //    if (_renderSettings.debugNormalLines) {
 //        debugNormalLinesPass(_graph, *_engine, scene, _renderSettings);
@@ -603,7 +612,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
                     u32 materialCount;
                 } pixelPush;
                 pixelPush.visibilityImageIndex = visibilityImage.index();
-                pixelPush.materialCount = scene._materialCounts.size();
+                pixelPush.materialCount = _engine->materialCount();
                 cmd->pushConstants(vk::ShaderStage::COMPUTE, pixelPush);
 
                 cmd->bindPipeline();

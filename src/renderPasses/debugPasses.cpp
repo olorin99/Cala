@@ -35,7 +35,7 @@ void debugClusters(cala::RenderGraph& graph, cala::Engine& engine, cala::vk::Swa
     });
 }
 
-void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, NormalDebugInput input) {
+void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, NormalDebugInput input) {
     auto& normalsPass = graph.addPass("debug_normals", RenderPass::Type::COMPUTE);
 
     normalsPass.addStorageImageWrite(input.backbuffer, vk::PipelineStage::COMPUTE_SHADER);
@@ -97,7 +97,7 @@ void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene
     });
 }
 
-void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, RoughnessDebugInput input) {
+void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, RoughnessDebugInput input) {
     auto& debugRoughness = graph.addPass("debug_roughness", RenderPass::Type::COMPUTE);
 
     debugRoughness.addStorageImageWrite(input.backbuffer, vk::PipelineStage::COMPUTE_SHADER);
@@ -159,7 +159,7 @@ void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sc
     });
 }
 
-void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, MetallicDebugInput input) {
+void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, MetallicDebugInput input) {
     auto& debugMetallic = graph.addPass("debug_metallic", RenderPass::Type::COMPUTE);
 
     debugMetallic.addStorageImageWrite(input.backbuffer, vk::PipelineStage::COMPUTE_SHADER);
@@ -221,7 +221,7 @@ void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Sce
     });
 }
 
-void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, UnlitDebugInput input) {
+void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, UnlitDebugInput input) {
     auto& debugUnlit = graph.addPass("debug_unlit", RenderPass::Type::COMPUTE);
 
     debugUnlit.addStorageImageWrite(input.backbuffer, vk::PipelineStage::COMPUTE_SHADER);
@@ -283,7 +283,7 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene&
     });
 }
 
-void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, WorldPosDebugInput input) {
+void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, WorldPosDebugInput input) {
     auto& debugWorldPos = graph.addPass("debug_worldPos", RenderPass::Type::COMPUTE);
 
     debugWorldPos.addStorageImageWrite(input.backbuffer, vk::PipelineStage::COMPUTE_SHADER);
@@ -330,49 +330,43 @@ void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala
     });
 }
 
-void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings) {
-    auto& debugWireframe = graph.addPass("debug_wireframe");
+void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Renderer::Settings settings, WireframeDebugInput input) {
+    auto& debugWireframe = graph.addPass("debug_wireframe", RenderPass::Type::COMPUTE);
 
-    debugWireframe.addColourRead("backbuffer-debug");
-    debugWireframe.addColourWrite("backbuffer");
-    debugWireframe.addDepthRead("depth");
+    debugWireframe.addStorageImageWrite(input.backbuffer, vk::PipelineStage::COMPUTE_SHADER);
 
-    debugWireframe.addUniformBufferRead("global", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
-    debugWireframe.addIndirectRead("drawCommands");
-    debugWireframe.addIndirectRead("materialCounts");
-    debugWireframe.addStorageBufferRead("transforms", vk::PipelineStage::VERTEX_SHADER);
-    debugWireframe.addStorageBufferRead("meshData", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
-    debugWireframe.addStorageBufferRead("camera", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::GEOMETRY_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
+    debugWireframe.addStorageImageRead(input.visbility, vk::PipelineStage::COMPUTE_SHADER);
 
-    debugWireframe.setExecuteFunction([settings, &engine, &scene](cala::vk::CommandHandle cmd, cala::RenderGraph& graph) {
-        auto global = graph.getBuffer("global");
-        auto drawCommands = graph.getBuffer("drawCommands");
-        auto materialCounts = graph.getBuffer("materialCounts");
+    debugWireframe.addUniformBufferRead(input.global, vk::PipelineStage::COMPUTE_SHADER);
+    debugWireframe.addStorageBufferRead(input.vertexBuffer, vk::PipelineStage::COMPUTE_SHADER);
+    debugWireframe.addStorageBufferRead(input.indexBuffer, vk::PipelineStage::COMPUTE_SHADER);
+    debugWireframe.addStorageBufferRead(input.transforms, vk::PipelineStage::COMPUTE_SHADER);
+    debugWireframe.addStorageBufferRead(input.meshData, vk::PipelineStage::COMPUTE_SHADER);
+    debugWireframe.addStorageBufferRead(input.camera, vk::PipelineStage::COMPUTE_SHADER);
+
+    debugWireframe.setExecuteFunction([&, input](vk::CommandHandle cmd, RenderGraph& graph) {
+        auto global = graph.getBuffer(input.global);
+        auto visibilityImage = graph.getImage(input.visbility);
+        vk::ImageHandle image = graph.getImage(input.backbuffer);
+
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
 
-        auto binding = engine.globalBinding();
-        auto attributes = engine.globalVertexAttributes();
-        cmd->bindBindings({ &binding, 1 });
-        cmd->bindAttributes(attributes);
+        cmd->bindProgram(engine.getProgram(Engine::ProgramType::DEBUG_WIREFRAME));
 
-        cmd->bindDepthState({ true, false, cala::vk::CompareOp::LESS_EQUAL });
-        cmd->bindRasterState({
-            .polygonMode = cala::vk::PolygonMode::LINE,
-            .lineWidth = settings.wireframeThickness
-        });
-        cmd->bindVertexBuffer(0, engine.vertexBuffer());
-        cmd->bindIndexBuffer(engine.indexBuffer());
-        for (u32 material = 0; material < scene._materialCounts.size(); material++) {
-            cmd->bindProgram(engine.getProgram(cala::Engine::ProgramType::SOLID_COLOUR));
-            cmd->pushConstants(cala::vk::ShaderStage::FRAGMENT, settings.wireframeColour);
-            cmd->bindPipeline();
-            cmd->bindDescriptors();
+        struct Push {
+            i32 visibilityImageIndex;
+            u32 backbufferIndex;
+        } push;
+        push.visibilityImageIndex = visibilityImage.index();
+        push.backbufferIndex = image.index();
 
-            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(MeshTaskCommand);
-            u32 countOffset = material * (sizeof(u32) * 2);
-            cmd->drawMeshTasksIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset, sizeof(MeshTaskCommand));
-        }
+        cmd->pushConstants(vk::ShaderStage::COMPUTE, push);
+
+        cmd->bindPipeline();
+        cmd->bindDescriptors();
+
+        cmd->dispatch(image->width(), image->height(), 1);
     });
 }
 

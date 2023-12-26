@@ -156,6 +156,9 @@ cala::Engine::Engine(vk::Platform &platform)
             { "shaders/debug/clusters_debug.frag", vk::ShaderStage::FRAGMENT }
         });
     }
+    _wireframeDebugProgram = loadProgram("wireframeDebugProgram", {
+        { "shaders/debug/debug_wireframe.comp", vk::ShaderStage::COMPUTE }
+    });
     _worldPosDebugProgram = loadProgram("worldPosDebugProgram", {
         { "shaders/debug/world_pos.comp", vk::ShaderStage::COMPUTE }
     });
@@ -1133,6 +1136,8 @@ const cala::vk::ShaderProgram& cala::Engine::getProgram(cala::Engine::ProgramTyp
             return _clusterDebugProgram;
         case ProgramType::DEBUG_NORMALS:
             return _normalsDebugProgram;
+        case ProgramType::DEBUG_WIREFRAME:
+            return _wireframeDebugProgram;
         case ProgramType::DEBUG_WORLDPOS:
             return _worldPosDebugProgram;
         case ProgramType::DEBUG_FRUSTUM:

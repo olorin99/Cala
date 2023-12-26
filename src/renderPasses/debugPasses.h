@@ -28,7 +28,7 @@ struct NormalDebugInput {
     cala::BufferIndex vertexBuffer;
     cala::BufferIndex indexBuffer;
 };
-void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, NormalDebugInput input);
+void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, NormalDebugInput input);
 
 struct RoughnessDebugInput {
     cala::ImageIndex backbuffer;
@@ -44,7 +44,7 @@ struct RoughnessDebugInput {
     cala::BufferIndex vertexBuffer;
     cala::BufferIndex indexBuffer;
 };
-void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, RoughnessDebugInput input);
+void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, RoughnessDebugInput input);
 
 struct MetallicDebugInput {
     cala::ImageIndex backbuffer;
@@ -60,7 +60,7 @@ struct MetallicDebugInput {
     cala::BufferIndex vertexBuffer;
     cala::BufferIndex indexBuffer;
 };
-void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, MetallicDebugInput input);
+void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, MetallicDebugInput input);
 
 struct UnlitDebugInput {
     cala::ImageIndex backbuffer;
@@ -76,7 +76,7 @@ struct UnlitDebugInput {
     cala::BufferIndex vertexBuffer;
     cala::BufferIndex indexBuffer;
 };
-void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, UnlitDebugInput input);
+void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, UnlitDebugInput input);
 
 struct WorldPosDebugInput {
     cala::ImageIndex backbuffer;
@@ -92,9 +92,19 @@ struct WorldPosDebugInput {
     cala::BufferIndex vertexBuffer;
     cala::BufferIndex indexBuffer;
 };
-void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, WorldPosDebugInput input);
+void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, WorldPosDebugInput input);
 
-void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings);
+struct WireframeDebugInput {
+    cala::ImageIndex backbuffer;
+    cala::ImageIndex visbility;
+    cala::BufferIndex global;
+    cala::BufferIndex camera;
+    cala::BufferIndex meshData;
+    cala::BufferIndex transforms;
+    cala::BufferIndex vertexBuffer;
+    cala::BufferIndex indexBuffer;
+};
+void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Renderer::Settings settings, WireframeDebugInput input);
 
 void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings);
 

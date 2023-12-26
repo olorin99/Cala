@@ -162,6 +162,7 @@ namespace cala {
             DEBUG_PRIMITIVES,
             DEBUG_CLUSTER,
             DEBUG_NORMALS,
+            DEBUG_WIREFRAME,
             DEBUG_WORLDPOS,
             DEBUG_FRUSTUM,
             DEBUG_DEPTH,
@@ -235,6 +236,7 @@ namespace cala {
         vk::ShaderProgram _clusterDebugProgram;
         vk::ShaderProgram _normalsDebugProgram;
         vk::ShaderProgram _worldPosDebugProgram;
+        vk::ShaderProgram _wireframeDebugProgram;
         vk::ShaderProgram _solidColourProgram;
         vk::ShaderProgram _frustumDebugProgram;
         vk::ShaderProgram _depthDebugProgram;
