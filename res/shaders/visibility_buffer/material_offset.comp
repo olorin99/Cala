@@ -1,0 +1,44 @@
+
+layout (local_size_x = LOCAL_SIZE_X, local_size_y = 1, local_size_z = 1) in;
+
+#include "shaderBridge.h"
+#include "bindings.glsl"
+
+layout (push_constant) uniform PushData {
+    uint materialCounts;
+};
+
+struct MaterialCount {
+    uint count;
+    uint offset;
+};
+
+layout (scalar, set = 1, binding = 1) buffer MaterialCounts {
+    MaterialCount materials[];
+};
+
+shared uint sharedSum[2][gl_WorkGroupSize.x * 2];
+
+void main() {
+
+    if (gl_LocalInvocationIndex >= materialCounts)
+    return;
+
+    sharedSum[0][0] = 0;
+    sharedSum[1][0] = 0;
+    sharedSum[0][gl_LocalInvocationIndex + 1] = materials[min(gl_LocalInvocationIndex, materialCounts - 1)].count;
+    sharedSum[1][gl_LocalInvocationIndex + 1] = materials[min(gl_LocalInvocationIndex, materialCounts - 1)].count;
+
+    uint loopCount = 0;
+    for (int i = 1; i < materialCounts; i <<= 1) {
+        uint getIndex = loopCount % 2;
+        uint setIndex = (loopCount + 1) % 2;
+        if (gl_LocalInvocationIndex + i < materialCounts) {
+            sharedSum[setIndex][gl_LocalInvocationIndex + i] += sharedSum[getIndex][gl_LocalInvocationIndex];
+        }
+        loopCount++;
+        barrier();
+    }
+
+    materials[gl_LocalInvocationIndex].offset = sharedSum[loopCount % 2][gl_LocalInvocationIndex];
+}

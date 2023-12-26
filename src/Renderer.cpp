@@ -140,6 +140,10 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     BufferResource visibilityPixelPositions;
     visibilityPixelPositions.size = _swapchain->extent().width * _swapchain->extent().height * sizeof(u32) * 2;
     auto pixelPositionsBufferIndex = _graph.addBufferResource("pixelPositions", visibilityPixelPositions);
+
+    BufferResource visibilityDispatchCommands;
+    visibilityDispatchCommands.size = _engine->materialCount() * sizeof(DispatchCommand);
+    auto visibilityDispatchBufferIndex = _graph.addBufferResource("dispatchCommands", visibilityDispatchCommands);
     {
         // Register resources used by graph
 
@@ -462,12 +466,14 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
             visibilityCountPass.addStorageBufferRead("meshData", vk::PipelineStage::COMPUTE_SHADER);
             visibilityCountPass.addStorageBufferWrite(materialCountBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
             visibilityCountPass.addStorageBufferWrite(pixelPositionsBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
+            visibilityCountPass.addStorageBufferWrite(visibilityDispatchBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
 
             visibilityCountPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph &graph) {
                 auto global = graph.getBuffer("global");
                 auto visibilityImage = graph.getImage(visibilityImageIndex);
                 auto materialCounts = graph.getBuffer(materialCountBufferIndex);
                 auto pixelPositions = graph.getBuffer(pixelPositionsBufferIndex);
+                auto dispatchCommands = graph.getBuffer(visibilityDispatchBufferIndex);
 
                 cmd->clearBuffer(materialCounts);
                 auto barrier = materialCounts->barrier(vk::PipelineStage::TRANSFER, vk::PipelineStage::COMPUTE_SHADER,
@@ -486,13 +492,33 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
                     u32 materialCount;
                 } countPush;
                 countPush.visibilityImageIndex = visibilityImage.index();
-                countPush.materialCount = scene._materialCounts.size();
+                countPush.materialCount = _engine->materialCount();
                 cmd->pushConstants(vk::ShaderStage::COMPUTE, countPush);
 
                 cmd->bindPipeline();
                 cmd->bindDescriptors();
 
                 cmd->dispatch(visibilityImage->width(), visibilityImage->height(), 1);
+
+                barrier = materialCounts->barrier(vk::PipelineStage::COMPUTE_SHADER, vk::PipelineStage::COMPUTE_SHADER,
+                                                  vk::Access::SHADER_READ | vk::Access::SHADER_WRITE,
+                                                  vk::Access::SHADER_READ | vk::Access::SHADER_WRITE);
+                cmd->pipelineBarrier({&barrier, 1});
+                cmd->clearDescriptors();
+
+                cmd->bindBuffer(1, 1, materialCounts, true);
+                cmd->bindProgram(_engine->getProgram(Engine::ProgramType::VISIBILITY_OFFSET));
+
+                struct OffsetPush {
+                    u32 materialCount;
+                } offsetPush;
+                offsetPush.materialCount = _engine->materialCount();
+                cmd->pushConstants(vk::ShaderStage::COMPUTE, offsetPush);
+
+                cmd->bindPipeline();
+                cmd->bindDescriptors();
+
+                cmd->dispatchWorkgroups(1, 1, 1);
             });
         }
 

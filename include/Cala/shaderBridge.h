@@ -24,6 +24,12 @@ using mat3 = ende::math::Mat<3, f32>;
 using mat4 = ende::math::Mat<4, f32>;
 #endif
 
+struct DispatchCommand {
+    uint x;
+    uint y;
+    uint z;
+};
+
 struct MeshTaskCommand {
     uint x;
     uint y;
