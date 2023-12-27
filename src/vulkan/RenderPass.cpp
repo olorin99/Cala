@@ -32,7 +32,7 @@ cala::vk::RenderPass::RenderPass(Device& driver, std::span<Attachment> attachmen
             colourReferences[colourAttachmentCount].layout = getImageLayout(attachments[i].internalLayout);
             if (attachmentDescriptions[colourAttachmentCount].loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
                 while (_clearValues.size() <= i)
-                    _clearValues.push_back({0.f, 0.f, 0.f, 1.f});
+                    _clearValues.push_back(attachments[i].clearValue);
             colourAttachmentCount++;
             _colourAttachments++;
         } else {

@@ -33,6 +33,9 @@ void main() {
     uint visibility = data.x;
     uint drawID = data.y;
 
+    if (drawID > 2000000000)
+        return;
+
     uint meshletID = getMeshletID(visibility);
     uint primitiveID = getPrimitiveID(visibility);
 

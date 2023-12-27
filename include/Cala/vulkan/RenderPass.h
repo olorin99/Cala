@@ -23,6 +23,7 @@ namespace cala::vk {
             ImageLayout initialLayout;
             ImageLayout finalLayout;
             ImageLayout internalLayout;
+            VkClearValue clearValue = { 0.f, 0.f, 0.f, 1.f };
         };
 
         RenderPass(Device& driver, std::span<Attachment> attachments);

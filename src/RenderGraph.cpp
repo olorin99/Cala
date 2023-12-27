@@ -29,23 +29,23 @@ void cala::RenderPass::setDimensions(u32 width, u32 height) {
 
 
 
-void cala::RenderPass::addColourWrite(const char *label) {
+void cala::RenderPass::addColourWrite(const char *label, const std::array<f32, 4>& clearColour) {
     if (auto resource = writes(label, vk::Access::COLOUR_ATTACHMENT_READ | vk::Access::COLOUR_ATTACHMENT_WRITE,
                                vk::PipelineStage::COLOUR_ATTACHMENT_OUTPUT,
                                vk::ImageLayout::COLOUR_ATTACHMENT); resource) {
         auto imageResource = dynamic_cast<ImageResource*>(resource);
         imageResource->usage = imageResource->usage | vk::ImageUsage::COLOUR_ATTACHMENT;
-        _colourAttachments.push_back(imageResource->index);
+        _colourAttachments.push_back({ imageResource->index, clearColour });
     }
 }
 
-void cala::RenderPass::addColourWrite(cala::ImageIndex index) {
+void cala::RenderPass::addColourWrite(cala::ImageIndex index, const std::array<f32, 4>& clearColour) {
     if (auto resource = writes(index, vk::Access::COLOUR_ATTACHMENT_READ | vk::Access::COLOUR_ATTACHMENT_WRITE,
                                vk::PipelineStage::COLOUR_ATTACHMENT_OUTPUT,
                                vk::ImageLayout::COLOUR_ATTACHMENT); resource) {
         auto imageResource = dynamic_cast<ImageResource*>(resource);
         imageResource->usage = imageResource->usage | vk::ImageUsage::COLOUR_ATTACHMENT;
-        _colourAttachments.push_back(imageResource->index);
+        _colourAttachments.push_back({ imageResource->index, clearColour });
     }
 }
 
@@ -874,7 +874,8 @@ void cala::RenderGraph::buildRenderPasses() {
 
         u32 width = pass->_width, height = pass->_height;
 
-        for (auto& imageIndex : pass->_colourAttachments) {
+        for (auto& attachmentInfo : pass->_colourAttachments) {
+            u32 imageIndex = attachmentInfo.index;
             auto image = dynamic_cast<ImageResource*>(_resources[imageIndex].get());
 
             auto [prevAccessPassIndex, prevAccessIndex, prevAccess] = findPrevAccess(i - 1, image->index);
@@ -894,6 +895,7 @@ void cala::RenderGraph::buildRenderPasses() {
             attachment.initialLayout = access.layout;
             attachment.finalLayout = access.layout;
             attachment.internalLayout = access.layout;
+            attachment.clearValue = { attachmentInfo.clearColour[0], attachmentInfo.clearColour[1], attachmentInfo.clearColour[2], attachmentInfo.clearColour[3] };
 
             width = std::max(width, image->width);
             height = std::max(height, image->height);

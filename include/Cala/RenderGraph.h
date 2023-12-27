@@ -56,8 +56,8 @@ namespace cala {
         void setDimensions(u32 width, u32 height);
 
 
-        void addColourWrite(const char* label);
-        void addColourWrite(ImageIndex index);
+        void addColourWrite(const char* label, const std::array<f32, 4>& clearColour = { 0.f, 0.f, 0.f, 1.f });
+        void addColourWrite(ImageIndex index, const std::array<f32, 4>& clearColour = { 0.f, 0.f, 0.f, 1.f });
 
         void addColourRead(const char* label);
         void addColourRead(ImageIndex index);
@@ -143,7 +143,11 @@ namespace cala {
         std::vector<ResourceAccess> _inputs;
         std::vector<ResourceAccess> _outputs;
 
-        std::vector<u32> _colourAttachments;
+        struct Attachment {
+            u32 index;
+            std::array<f32, 4> clearColour;
+        };
+        std::vector<Attachment> _colourAttachments;
         i32 _depthResource;
         u32 _width;
         u32 _height;

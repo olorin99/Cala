@@ -504,7 +504,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
 
     {
         auto& visibilityPass = _graph.addPass("visibility_pass");
-        visibilityPass.addColourWrite(visibilityImageIndex);
+        visibilityPass.addColourWrite(visibilityImageIndex, { 0, std::numeric_limits<f32>::max() });
         visibilityPass.addDepthWrite(depthIndex);
 
         visibilityPass.addUniformBufferRead(globalIndex, vk::PipelineStage::TASK_SHADER | vk::PipelineStage::MESH_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
