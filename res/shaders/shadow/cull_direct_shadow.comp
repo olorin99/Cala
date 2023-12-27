@@ -83,6 +83,8 @@ void main() {
     }
     if (visible) {
         uint lod = getLOD(mesh.lodCount, mesh.min.xyz, mesh.max.xyz);
+        lod = min(max(lod, max(globalData.lodBias, globalData.shadowLodBias)), mesh.lodCount - 1);
+
         uint meshletCount = mesh.lods[lod].meshletCount;
 
         uint a = atomicAdd(drawCount, 1);

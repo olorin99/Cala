@@ -1076,6 +1076,8 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     _globalData.shadowMode = _renderSettings.shadowMode;
     _globalData.pcfSamples = _renderSettings.pcfSamples;
     _globalData.blockerSamples = _renderSettings.blockerSamples;
+    _globalData.lodBias = _renderSettings.lodBias;
+    _globalData.shadowLodBias = _renderSettings.shadowLodBias;
 
     if (_renderSettings.ibl) {
         _globalData.irradianceIndex = scene._skyLightIrradiance.index();

@@ -64,7 +64,7 @@ layout (scalar, buffer_reference, buffer_reference_align = 8) readonly buffer Pr
 #define PrimitiveBuffer u64
 #endif
 
-#define MAX_LODS 5
+#define MAX_LODS 10
 
 struct LOD {
     uint meshletOffset;
@@ -222,6 +222,8 @@ struct GlobalData {
     int shadowMode;
     int pcfSamples;
     int blockerSamples;
+    uint lodBias;
+    uint shadowLodBias;
     int irradianceIndex;
     int prefilterIndex;
     int brdfIndex;

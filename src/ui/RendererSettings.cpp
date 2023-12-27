@@ -28,6 +28,7 @@ void cala::ui::RendererSettingsWindow::render() {
                 rendererSettings.shadowMode = modeIndex;
             ImGui::SliderInt("PCF Samples", &rendererSettings.pcfSamples, 1, 128);
             ImGui::SliderInt("PCSS Blocker Samples", &rendererSettings.blockerSamples, 1, 128);
+            ImGui::SliderInt("Shadow LOD bias", &rendererSettings.shadowLodBias, 0, MAX_LODS - 1);
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("Tonemapping Settings")) {
@@ -51,6 +52,8 @@ void cala::ui::RendererSettingsWindow::render() {
         ImGui::Checkbox("Freeze Frustum,", &rendererSettings.freezeFrustum);
         ImGui::Checkbox("IBL,", &rendererSettings.ibl);
         ImGui::Checkbox("GPU Culling", &rendererSettings.gpuCulling);
+        ImGui::SliderInt("LOD bias", &rendererSettings.lodBias, 0, MAX_LODS - 1);
+        ImGui::SliderInt("Shadow LOD bias", &rendererSettings.shadowLodBias, 0, MAX_LODS - 1);
         ImGui::Checkbox("Bounded FrameTime", &rendererSettings.boundedFrameTime);
         ImGui::SliderInt("Target FPS", &_targetFPS, 5, 240);
         rendererSettings.millisecondTarget = 1000.f / _targetFPS;
