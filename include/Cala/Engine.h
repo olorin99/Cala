@@ -147,7 +147,6 @@ namespace cala {
             BLOOM_DOWNSAMPLE,
             BLOOM_UPSAMPLE,
             BLOOM_COMPOSITE,
-            CULL,
             CULL_MESH_SHADER,
             CULL_POINT,
             CULL_DIRECT,
@@ -214,7 +213,6 @@ namespace cala {
         vk::ShaderProgram _brdfProgram;
         vk::ShaderProgram _skyboxProgram;
         vk::ShaderProgram _tonemapProgram;
-        vk::ShaderProgram _cullProgram;
         vk::ShaderProgram _cullMeshShaderProgram;
         vk::ShaderProgram _pointShadowCullProgram;
         vk::ShaderProgram _directShadowCullProgram;
