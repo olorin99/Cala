@@ -106,7 +106,7 @@ struct WireframeDebugInput {
 };
 void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Renderer::Settings settings, WireframeDebugInput input);
 
-void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings);
+//void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings);
 
 struct FrustumDebugInput {
     cala::ImageIndex backbuffer;

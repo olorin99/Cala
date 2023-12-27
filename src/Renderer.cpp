@@ -25,7 +25,8 @@ cala::Renderer::Renderer(cala::Engine* engine, cala::Renderer::Settings settings
         buffer = engine->device().createBuffer({
             .size = sizeof(GlobalData),
             .usage = vk::BufferUsage::UNIFORM,
-            .memoryType = vk::MemoryProperties::DEVICE,
+            .memoryType = vk::MemoryProperties::STAGING,
+            .persistentlyMapped = true,
             .name = "GlobalBuffer:" + std::to_string(i++)
         });
     }
@@ -1122,7 +1123,8 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     _globalData.lightIndicesBuffer = _graph.getBuffer("lightIndices")->address();
     _globalData.feedbackBuffer = _feedbackBuffer[_engine->device().frameIndex()]->address();
 
-    _engine->stageData(_globalDataBuffer[_engine->device().frameIndex()], _globalData);
+    _globalDataBuffer[_engine->device().frameIndex()]->data(_globalData);
+//    _engine->stageData(_globalDataBuffer[_engine->device().frameIndex()], _globalData);
 
     cmd->startPipelineStatistics();
     _graph.execute(cmd);

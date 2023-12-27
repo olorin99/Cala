@@ -97,7 +97,6 @@ namespace cala {
         vk::BufferHandle _meshTransformsBuffer[vk::FRAMES_IN_FLIGHT];
         vk::BufferHandle _lightBuffer[vk::FRAMES_IN_FLIGHT];
         vk::BufferHandle _cameraBuffer[vk::FRAMES_IN_FLIGHT];
-        vk::BufferHandle _materialCountBuffer[vk::FRAMES_IN_FLIGHT];
         vk::ImageHandle _skyLightMap;
         vk::Image::View _skyLightMapView;
         vk::ImageHandle _skyLightIrradiance;
@@ -119,12 +118,6 @@ namespace cala {
         GPUCamera _cullingCameraData = {};
         i32 _cullingCameraIndex = -1;
         bool _updateCullingCamera = true;
-
-        struct MaterialCount {
-            u32 count = 0;
-            u32 offset = 0;
-        };
-        std::vector<MaterialCount> _materialCounts;
 
         std::unique_ptr<SceneNode> _root;
 

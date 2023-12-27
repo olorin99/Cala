@@ -376,49 +376,49 @@ void debugWireframePass(cala::RenderGraph& graph, cala::Engine& engine, cala::Re
     });
 }
 
-void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings) {
-    auto& debugNormalLines = graph.addPass("debug_normal_lines");
-
-    debugNormalLines.addColourRead("backbuffer-debug");
-    debugNormalLines.addColourWrite("backbuffer");
-    debugNormalLines.addDepthRead("depth");
-
-    debugNormalLines.addUniformBufferRead("global", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
-    debugNormalLines.addIndirectRead("drawCommands");
-    debugNormalLines.addIndirectRead("materialCounts");
-    debugNormalLines.addStorageBufferRead("transforms", vk::PipelineStage::VERTEX_SHADER);
-    debugNormalLines.addStorageBufferRead("meshData", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
-    debugNormalLines.addStorageBufferRead("camera", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::GEOMETRY_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
-
-    debugNormalLines.setExecuteFunction([settings, &engine, &scene](cala::vk::CommandHandle cmd, cala::RenderGraph& graph) {
-        auto global = graph.getBuffer("global");
-        auto drawCommands = graph.getBuffer("drawCommands");
-        auto materialCounts = graph.getBuffer("materialCounts");
-        cmd->clearDescriptors();
-        cmd->bindBuffer(1, 0, global);
-
-        auto binding = engine.globalBinding();
-        auto attributes = engine.globalVertexAttributes();
-        cmd->bindBindings({ &binding, 1 });
-        cmd->bindAttributes(attributes);
-
-        cmd->bindDepthState({ true, false, cala::vk::CompareOp::LESS_EQUAL });
-        cmd->bindRasterState({});
-        cmd->bindVertexBuffer(0, engine.vertexBuffer());
-        cmd->bindIndexBuffer(engine.indexBuffer());
-        for (u32 material = 0; material < scene._materialCounts.size(); material++) {
-            cmd->bindProgram(engine.getProgram(cala::Engine::ProgramType::DEBUG_NORMALS));
-            cmd->pushConstants(cala::vk::ShaderStage::FRAGMENT, settings.wireframeColour);
-            cmd->pushConstants(cala::vk::ShaderStage::GEOMETRY, settings.normalLength, sizeof(settings.wireframeColour));
-            cmd->bindPipeline();
-            cmd->bindDescriptors();
-
-            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
-            u32 countOffset = material * (sizeof(u32) * 2);
-            cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
-        }
-    });
-}
+//void debugNormalLinesPass(cala::RenderGraph& graph, cala::Engine& engine, cala::Scene& scene, cala::Renderer::Settings settings) {
+//    auto& debugNormalLines = graph.addPass("debug_normal_lines");
+//
+//    debugNormalLines.addColourRead("backbuffer-debug");
+//    debugNormalLines.addColourWrite("backbuffer");
+//    debugNormalLines.addDepthRead("depth");
+//
+//    debugNormalLines.addUniformBufferRead("global", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
+//    debugNormalLines.addIndirectRead("drawCommands");
+//    debugNormalLines.addIndirectRead("materialCounts");
+//    debugNormalLines.addStorageBufferRead("transforms", vk::PipelineStage::VERTEX_SHADER);
+//    debugNormalLines.addStorageBufferRead("meshData", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
+//    debugNormalLines.addStorageBufferRead("camera", vk::PipelineStage::VERTEX_SHADER | vk::PipelineStage::GEOMETRY_SHADER | vk::PipelineStage::FRAGMENT_SHADER);
+//
+//    debugNormalLines.setExecuteFunction([settings, &engine, &scene](cala::vk::CommandHandle cmd, cala::RenderGraph& graph) {
+//        auto global = graph.getBuffer("global");
+//        auto drawCommands = graph.getBuffer("drawCommands");
+//        auto materialCounts = graph.getBuffer("materialCounts");
+//        cmd->clearDescriptors();
+//        cmd->bindBuffer(1, 0, global);
+//
+//        auto binding = engine.globalBinding();
+//        auto attributes = engine.globalVertexAttributes();
+//        cmd->bindBindings({ &binding, 1 });
+//        cmd->bindAttributes(attributes);
+//
+//        cmd->bindDepthState({ true, false, cala::vk::CompareOp::LESS_EQUAL });
+//        cmd->bindRasterState({});
+//        cmd->bindVertexBuffer(0, engine.vertexBuffer());
+//        cmd->bindIndexBuffer(engine.indexBuffer());
+//        for (u32 material = 0; material < scene._materialCounts.size(); material++) {
+//            cmd->bindProgram(engine.getProgram(cala::Engine::ProgramType::DEBUG_NORMALS));
+//            cmd->pushConstants(cala::vk::ShaderStage::FRAGMENT, settings.wireframeColour);
+//            cmd->pushConstants(cala::vk::ShaderStage::GEOMETRY, settings.normalLength, sizeof(settings.wireframeColour));
+//            cmd->bindPipeline();
+//            cmd->bindDescriptors();
+//
+//            u32 drawCommandOffset = scene._materialCounts[material].offset * sizeof(VkDrawIndexedIndirectCommand);
+//            u32 countOffset = material * (sizeof(u32) * 2);
+//            cmd->drawIndirectCount(drawCommands, drawCommandOffset, materialCounts, countOffset);
+//        }
+//    });
+//}
 
 void debugFrustum(cala::RenderGraph& graph, cala::Engine& engine, cala::Renderer::Settings settings, FrustumDebugInput input) {
     auto& debugFrustum = graph.addPass("debug_frustums");

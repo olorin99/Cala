@@ -14,6 +14,7 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
             .size = (u32)(count * sizeof(GPUMesh)),
             .usage = vk::BufferUsage::STORAGE,
             .memoryType = vk::MemoryProperties::STAGING,
+            .persistentlyMapped = true,
             .name = "MeshDataBuffer: " + std::to_string(i)
         });
     }
@@ -22,6 +23,7 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
             .size = (u32)(count * sizeof(ende::math::Mat4f)),
             .usage = vk::BufferUsage::UNIFORM | vk::BufferUsage::STORAGE,
             .memoryType = vk::MemoryProperties::STAGING,
+            .persistentlyMapped = true,
             .name = "ModelBuffer: " + std::to_string(i)
         });
     }
@@ -30,6 +32,7 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
             .size = (u32)(sizeof(u32) + lightCount * sizeof(GPULight)),
             .usage = vk::BufferUsage::STORAGE,
             .memoryType = vk::MemoryProperties::STAGING,
+            .persistentlyMapped = true,
             .name = "LightBuffer: " + std::to_string(i)
         });
     }
@@ -38,15 +41,8 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
             .size = (u32)(10 * sizeof(GPUCamera)),
             .usage = vk::BufferUsage::STORAGE,
             .memoryType = vk::MemoryProperties::STAGING,
+            .persistentlyMapped = true,
             .name = "CameraBuffer: " + std::to_string(i)
-        });
-    }
-    for (u32 i = 0; i < vk::FRAMES_IN_FLIGHT; i++) {
-        _materialCountBuffer[i] = engine->device().createBuffer({
-            .size = (u32)(sizeof(MaterialCount) * 1),
-            .usage = vk::BufferUsage::UNIFORM | vk::BufferUsage::STORAGE | vk::BufferUsage::INDIRECT,
-            .memoryType = vk::MemoryProperties::STAGING,
-            .name = "MaterialCountBuffer: " + std::to_string(i)
         });
     }
 
@@ -84,10 +80,6 @@ void traverseNode(cala::Scene::SceneNode* node, ende::math::Mat4f worldTransform
 void cala::Scene::prepare() {
     PROFILE_NAMED("Scene::prepare");
     u32 frame = _engine->device().frameIndex();
-    _materialCounts.resize(_engine->materialCount());
-    for (auto& materialCount : _materialCounts)
-        materialCount.count = 0;
-
 
     u32 meshCount = _meshData.size();
     // resize buffers to fit and update persistent mappings
@@ -97,9 +89,6 @@ void cala::Scene::prepare() {
     if (meshCount * sizeof(ende::math::Mat4f) >= _meshTransformsBuffer[frame]->size()) {
         _meshTransformsBuffer[frame] = _engine->device().resizeBuffer(_meshTransformsBuffer[frame], meshCount * sizeof(ende::math::Mat4f) * 2);
     }
-    if (_materialCounts.size() * sizeof(MaterialCount) > _materialCountBuffer[frame]->size()) {
-        _materialCountBuffer[frame] = _engine->device().resizeBuffer(_materialCountBuffer[frame], _materialCounts.size() * sizeof(MaterialCount));
-    }
     if (_lights.size() * sizeof(GPULight) >= _lightBuffer[frame]->size()) {
         _lightBuffer[frame] = _engine->device().resizeBuffer(_lightBuffer[frame], _lights.size() * sizeof(GPULight) * 2 + sizeof(u32));
     }
@@ -107,10 +96,10 @@ void cala::Scene::prepare() {
     // update transforms
     traverseNode(_root.get(), ende::math::identity<4, f32>(), _meshTransforms);
 
-//    _meshDataBuffer[frame]->data(_meshData);
-    _engine->stageData(_meshDataBuffer[frame], _meshData);
-//    _meshTransformsBuffer[frame]->data(_meshTransformsBuffer);
-    _engine->stageData(_meshTransformsBuffer[frame], _meshTransforms);
+    _meshDataBuffer[frame]->data(_meshData);
+//    _engine->stageData(_meshDataBuffer[frame], _meshData);
+    _meshTransformsBuffer[frame]->data(_meshTransforms);
+//    _engine->stageData(_meshTransformsBuffer[frame], _meshTransforms);
 
     _cameraData.clear();
     auto mainCamera = getMainCamera();
@@ -195,26 +184,18 @@ void cala::Scene::prepare() {
 
         _lightData.push_back(data);
     }
-//    _lightBuffer[frame]->data(_lightData, sizeof(u32));
-    _engine->stageData(_lightBuffer[frame], _lightData, sizeof(u32));
+    _lightBuffer[frame]->data(_lightData, sizeof(u32));
+//    _engine->stageData(_lightBuffer[frame], _lightData, sizeof(u32));
     u32 totalLightCount = _lights.size();
-//    _lightBuffer[frame]->data(totalLightCount);
-    _engine->stageData(_lightBuffer[frame], totalLightCount);
+    _lightBuffer[frame]->data(totalLightCount);
+//    _engine->stageData(_lightBuffer[frame], totalLightCount);
 
     if (_cameraData.size() * sizeof(GPUCamera) >= _cameraBuffer[frame]->size()) {
         _cameraBuffer[frame] = _engine->device().resizeBuffer(_cameraBuffer[frame], _cameraData.size() * sizeof(GPUCamera) * 2);
     }
-//    _cameraBuffer[frame]->data(_cameraData);
-    _engine->stageData(_cameraBuffer[frame], _cameraData);
+    _cameraBuffer[frame]->data(_cameraData);
+//    _engine->stageData(_cameraBuffer[frame], _cameraData);
 
-
-    u32 offset = 0;
-    for (auto& count : _materialCounts) {
-        count.offset = offset;
-        offset += count.count;
-    }
-
-    _engine->stageData(_materialCountBuffer[frame], _materialCounts);
 
     _engine->updateMaterialdata();
 }
