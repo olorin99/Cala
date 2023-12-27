@@ -154,7 +154,7 @@ i32 cala::AssetManager::registerModel(const std::string &name, const std::filesy
 }
 
 cala::vk::ShaderModuleHandle cala::AssetManager::loadShaderModule(const std::string& name, const std::filesystem::path &path, vk::ShaderStage stage, const std::vector<util::Macro>& macros, std::span<const std::string> includes, const ende::math::Vec<3, u32>& localSize) {
-    u32 hash = std::hash<std::filesystem::path>()(path);
+    u32 hash = std::hash<std::filesystem::path>()(absolute(path));
 
     std::hash<std::string_view> hasher;
     for (auto& macro : macros) {
@@ -304,7 +304,7 @@ cala::vk::ShaderModuleHandle cala::AssetManager::reloadShaderModule(u32 hash) {
 }
 
 cala::vk::ImageHandle cala::AssetManager::loadImage(const std::string &name, const std::filesystem::path &path, vk::Format format) {
-    u32 hash = std::hash<std::filesystem::path>()(path);
+    u32 hash = std::hash<std::filesystem::path>()(absolute(path));
 
     i32 index = getAssetIndex(hash);
     if (index < 0)
@@ -398,7 +398,7 @@ struct fastgltf::ElementTraits<ende::math::Vec4f> : fastgltf::ElementTraitsBase<
 
 
 cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::string &name, const std::filesystem::path &path, Material* material) {
-    u32 hash = std::hash<std::filesystem::path>()(path);
+    u32 hash = std::hash<std::filesystem::path>()(absolute(path));
 
     i32 index = getAssetIndex(hash);
     if (index < 0)
