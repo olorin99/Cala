@@ -6,10 +6,12 @@ layout (local_size_x = LOCAL_SIZE_X, local_size_y = LOCAL_SIZE_Y, local_size_z =
 #include "visibility_buffer/visibility.glsl"
 
 layout (rg32ui, set = 0, binding = CALA_BINDLESS_STORAGE_IMAGE) uniform readonly uimage2D calaBindlessStorageImages2Dreadonlyrg32ui[];
+layout (rg16i, set = 0, binding = CALA_BINDLESS_STORAGE_IMAGE) uniform writeonly iimage2D calaBindlessStorageImages1Dwriteonlyrg32i[];
 
 layout (push_constant) uniform PushData {
     int visibilityImageIndex;
     uint materialCounts;
+    int pixelPositionsIndex;
 };
 
 struct MaterialCount {
@@ -21,9 +23,9 @@ layout (scalar, set = 1, binding = 1) buffer MaterialCounts {
     MaterialCount materials[];
 };
 
-layout (scalar, set = 1, binding = 2) buffer PixelPositions {
-    ivec2 positions[];
-};
+//layout (scalar, set = 1, binding = 2) buffer PixelPositions {
+//    ivec2 positions[];
+//};
 
 void main() {
 
@@ -43,5 +45,11 @@ void main() {
 
     uint id = atomicAdd(materials[mesh.materialID].count, 1);
     uint offset = materials[mesh.materialID].offset;
-    positions[offset + id] = globCoords;
+
+    uint index = offset + id;
+    uint x = index % MAX_IMAGE_DIMENSIONS_1D;
+    uint y = index / MAX_IMAGE_DIMENSIONS_1D;
+
+//    positions[offset + id] = globCoords;
+    imageStore(calaBindlessStorageImages1Dwriteonlyrg32i[pixelPositionsIndex], ivec2(x, y), ivec4(globCoords, 0, 0));
 }

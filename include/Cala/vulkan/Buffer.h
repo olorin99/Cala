@@ -50,14 +50,19 @@ namespace cala::vk {
 
         void _data(u8, std::span<const u8> data, u32 offset = 0);
 
-        template<typename T>
-        void data(std::span<T> data, u32 offset = 0) {
-            _data(0, std::span<u8>(reinterpret_cast<u8*>(data.data()), data.size() * sizeof(T)), offset);
-        }
+//        template<typename T>
+//        void data(T data, u32 offset = 0) {
+//            _data(0, std::span<u8>(reinterpret_cast<u8*>(data.data()), data.size() * sizeof(T)), offset);
+//        }
 
         template<typename T>
-        void data(std::span<const T> data, u32 offset = 0) {
-            _data(0, std::span<const u8>(reinterpret_cast<const u8*>(data.data()), data.size() * sizeof(T)), offset);
+        void data(const T& data, u32 offset = 0) {
+            _data(0, std::span<const u8>(reinterpret_cast<const u8*>(&data), sizeof(T)), offset);
+        }
+
+        template <std::ranges::range Range>
+        void data(const Range& range, u32 offset = 0) {
+            _data(0, std::span<const u8>(reinterpret_cast<const u8*>(std::ranges::data(range)), std::ranges::size(range) * sizeof(std::ranges::range_value_t<Range>)), offset);
         }
 
         struct Barrier {

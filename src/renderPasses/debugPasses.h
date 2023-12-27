@@ -20,7 +20,7 @@ struct NormalDebugInput {
     cala::ImageIndex visbility;
     cala::BufferIndex global;
     cala::BufferIndex materialCount;
-    cala::BufferIndex pixelPositions;
+    cala::ImageIndex pixelPositions;
     cala::BufferIndex dispatchBuffer;
     cala::BufferIndex camera;
     cala::BufferIndex meshData;
@@ -36,7 +36,7 @@ struct RoughnessDebugInput {
     cala::ImageIndex visbility;
     cala::BufferIndex global;
     cala::BufferIndex materialCount;
-    cala::BufferIndex pixelPositions;
+    cala::ImageIndex pixelPositions;
     cala::BufferIndex dispatchBuffer;
     cala::BufferIndex camera;
     cala::BufferIndex meshData;
@@ -52,7 +52,7 @@ struct MetallicDebugInput {
     cala::ImageIndex visbility;
     cala::BufferIndex global;
     cala::BufferIndex materialCount;
-    cala::BufferIndex pixelPositions;
+    cala::ImageIndex pixelPositions;
     cala::BufferIndex dispatchBuffer;
     cala::BufferIndex camera;
     cala::BufferIndex meshData;
@@ -68,7 +68,7 @@ struct UnlitDebugInput {
     cala::ImageIndex visbility;
     cala::BufferIndex global;
     cala::BufferIndex materialCount;
-    cala::BufferIndex pixelPositions;
+    cala::ImageIndex pixelPositions;
     cala::BufferIndex dispatchBuffer;
     cala::BufferIndex camera;
     cala::BufferIndex meshData;
@@ -84,7 +84,7 @@ struct WorldPosDebugInput {
     cala::ImageIndex visbility;
     cala::BufferIndex global;
     cala::BufferIndex materialCount;
-    cala::BufferIndex pixelPositions;
+    cala::ImageIndex pixelPositions;
     cala::BufferIndex dispatchBuffer;
     cala::BufferIndex camera;
     cala::BufferIndex meshData;

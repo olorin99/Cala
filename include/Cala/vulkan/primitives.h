@@ -74,6 +74,8 @@ namespace cala::vk {
         RGBA8_SINT = 42,
         RGBA8_SRGB = 43,
 
+        RG16_UINT = 81,
+        RG16_SINT = 82,
         RG16_SFLOAT = 83,
 
         RGBA16_SFLOAT = 97,

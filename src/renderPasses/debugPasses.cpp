@@ -49,7 +49,7 @@ void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, NormalDebug
     normalsPass.addStorageBufferRead(input.meshData, vk::PipelineStage::COMPUTE_SHADER);
     normalsPass.addStorageBufferRead(input.camera, vk::PipelineStage::COMPUTE_SHADER);
 
-    normalsPass.addStorageBufferRead(input.pixelPositions, vk::PipelineStage::COMPUTE_SHADER);
+    normalsPass.addStorageImageRead(input.pixelPositions, vk::PipelineStage::COMPUTE_SHADER);
     normalsPass.addIndirectRead(input.dispatchBuffer);
 
     normalsPass.setExecuteFunction([&, input](vk::CommandHandle cmd, RenderGraph& graph) {
@@ -58,13 +58,13 @@ void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, NormalDebug
         vk::ImageHandle image = graph.getImage(input.backbuffer);
         auto depth = graph.getImage(input.depth);
         auto materialCounts = graph.getBuffer(input.materialCount);
-        auto pixelPositions = graph.getBuffer(input.pixelPositions);
+        auto pixelPositions = graph.getImage(input.pixelPositions);
         auto dispatchCommands = graph.getBuffer(input.dispatchBuffer);
 
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
         cmd->bindBuffer(1, 1, materialCounts, true);
-        cmd->bindBuffer(1, 2, pixelPositions, true);
+//        cmd->bindBuffer(1, 2, pixelPositions, true);
 
         for (u32 i = 0; i < engine.materialCount(); i++) {
             Material* material = engine.getMaterial(i);
@@ -79,11 +79,13 @@ void debugNormalPass(cala::RenderGraph& graph, cala::Engine& engine, NormalDebug
                 i32 backbufferIndex;
                 i32 depthIndex;
                 u32 materialIndex;
+                i32 pixelPositionsIndex;
             } push;
             push.visibilityImageIndex = visibilityImage.index();
             push.backbufferIndex = image.index();
             push.depthIndex = depth.index();
             push.materialIndex = i;
+            push.pixelPositionsIndex = pixelPositions.index();
 
             cmd->pushConstants(vk::ShaderStage::COMPUTE, push);
 
@@ -111,7 +113,7 @@ void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, Roughnes
     debugRoughness.addStorageBufferRead(input.meshData, vk::PipelineStage::COMPUTE_SHADER);
     debugRoughness.addStorageBufferRead(input.camera, vk::PipelineStage::COMPUTE_SHADER);
 
-    debugRoughness.addStorageBufferRead(input.pixelPositions, vk::PipelineStage::COMPUTE_SHADER);
+    debugRoughness.addStorageImageRead(input.pixelPositions, vk::PipelineStage::COMPUTE_SHADER);
     debugRoughness.addIndirectRead(input.dispatchBuffer);
 
     debugRoughness.setExecuteFunction([&, input](vk::CommandHandle cmd, RenderGraph& graph) {
@@ -120,13 +122,13 @@ void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, Roughnes
         vk::ImageHandle image = graph.getImage(input.backbuffer);
         auto depth = graph.getImage(input.depth);
         auto materialCounts = graph.getBuffer(input.materialCount);
-        auto pixelPositions = graph.getBuffer(input.pixelPositions);
+        auto pixelPositions = graph.getImage(input.pixelPositions);
         auto dispatchCommands = graph.getBuffer(input.dispatchBuffer);
 
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
         cmd->bindBuffer(1, 1, materialCounts, true);
-        cmd->bindBuffer(1, 2, pixelPositions, true);
+//        cmd->bindBuffer(1, 2, pixelPositions, true);
 
         for (u32 i = 0; i < engine.materialCount(); i++) {
             Material* material = engine.getMaterial(i);
@@ -141,11 +143,13 @@ void debugRoughnessPass(cala::RenderGraph& graph, cala::Engine& engine, Roughnes
                 i32 backbufferIndex;
                 i32 depthIndex;
                 u32 materialIndex;
+                i32 pixelPositionsIndex;
             } push;
             push.visibilityImageIndex = visibilityImage.index();
             push.backbufferIndex = image.index();
             push.depthIndex = depth.index();
             push.materialIndex = i;
+            push.pixelPositionsIndex = pixelPositions.index();
 
             cmd->pushConstants(vk::ShaderStage::COMPUTE, push);
 
@@ -173,7 +177,7 @@ void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, MetallicD
     debugMetallic.addStorageBufferRead(input.meshData, vk::PipelineStage::COMPUTE_SHADER);
     debugMetallic.addStorageBufferRead(input.camera, vk::PipelineStage::COMPUTE_SHADER);
 
-    debugMetallic.addStorageBufferRead(input.pixelPositions, vk::PipelineStage::COMPUTE_SHADER);
+    debugMetallic.addStorageImageRead(input.pixelPositions, vk::PipelineStage::COMPUTE_SHADER);
     debugMetallic.addIndirectRead(input.dispatchBuffer);
 
     debugMetallic.setExecuteFunction([&, input](vk::CommandHandle cmd, RenderGraph& graph) {
@@ -182,13 +186,13 @@ void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, MetallicD
         vk::ImageHandle image = graph.getImage(input.backbuffer);
         auto depth = graph.getImage(input.depth);
         auto materialCounts = graph.getBuffer(input.materialCount);
-        auto pixelPositions = graph.getBuffer(input.pixelPositions);
+        auto pixelPositions = graph.getImage(input.pixelPositions);
         auto dispatchCommands = graph.getBuffer(input.dispatchBuffer);
 
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
         cmd->bindBuffer(1, 1, materialCounts, true);
-        cmd->bindBuffer(1, 2, pixelPositions, true);
+//        cmd->bindBuffer(1, 2, pixelPositions, true);
 
         for (u32 i = 0; i < engine.materialCount(); i++) {
             Material* material = engine.getMaterial(i);
@@ -203,11 +207,13 @@ void debugMetallicPass(cala::RenderGraph& graph, cala::Engine& engine, MetallicD
                 i32 backbufferIndex;
                 i32 depthIndex;
                 u32 materialIndex;
+                i32 pixelPositionsIndex;
             } push;
             push.visibilityImageIndex = visibilityImage.index();
             push.backbufferIndex = image.index();
             push.depthIndex = depth.index();
             push.materialIndex = i;
+            push.pixelPositionsIndex = pixelPositions.index();
 
             cmd->pushConstants(vk::ShaderStage::COMPUTE, push);
 
@@ -235,7 +241,7 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, UnlitDebugIn
     debugUnlit.addStorageBufferRead(input.meshData, vk::PipelineStage::COMPUTE_SHADER);
     debugUnlit.addStorageBufferRead(input.camera, vk::PipelineStage::COMPUTE_SHADER);
 
-    debugUnlit.addStorageBufferRead(input.pixelPositions, vk::PipelineStage::COMPUTE_SHADER);
+    debugUnlit.addStorageImageRead(input.pixelPositions, vk::PipelineStage::COMPUTE_SHADER);
     debugUnlit.addIndirectRead(input.dispatchBuffer);
 
     debugUnlit.setExecuteFunction([&, input](vk::CommandHandle cmd, RenderGraph& graph) {
@@ -244,13 +250,13 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, UnlitDebugIn
         vk::ImageHandle image = graph.getImage(input.backbuffer);
         auto depth = graph.getImage(input.depth);
         auto materialCounts = graph.getBuffer(input.materialCount);
-        auto pixelPositions = graph.getBuffer(input.pixelPositions);
+        auto pixelPositions = graph.getImage(input.pixelPositions);
         auto dispatchCommands = graph.getBuffer(input.dispatchBuffer);
 
         cmd->clearDescriptors();
         cmd->bindBuffer(1, 0, global);
         cmd->bindBuffer(1, 1, materialCounts, true);
-        cmd->bindBuffer(1, 2, pixelPositions, true);
+//        cmd->bindBuffer(1, 2, pixelPositions, true);
 
         for (u32 i = 0; i < engine.materialCount(); i++) {
             Material* material = engine.getMaterial(i);
@@ -265,11 +271,13 @@ void debugUnlitPass(cala::RenderGraph& graph, cala::Engine& engine, UnlitDebugIn
                 i32 backbufferIndex;
                 i32 depthIndex;
                 u32 materialIndex;
+                i32 pixelPositionsIndex;
             } push;
             push.visibilityImageIndex = visibilityImage.index();
             push.backbufferIndex = image.index();
             push.depthIndex = depth.index();
             push.materialIndex = i;
+            push.pixelPositionsIndex = pixelPositions.index();
 
             cmd->pushConstants(vk::ShaderStage::COMPUTE, push);
 
@@ -297,7 +305,6 @@ void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, Worl
     debugWorldPos.addStorageBufferRead(input.meshData, vk::PipelineStage::COMPUTE_SHADER);
     debugWorldPos.addStorageBufferRead(input.camera, vk::PipelineStage::COMPUTE_SHADER);
 
-    debugWorldPos.addStorageBufferRead(input.pixelPositions, vk::PipelineStage::COMPUTE_SHADER);
     debugWorldPos.addIndirectRead(input.dispatchBuffer);
 
     debugWorldPos.setExecuteFunction([&, input](vk::CommandHandle cmd, RenderGraph& graph) {
@@ -305,7 +312,6 @@ void debugWorldPositionPass(cala::RenderGraph& graph, cala::Engine& engine, Worl
         auto visibilityImage = graph.getImage(input.visbility);
         vk::ImageHandle image = graph.getImage(input.backbuffer);
         auto materialCounts = graph.getBuffer(input.materialCount);
-        auto pixelPositions = graph.getBuffer(input.pixelPositions);
         auto dispatchCommands = graph.getBuffer(input.dispatchBuffer);
 
         cmd->clearDescriptors();

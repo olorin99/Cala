@@ -6,6 +6,7 @@ layout (local_size_x = LOCAL_SIZE_X, local_size_y = LOCAL_SIZE_Y, local_size_z =
 #include "visibility_buffer/visibility.glsl"
 
 layout (rg32ui, set = 0, binding = CALA_BINDLESS_STORAGE_IMAGE) uniform readonly uimage2D calaBindlessStorageImages2Dreadonlyrg32ui[];
+layout (rg16i, set = 0, binding = CALA_BINDLESS_STORAGE_IMAGE) uniform readonly iimage2D calaBindlessStorageImages1Dreadonlyrg32i[];
 CALA_USE_STORAGE_IMAGE(2D, writeonly);
 
 
@@ -17,9 +18,9 @@ layout (scalar, set = 1, binding = 1) buffer MaterialCounts {
     MaterialCount counts[];
 };
 
-layout (scalar, set = 1, binding = 2) buffer PixelPositions {
-    ivec2 positions[];
-};
+//layout (scalar, set = 1, binding = 2) buffer PixelPositions {
+//    ivec2 positions[];
+//};
 
 
 layout (push_constant) uniform PushData {
@@ -27,6 +28,7 @@ layout (push_constant) uniform PushData {
     int backbufferIndex;
     int depthIndex;
     uint materialIndex;
+    int pixelPositionsIndex;
 };
 
 uint[3] loadIndices(Meshlet meshlet, uint primitiveID) {
@@ -77,7 +79,12 @@ void main() {
     if (idx >= count.count)
         return;
 
-    const ivec2 globCoords = positions[count.offset + idx];
+//    const ivec2 globCoords = positions[count.offset + idx];
+    uint index = count.offset + idx;
+    uint x = index % MAX_IMAGE_DIMENSIONS_1D;
+    uint y = index / MAX_IMAGE_DIMENSIONS_1D;
+
+    const ivec2 globCoords = imageLoad(calaBindlessStorageImages1Dreadonlyrg32i[pixelPositionsIndex], ivec2(x, y)).rg;
     const ivec2 outputSize = imageSize(CALA_GET_STORAGE_IMAGE2D(writeonly, backbufferIndex));
     const vec2 texCoords = (vec2(globCoords) + 0.5) / outputSize;
     if (any(greaterThanEqual(globCoords, outputSize)))

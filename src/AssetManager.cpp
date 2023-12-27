@@ -238,6 +238,18 @@ cala::vk::ShaderModuleHandle cala::AssetManager::loadShaderModule(const std::str
         "LOCAL_SIZE_Z",
         std::to_string(localSize.z())
     });
+    finalMacros.push_back({
+        "MAX_IMAGE_DIMENSIONS_1D",
+        std::to_string(_engine->device().context().getLimits().maxImageDimensions1D)
+    });
+    finalMacros.push_back({
+        "MAX_IMAGE_DIMENSIONS_2D",
+        std::to_string(_engine->device().context().getLimits().maxImageDimensions2D)
+    });
+    finalMacros.push_back({
+        "MAX_IMAGE_DIMENSIONS_3D",
+        std::to_string(_engine->device().context().getLimits().maxImageDimensions3D)
+    });
 
     auto expectedSpirV = util::compileGLSLToSpirv(path.string(), source, stage, finalMacros, searchPaths);
     if (!expectedSpirV.has_value()) {

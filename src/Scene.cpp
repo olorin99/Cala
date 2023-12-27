@@ -13,7 +13,7 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
         _meshDataBuffer[i] = engine->device().createBuffer({
             .size = (u32)(count * sizeof(GPUMesh)),
             .usage = vk::BufferUsage::STORAGE,
-            .memoryType = vk::MemoryProperties::DEVICE,
+            .memoryType = vk::MemoryProperties::STAGING,
             .name = "MeshDataBuffer: " + std::to_string(i)
         });
     }
@@ -21,7 +21,7 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
         _meshTransformsBuffer[i] = engine->device().createBuffer({
             .size = (u32)(count * sizeof(ende::math::Mat4f)),
             .usage = vk::BufferUsage::UNIFORM | vk::BufferUsage::STORAGE,
-            .memoryType = vk::MemoryProperties::DEVICE,
+            .memoryType = vk::MemoryProperties::STAGING,
             .name = "ModelBuffer: " + std::to_string(i)
         });
     }
@@ -29,7 +29,7 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
         _lightBuffer[i] = engine->device().createBuffer({
             .size = (u32)(sizeof(u32) + lightCount * sizeof(GPULight)),
             .usage = vk::BufferUsage::STORAGE,
-            .memoryType = vk::MemoryProperties::DEVICE,
+            .memoryType = vk::MemoryProperties::STAGING,
             .name = "LightBuffer: " + std::to_string(i)
         });
     }
@@ -37,7 +37,7 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
         _cameraBuffer[i] = engine->device().createBuffer({
             .size = (u32)(10 * sizeof(GPUCamera)),
             .usage = vk::BufferUsage::STORAGE,
-            .memoryType = vk::MemoryProperties::DEVICE,
+            .memoryType = vk::MemoryProperties::STAGING,
             .name = "CameraBuffer: " + std::to_string(i)
         });
     }
@@ -45,7 +45,7 @@ cala::Scene::Scene(cala::Engine* engine, u32 count, u32 lightCount)
         _materialCountBuffer[i] = engine->device().createBuffer({
             .size = (u32)(sizeof(MaterialCount) * 1),
             .usage = vk::BufferUsage::UNIFORM | vk::BufferUsage::STORAGE | vk::BufferUsage::INDIRECT,
-            .memoryType = vk::MemoryProperties::DEVICE,
+            .memoryType = vk::MemoryProperties::STAGING,
             .name = "MaterialCountBuffer: " + std::to_string(i)
         });
     }
@@ -107,7 +107,9 @@ void cala::Scene::prepare() {
     // update transforms
     traverseNode(_root.get(), ende::math::identity<4, f32>(), _meshTransforms);
 
+//    _meshDataBuffer[frame]->data(_meshData);
     _engine->stageData(_meshDataBuffer[frame], _meshData);
+//    _meshTransformsBuffer[frame]->data(_meshTransformsBuffer);
     _engine->stageData(_meshTransformsBuffer[frame], _meshTransforms);
 
     _cameraData.clear();
@@ -193,13 +195,16 @@ void cala::Scene::prepare() {
 
         _lightData.push_back(data);
     }
+//    _lightBuffer[frame]->data(_lightData, sizeof(u32));
     _engine->stageData(_lightBuffer[frame], _lightData, sizeof(u32));
     u32 totalLightCount = _lights.size();
+//    _lightBuffer[frame]->data(totalLightCount);
     _engine->stageData(_lightBuffer[frame], totalLightCount);
 
     if (_cameraData.size() * sizeof(GPUCamera) >= _cameraBuffer[frame]->size()) {
         _cameraBuffer[frame] = _engine->device().resizeBuffer(_cameraBuffer[frame], _cameraData.size() * sizeof(GPUCamera) * 2);
     }
+//    _cameraBuffer[frame]->data(_cameraData);
     _engine->stageData(_cameraBuffer[frame], _cameraData);
 
 
@@ -208,6 +213,7 @@ void cala::Scene::prepare() {
         count.offset = offset;
         offset += count.count;
     }
+
     _engine->stageData(_materialCountBuffer[frame], _materialCounts);
 
     _engine->updateMaterialdata();
