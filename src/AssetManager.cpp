@@ -500,13 +500,6 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
         materials.push_back(material->instance());
     }
 
-    // load meshes
-    struct Vertex {
-        ende::math::Vec3f position = { 0, 0, 0 };
-        ende::math::Vec3f normal = { 1, 0, 0 };
-        ende::math::Vec<2, f32> texCoords = { 0, 0 };
-        ende::math::Vec4f tangent = { 0, 1, 0 };
-    };
     std::vector<Vertex> vertices;
     std::vector<u32> indices;
     std::vector<Meshlet> meshlets;
@@ -630,12 +623,12 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
                 });
             }
 
-            if (auto tangentIT = primitive.findAttribute("TANGENT"); tangentIT != primitive.attributes.end()) {
-                auto& tangentAccessor = asset->accessors[tangentIT->second];
-                fastgltf::iterateAccessorWithIndex<ende::math::Vec4f>(asset.get(), tangentAccessor, [&](ende::math::Vec4f tangent, std::size_t idx) {
-                    meshVertices[idx].tangent = tangent;
-                });
-            }
+//            if (auto tangentIT = primitive.findAttribute("TANGENT"); tangentIT != primitive.attributes.end()) {
+//                auto& tangentAccessor = asset->accessors[tangentIT->second];
+//                fastgltf::iterateAccessorWithIndex<ende::math::Vec4f>(asset.get(), tangentAccessor, [&](ende::math::Vec4f tangent, std::size_t idx) {
+//                    meshVertices[idx].tangent = tangent;
+//                });
+//            }
 
             struct MeshletLOD {
                 std::vector<u32> indices;

@@ -1007,8 +1007,11 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
             cmd->bindProgram(_engine->getProgram(Engine::ProgramType::SKYBOX));
             cmd->bindRasterState({ vk::CullMode::NONE });
             cmd->bindDepthState({ true, false, vk::CompareOp::LESS_EQUAL });
-            cmd->bindBindings({ &_engine->_cube->_binding, 1 });
-            cmd->bindAttributes(_engine->_cube->_attributes);
+
+            auto binding = _engine->globalBinding();
+            auto attributes = _engine->globalVertexAttributes();
+            cmd->bindBindings({ &binding, 1 });
+            cmd->bindAttributes(attributes);
             cmd->bindBuffer(1, 0, global);
             i32 skyMapIndex = scene._skyLightMap.index();
             cmd->pushConstants(vk::ShaderStage::FRAGMENT, skyMapIndex);

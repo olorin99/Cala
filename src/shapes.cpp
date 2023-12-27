@@ -8,9 +8,9 @@ cala::MeshData cala::shapes::triangle(f32 width, f32 height) {
     f32 halfWidth = width / 2.f;
     f32 halfHeight = height / 2.f;
 
-    data.addVertex({ { -halfWidth, -halfHeight, 0 }, { 0, 0, 1 }, { 0, 0 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { halfWidth, -halfHeight, 0 }, { 0, 0, 1 }, { 1, 0 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { 0, halfHeight, 0 }, { 0, 0, 1 }, { 0.5, 1 }, { 1, 0, 0, 1 } });
+    data.addVertex({ { -halfWidth, -halfHeight, 0 }, { 0, 0, 1 }, { 0, 0 } });
+    data.addVertex({ { halfWidth, -halfHeight, 0 }, { 0, 0, 1 }, { 1, 0 } });
+    data.addVertex({ { 0, halfHeight, 0 }, { 0, 0, 1 }, { 0.5, 1 } });
 
     data.addTriangle(0, 1, 2);
 
@@ -20,10 +20,10 @@ cala::MeshData cala::shapes::triangle(f32 width, f32 height) {
 cala::MeshData cala::shapes::quad(f32 edge) {
     MeshData data;
 
-    data.addVertex({ { -edge, -edge, -edge }, { 0, 0, -1 }, { 0, 0 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { -edge, edge, -edge }, { 0, 0, -1 }, { 0, 1 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { edge, -edge, -edge }, { 0, 0, -1 }, { 1, 0 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { edge, edge, -edge }, { 0, 0, -1 }, { 1, 1 }, { 1, 0, 0, 1 } });
+    data.addVertex({ { -edge, -edge, -edge }, { 0, 0, -1 }, { 0, 0 } });
+    data.addVertex({ { -edge, edge, -edge }, { 0, 0, -1 }, { 0, 1 } });
+    data.addVertex({ { edge, -edge, -edge }, { 0, 0, -1 }, { 1, 0 } });
+    data.addVertex({ { edge, edge, -edge }, { 0, 0, -1 }, { 1, 1 } });
 
     data.addQuad(0, 1, 2, 3);
 
@@ -34,63 +34,63 @@ cala::MeshData cala::shapes::cube(f32 edge) {
     MeshData data;
 
     //top
-    data.addVertex({ { -edge, edge, -edge }, { 0, 1, 0 }, { 0, 0 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { -edge, edge, edge }, { 0, 1, 0 }, { 0, 1 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { edge, edge, edge }, { 0, 1, 0 }, { 1, 1 }, { 1, 0, 0, 1 } });
+    data.addVertex({ { -edge, edge, -edge }, { 0, 1, 0 }, { 0, 0 } });
+    data.addVertex({ { -edge, edge, edge }, { 0, 1, 0 }, { 0, 1 } });
+    data.addVertex({ { edge, edge, edge }, { 0, 1, 0 }, { 1, 1 } });
 
-    data.addVertex({ { edge, edge, edge }, { 0, 1, 0 }, { 1, 1 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { edge, edge, -edge }, { 0, 1, 0 }, { 1, 0 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { -edge, edge, -edge }, { 0, 1, 0 }, { 0, 0 }, { 1, 0, 0, 1 } });
+    data.addVertex({ { edge, edge, edge }, { 0, 1, 0 }, { 1, 1 } });
+    data.addVertex({ { edge, edge, -edge }, { 0, 1, 0 }, { 1, 0 } });
+    data.addVertex({ { -edge, edge, -edge }, { 0, 1, 0 }, { 0, 0 } });
 
 
     //front
-    data.addVertex({ { -edge, -edge, -edge }, { 0, 0, -1 }, { 0, 0 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { -edge, edge, -edge }, { 0, 0, -1 }, { 0, 1 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { edge, edge, -edge }, { 0, 0, -1 }, { 1, 1 }, { 1, 0, 0, 1 } });
+    data.addVertex({ { -edge, -edge, -edge }, { 0, 0, -1 }, { 0, 0 } });
+    data.addVertex({ { -edge, edge, -edge }, { 0, 0, -1 }, { 0, 1 } });
+    data.addVertex({ { edge, edge, -edge }, { 0, 0, -1 }, { 1, 1 } });
 
-    data.addVertex({ { edge, edge, -edge }, { 0, 0, -1 }, { 1, 1 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { edge, -edge, -edge }, { 0, 0, -1 }, { 1, 0 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { -edge, -edge, -edge }, { 0, 0, -1 }, { 0, 0 }, { 1, 0, 0, 1 } });
+    data.addVertex({ { edge, edge, -edge }, { 0, 0, -1 }, { 1, 1 } });
+    data.addVertex({ { edge, -edge, -edge }, { 0, 0, -1 }, { 1, 0 } });
+    data.addVertex({ { -edge, -edge, -edge }, { 0, 0, -1 }, { 0, 0 } });
 
 
     //left
-    data.addVertex({ { -edge, -edge, edge }, { -1, 0, 0 }, { 0, 0 }, { 0, 0, -1, 1 } });
-    data.addVertex({ { -edge, edge, edge }, { -1, 0, 0 }, { 0, 1 }, { 0, 0, -1, 1 } });
-    data.addVertex({ { -edge, edge, -edge }, { -1, 0, 0 }, { 1, 1 }, { 0, 0, -1, 1 } });
+    data.addVertex({ { -edge, -edge, edge }, { -1, 0, 0 }, { 0, 0 } });
+    data.addVertex({ { -edge, edge, edge }, { -1, 0, 0 }, { 0, 1 } });
+    data.addVertex({ { -edge, edge, -edge }, { -1, 0, 0 }, { 1, 1 } });
 
-    data.addVertex({ { -edge, edge, -edge }, { -1, 0, 0 }, { 1, 1 }, { 0, 0, -1, 1 } });
-    data.addVertex({ { -edge, -edge, -edge }, { -1, 0, 0 }, { 1, 0 }, { 0, 0, -1, 1 } });
-    data.addVertex({ { -edge, -edge, edge }, { -1, 0, 0 }, { 0, 0 }, { 0, 0, -1, 1 } });
+    data.addVertex({ { -edge, edge, -edge }, { -1, 0, 0 }, { 1, 1 } });
+    data.addVertex({ { -edge, -edge, -edge }, { -1, 0, 0 }, { 1, 0 } });
+    data.addVertex({ { -edge, -edge, edge }, { -1, 0, 0 }, { 0, 0 } });
 
 
     //right
-    data.addVertex({ { edge, -edge, -edge }, { 1, 0, 0 }, { 0, 0 }, { 0, 0, 1, 1 } });
-    data.addVertex({ { edge, edge, -edge }, { 1, 0, 0 }, { 0, 1 }, { 0, 0, 1, 1 } });
-    data.addVertex({ { edge, edge, edge }, { 1, 0, 0 }, { 1, 1 }, { 0, 0, 1, 1 } });
+    data.addVertex({ { edge, -edge, -edge }, { 1, 0, 0 }, { 0, 0 } });
+    data.addVertex({ { edge, edge, -edge }, { 1, 0, 0 }, { 0, 1 } });
+    data.addVertex({ { edge, edge, edge }, { 1, 0, 0 }, { 1, 1 } });
 
-    data.addVertex({ { edge, edge, edge }, { 1, 0, 0 }, { 1, 1 }, { 0, 0, 1, 1 } });
-    data.addVertex({ { edge, -edge, edge }, { 1, 0, 0 }, { 1, 0 }, { 0, 0, 1, 1 } });
-    data.addVertex({ { edge, -edge, -edge }, { 1, 0, 0 }, { 0, 0 }, { 0, 0, 1, 1 } });
+    data.addVertex({ { edge, edge, edge }, { 1, 0, 0 }, { 1, 1 } });
+    data.addVertex({ { edge, -edge, edge }, { 1, 0, 0 }, { 1, 0 } });
+    data.addVertex({ { edge, -edge, -edge }, { 1, 0, 0 }, { 0, 0 } });
 
 
     //bottom
-    data.addVertex({ { -edge, -edge, edge }, { 0, -1, 0 }, { 0, 0 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { -edge, -edge, -edge }, { 0, -1, 0 }, { 0, 1 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { edge, -edge, -edge }, { 0, -1, 0 }, { 1, 1 }, { 1, 0, 0, 1 } });
+    data.addVertex({ { -edge, -edge, edge }, { 0, -1, 0 }, { 0, 0 } });
+    data.addVertex({ { -edge, -edge, -edge }, { 0, -1, 0 }, { 0, 1 } });
+    data.addVertex({ { edge, -edge, -edge }, { 0, -1, 0 }, { 1, 1 } });
 
-    data.addVertex({ { edge, -edge, -edge }, { 0, -1, 0 }, { 1, 1 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { edge, -edge, edge }, { 0, -1, 0 }, { 1, 0 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { -edge, -edge, edge }, { 0, -1, 0 }, { 0, 0 }, { 1, 0, 0, 1 } });
+    data.addVertex({ { edge, -edge, -edge }, { 0, -1, 0 }, { 1, 1 } });
+    data.addVertex({ { edge, -edge, edge }, { 0, -1, 0 }, { 1, 0 } });
+    data.addVertex({ { -edge, -edge, edge }, { 0, -1, 0 }, { 0, 0 } });
 
 
     //back
-    data.addVertex({ { edge, -edge, edge }, { 0, 0, 1 }, { 0, 0 }, { -1, 0, 0, 1 } });
-    data.addVertex({ { edge, edge, edge }, { 0, 0, 1 }, { 0, 1 }, { -1, 0, 0, 1 } });
-    data.addVertex({ { -edge, edge, edge }, { 0, 0, 1 }, { 1, 1 }, { -1, 0, 0, 1 } });
+    data.addVertex({ { edge, -edge, edge }, { 0, 0, 1 }, { 0, 0 } });
+    data.addVertex({ { edge, edge, edge }, { 0, 0, 1 }, { 0, 1 } });
+    data.addVertex({ { -edge, edge, edge }, { 0, 0, 1 }, { 1, 1 } });
 
-    data.addVertex({ { -edge, edge, edge }, { 0, 0, 1 }, { 1, 1 }, { -1, 0, 0, 1 } });
-    data.addVertex({ { -edge, -edge, edge }, { 0, 0, 1 }, { 1, 0 }, { -1, 0, 0, 1 } });
-    data.addVertex({ { edge, -edge, edge }, { 0, 0, 1 }, { 0, 0 }, { -1, 0, 0, 1 } });
+    data.addVertex({ { -edge, edge, edge }, { 0, 0, 1 }, { 1, 1 } });
+    data.addVertex({ { -edge, -edge, edge }, { 0, 0, 1 }, { 1, 0 } });
+    data.addVertex({ { edge, -edge, edge }, { 0, 0, 1 }, { 0, 0 } });
 
 
     for (u32 i = 0; i < 36; i++)
@@ -118,7 +118,7 @@ cala::MeshData cala::shapes::sphereUV(f32 radius, u32 rings, u32 sectors) {
 
     ende::math::Vec<2, f32> uv = sphereUtils::normalToUV({0, 0.5, 0});
 
-    data.addVertex({{0, radius, 0}, {0, 1, 0}, {uv.x(), uv.y()}, {1, 0, 0, 1} });
+    data.addVertex({{0, radius, 0}, {0, 1, 0}, {uv.x(), uv.y()} });
     for (u32 i = 0; i < rings - 1; i++) {
         f32 polar = ende::math::PI * (f32)(i + 1) / (f32)rings;
         f32 sp = std::sin(polar);
@@ -135,14 +135,14 @@ cala::MeshData cala::shapes::sphereUV(f32 radius, u32 rings, u32 sectors) {
             normal = normal.unit();
             uv = sphereUtils::normalToUV(normal);
 
-            ende::math::Vec<3, f32> tangent({sa * cp, sa * sp, ca});
-            ende::math::Vec<3, f32> bitangent = normal.cross(tangent);
+//            ende::math::Vec<3, f32> tangent({sa * cp, sa * sp, ca});
+//            ende::math::Vec<3, f32> bitangent = normal.cross(tangent);
 
-            data.addVertex({{x * radius, y * radius, z * radius}, {normal.x(), normal.y(), normal.x()}, {uv.x(), uv.y()}, {(f32)tangent.x(), (f32)tangent.y(), (f32)tangent.z(), 1}});
+            data.addVertex({{x * radius, y * radius, z * radius}, {normal.x(), normal.y(), normal.x()}, {uv.x(), uv.y()}});
         }
     }
     uv = sphereUtils::normalToUV({0, -0.5, 0});
-    data.addVertex({{0, -radius, 0}, {0, -1, 0}, {uv.x(), uv.y()}, {-1, 0, 0, 1} });
+    data.addVertex({{0, -radius, 0}, {0, -1, 0}, {uv.x(), uv.y()} });
 
     for (u32 i = 0; i < sectors; i++) {
         u32 a = i + 1;
@@ -223,7 +223,7 @@ cala::MeshData cala::shapes::sphereNormalized(f32 radius, u32 divisions) {
                 ende::math::Vec3f normal = p.unit();
                 p = normal * radius;
                 auto uv = sphereUtils::normalToUV(normal);
-                data.addVertex({{p.x(), p.y(), p.z()}, {normal.x(), normal.y(), normal.z()}, {uv.x(), uv.y()}, {-1, 0, 0, 1}});
+                data.addVertex({{p.x(), p.y(), p.z()}, {normal.x(), normal.y(), normal.z()}, {uv.x(), uv.y()}});
             }
         }
     }
@@ -270,7 +270,7 @@ cala::MeshData cala::shapes::sphereCube(f32 radius, u32 divisions) {
                 ende::math::Vec3f normal = n.unit();
                 n = n * radius;
                 auto uv = sphereUtils::normalToUV(normal);
-                data.addVertex({{n.x(), n.y(), n.z()}, {normal.x(), normal.y(), normal.z()}, {uv.x(), uv.y()}, {-1, 0, 0, 1}});
+                data.addVertex({{n.x(), n.y(), n.z()}, {normal.x(), normal.y(), normal.z()}, {uv.x(), uv.y()}});
             }
         }
     }
@@ -298,7 +298,7 @@ cala::MeshData cala::shapes::sphereCube(f32 radius, u32 divisions) {
     normal = pos.unit(); \
     uv = sphereUtils::normalToUV(normal); \
     pos = normal * radius;                \
-    data.addVertex({{pos.x(), pos.y(), pos.z()}, {normal.x(), normal.y(), normal.z()}, {uv.x(), uv.y()}, {-1, 0, 0, 1}});
+    data.addVertex({{pos.x(), pos.y(), pos.z()}, {normal.x(), normal.y(), normal.z()}, {uv.x(), uv.y()}});
 
 cala::MeshData cala::shapes::icosahedron(f32 radius) {
     MeshData data;
@@ -309,7 +309,7 @@ cala::MeshData cala::shapes::icosahedron(f32 radius) {
     ende::math::Vec3f normal = pos.unit();
     ende::math::Vec<2, f32> uv = sphereUtils::normalToUV(normal);
     pos = normal * radius;
-    data.addVertex({{pos.x(), pos.y(), pos.z()}, {normal.x(), normal.y(), normal.z()}, {uv.x(), uv.y()}, {-1, 0, 0, 1}});
+    data.addVertex({{pos.x(), pos.y(), pos.z()}, {normal.x(), normal.y(), normal.z()}, {uv.x(), uv.y()}});
 
     POSITION({1, t, 0})
     POSITION({-1, -t, 0})
@@ -387,63 +387,63 @@ cala::MeshData cala::shapes::frustum(const ende::math::Mat4f &matrix) {
     MeshData data;
 
     //top
-    data.addVertex({ { o.x(), o.y(), o.z() }, { 0, 1, 0 }, { 0, 0 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { k.x(), k.y(), k.z() }, { 0, 1, 0 }, { 0, 1 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { l.x(), l.y(), l.z() }, { 0, 1, 0 }, { 1, 1 }, { 1, 0, 0, 1 } });
+    data.addVertex({ { o.x(), o.y(), o.z() }, { 0, 1, 0 }, { 0, 0 } });
+    data.addVertex({ { k.x(), k.y(), k.z() }, { 0, 1, 0 }, { 0, 1 } });
+    data.addVertex({ { l.x(), l.y(), l.z() }, { 0, 1, 0 }, { 1, 1 } });
 
-    data.addVertex({ { l.x(), l.y(), l.z() }, { 0, 1, 0 }, { 1, 1 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { p.x(), p.y(), p.z() }, { 0, 1, 0 }, { 1, 0 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { o.x(), o.y(), o.z() }, { 0, 1, 0 }, { 0, 0 }, { 1, 0, 0, 1 } });
+    data.addVertex({ { l.x(), l.y(), l.z() }, { 0, 1, 0 }, { 1, 1 } });
+    data.addVertex({ { p.x(), p.y(), p.z() }, { 0, 1, 0 }, { 1, 0 } });
+    data.addVertex({ { o.x(), o.y(), o.z() }, { 0, 1, 0 }, { 0, 0 } });
 
 
     //front
-    data.addVertex({ { m.x(), m.y(), m.z() }, { 0, 0, -1 }, { 0, 0 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { o.x(), o.y(), o.z() }, { 0, 0, -1 }, { 0, 1 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { p.x(), p.y(), p.z() }, { 0, 0, -1 }, { 1, 1 }, { 1, 0, 0, 1 } });
+    data.addVertex({ { m.x(), m.y(), m.z() }, { 0, 0, -1 }, { 0, 0 } });
+    data.addVertex({ { o.x(), o.y(), o.z() }, { 0, 0, -1 }, { 0, 1 } });
+    data.addVertex({ { p.x(), p.y(), p.z() }, { 0, 0, -1 }, { 1, 1 } });
 
-    data.addVertex({ { p.x(), p.y(), p.z() }, { 0, 0, -1 }, { 1, 1 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { n.x(), n.y(), n.z() }, { 0, 0, -1 }, { 1, 0 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { m.x(), m.y(), m.z() }, { 0, 0, -1 }, { 0, 0 }, { 1, 0, 0, 1 } });
+    data.addVertex({ { p.x(), p.y(), p.z() }, { 0, 0, -1 }, { 1, 1 } });
+    data.addVertex({ { n.x(), n.y(), n.z() }, { 0, 0, -1 }, { 1, 0 } });
+    data.addVertex({ { m.x(), m.y(), m.z() }, { 0, 0, -1 }, { 0, 0 } });
 
 
     //left
-    data.addVertex({ { i.x(), i.y(), i.z() }, { -1, 0, 0 }, { 0, 0 }, { 0, 0, -1, 1 } });
-    data.addVertex({ { k.x(), k.y(), k.z() }, { -1, 0, 0 }, { 0, 1 }, { 0, 0, -1, 1 } });
-    data.addVertex({ { o.x(), o.y(), o.z() }, { -1, 0, 0 }, { 1, 1 }, { 0, 0, -1, 1 } });
+    data.addVertex({ { i.x(), i.y(), i.z() }, { -1, 0, 0 }, { 0, 0 } });
+    data.addVertex({ { k.x(), k.y(), k.z() }, { -1, 0, 0 }, { 0, 1 } });
+    data.addVertex({ { o.x(), o.y(), o.z() }, { -1, 0, 0 }, { 1, 1 } });
 
-    data.addVertex({ { o.x(), o.y(), o.z() }, { -1, 0, 0 }, { 1, 1 }, { 0, 0, -1, 1 } });
-    data.addVertex({ { m.x(), m.y(), m.z() }, { -1, 0, 0 }, { 1, 0 }, { 0, 0, -1, 1 } });
-    data.addVertex({ { i.x(), i.y(), i.z() }, { -1, 0, 0 }, { 0, 0 }, { 0, 0, -1, 1 } });
+    data.addVertex({ { o.x(), o.y(), o.z() }, { -1, 0, 0 }, { 1, 1 } });
+    data.addVertex({ { m.x(), m.y(), m.z() }, { -1, 0, 0 }, { 1, 0 } });
+    data.addVertex({ { i.x(), i.y(), i.z() }, { -1, 0, 0 }, { 0, 0 } });
 
 
     //right
-    data.addVertex({ { n.x(), n.y(), n.z() }, { 1, 0, 0 }, { 0, 0 }, { 0, 0, 1, 1 } });
-    data.addVertex({ { p.x(), p.y(), p.z() }, { 1, 0, 0 }, { 0, 1 }, { 0, 0, 1, 1 } });
-    data.addVertex({ { l.x(), l.y(), l.z() }, { 1, 0, 0 }, { 1, 1 }, { 0, 0, 1, 1 } });
+    data.addVertex({ { n.x(), n.y(), n.z() }, { 1, 0, 0 }, { 0, 0 } });
+    data.addVertex({ { p.x(), p.y(), p.z() }, { 1, 0, 0 }, { 0, 1 } });
+    data.addVertex({ { l.x(), l.y(), l.z() }, { 1, 0, 0 }, { 1, 1 } });
 
-    data.addVertex({ { l.x(), l.y(), l.z() }, { 1, 0, 0 }, { 1, 1 }, { 0, 0, 1, 1 } });
-    data.addVertex({ { j.x(), j.y(), j.z() }, { 1, 0, 0 }, { 1, 0 }, { 0, 0, 1, 1 } });
-    data.addVertex({ { n.x(), n.y(), n.z() }, { 1, 0, 0 }, { 0, 0 }, { 0, 0, 1, 1 } });
+    data.addVertex({ { l.x(), l.y(), l.z() }, { 1, 0, 0 }, { 1, 1 } });
+    data.addVertex({ { j.x(), j.y(), j.z() }, { 1, 0, 0 }, { 1, 0 } });
+    data.addVertex({ { n.x(), n.y(), n.z() }, { 1, 0, 0 }, { 0, 0 } });
 
 
     //bottom
-    data.addVertex({ { i.x(), i.y(), i.z() }, { 0, -1, 0 }, { 0, 0 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { m.x(), m.y(), m.z() }, { 0, -1, 0 }, { 0, 1 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { n.x(), n.y(), n.z() }, { 0, -1, 0 }, { 1, 1 }, { 1, 0, 0, 1 } });
+    data.addVertex({ { i.x(), i.y(), i.z() }, { 0, -1, 0 }, { 0, 0 } });
+    data.addVertex({ { m.x(), m.y(), m.z() }, { 0, -1, 0 }, { 0, 1 } });
+    data.addVertex({ { n.x(), n.y(), n.z() }, { 0, -1, 0 }, { 1, 1 } });
 
-    data.addVertex({ { n.x(), n.y(), n.z() }, { 0, -1, 0 }, { 1, 1 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { j.x(), j.y(), j.z() }, { 0, -1, 0 }, { 1, 0 }, { 1, 0, 0, 1 } });
-    data.addVertex({ { i.x(), i.y(), i.z() }, { 0, -1, 0 }, { 0, 0 }, { 1, 0, 0, 1 } });
+    data.addVertex({ { n.x(), n.y(), n.z() }, { 0, -1, 0 }, { 1, 1 } });
+    data.addVertex({ { j.x(), j.y(), j.z() }, { 0, -1, 0 }, { 1, 0 } });
+    data.addVertex({ { i.x(), i.y(), i.z() }, { 0, -1, 0 }, { 0, 0 } });
 
 
     //back
-    data.addVertex({ { j.x(), j.y(), j.z() }, { 0, 0, 1 }, { 0, 0 }, { -1, 0, 0, 1 } });
-    data.addVertex({ { l.x(), l.y(), l.z() }, { 0, 0, 1 }, { 0, 1 }, { -1, 0, 0, 1 } });
-    data.addVertex({ { k.x(), k.y(), k.z() }, { 0, 0, 1 }, { 1, 1 }, { -1, 0, 0, 1 } });
+    data.addVertex({ { j.x(), j.y(), j.z() }, { 0, 0, 1 }, { 0, 0 } });
+    data.addVertex({ { l.x(), l.y(), l.z() }, { 0, 0, 1 }, { 0, 1 } });
+    data.addVertex({ { k.x(), k.y(), k.z() }, { 0, 0, 1 }, { 1, 1 } });
 
-    data.addVertex({ { k.x(), k.y(), k.z() }, { 0, 0, 1 }, { 1, 1 }, { -1, 0, 0, 1 } });
-    data.addVertex({ { i.x(), i.y(), i.z() }, { 0, 0, 1 }, { 1, 0 }, { -1, 0, 0, 1 } });
-    data.addVertex({ { j.x(), j.y(), j.z() }, { 0, 0, 1 }, { 0, 0 }, { -1, 0, 0, 1 } });
+    data.addVertex({ { k.x(), k.y(), k.z() }, { 0, 0, 1 }, { 1, 1 } });
+    data.addVertex({ { i.x(), i.y(), i.z() }, { 0, 0, 1 }, { 1, 0 } });
+    data.addVertex({ { j.x(), j.y(), j.z() }, { 0, 0, 1 }, { 0, 0 } });
 
 
     for (u32 i = 0; i < 36; i++)

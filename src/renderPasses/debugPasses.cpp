@@ -451,8 +451,6 @@ void debugFrustum(cala::RenderGraph& graph, cala::Engine& engine, cala::Renderer
         cmd->bindPipeline();
         cmd->bindDescriptors();
 
-        cmd->bindVertexBuffer(0, engine.vertexBuffer());
-        cmd->bindIndexBuffer(engine.indexBuffer());
         cmd->draw(engine.unitCube()->indexCount, 1, engine.unitCube()->firstIndex, 0);
     });
 }

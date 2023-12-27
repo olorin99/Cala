@@ -20,7 +20,7 @@ namespace cala {
         u32 lodCount = 0;
 
         VkVertexInputBindingDescription _binding = {};
-        std::array<vk::Attribute, 4> _attributes = {};
+        std::array<vk::Attribute, 3> _attributes = {};
 
     };
 

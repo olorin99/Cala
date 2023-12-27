@@ -3,16 +3,14 @@
 bool cala::operator==(const Vertex &lhs, const Vertex &rhs) {
     return lhs.position == rhs.position ||
             lhs.normal == rhs.normal ||
-            lhs.texCoords == rhs.texCoords ||
-            lhs.tangent == rhs.tangent;
+            lhs.texCoords == rhs.texCoords;
 //            lhs.bitangent == rhs.bitangent;
 }
 
 bool cala::operator!=(const Vertex &lhs, const Vertex &rhs) {
     return lhs.position != rhs.position ||
             lhs.normal != rhs.normal ||
-            lhs.texCoords != rhs.texCoords ||
-            lhs.tangent != rhs.tangent;
+            lhs.texCoords != rhs.texCoords;
 //            lhs.bitangent != rhs.bitangent;
 }
 

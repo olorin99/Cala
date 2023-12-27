@@ -123,17 +123,16 @@ namespace cala {
         VkVertexInputBindingDescription globalBinding() const {
             VkVertexInputBindingDescription binding{};
             binding.binding = 0;
-            binding.stride = 12 * sizeof(f32);
+            binding.stride = 8 * sizeof(f32);
             binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
             return binding;
         }
 
-        std::array<vk::Attribute, 4> globalVertexAttributes() const {
-            std::array<vk::Attribute, 4> attributes = {
+        std::array<vk::Attribute, 3> globalVertexAttributes() const {
+            std::array<vk::Attribute, 3> attributes = {
                     vk::Attribute{0, 0, vk::AttribType::Vec3f},
                     vk::Attribute{1, 0, vk::AttribType::Vec3f},
-                    vk::Attribute{2, 0, vk::AttribType::Vec2f},
-                    vk::Attribute{3, 0, vk::AttribType::Vec4f}
+                    vk::Attribute{2, 0, vk::AttribType::Vec2f}
             };
             return attributes;
         }

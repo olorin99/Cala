@@ -9,13 +9,6 @@
 
 namespace cala {
 
-    struct Vertex {
-        std::array<f32, 3> position = {0, 0, 0};
-        std::array<f32, 3> normal = {0, 1, 0};
-        std::array<f32, 2> texCoords = {0, 0};
-        std::array<f32, 4> tangent = {1, 0, 0};
-    };
-
     bool operator==(const Vertex& lhs, const Vertex& rhs);
 
     bool operator!=(const Vertex& lhs, const Vertex& rhs);
