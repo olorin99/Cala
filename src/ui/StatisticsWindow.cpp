@@ -5,29 +5,66 @@ cala::ui::StatisticsWindow::StatisticsWindow(ImGuiContext* context, Engine *engi
     : Window(context),
     _engine(engine),
     _renderer(renderer),
-    _detailedMemoryStats(false)
+    _detailedMemoryStats(false),
+    _numericalStats(true)
 {}
+
+std::string numberToWord(u32 number) {
+    if (number > 1000000000) {
+        return std::to_string(number / 1000000000) + " billion";
+    } else if (number > 1000000) {
+        return std::to_string(number / 1000000) + " million";
+    } else if (number > 1000) {
+        return std::to_string(number / 1000) + " thousand";
+    }
+    return std::to_string(number);
+}
 
 void cala::ui::StatisticsWindow::render() {
     if (ImGui::Begin("Statistics")) {
         ImGui::Text("%s", _engine->device().context().deviceName().data());
 
+        ImGui::Checkbox("Numerical Stats", &_numericalStats);
+
         auto rendererStats = _renderer->stats();
 
-        ImGui::Text("Draw Calls: %d", rendererStats.drawCallCount);
-        ImGui::Text("Drawn Meshes: %d", rendererStats.drawnMeshes);
-        ImGui::Text("Culled Meshes: %d", rendererStats.culledMeshes);
-        f32 culledMeshRatio = (static_cast<f32>(rendererStats.culledMeshes) / (static_cast<f32>(rendererStats.drawnMeshes) + static_cast<f32>(rendererStats.culledMeshes))) * 100;
-        if (rendererStats.drawnMeshes + rendererStats.culledMeshes == 0)
-            culledMeshRatio = 0;
-        ImGui::Text("Culled mesh ratio: %.0f%%", culledMeshRatio);
-        ImGui::Text("Drawn Meshlets: %d", rendererStats.drawnMeshlets);
-        ImGui::Text("Culled Meshlets: %d", rendererStats.culledMeshlets);
-        f32 culledMeshletRatio = (static_cast<f32>(rendererStats.culledMeshlets) / (static_cast<f32>(rendererStats.drawnMeshlets) + static_cast<f32>(rendererStats.culledMeshlets))) * 100;
-        if (rendererStats.drawnMeshlets + rendererStats.culledMeshlets == 0)
-            culledMeshletRatio = 0;
-        ImGui::Text("Culled meshlet ratio: %.0f%%", culledMeshletRatio);
-        ImGui::Text("Drawn Triangles %d", rendererStats.drawnTriangles);
+        if (_numericalStats) {
+            ImGui::Text("Total Meshlets: %d", rendererStats.sceneMeshlets);
+            ImGui::Text("Total Indices: %d", rendererStats.sceneIndices);
+
+            ImGui::Text("Draw Calls: %d", rendererStats.drawCallCount);
+            ImGui::Text("Drawn Meshes: %d", rendererStats.drawnMeshes);
+            ImGui::Text("Culled Meshes: %d", rendererStats.culledMeshes);
+            f32 culledMeshRatio = (static_cast<f32>(rendererStats.culledMeshes) / (static_cast<f32>(rendererStats.drawnMeshes) + static_cast<f32>(rendererStats.culledMeshes))) * 100;
+            if (rendererStats.drawnMeshes + rendererStats.culledMeshes == 0)
+                culledMeshRatio = 0;
+            ImGui::Text("Culled mesh ratio: %.0f%%", culledMeshRatio);
+            ImGui::Text("Drawn Meshlets: %d", rendererStats.drawnMeshlets);
+            ImGui::Text("Culled Meshlets: %d", rendererStats.culledMeshlets);
+            f32 culledMeshletRatio = (static_cast<f32>(rendererStats.culledMeshlets) / (static_cast<f32>(rendererStats.drawnMeshlets) + static_cast<f32>(rendererStats.culledMeshlets))) * 100;
+            if (rendererStats.drawnMeshlets + rendererStats.culledMeshlets == 0)
+                culledMeshletRatio = 0;
+            ImGui::Text("Culled meshlet ratio: %.0f%%", culledMeshletRatio);
+            ImGui::Text("Drawn Triangles %d", rendererStats.drawnTriangles);
+        } else {
+            ImGui::Text("Total Meshlets: %s", numberToWord(rendererStats.sceneMeshlets).c_str());
+            ImGui::Text("Total Indices: %s", numberToWord(rendererStats.sceneIndices).c_str());
+
+            ImGui::Text("Draw Calls: %s", numberToWord(rendererStats.drawCallCount).c_str());
+            ImGui::Text("Drawn Meshes: %s", numberToWord(rendererStats.drawnMeshes).c_str());
+            ImGui::Text("Culled Meshes: %s", numberToWord(rendererStats.culledMeshes).c_str());
+            f32 culledMeshRatio = (static_cast<f32>(rendererStats.culledMeshes) / (static_cast<f32>(rendererStats.drawnMeshes) + static_cast<f32>(rendererStats.culledMeshes))) * 100;
+            if (rendererStats.drawnMeshes + rendererStats.culledMeshes == 0)
+                culledMeshRatio = 0;
+            ImGui::Text("Culled mesh ratio: %.0f%%", culledMeshRatio);
+            ImGui::Text("Drawn Meshlets: %s", numberToWord(rendererStats.drawnMeshlets).c_str());
+            ImGui::Text("Culled Meshlets: %s", numberToWord(rendererStats.culledMeshlets).c_str());
+            f32 culledMeshletRatio = (static_cast<f32>(rendererStats.culledMeshlets) / (static_cast<f32>(rendererStats.drawnMeshlets) + static_cast<f32>(rendererStats.culledMeshlets))) * 100;
+            if (rendererStats.drawnMeshlets + rendererStats.culledMeshlets == 0)
+                culledMeshletRatio = 0;
+            ImGui::Text("Culled meshlet ratio: %.0f%%", culledMeshletRatio);
+            ImGui::Text("Drawn Triangles %s", numberToWord(rendererStats.drawnTriangles).c_str());
+        }
 
         auto pipelineStats = _engine->device().context().getPipelineStatistics();
 

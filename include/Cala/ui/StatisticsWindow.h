@@ -18,6 +18,7 @@ namespace cala::ui {
         Engine* _engine;
         Renderer* _renderer;
         bool _detailedMemoryStats;
+        bool _numericalStats;
 
     };
 

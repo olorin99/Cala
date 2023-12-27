@@ -292,6 +292,9 @@ cala::Scene::SceneNode *cala::Scene::addMesh(const cala::Mesh &mesh, const cala:
             std::max(_max.z(), mesh.max.z())
     };
 
+    _totalMeshlets += _meshData.back().meshletCount;
+    _totalIndices += _meshData.back().indexCount;
+
     auto node = std::make_unique<MeshNode>();
     node->index = index;
     node->type = NodeType::MESH;

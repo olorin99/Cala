@@ -119,6 +119,9 @@ namespace cala {
         i32 _cullingCameraIndex = -1;
         bool _updateCullingCamera = true;
 
+        u32 _totalMeshlets = 0;
+        u32 _totalIndices = 0;
+
         std::unique_ptr<SceneNode> _root;
 
     };

@@ -90,6 +90,7 @@ int main() {
     auto sphere = engine.assetManager()->loadModel("sphere", "models/sphere.glb", material);
 //    auto sibenik = engine.assetManager()->loadModel("sibenik", "models/gltf/sibenik/sibenik.gltf", material1);
 //    auto sanMiguel = engine.assetManager()->loadModel("San Miguel", "models/gltf/San_Miguel/San_Miguel.gltf", material1);
+    auto dragon = engine.assetManager()->loadModel("dragon", "models/gltf/glTF-Sample-Models/2.0/DragonAttenuation/glTF/DragonAttenuation.gltf", material1);
 
     scene.addModel("lightSphere", *sphere, Transform(), lightNode);
 
@@ -104,7 +105,8 @@ int main() {
                 f32 z = k * 3;
                 Transform transform({ x, y, z });
 
-                scene.addModel("suzanne", *suzanne, transform);
+//                scene.addModel("suzanne", *suzanne, transform);
+                scene.addModel("dragon", *dragon, transform);
 //                scene.addModel("sphere", *sphere, transform);
             }
         }

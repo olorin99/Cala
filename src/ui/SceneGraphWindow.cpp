@@ -63,6 +63,16 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
 
                     ImGui::Text("First Index: %u", meshInfo.firstIndex);
                     ImGui::Text("Index Count: %u", meshInfo.indexCount);
+                    ImGui::Text("First Meshlet: %u", meshInfo.meshletIndex);
+                    ImGui::Text("Meshlet Count: %u", meshInfo.meshletCount);
+
+                    for (u32 i = 0; auto& lod : meshInfo.lods) {
+                        if (lod.meshletCount == 0)
+                            break;
+                        ImGui::Text("Lod: %d", i++);
+                        ImGui::Text("\tMeshlet Offset: %u", lod.meshletOffset);
+                        ImGui::Text("\tMeshlet Count: %u", lod.meshletCount);
+                    }
 
                     ImGui::Text("Min Extent: (%f, %f, %f)", meshInfo.min.x(), meshInfo.min.y(), meshInfo.min.z());
                     ImGui::Text("Max Extent: (%f, %f, %f)", meshInfo.max.x(), meshInfo.max.y(), meshInfo.max.z());

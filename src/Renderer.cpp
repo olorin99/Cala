@@ -124,6 +124,9 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     bool fullscreenDebug = _renderSettings.debugWireframe || _renderSettings.debugNormals || _renderSettings.debugWorldPos || _renderSettings.debugUnlit || _renderSettings.debugMetallic || _renderSettings.debugRoughness || _renderSettings.debugMeshlets || _renderSettings.debugPrimitives;
     bool debugViewEnabled = overlayDebug || fullscreenDebug;
 
+    _stats.sceneMeshlets = scene._totalMeshlets;
+    _stats.sceneIndices = scene._totalIndices;
+
     vk::CommandHandle cmd = _frameInfo.cmd;
 
     cmd->clearDescriptors();
@@ -533,8 +536,8 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
 
             cmd->bindProgram(_engine->getProgram(Engine::ProgramType::VISIBILITY));
 
-            cmd->bindRasterState({ .cullMode = vk::CullMode::NONE });
-            cmd->bindDepthState({ true, true });
+            cmd->bindRasterState({ .cullMode = vk::CullMode::BACK });
+            cmd->bindDepthState({ true, true, vk::CompareOp::LESS });
 
             cmd->bindPipeline();
             cmd->bindDescriptors();

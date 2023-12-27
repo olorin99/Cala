@@ -78,6 +78,8 @@ namespace cala {
             u32 culledMeshes = 0;
             u32 culledMeshlets = 0;
             u32 drawnTriangles = 0;
+            u32 sceneMeshlets = 0;
+            u32 sceneIndices = 0;
         };
 
         Stats stats() const { return _stats; }
