@@ -12,7 +12,7 @@ cala::ui::GuiWindow::GuiWindow(cala::Engine &engine, cala::Renderer& renderer, c
       _rendererSettings(&_context, &engine, &renderer, &swapchain),
       _resourceViewer(&_context, &engine.device()),
       _statisticsWindow(&_context, &engine, &renderer),
-      _backbufferView(&_context, &engine.device()),
+      _backbufferView(&_context, &engine.device(), &renderer),
       _assetManager(&_context, engine.assetManager()),
       _renderGraphWindow(&_context, &renderer._graph),
       _sceneGraphWindow(&_context, &scene),
@@ -100,6 +100,8 @@ void cala::ui::GuiWindow::render() {
     if (_showLightWindow)
         _lightWindow.render();
 
-    if (_showSceneGraphWindow)
+    if (_showSceneGraphWindow) {
+        _sceneGraphWindow.setSelectedMeshID(_backbufferView.getSelectedMeshID());
         _sceneGraphWindow.render();
+    }
 }

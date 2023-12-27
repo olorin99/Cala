@@ -55,4 +55,9 @@ void main() {
 
 //    positions[offset + id] = globCoords;
     imageStore(calaBindlessStorageImages1Dwriteonlyrg32i[pixelPositionsIndex], ivec2(x, y), ivec4(globCoords, 0, 0));
+
+    if (globCoords == globalData.cursorPos) {
+        atomicExchange(globalData.feedbackBuffer.feedback.meshletID, meshletID);
+        atomicExchange(globalData.feedbackBuffer.feedback.meshID, drawID);
+    }
 }

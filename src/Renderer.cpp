@@ -53,6 +53,8 @@ bool cala::Renderer::beginFrame(cala::vk::Swapchain* swapchain) {
         _stats.culledMeshes = _feedbackInfo.totalMeshes - _feedbackInfo.drawnMeshes;
         _stats.culledMeshlets = _feedbackInfo.totalMeshlets - _feedbackInfo.drawnMeshlets;
         _stats.drawnTriangles = _feedbackInfo.drawnTriangles;
+        _stats.currentMeshlet = _feedbackInfo.meshletID;
+        _stats.currentMesh = _feedbackInfo.meshID;
         std::memset(_feedbackBuffer[_engine->device().frameIndex()]->persistentMapping(), 0, sizeof(FeedbackInfo));
     }
 
@@ -555,6 +557,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
             visibilityCountPass.addStorageBufferWrite(materialCountBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
             visibilityCountPass.addStorageImageWrite(pixelPositionsImageIndex, vk::PipelineStage::COMPUTE_SHADER);
             visibilityCountPass.addStorageBufferWrite(visibilityDispatchBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
+            visibilityCountPass.addStorageBufferWrite(feedbackBufferIndex, vk::PipelineStage::COMPUTE_SHADER);
 
             visibilityCountPass.setExecuteFunction([&](vk::CommandHandle cmd, RenderGraph &graph) {
                 auto global = graph.getBuffer(globalIndex);
@@ -1073,6 +1076,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     _globalData.gpuCulling = _renderSettings.gpuCulling;
     _globalData.tileSizes = { 16, 9, 24, (u32)std::ceil((f32)_swapchain->extent().width / (f32)16.f) };
     _globalData.swapchainSize = { _swapchain->extent().width, _swapchain->extent().height };
+    _globalData.cursorPos = _cursorPos;
     _globalData.randomOffset = { static_cast<f32>(_randomDistribution(_randomGenerator)), static_cast<f32>(_randomDistribution(_randomGenerator)) };
     _globalData.poissonIndex = _engine->_poissonImage.index();
     _globalData.bloomStrength = _renderSettings.bloomStrength;

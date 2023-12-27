@@ -1,12 +1,14 @@
 #include "Cala/ui/SceneGraphWindow.h"
 #include <Cala/Material.h>
+#include <Cala/Renderer.h>
+#include <SDL_mouse.h>
 
 cala::ui::SceneGraphWindow::SceneGraphWindow(ImGuiContext *context, cala::Scene *scene)
     : Window(context),
     _scene(scene)
 {}
 
-void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
+void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene, u32 selectedMesh) {
 
     for (u32 childIndex = 0; childIndex < node->children.size(); childIndex++) {
         auto& child = node->children[childIndex];
@@ -35,7 +37,7 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                     if (ImGui::DragFloat3("Scale", &scale[0], 0.1)) {
                         child->transform.setScale(scale);
                     }
-                    traverseSceneNode(child.get(), scene);
+                    traverseSceneNode(child.get(), scene, selectedMesh);
                     ImGui::TreePop();
                 }
             }
@@ -43,6 +45,9 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
             case cala::Scene::NodeType::MESH:
             {
                 auto meshNode = dynamic_cast<cala::Scene::MeshNode*>(child.get());
+                if (meshNode->index == selectedMesh) {
+                    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
+                }
                 auto label = std::format("Mesh: {}", meshNode->index);
                 if (ImGui::TreeNode(label.c_str())) {
                     if (ImGui::Button("Delete")) {
@@ -129,8 +134,11 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                                 break;
                         }
                     }
-                    traverseSceneNode(child.get(), scene);
+                    traverseSceneNode(child.get(), scene, selectedMesh);
                     ImGui::TreePop();
+                }
+                if (meshNode->index == selectedMesh) {
+                    ImGui::PopStyleColor(1);
                 }
             }
                 break;
@@ -198,7 +206,7 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                     if (ImGui::Checkbox("Shadowing", &shadowing))
                         light.setShadowing(shadowing);
 
-                    traverseSceneNode(child.get(), scene);
+                    traverseSceneNode(child.get(), scene, selectedMesh);
                     ImGui::TreePop();
                 }
             }
@@ -240,7 +248,7 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
                     f32 fov = ende::math::deg(scene->getCamera(cameraNode)->fov());
                     if (ImGui::SliderFloat("FOV", &fov, 1, 180))
                         scene->getCamera(cameraNode)->setFov(ende::math::rad(fov));
-                    traverseSceneNode(child.get(), scene);
+                    traverseSceneNode(child.get(), scene, selectedMesh);
                     ImGui::TreePop();
                 }
             }
@@ -253,7 +261,7 @@ void traverseSceneNode(cala::Scene::SceneNode* node, cala::Scene* scene) {
 
 void cala::ui::SceneGraphWindow::render() {
     if (ImGui::Begin("SceneGraph Window")) {
-        traverseSceneNode(_scene->_root.get(), _scene);
+        traverseSceneNode(_scene->_root.get(), _scene, _selectedMeshID);
     }
     ImGui::End();
 }

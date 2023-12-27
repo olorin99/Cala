@@ -199,6 +199,8 @@ struct FeedbackInfo {
     uint drawnMeshlets;
     uint totalMeshlets;
     uint drawnTriangles;
+    uint meshletID;
+    uint meshID;
 };
 
 #ifndef __cplusplus
@@ -216,6 +218,7 @@ struct GlobalData {
     uint maxDrawCount;
     uvec4 tileSizes;
     uvec2 swapchainSize;
+    uvec2 cursorPos;
     vec2 randomOffset;
     int poissonIndex;
     float bloomStrength;

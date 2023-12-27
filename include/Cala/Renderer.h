@@ -80,6 +80,8 @@ namespace cala {
             u32 drawnTriangles = 0;
             u32 sceneMeshlets = 0;
             u32 sceneIndices = 0;
+            u32 currentMeshlet = 0;
+            u32 currentMesh = 0;
         };
 
         Stats stats() const { return _stats; }
@@ -89,6 +91,9 @@ namespace cala {
         void setGamma(f32 gamma) { _globalData.gamma = gamma; }
 
         f32 getGamma() const { return _globalData.gamma; }
+
+        void setCursorPos(const ende::math::Vec<2, u32>& pos) { _cursorPos = pos; }
+        const ende::math::Vec<2, u32>& getCursorPos() const { return _cursorPos; }
 
     private:
 
@@ -114,6 +119,8 @@ namespace cala {
 
         GlobalData _globalData;
         FeedbackInfo _feedbackInfo;
+
+        ende::math::Vec<2, u32> _cursorPos;
 
     };
 

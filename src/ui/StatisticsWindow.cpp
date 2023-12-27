@@ -66,6 +66,16 @@ void cala::ui::StatisticsWindow::render() {
             ImGui::Text("Drawn Triangles %s", numberToWord(rendererStats.drawnTriangles).c_str());
         }
 
+        ImGui::Separator();
+
+        auto cursorPos = _renderer->getCursorPos();
+        ImGui::Text("CursorPos: (%d, %d)", cursorPos.x(), cursorPos.y());
+
+        ImGui::Text("Current Meshlet: %d", rendererStats.currentMeshlet);
+        ImGui::Text("Current Mesh: %d", rendererStats.currentMesh);
+
+        ImGui::Separator();
+
         auto pipelineStats = _engine->device().context().getPipelineStatistics();
 
         ImGui::Text("Input Assembly Vertices: %lu", pipelineStats.inputAssemblyVertices);
