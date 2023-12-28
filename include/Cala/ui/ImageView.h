@@ -17,6 +17,8 @@ namespace cala::ui {
 
         void render() override;
 
+        vk::ImageHandle handle() const { return _image; }
+
         void setImageHandle(vk::ImageHandle handle) {
             if (_image != handle) {
                 _dirty = true;
