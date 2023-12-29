@@ -25,9 +25,9 @@ uint[3] loadIndices(Meshlet meshlet, uint primitiveID) {
     );
 
     return uint[3](
-    globalData.meshletIndexBuffer.indices[indexOffset + primitiveIDs[0]] + vertexOffset,
-    globalData.meshletIndexBuffer.indices[indexOffset + primitiveIDs[1]] + vertexOffset,
-    globalData.meshletIndexBuffer.indices[indexOffset + primitiveIDs[2]] + vertexOffset
+    globalData.indexBuffer.indices[indexOffset + primitiveIDs[0]] + vertexOffset,
+    globalData.indexBuffer.indices[indexOffset + primitiveIDs[1]] + vertexOffset,
+    globalData.indexBuffer.indices[indexOffset + primitiveIDs[2]] + vertexOffset
     );
 }
 

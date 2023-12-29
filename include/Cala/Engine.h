@@ -51,8 +51,6 @@ namespace cala {
 
         u32 uploadMeshletData(std::span<Meshlet> data);
 
-        u32 uploadMeshletIndicesData(std::span<u32> data);
-
         u32 uploadPrimitiveData(std::span<u8> data);
 
         template <typename T>
@@ -115,8 +113,6 @@ namespace cala {
         vk::BufferHandle indexBuffer() const { return _globalIndexBuffer; }
 
         vk::BufferHandle meshletBuffer() const { return _globalMeshletBuffer; }
-
-        vk::BufferHandle meshletIndexBuffer() const { return _globalMeshletIndexBuffer; }
 
         vk::BufferHandle primitiveBuffer() const { return _globalPrimitiveBuffer; }
 
@@ -248,10 +244,8 @@ namespace cala {
         u32 _indexOffset;
 
         vk::BufferHandle _globalMeshletBuffer;
-        vk::BufferHandle _globalMeshletIndexBuffer;
         vk::BufferHandle _globalPrimitiveBuffer;
         u32 _meshletOffset;
-        u32 _meshletIndexOffset;
         u32 _primitiveOffset;
 
         struct StagedBufferInfo {

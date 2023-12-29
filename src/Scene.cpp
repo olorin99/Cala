@@ -258,10 +258,6 @@ cala::Scene::SceneNode *cala::Scene::addMesh(const cala::Mesh &mesh, const cala:
     MaterialInstance* instance = materialInstance ? materialInstance : mesh.materialInstance;
     i32 index = _meshData.size();
     _meshData.push_back(GPUMesh{
-        mesh.firstIndex,
-        mesh.indexCount,
-        mesh.meshletIndex,
-        mesh.meshletCount,
         instance->material()->id(),
         instance->getIndex(),
         mesh.min,
@@ -292,8 +288,7 @@ cala::Scene::SceneNode *cala::Scene::addMesh(const cala::Mesh &mesh, const cala:
             std::max(_max.z(), mesh.max.z())
     };
 
-    _totalMeshlets += _meshData.back().meshletCount;
-    _totalIndices += _meshData.back().indexCount;
+    _totalMeshlets += _meshData.back().lods[0].meshletCount;
 
     auto node = std::make_unique<MeshNode>();
     node->index = index;

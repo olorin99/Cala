@@ -503,7 +503,6 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
     std::vector<Vertex> vertices;
     std::vector<u32> indices;
     std::vector<Meshlet> meshlets;
-    std::vector<u32> meshletIndices;
     std::vector<u8> primitives;
 
     std::vector<Model::Primitive> meshes;
@@ -579,7 +578,6 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             u32 firstVertex = vertices.size();
             u32 firstMeshlet = meshlets.size();
             u32 firstPrimitive = primitives.size();
-            u32 firstMeshletIndex = meshletIndices.size();
 
             auto& indicesAccessor = asset->accessors[primitive.indicesAccessor.value()];
             u32 indexCount = indicesAccessor.count;
@@ -623,13 +621,6 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
                 });
             }
 
-//            if (auto tangentIT = primitive.findAttribute("TANGENT"); tangentIT != primitive.attributes.end()) {
-//                auto& tangentAccessor = asset->accessors[tangentIT->second];
-//                fastgltf::iterateAccessorWithIndex<ende::math::Vec4f>(asset.get(), tangentAccessor, [&](ende::math::Vec4f tangent, std::size_t idx) {
-//                    meshVertices[idx].tangent = tangent;
-//                });
-//            }
-
             struct MeshletLOD {
                 std::vector<u32> indices;
                 std::vector<Meshlet> meshlets;
@@ -655,7 +646,7 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
                     if (indices.size() == lodIndexCount)
                         return {};
                     lodIndices.resize(lodIndexCount);
-//                    meshopt_optimizeVertexCache(lodIndices.data(), lodIndices.data(), lodIndices.size(), vertices.size());
+                    meshopt_optimizeVertexCache(lodIndices.data(), lodIndices.data(), lodIndices.size(), vertices.size());
                 }
 
                 u32 maxMeshlets = meshopt_buildMeshletsBound(lodIndices.size(), maxVertices, maxTriangles);
@@ -718,16 +709,16 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
             meshopt_optimizeOverdraw(&optimisedIndices[0], &optimisedIndices[0], indexCount, (f32*)&optimisedVertices[0], vertexCount, sizeof(Vertex), 1.05f);
             meshopt_optimizeVertexFetch(&optimisedVertices[0], &optimisedIndices[0], indexCount, &optimisedVertices[0], vertexCount, sizeof(Vertex));
 
-            auto lod0 = generateMeshletLOD(optimisedVertices, optimisedIndices, firstVertex, firstMeshletIndex, firstPrimitive, 1, 1e-2f).value();
+            auto lod0 = generateMeshletLOD(optimisedVertices, optimisedIndices, firstVertex, firstIndex, firstPrimitive, 1, 1e-2f).value();
 
             meshlets.insert(meshlets.end(), lod0.meshlets.begin(), lod0.meshlets.end());
-            meshletIndices.insert(meshletIndices.end(), lod0.meshletIndices.begin(), lod0.meshletIndices.end());
+            indices.insert(indices.end(), lod0.meshletIndices.begin(), lod0.meshletIndices.end());
             primitives.insert(primitives.end(), lod0.primitives.begin(), lod0.primitives.end());
 
             std::vector<MeshletLOD> lods;
             lods.push_back(lod0);
             u32 vertexOffset = firstVertex;
-            u32 indexOffset = firstMeshletIndex + lod0.meshletIndices.size();
+            u32 indexOffset = firstIndex + lod0.meshletIndices.size();
             u32 primitiveOffset = firstPrimitive + lod0.primitives.size();
 
             u32 lodCount = 1;
@@ -743,7 +734,7 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
                 primitiveOffset += lod.primitives.size();
 
                 meshlets.insert(meshlets.end(), lod.meshlets.begin(), lod.meshlets.end());
-                meshletIndices.insert(meshletIndices.end(), lod.meshletIndices.begin(), lod.meshletIndices.end());
+                indices.insert(indices.end(), lod.meshletIndices.begin(), lod.meshletIndices.end());
                 primitives.insert(primitives.end(), lod.primitives.begin(), lod.primitives.end());
 
                 lods.push_back(lod);
@@ -757,7 +748,6 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
                 index += firstVertex;
 
             vertices.insert(vertices.end(), optimisedVertices.begin(), optimisedVertices.end());
-            indices.insert(indices.end(), optimisedIndices.begin(), optimisedIndices.end());
 
             Model::Primitive mesh{};
             mesh.firstIndex = firstIndex;
@@ -794,19 +784,7 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
 
     std::span<f32> vs(reinterpret_cast<f32*>(vertices.data()), vertices.size() * sizeof(Vertex) / sizeof(f32));
     u32 vertexOffset = _engine->uploadVertexData(vs);
-//    std::for_each(std::execution::par, indices.begin(), indices.end(), [vertexOffset](auto& index) {
-//        index += vertexOffset / sizeof(Vertex);
-//    });
-    for (auto& idx : indices)
-        idx += vertexOffset / sizeof(Vertex);
     u32 indexOffset = _engine->uploadIndexData(indices);
-//    std::for_each(std::execution::par, meshes.begin(), meshes.end(), [indexOffset](auto& mesh) {
-//        mesh.firstIndex += indexOffset / sizeof(u32);
-//    });
-    for (auto& mesh : meshes)
-        mesh.firstIndex += indexOffset / sizeof(u32);
-
-    u32 meshletIndexOffset = _engine->uploadMeshletIndicesData(meshletIndices);
     u32 primitiveOffset = _engine->uploadPrimitiveData(primitives);
 //    std::for_each(std::execution::par, meshlets.begin(), meshlets.end(), [vertexOffset, meshletIndexOffset, primitiveOffset](auto& meshlet) {
 //        meshlet.vertexOffset += vertexOffset / sizeof(Vertex);
@@ -815,7 +793,7 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
 //    });
     for (auto& meshlet : meshlets) {
         meshlet.vertexOffset += vertexOffset / sizeof(Vertex);
-        meshlet.indexOffset += meshletIndexOffset / sizeof(u32);
+        meshlet.indexOffset += indexOffset / sizeof(u32);
         meshlet.primitiveOffset += primitiveOffset / sizeof(u8);
     }
     u32 meshletOffset = _engine->uploadMeshletData(meshlets);

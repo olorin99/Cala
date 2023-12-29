@@ -72,10 +72,6 @@ struct LOD {
 };
 
 struct GPUMesh {
-    uint firstIndex;
-    uint indexCount;
-    uint meshletIndex;
-    uint meshletCount;
     uint materialID;
     uint materialIndex;
     vec4 min;
@@ -239,7 +235,6 @@ struct GlobalData {
     VertexBuffer vertexBuffer;
     IndexBuffer indexBuffer;
     MeshletBuffer meshletBuffer;
-    IndexBuffer meshletIndexBuffer;
     PrimitiveBuffer primitiveBuffer;
     MeshBuffer meshBuffer;
     TransformsBuffer transformsBuffer;

@@ -127,7 +127,6 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     bool debugViewEnabled = overlayDebug || fullscreenDebug;
 
     _stats.sceneMeshlets = scene._totalMeshlets;
-    _stats.sceneIndices = scene._totalIndices;
 
     vk::CommandHandle cmd = _frameInfo.cmd;
 
@@ -1125,7 +1124,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     _globalData.vertexBuffer = _engine->vertexBuffer()->address();
     _globalData.indexBuffer = _engine->indexBuffer()->address();
     _globalData.meshletBuffer = _engine->meshletBuffer()->address();
-    _globalData.meshletIndexBuffer = _engine->meshletIndexBuffer()->address();
+//    _globalData.meshletIndexBuffer = _engine->meshletIndexBuffer()->address();
     _globalData.primitiveBuffer = _engine->primitiveBuffer()->address();
     _globalData.meshBuffer = scene._meshDataBuffer[_engine->device().frameIndex()]->address();
     _globalData.transformsBuffer = scene._meshTransformsBuffer[_engine->device().frameIndex()]->address();

@@ -28,7 +28,7 @@ void main() {
     SetMeshOutputsEXT(meshlet.indexCount, meshlet.primitiveCount);
 
     if (threadIndex < meshlet.indexCount) {
-        uint index = globalData.meshletIndexBuffer.indices[meshlet.indexOffset + threadIndex] + meshlet.vertexOffset;
+        uint index = globalData.indexBuffer.indices[meshlet.indexOffset + threadIndex] + meshlet.vertexOffset;
         Vertex vertex = globalData.vertexBuffer.vertices[index];
         vec4 fragPos = model * vec4(vertex.position, 1.0);
 
