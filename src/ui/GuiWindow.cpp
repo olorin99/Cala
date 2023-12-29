@@ -7,7 +7,6 @@ cala::ui::GuiWindow::GuiWindow(cala::Engine &engine, cala::Renderer& renderer, c
       _context(engine.device(), &swapchain, window),
 
       _renderGraphViewer(&_context, &renderer._graph),
-      _lightWindow(&_context, &scene),
       _profileWindow(&_context, &engine, &renderer),
       _rendererSettings(&_context, &engine, &renderer, &swapchain),
       _resourceViewer(&_context, &engine.device()),
@@ -18,7 +17,6 @@ cala::ui::GuiWindow::GuiWindow(cala::Engine &engine, cala::Renderer& renderer, c
       _sceneGraphWindow(&_context, &scene),
 
       _showRenderGraph(false),
-      _showLightWindow(true),
       _showProfileWindow(true),
       _showRendererSettings(true),
       _showResourceViewer(true),
@@ -56,7 +54,6 @@ void cala::ui::GuiWindow::render() {
                 ImGui::MenuItem("Debug");
 
                 ImGui::MenuItem("RenderGraph", nullptr, &_showRenderGraph, true);
-                ImGui::MenuItem("LightWindow", nullptr, &_showLightWindow, true);
                 ImGui::MenuItem("Profiler", nullptr, &_showProfileWindow, true);
                 ImGui::MenuItem("RendererSettings", nullptr, &_showRendererSettings, true);
                 ImGui::MenuItem("ResourceViewer", nullptr, &_showResourceViewer, true);
@@ -103,11 +100,11 @@ void cala::ui::GuiWindow::render() {
     if (_showAssetmanager)
         _assetManager.render();
 
-    if (_showLightWindow)
-        _lightWindow.render();
-
     if (_showSceneGraphWindow) {
         _sceneGraphWindow.setSelectedMeshID(_backbufferView.getSelectedMeshID());
         _sceneGraphWindow.render();
     }
+
+
+    ImGui::Render();
 }

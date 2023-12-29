@@ -687,6 +687,7 @@ void cala::RenderGraph::buildResources() {
                 imageResource->height = _backbufferHeight;
                 imageResource->depth = 1;
             }
+            imageResource->usage = imageResource->usage | vk::ImageUsage::TRANSFER_DST;
             vk::ImageHandle image = _images[i];
             if (!image || image->usage() != imageResource->usage ||
                     image->width() != imageResource->width ||

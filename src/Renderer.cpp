@@ -179,7 +179,7 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     auto clustersIndex = _graph.addBufferResource("clusters", clustersResource);
 
     BufferResource drawCommandsResource;
-    drawCommandsResource.size = scene.meshCount() * sizeof(MeshTaskCommand);
+    drawCommandsResource.size = std::max(scene.meshCount() * sizeof(MeshTaskCommand), 1ul);
     drawCommandsResource.usage = vk::BufferUsage::INDIRECT | vk::BufferUsage::STORAGE;
     auto drawCommandsIndex = _graph.addBufferResource("drawCommands", drawCommandsResource);
     auto shadowDrawCommandsIndex = _graph.addBufferResource("shadowDrawCommands", drawCommandsResource);
@@ -679,6 +679,13 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
                 auto materialCounts = graph.getBuffer(materialCountBufferIndex);
                 auto pixelPositions = graph.getImage(pixelPositionsImageIndex);
                 auto dispatchCommands = graph.getBuffer(visibilityDispatchBufferIndex);
+
+                cmd->clearImage(image);
+                auto barrier = image->barrier(vk::PipelineStage::TRANSFER, vk::PipelineStage::COMPUTE_SHADER,
+                                                       vk::Access::TRANSFER_WRITE,
+                                                       vk::Access::SHADER_READ | vk::Access::SHADER_WRITE,
+                                                       vk::ImageLayout::GENERAL);
+                cmd->pipelineBarrier({&barrier, 1});
 
                 cmd->clearDescriptors();
                 cmd->bindBuffer(1, 0, global);

@@ -33,102 +33,27 @@ int main() {
 
     ui::GuiWindow guiWindow(engine, renderer, scene, swapchain, platform.window());
 
-    Material* material = engine.loadMaterial("../../res/materials/expanded_pbr.mat");
     Material* material1 = engine.loadMaterial("../../res/materials/pbr.mat");
     if (!material1)
         return -2;
 
     Camera camera((f32)ende::math::rad(54.4), platform.windowSize().first, platform.windowSize().second, 0.1f, 100.f);
     scene.addCamera(camera, Transform({10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(-90))));
-//    scene.addCamera(camera, Transform({-10, 1.3, 0}, ende::math::Quaternion({0, 1, 0}, ende::math::rad(90))));
 
-
-    Sampler sampler(engine.device(), {});
 
     Transform lightTransform({0, 1, 0}, {0, 0, 0, 1}, {0.1, 0.1, 0.1});
-    Light light(cala::Light::POINT, true);
-    light.setPosition({ 0, 1, 0 });
+    Light light(cala::Light::DIRECTIONAL, true);
+    light.setDirection(ende::math::Quaternion(ende::math::rad(-84), 0, ende::math::rad(-11)));
     light.setColour({ 255.f / 255.f, 202.f / 255.f, 136.f / 255.f });
-    light.setIntensity(4.649);
+    light.setIntensity(2);
     light.setShadowing(true);
-    Light light1(cala::Light::POINT, false);
-    light1.setPosition({ 10, 2, 4 });
-    light1.setColour({0, 1, 0});
-    light1.setIntensity(10);
-    Light light2(cala::Light::DIRECTIONAL, true);
-    light2.setDirection(ende::math::Quaternion(ende::math::rad(-84), 0, ende::math::rad(-11)));
-    light2.setColour({ 255.f / 255.f, 202.f / 255.f, 136.f / 255.f });
-    light2.setIntensity(2);
-    light2.setShadowing(true);
-    light2.setCascadeCount(4);
-    light2.setCascadeSplit(0, 4.5);
-    light2.setCascadeSplit(1, 20);
-    light2.setCascadeSplit(2, 50);
-    light2.setCascadeSplit(2, 75);
-    Light light3(cala::Light::POINT, false);
-    light3.setPosition({ -10, 2, 4 });
-    light3.setIntensity(1);
-    light3.setColour({0.23, 0.46, 0.10});
-    light3.setShadowing(true);
+    light.setCascadeCount(4);
+    light.setCascadeSplit(0, 4.5);
+    light.setCascadeSplit(1, 20);
+    light.setCascadeSplit(2, 50);
+    light.setCascadeSplit(2, 75);
 
-//    scene.addLight(light, lightTransform);
-    auto lightNode = scene.addLight(light2, lightTransform);
-//    scene.addLight(light3, lightTransform);
-
-    auto background = engine.assetManager()->loadImage("background", "textures/TropicalRuins_3k.hdr", vk::Format::RGBA32_SFLOAT);
-//    auto background = engine.assetManager()->loadImage("background", "textures/Tropical_Beach_3k.hdr", backend::Format::RGBA32_SFLOAT);
-    scene.addSkyLightMap(background, true);
-
-//    Mesh cube = cala::shapes::cube().mesh(&engine);
-//    auto matInstance = material1->instance();
-//    scene.addMesh(cube, Transform({0, 3, 0}, {}, {1, 3, 1}), &matInstance);
-
-    auto sponzaAsset = engine.assetManager()->loadModel("sponza", "models/gltf/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf", material1);
-//    auto bistro = engine.assetManager()->loadModel("bistro", "models/bistro/gltf/Bistro_Exterior.gltf", material1);
-//    auto damagedHelmet = engine.assetManager()->loadModel("damagedHelmet", "models/gltf/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf", material1);
-    auto suzanne = engine.assetManager()->loadModel("suzanne", "models/gltf/glTF-Sample-Models/2.0/Suzanne/glTF/Suzanne.gltf", material1);
-    auto sphere = engine.assetManager()->loadModel("sphere", "models/sphere.glb", material);
-//    auto sibenik = engine.assetManager()->loadModel("sibenik", "models/gltf/sibenik/sibenik.gltf", material1);
-//    auto sanMiguel = engine.assetManager()->loadModel("San Miguel", "models/gltf/San_Miguel/San_Miguel.gltf", material1);
-    auto dragon = engine.assetManager()->loadModel("dragon", "models/gltf/glTF-Sample-Models/2.0/DragonAttenuation/glTF/DragonAttenuation.gltf", material1);
-
-    scene.addModel("lightSphere", *sphere, Transform(), lightNode);
-
-//    scene.addModel("sibenik", *sibenik, Transform());
-//    scene.addModel("San Miguel", *sanMiguel, Transform());
-//
-    for (u32 i = 0; i < 10; i++) {
-        for (u32 j = 0; j < 10; j++) {
-            for (u32 k = 0; k < 10; k++) {
-                f32 x = i * 3;
-                f32 y = j * 3;
-                f32 z = k * 3;
-                Transform transform({ x, y, z });
-
-//                scene.addModel("suzanne", *suzanne, transform);
-                scene.addModel("dragon", *dragon, transform);
-//                scene.addModel("sphere", *sphere, transform);
-            }
-        }
-    }
-
-
-//    auto plane = engine.assetManager()->loadModel("plane", "models/plane.glb", material1);
-//    scene.addModel("plane", *plane, Transform({}, {}, {100, 1, 100}));
-
-    Transform defaultTransform;
-    scene.addModel("sponza", *sponzaAsset, defaultTransform);
-//    scene.addModel("bistro", *bistro, defaultTransform);
-//    scene.addModel(*damagedHelmet, sponzaTransform);
-//    auto sphereNode = scene.addModel("smallSphere", *sphere, lightTransform);
-
-    f32 sceneBounds = 10;
-
-    Transform t2({ 2, 4, 0 });
-
-//    scene.addModel("sphere2", *sphere, t2);
-
-    i32 newLights = 10;
+    auto lightNode = scene.addLight(light, lightTransform);
 
     f64 dt = 1.f / 60.f;
     bool running = true;
@@ -154,7 +79,7 @@ int main() {
                     std::filesystem::path assetPath = droppedFile;
                     if (assetPath.extension() == ".gltf" || assetPath.extension() == ".glb") {
                         auto asset = engine.assetManager()->loadModel(droppedFile, assetPath, material1);
-                        scene.addModel(droppedFile, *asset, defaultTransform);
+                        scene.addModel(droppedFile, *asset, Transform());
                     } else
                         engine.logger().warn("Unrecognised file type: {}", assetPath.extension().string());
                     SDL_free(droppedFile);

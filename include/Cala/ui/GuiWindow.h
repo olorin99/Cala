@@ -6,7 +6,6 @@
 #include "Cala/ImGuiContext.h"
 
 #include <Cala/ui/RenderGraphViewer.h>
-#include <Cala/ui/LightWindow.h>
 #include <Cala/ui/ProfileWindow.h>
 #include <Cala/ui/RendererSettingsWindow.h>
 #include <Cala/ui/ResourceViewer.h>
@@ -36,9 +35,6 @@ namespace cala::ui {
 
         bool _showRenderGraph;
         RenderGraphViewer _renderGraphViewer;
-
-        bool _showLightWindow;
-        LightWindow _lightWindow;
 
         bool _showProfileWindow;
         ProfileWindow _profileWindow;

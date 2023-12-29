@@ -6,53 +6,48 @@ Cala is the Quenya word for light so this project is a simulatio of light.
 
 ### Features:
 - [x] Linux support
-- [x] GPU Driven Rendering
-- [x] Rudimentary Render Graph
-- [x] Cook Torrence PBR
-- [x] Point Lights with shadows
-- [x] Clustered forward shading
-- [x] Debug views (normal, roughness, metallic)
-- [x] shader reflection and hot reloading
-- [x] bindless images/buffers
+- [x] Render graph
+- [x] Visibility buffer
+- [x] Mesh shaders
+- [x] Meshlet frustum culling
+- [x] Mesh LOD
+- [x] Direct and point lights
+- [x] Clusterd lights
+- [x] Cascading shadow maps for direct light
+- [x] PCSS (Percentage Closer Soft Shadows) for direct light
+- [x] PCF (Percentage Closer Filtering) for point light
+- [x] Shader reflection and hot reloading
+- [x] Multiple tonemaping functions available (AGX, ACES, Reinhard, ...)
 
-##### Clustered Forward Lighting
-Compute shaders used to divide view frustum into buckets which are then used to sort lights in the scene according to world position.
+### Build
+```
+git clone --recursive https://github.com/olorin99/Cala.git
+cd Cala
+mkdir build
+cd build
+cmake ..
+make
+```
+A static library and an executable called main should be built. To use simply link the static library or run the executable to test.
+The executable supports drag and drop for gltf files. So can simply drag gltf files into the window to view them using Cala.
 
-![clustered_forward.gif](res/gifs/clustered_forward.gif)
 
-##### Dynamic Lights
-Light positions, colour, intensity and range are all variable at runtime.
-
-![dynamic_lights.gif](res/gifs/dynamic_lights.gif)
-
-##### Normal Debug View
-Option to view mesh normals
-
-![normal_view.gif](res/gifs/normal_view.gif)
-##### Roughness Debug View
-Option to view material roughness
-
-![roughness_view.gif](res/gifs/roughness_view.gif)
-##### Metallic Debug View
-Option to view material metallicness
-
-![metallic_view.gif](res/gifs/metallic_view.gif)
-##### Clustered Debug View
-Option to view density of lights per cluster. Green is low density, yellow is medium density, red is high density. 
-
-![clustered_debug.gif](res/gifs/clustered_debug.gif)
-
-##### CPU + GPU Profiler
-Use PROFILE_NAMED() macro to enable profilig of a function. GPU timers are automatically inserted into rendergraph between each renderpass
-
-![profiler.gif](res/gifs/profiler.gif)
-
+### Images
+#### Meshlet View of Sponza
+![cala_meshlet_sponza.png](docs%2Fcala_meshlet_sponza.png)
+#### Primitive View of Sponza
+![cala_primitive_sponza.png](docs%2Fcala_primitive_sponza.png)
+#### Primitive View showing differences between LODs
+![cala_primitive_lod_dragons.png](docs%2Fcala_primitive_lod_dragons.png)
+#### View of Sponza using point light and AGX tonemap
+![cala_agx_sponza.png](docs%2Fcala_agx_sponza.png)
 
 ### Dependencies
 ##### system library
 - SDL2 - windowing system
 
 ##### git submodules
+- meshoptimizer - Meshlet and LOD generation
 - spirv-cross - spirv reflection
 - spirv-headers
 - spirv-tools
