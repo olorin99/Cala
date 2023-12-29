@@ -221,6 +221,8 @@ struct GlobalData {
     int shadowMode;
     int pcfSamples;
     int blockerSamples;
+    float lodTransitionBase;
+    float lodTransitionStep;
     uint lodBias;
     uint shadowLodBias;
     int irradianceIndex;

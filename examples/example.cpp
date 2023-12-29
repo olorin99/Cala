@@ -90,27 +90,27 @@ int main() {
     auto sphere = engine.assetManager()->loadModel("sphere", "models/sphere.glb", material);
 //    auto sibenik = engine.assetManager()->loadModel("sibenik", "models/gltf/sibenik/sibenik.gltf", material1);
 //    auto sanMiguel = engine.assetManager()->loadModel("San Miguel", "models/gltf/San_Miguel/San_Miguel.gltf", material1);
-//    auto dragon = engine.assetManager()->loadModel("dragon", "models/gltf/glTF-Sample-Models/2.0/DragonAttenuation/glTF/DragonAttenuation.gltf", material1);
+    auto dragon = engine.assetManager()->loadModel("dragon", "models/gltf/glTF-Sample-Models/2.0/DragonAttenuation/glTF/DragonAttenuation.gltf", material1);
 
     scene.addModel("lightSphere", *sphere, Transform(), lightNode);
 
 //    scene.addModel("sibenik", *sibenik, Transform());
 //    scene.addModel("San Miguel", *sanMiguel, Transform());
 //
-//    for (u32 i = 0; i < 10; i++) {
-//        for (u32 j = 0; j < 10; j++) {
-//            for (u32 k = 0; k < 10; k++) {
-//                f32 x = i * 3;
-//                f32 y = j * 3;
-//                f32 z = k * 3;
-//                Transform transform({ x, y, z });
-//
-////                scene.addModel("suzanne", *suzanne, transform);
-//                scene.addModel("dragon", *dragon, transform);
-////                scene.addModel("sphere", *sphere, transform);
-//            }
-//        }
-//    }
+    for (u32 i = 0; i < 10; i++) {
+        for (u32 j = 0; j < 10; j++) {
+            for (u32 k = 0; k < 10; k++) {
+                f32 x = i * 3;
+                f32 y = j * 3;
+                f32 z = k * 3;
+                Transform transform({ x, y, z });
+
+//                scene.addModel("suzanne", *suzanne, transform);
+                scene.addModel("dragon", *dragon, transform);
+//                scene.addModel("sphere", *sphere, transform);
+            }
+        }
+    }
 
 
 //    auto plane = engine.assetManager()->loadModel("plane", "models/plane.glb", material1);

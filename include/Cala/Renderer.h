@@ -34,6 +34,8 @@ namespace cala {
             int shadowMode = 0;
             i32 pcfSamples = 20;
             i32 blockerSamples = 20;
+            float lodTransitionBase = 20;
+            float lodTransitionStep = 1.25;
             i32 lodBias = 0;
             i32 shadowLodBias = 0;
             bool depthPre = false;

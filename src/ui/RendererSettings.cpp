@@ -52,6 +52,8 @@ void cala::ui::RendererSettingsWindow::render() {
         ImGui::Checkbox("Freeze Frustum,", &rendererSettings.freezeFrustum);
         ImGui::Checkbox("IBL,", &rendererSettings.ibl);
         ImGui::Checkbox("GPU Culling", &rendererSettings.gpuCulling);
+        ImGui::SliderFloat("LOD Transition Base", &rendererSettings.lodTransitionBase, 1, 100);
+        ImGui::SliderFloat("LOD Transition Step", &rendererSettings.lodTransitionStep, 1, 20);
         ImGui::SliderInt("LOD bias", &rendererSettings.lodBias, 0, MAX_LODS - 1);
         ImGui::SliderInt("Shadow LOD bias", &rendererSettings.shadowLodBias, 0, MAX_LODS - 1);
         ImGui::Checkbox("Bounded FrameTime", &rendererSettings.boundedFrameTime);

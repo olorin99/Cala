@@ -1082,6 +1082,8 @@ void cala::Renderer::render(cala::Scene &scene, ImGuiContext* imGui) {
     _globalData.shadowMode = _renderSettings.shadowMode;
     _globalData.pcfSamples = _renderSettings.pcfSamples;
     _globalData.blockerSamples = _renderSettings.blockerSamples;
+    _globalData.lodTransitionBase = _renderSettings.lodTransitionBase;
+    _globalData.lodTransitionStep = _renderSettings.lodTransitionStep;
     _globalData.lodBias = _renderSettings.lodBias;
     _globalData.shadowLodBias = _renderSettings.shadowLodBias;
 
