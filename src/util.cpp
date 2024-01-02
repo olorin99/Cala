@@ -66,12 +66,12 @@ public:
         if (path.empty())
             return new shaderc_include_result{"", 0, "unable to open file", 15};
 
-        ende::fs::File file;
         std::string f = path;
-        if (!file.open(std::move(path), ende::fs::in))
+        auto file = ende::fs::File::open(std::move(path), ende::fs::in);
+        if (!file)
             return new shaderc_include_result{"", 0, "unable to open file", 15};
 
-        std::string source = file.read();
+        std::string source = file->read();
         if (source.empty())
             return new shaderc_include_result{"", 0, "unable to read file", 15};
 

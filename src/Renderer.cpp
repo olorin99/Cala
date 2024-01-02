@@ -62,7 +62,7 @@ bool cala::Renderer::beginFrame(cala::vk::Swapchain* swapchain) {
         f64 frameTime = _engine->device().milliseconds();
         f64 frameTimeDiff = frameTime - _renderSettings.millisecondTarget;
         if (frameTimeDiff < 0)
-            ende::thread::sleep(ende::time::Duration::fromMilliseconds(-frameTimeDiff));
+            usleep(-frameTimeDiff * 1000);
     }
 
     auto result = _swapchain->nextImage();
@@ -75,7 +75,7 @@ bool cala::Renderer::beginFrame(cala::vk::Swapchain* swapchain) {
     _frameInfo = beginResult.value();
     _swapchainFrame = std::move(result.value());
     _frameInfo.cmd->begin();
-    _globalData.time = _engine->getRunningTime().milliseconds();
+    _globalData.time = std::chrono::duration_cast<std::chrono::milliseconds>(_engine->getRunningTime()).count();
     return true;
 }
 

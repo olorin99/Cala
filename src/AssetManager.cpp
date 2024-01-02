@@ -190,11 +190,11 @@ cala::vk::ShaderModuleHandle cala::AssetManager::loadShaderModule(const std::str
             stage = vk::ShaderStage::COMPUTE;
     }
 
-    ende::fs::File file;
-    if (!file.open(_rootAssetPath / path))
+    auto file = ende::fs::File::open(_rootAssetPath / path);
+    if (!file)
         return { nullptr, -1, nullptr };
 
-    auto rawSource = file.read();
+    auto rawSource = file->read();
 
     std::string source = "#version 460\n"
         "\n"
@@ -420,8 +420,8 @@ cala::AssetManager::Asset<cala::Model> cala::AssetManager::loadModel(const std::
 
     auto type = fastgltf::determineGltfFileType(&data);
     auto asset = type == fastgltf::GltfType::GLB ?
-            parser.loadBinaryGLTF(&data, filePath.parent_path(), fastgltf::Options::None) :
-            parser.loadGLTF(&data, filePath.parent_path(), fastgltf::Options::LoadGLBBuffers | fastgltf::Options::LoadExternalBuffers);
+            parser.loadGltfBinary(&data, filePath.parent_path(), fastgltf::Options::None) :
+            parser.loadGltf(&data, filePath.parent_path(), fastgltf::Options::LoadGLBBuffers | fastgltf::Options::LoadExternalBuffers);
 
     if (auto error = asset.error(); error != fastgltf::Error::None) {
         _engine->logger().warn("unable to load model: {}", path.string());

@@ -41,7 +41,9 @@ void cala::ui::ProfileWindow::render() {
 
 
     for (auto& profileData : frameData) {
-        f64 diff = (profileData.end.nanoseconds() - profileData.start.nanoseconds()) / 1e6;
+        auto duration = profileData.end - profileData.start;
+        f64 diff = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+//        f64 diff = (profileData.end.nanoseconds() - profileData.start.nanoseconds()) / 1e6;
         auto it = data.find(profileData.label);
         if (it == data.end())
             data.emplace(std::make_pair(profileData.label, std::make_pair(diff, 1)));

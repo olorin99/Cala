@@ -369,7 +369,7 @@ std::expected<cala::vk::Device::FrameInfo, cala::vk::Error> cala::vk::Device::be
     return std::unexpected(waitResult.error());
 }
 
-ende::time::Duration cala::vk::Device::endFrame() {
+std::chrono::high_resolution_clock::duration cala::vk::Device::endFrame() {
     _lastFrameTime = _frameClock.reset();
     return _lastFrameTime;
 }
