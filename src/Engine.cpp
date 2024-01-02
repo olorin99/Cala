@@ -35,7 +35,7 @@ cala::Engine::Engine(vk::Platform &platform)
           .logger = &_logger
       }).value()),
       _assetManager(this),
-      _startTime(ende::time::SystemTime::now()),
+      _startTime(std::chrono::system_clock::now()),
       _shadowPass(*_device, {&shadowPassAttachment, 1 }),
       _lodSampler(_device->getSampler({
           .maxLod = 10
@@ -947,11 +947,11 @@ std::optional<cala::vk::CommandBuffer::BlendState> loadMaterialBlendState(nlohma
 cala::Material *cala::Engine::loadMaterial(const std::filesystem::path &path, u32 size) {
     try {
 
-        ende::fs::File file;
-        if (!file.open(path, ende::fs::in | ende::fs::binary))
+        auto file = ende::fs::File::open(path, ende::fs::in | ende::fs::binary);
+        if (!file)
             return nullptr;
 
-        std::string source = file.read();
+        std::string source = file->read();
 
         nlohmann::json materialSource = nlohmann::json::parse(source);
 

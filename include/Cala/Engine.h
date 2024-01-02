@@ -1,7 +1,6 @@
 #ifndef CALA_ENGINE_H
 #define CALA_ENGINE_H
 
-#include <Ende/Shared.h>
 #include <Cala/vulkan/Buffer.h>
 #include <Cala/vulkan/Image.h>
 
@@ -35,7 +34,7 @@ namespace cala {
 
         AssetManager* assetManager() { return &_assetManager; }
 
-        ende::time::Duration getRunningTime() const { return _startTime.elapsed(); }
+        std::chrono::system_clock::duration getRunningTime() const { return std::chrono::system_clock::now() - _startTime; }
 
         bool gc();
 
@@ -193,7 +192,7 @@ namespace cala {
 
         AssetManager _assetManager;
 
-        ende::time::SystemTime _startTime;
+        std::chrono::system_clock::time_point _startTime;
 
         vk::SamplerHandle _lodSampler;
         vk::SamplerHandle _irradianceSampler;

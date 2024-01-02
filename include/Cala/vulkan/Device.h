@@ -49,7 +49,7 @@ namespace cala::vk {
 
         std::expected<FrameInfo, Error> beginFrame();
 
-        ende::time::Duration endFrame();
+        std::chrono::high_resolution_clock::duration endFrame();
 
         u32 frameIndex() const { return _frameCount % FRAMES_IN_FLIGHT; }
 
@@ -174,7 +174,7 @@ namespace cala::vk {
 
         f64 fps() const { return 1000.f / milliseconds(); }
 
-        f64 milliseconds() const { return static_cast<f64>(_lastFrameTime.microseconds()) / 1000.f; }
+        f64 milliseconds() const { return std::chrono::duration_cast<std::chrono::milliseconds>(_lastFrameTime).count(); }
 
         u32 framesInFlight() const { return FRAMES_IN_FLIGHT; }
 
@@ -222,7 +222,7 @@ namespace cala::vk {
         VkFence _frameFences[FRAMES_IN_FLIGHT] = {};
         u64 _frameCount = 0;
         ende::time::StopWatch _frameClock = {};
-        ende::time::Duration _lastFrameTime = 0;
+        std::chrono::system_clock::duration _lastFrameTime = {};
 
         Timer _immediateTimer = {};
 
